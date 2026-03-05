@@ -87,12 +87,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex h-screen overflow-hidden bg-background">
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      <aside className={`fixed z-50 inset-y-0 left-0 w-[260px] bg-sidebar flex flex-col transition-transform duration-300 ease-out md:translate-x-0 md:static border-r border-sidebar-border ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      <aside className={`fixed z-50 inset-y-0 left-0 w-[260px] bg-sidebar flex flex-col transition-transform duration-300 ease-out md:translate-x-0 md:static md:shrink-0 border-r border-sidebar-border ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex items-center justify-between px-5 h-16 border-b border-sidebar-border shrink-0">
           <img src={logo} alt="PlayBet" className="h-9" />
           <button className="md:hidden text-sidebar-foreground hover:text-foreground transition-colors" onClick={() => setSidebarOpen(false)}>
@@ -150,7 +150,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         <header className="h-14 border-b border-border flex items-center px-5 gap-3 bg-card/60 backdrop-blur-xl sticky top-0 z-30 shrink-0">
           <button className="md:hidden text-muted-foreground hover:text-foreground transition-colors" onClick={() => setSidebarOpen(true)}>
             <Menu size={18} />
@@ -171,7 +171,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </div>
         </header>
-        <main className="flex-1 p-5 lg:p-6 overflow-auto main-scroll animate-fade-in">{children}</main>
+        <main className="flex-1 p-5 lg:p-6 overflow-y-auto main-scroll animate-fade-in">{children}</main>
       </div>
     </div>
   );
