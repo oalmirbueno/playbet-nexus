@@ -95,3 +95,27 @@
     @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-destructive/20 text-destructive;
   }
 }
+
+/* Custom thin scrollbars */
+.sidebar-scroll::-webkit-scrollbar,
+.main-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-scroll::-webkit-scrollbar-track,
+.main-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb,
+.main-scroll::-webkit-scrollbar-thumb {
+  background: hsl(0 0% 25%);
+  border-radius: 100px;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb:hover,
+.main-scroll::-webkit-scrollbar-thumb:hover {
+  background: hsl(0 0% 35%);
+}
+.sidebar-scroll,
+.main-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(0 0% 25%) transparent;
+}
