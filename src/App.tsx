@@ -19,6 +19,8 @@ import Jogos from "./pages/Jogos";
 import PlataformasPage from "./pages/PlataformasPage";
 import LinksAfiliados from "./pages/LinksAfiliados";
 import LandingPagesPage from "./pages/LandingPagesPage";
+import LPTemplates from "./pages/LPTemplates";
+import LinkEngine from "./pages/LinkEngine";
 import HubsRotas from "./pages/HubsRotas";
 import CalendarioEditorial from "./pages/CalendarioEditorial";
 import Conteudo from "./pages/Conteudo";
@@ -61,6 +63,8 @@ const App = () => (
                 <Route path="/plataformas" element={<PlataformasPage />} />
                 <Route path="/links" element={<LinksAfiliados />} />
                 <Route path="/landing-pages" element={<LandingPagesPage />} />
+                <Route path="/lp-templates" element={<LPTemplates />} />
+                <Route path="/link-engine" element={<LinkEngine />} />
                 <Route path="/hubs" element={<HubsRotas />} />
                 <Route path="/calendario" element={<CalendarioEditorial />} />
                 <Route path="/conteudo" element={<Conteudo />} />
