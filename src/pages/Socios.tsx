@@ -119,7 +119,7 @@ export default function Socios() {
       {/* Historical Table */}
       <div className="glass-card p-5">
         <h3 className="section-title">Histórico de Distribuição Societária</h3>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto invisible-scroll">
           <table className="data-table">
             <thead><tr><th>Data</th><th>Referência</th><th>Base Societária</th>{data.map(s => <th key={s.id}>{s.nome.split(" ")[0]} ({s.part}%)</th>)}<th>Status</th></tr></thead>
             <tbody>
