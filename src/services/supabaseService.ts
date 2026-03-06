@@ -236,3 +236,183 @@ export const clickService = {
     return data;
   },
 };
+
+// ── Helper for untyped tables ──
+const db = supabase as any;
+
+// ── Campanhas ──
+export interface CampanhaRow {
+  id: string;
+  nome: string;
+  objetivo: string | null;
+  jogo: string | null;
+  plataforma: string | null;
+  influencer: string | null;
+  inicio: string | null;
+  fim: string | null;
+  status: string | null;
+  resultado: string | null;
+  is_demo: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export const campanhaService = {
+  async getAll(): Promise<CampanhaRow[]> {
+    const { data, error } = await db.from("campanhas").select("*").order("created_at", { ascending: false });
+    if (error) throw error;
+    return data;
+  },
+  async create(item: Partial<CampanhaRow>): Promise<CampanhaRow> {
+    const { data, error } = await db.from("campanhas").insert(item).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async update(id: string, updates: Partial<CampanhaRow>): Promise<CampanhaRow> {
+    const { data, error } = await db.from("campanhas").update(updates).eq("id", id).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async toggleActive(id: string, current: boolean): Promise<CampanhaRow> {
+    const newStatus = current ? "Inativa" : "Ativa";
+    return this.update(id, { status: newStatus });
+  },
+  async remove(id: string) {
+    const { error } = await db.from("campanhas").delete().eq("id", id);
+    if (error) throw error;
+  },
+};
+
+// ── Sócios ──
+export interface SocioRow {
+  id: string;
+  nome: string;
+  participacao: number;
+  ganhos: number;
+  disponivel: number;
+  ultimo_saque: string | null;
+  status: string | null;
+  is_demo: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export const socioService = {
+  async getAll(): Promise<SocioRow[]> {
+    const { data, error } = await db.from("socios").select("*").order("created_at", { ascending: false });
+    if (error) throw error;
+    return data;
+  },
+  async create(item: Partial<SocioRow>): Promise<SocioRow> {
+    const { data, error } = await db.from("socios").insert(item).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async update(id: string, updates: Partial<SocioRow>): Promise<SocioRow> {
+    const { data, error } = await db.from("socios").update(updates).eq("id", id).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async toggleActive(id: string, current: boolean): Promise<SocioRow> {
+    const newStatus = current ? "Inativo" : "Ativo";
+    return this.update(id, { status: newStatus });
+  },
+  async remove(id: string) {
+    const { error } = await db.from("socios").delete().eq("id", id);
+    if (error) throw error;
+  },
+};
+
+// ── Saques ──
+export interface SaqueRow {
+  id: string;
+  codigo: string;
+  nome: string;
+  tipo: string;
+  valor: number;
+  origem: string | null;
+  data: string | null;
+  conta: string | null;
+  status: string | null;
+  responsavel: string | null;
+  is_demo: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export const saqueService = {
+  async getAll(): Promise<SaqueRow[]> {
+    const { data, error } = await db.from("saques").select("*").order("created_at", { ascending: false });
+    if (error) throw error;
+    return data;
+  },
+  async create(item: Partial<SaqueRow>): Promise<SaqueRow> {
+    const { data, error } = await db.from("saques").insert(item).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async update(id: string, updates: Partial<SaqueRow>): Promise<SaqueRow> {
+    const { data, error } = await db.from("saques").update(updates).eq("id", id).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async toggleActive(id: string, current: boolean): Promise<SaqueRow> {
+    const newStatus = current ? "Recusado" : "Aprovado";
+    return this.update(id, { status: newStatus });
+  },
+  async remove(id: string) {
+    const { error } = await db.from("saques").delete().eq("id", id);
+    if (error) throw error;
+  },
+};
+
+// ── Conteúdo ──
+export interface ConteudoRow {
+  id: string;
+  tema: string;
+  tipo: string | null;
+  formato: string | null;
+  canal: string | null;
+  jogo: string | null;
+  influencer: string | null;
+  campanha: string | null;
+  lp: string | null;
+  status: string | null;
+  prioridade: string | null;
+  data: string | null;
+  data_publicacao: string | null;
+  responsavel: string | null;
+  cta: string | null;
+  roteiro: string | null;
+  objetivo: string | null;
+  observacoes: string | null;
+  is_demo: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export const conteudoService = {
+  async getAll(): Promise<ConteudoRow[]> {
+    const { data, error } = await db.from("conteudo").select("*").order("data", { ascending: true });
+    if (error) throw error;
+    return data;
+  },
+  async create(item: Partial<ConteudoRow>): Promise<ConteudoRow> {
+    const { data, error } = await db.from("conteudo").insert(item).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async update(id: string, updates: Partial<ConteudoRow>): Promise<ConteudoRow> {
+    const { data, error } = await db.from("conteudo").update(updates).eq("id", id).select().single();
+    if (error) throw error;
+    return data;
+  },
+  async toggleActive(id: string, current: boolean): Promise<ConteudoRow> {
+    const newStatus = current ? "Pausado" : "Ideia";
+    return this.update(id, { status: newStatus });
+  },
+  async remove(id: string) {
+    const { error } = await db.from("conteudo").delete().eq("id", id);
+    if (error) throw error;
+  },
+};

@@ -8,6 +8,10 @@ import {
   landingPageService,
   utmService,
   landingPageInstanceService,
+  campanhaService,
+  socioService,
+  saqueService,
+  conteudoService,
 } from "@/services/supabaseService";
 import { useDemoMode } from "@/contexts/DemoModeContext";
 
@@ -124,6 +128,22 @@ export const useLandingPages = () => {
 export const useUtms = () => {
   const { demoMode } = useDemoMode();
   return useEntityCrud("utms", utmService, "UTM", demoMode);
+};
+export const useCampanhas = () => {
+  const { demoMode } = useDemoMode();
+  return useEntityCrud("campanhas", campanhaService, "Campanha", demoMode);
+};
+export const useSocios = () => {
+  const { demoMode } = useDemoMode();
+  return useEntityCrud("socios", socioService, "Sócio", demoMode);
+};
+export const useSaques = () => {
+  const { demoMode } = useDemoMode();
+  return useEntityCrud("saques", saqueService, "Saque", demoMode);
+};
+export const useConteudo = () => {
+  const { demoMode } = useDemoMode();
+  return useEntityCrud("conteudo", conteudoService, "Conteúdo", demoMode);
 };
 export const useLandingPageInstances = () => {
   const { demoMode } = useDemoMode();
