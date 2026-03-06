@@ -1,32 +1,9 @@
 import {
   TrendingUp, TrendingDown, DollarSign, Wallet, Users, ArrowUpRight, ArrowDownRight,
-  AlertTriangle, Zap, Target, MousePointerClick, UserPlus, CreditCard, BarChart3, Trophy, ExternalLink
+  AlertTriangle, Zap, Target, CreditCard, BarChart3, Trophy, ExternalLink
 } from "lucide-react";
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
 import { useNavigate } from "react-router-dom";
-
-const data = [
-  { periodo: "Sem 1", cliques: 12400, ctr: 8.2, cadastros: 620, depositos: 280, receita: 28500, liquida: 14250 },
-  { periodo: "Sem 2", cliques: 15800, ctr: 9.1, cadastros: 810, depositos: 365, receita: 36200, liquida: 18100 },
-  { periodo: "Sem 3", cliques: 14200, ctr: 8.8, cadastros: 720, depositos: 310, receita: 32800, liquida: 16400 },
-  { periodo: "Sem 4", cliques: 18600, ctr: 10.4, cadastros: 980, depositos: 440, receita: 45200, liquida: 22600 },
-];
-
-const receitaJogo = [
-  { name: "Fortune Tiger", value: 32500 }, { name: "Aviator", value: 28100 }, { name: "Gates of Olympus", value: 19800 }, { name: "Mines", value: 15200 },
-];
-
-const receitaLP = [
-  { name: "Fortune Tiger LP", value: 18400 }, { name: "Aviator Promo", value: 12300 }, { name: "Cadastro Geral", value: 9800 }, { name: "Mines Special", value: 4200 },
-];
-
-const receitaInfluencer = [
-  { name: "Rafael M.", value: 42100 }, { name: "Pedro L.", value: 35700 }, { name: "Carlos S.", value: 28500 }, { name: "Ana S.", value: 18200 },
-];
-
-const receitaPlat = [
-  { name: "Bet365", value: 45200 }, { name: "Betano", value: 38600 }, { name: "Sportingbet", value: 22100 }, { name: "Pixbet", value: 18400 },
-];
 
 const kpis = [
   { label: "Receita Bruta Total", value: "R$ 284.750", trend: "+18.3%", up: true, icon: DollarSign, variant: "accent" as const, path: "/financeiro" },
