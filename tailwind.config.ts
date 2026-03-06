@@ -7,7 +7,17 @@ export default {
   theme: {
     container: { center: true, padding: "2rem", screens: { "2xl": "1400px" } },
     extend: {
-      fontFamily: { sans: ["Inter", "system-ui", "sans-serif"] },
+      fontFamily: { sans: ["Inter", "system-ui", "-apple-system", "sans-serif"] },
+      fontSize: {
+        xs: ["0.75rem", { lineHeight: "1.5" }],
+        sm: ["0.8125rem", { lineHeight: "1.5" }],
+        base: ["0.875rem", { lineHeight: "1.6" }],
+        lg: ["1rem", { lineHeight: "1.5" }],
+        xl: ["1.125rem", { lineHeight: "1.4" }],
+        "2xl": ["1.375rem", { lineHeight: "1.3" }],
+        "3xl": ["1.625rem", { lineHeight: "1.25" }],
+        "4xl": ["2rem", { lineHeight: "1.2" }],
+      },
       colors: {
         border: "hsl(var(--border))",
         "border-subtle": "hsl(var(--border-subtle))",
@@ -40,18 +50,18 @@ export default {
       keyframes: {
         "accordion-down": { from: { height: "0", opacity: "0" }, to: { height: "var(--radix-accordion-content-height)", opacity: "1" } },
         "accordion-up": { from: { height: "var(--radix-accordion-content-height)", opacity: "1" }, to: { height: "0", opacity: "0" } },
-        "fade-in": { "0%": { opacity: "0", transform: "translateY(8px)" }, "100%": { opacity: "1", transform: "translateY(0)" } },
+        "fade-in": { "0%": { opacity: "0", transform: "translateY(6px)" }, "100%": { opacity: "1", transform: "translateY(0)" } },
         "fade-in-fast": { "0%": { opacity: "0" }, "100%": { opacity: "1" } },
-        "scale-in": { "0%": { transform: "scale(0.96)", opacity: "0" }, "100%": { transform: "scale(1)", opacity: "1" } },
+        "scale-in": { "0%": { transform: "scale(0.97)", opacity: "0" }, "100%": { transform: "scale(1)", opacity: "1" } },
         "slide-in-right": { "0%": { transform: "translateX(100%)" }, "100%": { transform: "translateX(0)" } },
         "pulse-subtle": { "0%, 100%": { opacity: "1" }, "50%": { opacity: "0.7" } },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "fade-in": "fade-in 0.4s ease-out",
+        "fade-in": "fade-in 0.35s ease-out",
         "fade-in-fast": "fade-in-fast 0.2s ease-out",
-        "scale-in": "scale-in 0.3s ease-out",
+        "scale-in": "scale-in 0.25s ease-out",
         "slide-in-right": "slide-in-right 0.3s ease-out",
         "pulse-subtle": "pulse-subtle 2s ease-in-out infinite",
       },
