@@ -1,5 +1,8 @@
 import { supabase } from "@/integrations/supabase/client";
 
+// Helper to access tables not yet in auto-generated types
+const db = supabase as any;
+
 export async function seedDemoData() {
   // 1. Platforms
   const platforms = [
@@ -24,7 +27,7 @@ export async function seedDemoData() {
   if (gameErr) throw gameErr;
 
   // 3. Game-Platform relationships
-  const gpLinks = [];
+  const gpLinks: any[] = [];
   for (const g of gameData!) {
     const shuffled = [...platData!].sort(() => 0.5 - Math.random());
     const count = 2 + Math.floor(Math.random() * 2);
@@ -32,7 +35,8 @@ export async function seedDemoData() {
       gpLinks.push({ game_id: g.id, platform_id: shuffled[i].id, is_demo: true });
     }
   }
-  await supabase.from("game_platforms").insert(gpLinks);
+  const { error: gpErr } = await supabase.from("game_platforms").insert(gpLinks);
+  if (gpErr) throw gpErr;
 
   // 4. Influencers
   const influencers = [
@@ -75,7 +79,8 @@ export async function seedDemoData() {
     { landing_page_id: lpData![1].id, influencer_id: infData![4].id, slug: "julia-costa", affiliate_link: "https://pixbet.com?ref=julia", is_active: false, is_demo: true },
     { landing_page_id: lpData![0].id, influencer_id: infData![5].id, slug: "marcos-oliveira", affiliate_link: "https://bet365.com?ref=marcos", is_active: true, is_demo: true },
   ];
-  await supabase.from("landing_page_instances").insert(instances);
+  const { error: instErr } = await supabase.from("landing_page_instances").insert(instances);
+  if (instErr) throw instErr;
 
   // 8. UTMs
   const utms = [
@@ -85,10 +90,11 @@ export async function seedDemoData() {
     { utm_source: "playbet", utm_medium: "bio", utm_campaign: "geral", subid: "ana001", influencer_id: infData![3].id, game_id: gameData![2].id, platform_id: platData![0].id, landing_page_id: lpData![2].id, template_id: tplData![2].id, is_active: true, is_demo: true },
     { utm_source: "playbet", utm_medium: "telegram", utm_campaign: "spaceman", subid: "julia001", influencer_id: infData![4].id, game_id: gameData![4].id, platform_id: platData![3].id, landing_page_id: lpData![1].id, template_id: tplData![1].id, is_active: false, is_demo: true },
   ];
-  await supabase.from("utms").insert(utms);
+  const { error: utmErr } = await supabase.from("utms").insert(utms);
+  if (utmErr) throw utmErr;
 
-  // 9. Clicks (simulated — 50 clicks over 30 days)
-  const clicks = [];
+  // 9. Clicks (50 over 30 days)
+  const clicks: any[] = [];
   const now = new Date();
   for (let i = 0; i < 50; i++) {
     const randInf = infData![Math.floor(Math.random() * infData!.length)];
@@ -106,7 +112,8 @@ export async function seedDemoData() {
       is_demo: true,
     });
   }
-  await supabase.from("clicks").insert(clicks);
+  const { error: clickErr } = await supabase.from("clicks").insert(clicks);
+  if (clickErr) throw clickErr;
 
   // 10. Campanhas
   const campanhas = [
@@ -115,7 +122,8 @@ export async function seedDemoData() {
     { nome: "Bônus Fev", objetivo: "Divulgar bônus de cadastro", jogo: "Vários", plataforma: "Betano", influencer: "Carlos S.", inicio: "2026-02-01", fim: "2026-02-28", status: "Finalizada", resultado: "+420 cadastros", is_demo: true },
     { nome: "VIP Mines", objetivo: "Campanha exclusiva grupo VIP", jogo: "Mines", plataforma: "Sportingbet", influencer: "Ana S.", inicio: "2026-02-15", fim: "2026-03-01", status: "Finalizada", resultado: "+180 depósitos", is_demo: true },
   ];
-  await supabase.from("campanhas").insert(campanhas);
+  const { error: campErr } = await db.from("campanhas").insert(campanhas);
+  if (campErr) throw campErr;
 
   // 11. Sócios
   const socios = [
@@ -123,7 +131,8 @@ export async function seedDemoData() {
     { nome: "Fernanda Rocha", participacao: 35, ganhos: 59797, disponivel: 14175, ultimo_saque: "28/02/2026", status: "Ativo", is_demo: true },
     { nome: "Lucas Martins", participacao: 25, ganhos: 42712, disponivel: 10125, ultimo_saque: "25/02/2026", status: "Ativo", is_demo: true },
   ];
-  await supabase.from("socios").insert(socios);
+  const { error: socErr } = await db.from("socios").insert(socios);
+  if (socErr) throw socErr;
 
   // 12. Saques
   const saques = [
@@ -134,7 +143,8 @@ export async function seedDemoData() {
     { codigo: "SAQ-005", nome: "Pedro Lima", tipo: "Influencer", valor: 6100, origem: "Comissão afiliado", data: "2026-03-01", conta: "PIX •••2266", status: "Recusado", responsavel: "Admin", is_demo: true },
     { codigo: "SAQ-006", nome: "Carlos Silva", tipo: "Influencer", valor: 3500, origem: "Comissão afiliado", data: "2026-02-28", conta: "PIX •••3388", status: "Aprovado", responsavel: "Admin", is_demo: true },
   ];
-  await supabase.from("saques").insert(saques);
+  const { error: saqErr } = await db.from("saques").insert(saques);
+  if (saqErr) throw saqErr;
 
   // 13. Conteúdo / Calendário Editorial
   const conteudo = [
@@ -149,22 +159,37 @@ export async function seedDemoData() {
     { tema: "Live tirada de dúvidas", tipo: "Live", formato: "Vertical", canal: "Instagram", jogo: "Vários", influencer: "Ana S.", campanha: "—", lp: "Cadastro Geral", status: "Ideia", prioridade: "Baixa", data: "2026-03-14", responsavel: "Ana", observacoes: "Confirmar horário", is_demo: true },
     { tema: "Teaser novo jogo Spaceman", tipo: "Reels", formato: "Vertical 9:16", canal: "TikTok", jogo: "Spaceman", influencer: "Pedro L.", campanha: "—", lp: "—", status: "Pausado", prioridade: "Baixa", data: "2026-03-15", responsavel: "Pedro", observacoes: "Jogo inativo, aguardar reativação", is_demo: true },
   ];
-  await supabase.from("conteudo").insert(conteudo);
+  const { error: contErr } = await db.from("conteudo").insert(conteudo);
+  if (contErr) throw contErr;
 }
 
 export async function clearDemoData() {
   // Delete only demo records, in FK order
-  await supabase.from("clicks").delete().eq("is_demo", true);
-  await supabase.from("utms").delete().eq("is_demo", true);
-  await supabase.from("landing_page_instances").delete().eq("is_demo", true);
-  await supabase.from("landing_pages").delete().eq("is_demo", true);
-  await supabase.from("templates").delete().eq("is_demo", true);
-  await supabase.from("game_platforms").delete().eq("is_demo", true);
-  await supabase.from("games").delete().eq("is_demo", true);
-  await supabase.from("platforms").delete().eq("is_demo", true);
-  await supabase.from("influencers").delete().eq("is_demo", true);
-  await supabase.from("conteudo").delete().eq("is_demo", true);
-  await supabase.from("campanhas").delete().eq("is_demo", true);
-  await supabase.from("saques").delete().eq("is_demo", true);
-  await supabase.from("socios").delete().eq("is_demo", true);
+  const { error: e1 } = await supabase.from("clicks").delete().eq("is_demo", true);
+  if (e1) throw e1;
+  const { error: e2 } = await supabase.from("utms").delete().eq("is_demo", true);
+  if (e2) throw e2;
+  const { error: e3 } = await supabase.from("landing_page_instances").delete().eq("is_demo", true);
+  if (e3) throw e3;
+  const { error: e4 } = await supabase.from("landing_pages").delete().eq("is_demo", true);
+  if (e4) throw e4;
+  const { error: e5 } = await supabase.from("templates").delete().eq("is_demo", true);
+  if (e5) throw e5;
+  const { error: e6 } = await supabase.from("game_platforms").delete().eq("is_demo", true);
+  if (e6) throw e6;
+  const { error: e7 } = await supabase.from("games").delete().eq("is_demo", true);
+  if (e7) throw e7;
+  const { error: e8 } = await supabase.from("platforms").delete().eq("is_demo", true);
+  if (e8) throw e8;
+  const { error: e9 } = await supabase.from("influencers").delete().eq("is_demo", true);
+  if (e9) throw e9;
+  // New tables
+  const { error: e10 } = await db.from("conteudo").delete().eq("is_demo", true);
+  if (e10) throw e10;
+  const { error: e11 } = await db.from("campanhas").delete().eq("is_demo", true);
+  if (e11) throw e11;
+  const { error: e12 } = await db.from("saques").delete().eq("is_demo", true);
+  if (e12) throw e12;
+  const { error: e13 } = await db.from("socios").delete().eq("is_demo", true);
+  if (e13) throw e13;
 }

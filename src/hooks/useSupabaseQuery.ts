@@ -8,6 +8,10 @@ import {
   landingPageService,
   utmService,
   landingPageInstanceService,
+  campanhaService,
+  socioService,
+  saqueService,
+  conteudoService,
 } from "@/services/supabaseService";
 import { useDemoMode } from "@/contexts/DemoModeContext";
 
