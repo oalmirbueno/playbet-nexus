@@ -34,76 +34,81 @@ const stats = [
   { label: "Receita por jogo", value: "R$ 22.700", icon: Gamepad2, trend: "+18%" },
 ];
 
+const ct = { background: "hsl(0 0% 8%)", border: "1px solid hsl(0 0% 15%)", borderRadius: 8, color: "#fff", fontSize: 12 };
+
 export default function Dashboard() {
   return (
-    <div>
-      <h1 className="page-header">Dashboard</h1>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+        <p className="text-sm text-muted-foreground mt-1">Visão geral consolidada da operação</p>
+      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {stats.map((s) => (
-          <div key={s.label} className="stat-card">
+          <div key={s.label} className="glass-card p-6 flex flex-col gap-3">
             <div className="flex items-center justify-between">
-              <span className="text-muted-foreground text-sm">{s.label}</span>
-              <s.icon size={18} className="text-accent" />
+              <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{s.label}</span>
+              <s.icon size={15} className="text-muted-foreground" />
             </div>
-            <div className="text-2xl font-bold">{s.value}</div>
-            <span className="text-xs text-success">{s.trend} vs ontem</span>
+            <div className="text-2xl font-bold tracking-tight">{s.value}</div>
+            <span className="text-xs text-success font-medium">{s.trend} vs ontem</span>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="glass-card p-5">
-          <h3 className="text-sm font-semibold text-muted-foreground mb-4">Cliques & Cadastros Semanal</h3>
-          <ResponsiveContainer width="100%" height={260}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="glass-card p-6">
+          <h3 className="text-sm font-semibold text-foreground mb-5">Cliques & Cadastros Semanal</h3>
+          <ResponsiveContainer width="100%" height={280}>
             <LineChart data={weeklyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 18%)" />
-              <XAxis dataKey="day" stroke="hsl(0 0% 60%)" fontSize={12} />
-              <YAxis stroke="hsl(0 0% 60%)" fontSize={12} />
-              <Tooltip contentStyle={{ background: "hsl(0 0% 9%)", border: "1px solid hsl(0 0% 18%)", borderRadius: 8, color: "#fff" }} />
-              <Line type="monotone" dataKey="cliques" stroke="hsl(217 85% 30%)" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="cadastros" stroke="hsl(45 100% 50%)" strokeWidth={2} dot={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 15%)" />
+              <XAxis dataKey="day" stroke="hsl(0 0% 40%)" fontSize={12} />
+              <YAxis stroke="hsl(0 0% 40%)" fontSize={12} />
+              <Tooltip contentStyle={ct} />
+              <Line type="monotone" dataKey="cliques" stroke="hsl(220 78% 35%)" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="cadastros" stroke="hsl(0 0% 50%)" strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="glass-card p-5">
-          <h3 className="text-sm font-semibold text-muted-foreground mb-4">Receita Semanal</h3>
-          <ResponsiveContainer width="100%" height={260}>
+        <div className="glass-card p-6">
+          <h3 className="text-sm font-semibold text-foreground mb-5">Receita Semanal</h3>
+          <ResponsiveContainer width="100%" height={280}>
             <BarChart data={weeklyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 18%)" />
-              <XAxis dataKey="day" stroke="hsl(0 0% 60%)" fontSize={12} />
-              <YAxis stroke="hsl(0 0% 60%)" fontSize={12} />
-              <Tooltip contentStyle={{ background: "hsl(0 0% 9%)", border: "1px solid hsl(0 0% 18%)", borderRadius: 8, color: "#fff" }} />
-              <Bar dataKey="receita" fill="hsl(217 85% 30%)" radius={[4, 4, 0, 0]} />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 15%)" />
+              <XAxis dataKey="day" stroke="hsl(0 0% 40%)" fontSize={12} />
+              <YAxis stroke="hsl(0 0% 40%)" fontSize={12} />
+              <Tooltip contentStyle={ct} />
+              <Bar dataKey="receita" fill="hsl(220 78% 30%)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="glass-card p-5">
-          <h3 className="text-sm font-semibold text-muted-foreground mb-4">Receita por Plataforma</h3>
-          <ResponsiveContainer width="100%" height={220}>
+        <div className="glass-card p-6">
+          <h3 className="text-sm font-semibold text-foreground mb-5">Receita por Plataforma</h3>
+          <ResponsiveContainer width="100%" height={240}>
             <BarChart data={plataformaData} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 18%)" />
-              <XAxis type="number" stroke="hsl(0 0% 60%)" fontSize={12} />
-              <YAxis dataKey="name" type="category" stroke="hsl(0 0% 60%)" fontSize={12} width={100} />
-              <Tooltip contentStyle={{ background: "hsl(0 0% 9%)", border: "1px solid hsl(0 0% 18%)", borderRadius: 8, color: "#fff" }} />
-              <Bar dataKey="receita" fill="hsl(45 100% 50%)" radius={[0, 4, 4, 0]} />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 15%)" />
+              <XAxis type="number" stroke="hsl(0 0% 40%)" fontSize={12} />
+              <YAxis dataKey="name" type="category" stroke="hsl(0 0% 40%)" fontSize={12} width={100} />
+              <Tooltip contentStyle={ct} />
+              <Bar dataKey="receita" fill="hsl(0 0% 35%)" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="glass-card p-5">
-          <h3 className="text-sm font-semibold text-muted-foreground mb-4">Receita por Jogo</h3>
-          <ResponsiveContainer width="100%" height={220}>
+        <div className="glass-card p-6">
+          <h3 className="text-sm font-semibold text-foreground mb-5">Receita por Jogo</h3>
+          <ResponsiveContainer width="100%" height={240}>
             <BarChart data={jogoData} layout="vertical">
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 18%)" />
-              <XAxis type="number" stroke="hsl(0 0% 60%)" fontSize={12} />
-              <YAxis dataKey="name" type="category" stroke="hsl(0 0% 60%)" fontSize={12} width={100} />
-              <Tooltip contentStyle={{ background: "hsl(0 0% 9%)", border: "1px solid hsl(0 0% 18%)", borderRadius: 8, color: "#fff" }} />
-              <Bar dataKey="receita" fill="hsl(217 85% 30%)" radius={[0, 4, 4, 0]} />
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 15%)" />
+              <XAxis type="number" stroke="hsl(0 0% 40%)" fontSize={12} />
+              <YAxis dataKey="name" type="category" stroke="hsl(0 0% 40%)" fontSize={12} width={100} />
+              <Tooltip contentStyle={ct} />
+              <Bar dataKey="receita" fill="hsl(220 78% 30%)" radius={[0, 4, 4, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>

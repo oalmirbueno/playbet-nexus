@@ -20,12 +20,15 @@ const receitaPlat = [
   { name: "Bet365", value: 45200 }, { name: "Betano", value: 38600 }, { name: "Sportingbet", value: 22100 }, { name: "Pixbet", value: 18400 },
 ];
 
-const ct = { background: "hsl(0 0% 8%)", border: "1px solid hsl(0 0% 15%)", borderRadius: 8, color: "#fff", fontSize: 11 };
+const ct = { background: "hsl(0 0% 8%)", border: "1px solid hsl(0 0% 15%)", borderRadius: 8, color: "#fff", fontSize: 12 };
 
 export default function Analytics() {
   return (
-    <div className="space-y-6">
-      <div><h1 className="page-header">Analytics</h1><p className="page-subtitle">Centro analítico da operação — métricas profundas e filtros avançados</p></div>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Analytics</h1>
+        <p className="text-sm text-muted-foreground mt-1">Centro analítico da operação — métricas profundas e filtros avançados</p>
+      </div>
 
       <div className="flex flex-wrap gap-3">
         <select className="select-field"><option>Período: Março 2026</option></select>
@@ -35,72 +38,72 @@ export default function Analytics() {
         <select className="select-field"><option>Campanha: Todas</option></select>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="glass-card p-5">
-          <h3 className="section-title">Cliques & CTR</h3>
-          <ResponsiveContainer width="100%" height={220}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="glass-card p-6">
+          <h3 className="text-sm font-semibold text-foreground mb-5">Cliques & CTR</h3>
+          <ResponsiveContainer width="100%" height={260}>
             <AreaChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 15%)" />
               <XAxis dataKey="periodo" stroke="hsl(0 0% 40%)" fontSize={11} />
               <YAxis stroke="hsl(0 0% 40%)" fontSize={11} />
               <Tooltip contentStyle={ct} />
-              <Area type="monotone" dataKey="cliques" stroke="hsl(217 85% 40%)" fill="hsl(217 85% 40% / 0.1)" strokeWidth={2} />
+              <Area type="monotone" dataKey="cliques" stroke="hsl(220 78% 35%)" fill="hsl(220 78% 35% / 0.08)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
-        <div className="glass-card p-5">
-          <h3 className="section-title">Cadastros & Depósitos Estimados</h3>
-          <ResponsiveContainer width="100%" height={220}>
+        <div className="glass-card p-6">
+          <h3 className="text-sm font-semibold text-foreground mb-5">Cadastros & Depósitos Estimados</h3>
+          <ResponsiveContainer width="100%" height={260}>
             <BarChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 15%)" />
               <XAxis dataKey="periodo" stroke="hsl(0 0% 40%)" fontSize={11} />
               <YAxis stroke="hsl(0 0% 40%)" fontSize={11} />
               <Tooltip contentStyle={ct} />
-              <Bar dataKey="cadastros" fill="hsl(217 85% 35%)" radius={[3, 3, 0, 0]} />
-              <Bar dataKey="depositos" fill="hsl(45 100% 50%)" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="cadastros" fill="hsl(220 78% 30%)" radius={[3, 3, 0, 0]} />
+              <Bar dataKey="depositos" fill="hsl(0 0% 40%)" radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <div className="glass-card p-5">
-          <h3 className="section-title">Receita Bruta vs Líquida</h3>
-          <ResponsiveContainer width="100%" height={220}>
+        <div className="glass-card p-6">
+          <h3 className="text-sm font-semibold text-foreground mb-5">Receita Bruta vs Líquida</h3>
+          <ResponsiveContainer width="100%" height={260}>
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 15%)" />
               <XAxis dataKey="periodo" stroke="hsl(0 0% 40%)" fontSize={11} />
               <YAxis stroke="hsl(0 0% 40%)" fontSize={11} />
               <Tooltip contentStyle={ct} />
-              <Line type="monotone" dataKey="receita" stroke="hsl(45 100% 50%)" strokeWidth={2} />
-              <Line type="monotone" dataKey="liquida" stroke="hsl(152 69% 41%)" strokeWidth={2} />
+              <Line type="monotone" dataKey="receita" stroke="hsl(0 0% 50%)" strokeWidth={2} />
+              <Line type="monotone" dataKey="liquida" stroke="hsl(152 55% 38%)" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
         </div>
-        <div className="glass-card p-5">
-          <h3 className="section-title">Receita por Jogo</h3>
-          <ResponsiveContainer width="100%" height={220}>
+        <div className="glass-card p-6">
+          <h3 className="text-sm font-semibold text-foreground mb-5">Receita por Jogo</h3>
+          <ResponsiveContainer width="100%" height={260}>
             <BarChart data={receitaJogo} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 15%)" />
               <XAxis type="number" stroke="hsl(0 0% 40%)" fontSize={10} />
-              <YAxis dataKey="name" type="category" stroke="hsl(0 0% 40%)" fontSize={10} width={85} />
+              <YAxis dataKey="name" type="category" stroke="hsl(0 0% 40%)" fontSize={10} width={100} />
               <Tooltip contentStyle={ct} />
-              <Bar dataKey="value" fill="hsl(45 100% 50%)" radius={[0, 3, 3, 0]} />
+              <Bar dataKey="value" fill="hsl(0 0% 40%)" radius={[0, 3, 3, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {[
-          { title: "Receita por LP", data: receitaLP, color: "hsl(199 89% 48%)" },
-          { title: "Receita por Influencer", data: receitaInfluencer, color: "hsl(152 69% 41%)" },
-          { title: "Receita por Plataforma", data: receitaPlat, color: "hsl(217 85% 40%)" },
+          { title: "Receita por LP", data: receitaLP, color: "hsl(205 70% 40%)" },
+          { title: "Receita por Influencer", data: receitaInfluencer, color: "hsl(152 55% 35%)" },
+          { title: "Receita por Plataforma", data: receitaPlat, color: "hsl(220 78% 30%)" },
         ].map((c) => (
-          <div key={c.title} className="glass-card p-5">
-            <h3 className="section-title">{c.title}</h3>
-            <ResponsiveContainer width="100%" height={180}>
+          <div key={c.title} className="glass-card p-6">
+            <h3 className="text-sm font-semibold text-foreground mb-5">{c.title}</h3>
+            <ResponsiveContainer width="100%" height={220}>
               <BarChart data={c.data} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 15%)" />
                 <XAxis type="number" stroke="hsl(0 0% 40%)" fontSize={10} />
-                <YAxis dataKey="name" type="category" stroke="hsl(0 0% 40%)" fontSize={10} width={85} />
+                <YAxis dataKey="name" type="category" stroke="hsl(0 0% 40%)" fontSize={10} width={100} />
                 <Tooltip contentStyle={ct} />
                 <Bar dataKey="value" fill={c.color} radius={[0, 3, 3, 0]} />
               </BarChart>
