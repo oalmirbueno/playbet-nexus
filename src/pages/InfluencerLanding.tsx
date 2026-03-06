@@ -1,57 +1,97 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import type { InfluencerRow } from "@/services/supabaseService";
 import { Gamepad2, Star, Shield, ArrowRight, Zap, Trophy, Gift } from "lucide-react";
 import logo from "@/assets/logo.png";
 
 type LoadState = "loading" | "ready" | "not_found" | "inactive";
 
+interface ResolvedLanding {
+  affiliate_link: string;
+  influencer_id: string;
+  influencer_name: string;
+  instance_id: string | null;
+  landing_page_id: string | null;
+}
+
 export default function InfluencerLanding() {
   const { slug } = useParams<{ slug: string }>();
   const [state, setState] = useState<LoadState>("loading");
-  const [influencer, setInfluencer] = useState<InfluencerRow | null>(null);
+  const [resolved, setResolved] = useState<ResolvedLanding | null>(null);
   const [clicking, setClicking] = useState(false);
 
   useEffect(() => {
     if (!slug) { setState("not_found"); return; }
+
     (async () => {
-      const { data, error } = await supabase
+      // 1. Try landing_page_instances first (LP instance by slug)
+      const { data: instance } = await supabase
+        .from("landing_page_instances")
+        .select("*")
+        .eq("slug", slug)
+        .maybeSingle();
+
+      if (instance) {
+        if (!instance.is_active) { setState("inactive"); return; }
+
+        // Get influencer name for display (optional)
+        const { data: inf } = await supabase
+          .from("influencers")
+          .select("name")
+          .eq("id", instance.influencer_id)
+          .maybeSingle();
+
+        setResolved({
+          affiliate_link: instance.affiliate_link,
+          influencer_id: instance.influencer_id,
+          influencer_name: inf?.name || "",
+          instance_id: instance.id,
+          landing_page_id: instance.landing_page_id,
+        });
+        setState("ready");
+        return;
+      }
+
+      // 2. Fallback: try influencers table by slug
+      const { data: influencer } = await supabase
         .from("influencers")
         .select("*")
         .eq("slug", slug)
-        .single();
-      if (error || !data) { setState("not_found"); return; }
-      if (!data.is_active) { setState("inactive"); return; }
-      setInfluencer(data);
+        .maybeSingle();
+
+      if (!influencer) { setState("not_found"); return; }
+      if (!influencer.is_active) { setState("inactive"); return; }
+
+      setResolved({
+        affiliate_link: influencer.affiliate_link || "",
+        influencer_id: influencer.id,
+        influencer_name: influencer.name,
+        instance_id: null,
+        landing_page_id: null,
+      });
       setState("ready");
     })();
   }, [slug]);
 
   const handleCTA = async () => {
-    if (!influencer || clicking) return;
+    if (!resolved?.affiliate_link || clicking) return;
     setClicking(true);
-    const link = influencer.affiliate_link;
 
-    // Register click, then redirect regardless of success
     try {
       await supabase.from("clicks").insert({
-        influencer_id: influencer.id,
+        influencer_id: resolved.influencer_id,
+        landing_page_id: resolved.landing_page_id,
         clicked_at: new Date().toISOString(),
         user_agent: navigator.userAgent,
         referrer: document.referrer || null,
         route: `/i/${slug}`,
-        source: "public_landing",
+        source: resolved.instance_id ? "lp_instance" : "public_landing",
       });
     } catch {
       // Don't block redirect on tracking failure
     }
 
-    if (link) {
-      window.location.href = link;
-    } else {
-      setClicking(false);
-    }
+    window.location.href = resolved.affiliate_link;
   };
 
   // ── Loading ──
@@ -85,6 +125,8 @@ export default function InfluencerLanding() {
     );
   }
 
+  const hasLink = !!resolved?.affiliate_link;
+
   // ── Ready ──
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white overflow-x-hidden">
@@ -105,12 +147,12 @@ export default function InfluencerLanding() {
           </p>
           <button
             onClick={handleCTA}
-            disabled={clicking || !influencer?.affiliate_link}
+            disabled={clicking || !hasLink}
             className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-8 py-3.5 rounded-xl text-base transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-400/30"
           >
             {clicking ? "Redirecionando..." : "Cadastrar Agora"} <ArrowRight size={18} />
           </button>
-          {!influencer?.affiliate_link && (
+          {!hasLink && (
             <p className="text-xs text-gray-500 mt-3">Link de cadastro em configuração.</p>
           )}
         </div>
@@ -157,7 +199,7 @@ export default function InfluencerLanding() {
           <p className="text-sm text-gray-400 mb-5">Cadastre-se agora e comece a jogar com bônus exclusivo.</p>
           <button
             onClick={handleCTA}
-            disabled={clicking || !influencer?.affiliate_link}
+            disabled={clicking || !hasLink}
             className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-8 py-3 rounded-xl text-sm transition-all shadow-lg shadow-emerald-500/25"
           >
             {clicking ? "Redirecionando..." : "Quero Meu Bônus"} <ArrowRight size={16} />
