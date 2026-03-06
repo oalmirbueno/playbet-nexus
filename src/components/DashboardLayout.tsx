@@ -104,8 +104,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       >
         {/* Logo */}
         <div className={`flex items-center ${sidebarCollapsed ? "justify-center px-2" : "justify-between px-5"} h-[60px] border-b border-sidebar-border shrink-0`}>
-          {!sidebarCollapsed && <img src={logo} alt="PlayBet" className="h-7 opacity-90" />}
-          {sidebarCollapsed && <img src={logo} alt="PlayBet" className="h-5 w-5 object-contain opacity-90" />}
+          {!sidebarCollapsed && <img src={logo} alt="PlayBet" className="h-10 opacity-90" />}
+          {sidebarCollapsed && <img src={logo} alt="PlayBet" className="h-7 w-7 object-contain opacity-90" />}
           <button className="md:hidden text-sidebar-foreground hover:text-foreground transition-colors" onClick={() => setSidebarOpen(false)}>
             <X size={16} />
           </button>
