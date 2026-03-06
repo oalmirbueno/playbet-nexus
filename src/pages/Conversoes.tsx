@@ -113,7 +113,7 @@ export default function Conversoes() {
       </div>
 
       {/* Table */}
-      <div className="glass-card overflow-x-auto">
+      <div className="glass-card overflow-x-auto invisible-scroll">
         <table className="data-table">
           <thead>
             <tr><th>Data</th><th>Origem</th><th>Influencer</th><th>LP</th><th>Jogo</th><th>Plat.</th><th>Campanha</th><th>Cliques</th><th>Cadastros</th><th>Depósitos</th><th>Receita Est.</th><th>Status</th><th></th></tr>

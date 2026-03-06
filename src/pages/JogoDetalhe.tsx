@@ -110,7 +110,7 @@ export default function JogoDetalhe() {
       )}
 
       {tab === "plataformas" && (
-        <div className="glass-card overflow-x-auto">
+        <div className="glass-card overflow-x-auto invisible-scroll">
           <table className="data-table"><thead><tr><th>Plataforma</th><th>Status</th></tr></thead>
             <tbody>{plats.map((p, i) => <tr key={i}><td className="font-medium cursor-pointer hover:text-accent" onClick={() => navigate("/plataformas")}>{p}</td><td><span className="badge-success">Ativo</span></td></tr>)}</tbody>
           </table>
@@ -118,7 +118,7 @@ export default function JogoDetalhe() {
       )}
 
       {tab === "lps" && (
-        <div className="glass-card overflow-x-auto">
+        <div className="glass-card overflow-x-auto invisible-scroll">
           <table className="data-table"><thead><tr><th>Nome</th><th>Rota</th><th>Cliques</th><th>CTR</th><th>Status</th></tr></thead>
             <tbody>{jogoLPs.map(l => <tr key={l.id}><td className="font-medium">{l.nome}</td><td className="font-mono text-xs text-accent">{l.rota}</td><td>{l.cliques.toLocaleString()}</td><td className="text-accent">{l.ctr}</td><td><span className={l.status === "Ativo" ? "badge-success" : "badge-warning"}>{l.status}</span></td></tr>)}</tbody>
           </table>
@@ -127,7 +127,7 @@ export default function JogoDetalhe() {
       )}
 
       {tab === "influencers" && (
-        <div className="glass-card overflow-x-auto">
+        <div className="glass-card overflow-x-auto invisible-scroll">
           <table className="data-table"><thead><tr><th>Nome</th><th>Instagram</th><th>Receita</th><th>Status</th></tr></thead>
             <tbody>{jogoInfluencers.map(inf => <tr key={inf.id}><td className="font-medium cursor-pointer hover:text-accent" onClick={() => navigate(`/influencers/${inf.id}`)}>{inf.nome}</td><td className="text-accent text-xs">{inf.insta}</td><td>R$ {inf.receita.toLocaleString()}</td><td><span className={inf.status === "Ativo" ? "badge-success" : "badge-warning"}>{inf.status}</span></td></tr>)}</tbody>
           </table>
@@ -135,7 +135,7 @@ export default function JogoDetalhe() {
       )}
 
       {tab === "campanhas" && (
-        <div className="glass-card overflow-x-auto">
+        <div className="glass-card overflow-x-auto invisible-scroll">
           <table className="data-table"><thead><tr><th>Nome</th><th>Influencer</th><th>Período</th><th>Status</th><th>Resultado</th></tr></thead>
             <tbody>{jogoCampanhas.map(c => <tr key={c.id}><td className="font-medium cursor-pointer hover:text-accent" onClick={() => navigate(`/campanhas/${c.id}`)}>{c.nome}</td><td>{c.influencer}</td><td className="text-xs">{c.inicio} - {c.fim}</td><td><span className={c.status === "Ativa" ? "badge-success" : c.status === "Planejada" ? "badge-info" : "badge-neutral"}>{c.status}</span></td><td className="text-xs">{c.resultado}</td></tr>)}</tbody>
           </table>
@@ -143,7 +143,7 @@ export default function JogoDetalhe() {
       )}
 
       {tab === "links" && (
-        <div className="glass-card overflow-x-auto">
+        <div className="glass-card overflow-x-auto invisible-scroll">
           <table className="data-table"><thead><tr><th>Nome</th><th>Plataforma</th><th>Influencer</th><th>Cliques</th><th>Status</th></tr></thead>
             <tbody>{jogoLinks.map(l => <tr key={l.id}><td className="font-medium">{l.nome}</td><td>{l.plat}</td><td>{l.influencer}</td><td>{l.cliques.toLocaleString()}</td><td><span className={l.status === "Ativo" ? "badge-success" : "badge-danger"}>{l.status}</span></td></tr>)}</tbody>
           </table>
@@ -162,7 +162,7 @@ export default function JogoDetalhe() {
       )}
 
       {tab === "conteudo" && (
-        <div className="glass-card overflow-x-auto">
+        <div className="glass-card overflow-x-auto invisible-scroll">
           <table className="data-table"><thead><tr><th>Tema</th><th>Tipo</th><th>Influencer</th><th>Campanha</th><th>Status</th><th>Data</th></tr></thead>
             <tbody>{jogoConteudos.map(c => <tr key={c.id}><td className="font-medium">{c.tema}</td><td><span className="badge-neutral">{c.tipo}</span></td><td>{c.influencer}</td><td>{c.campanha}</td><td><span className={c.status === "Publicado" ? "badge-success" : c.status === "Agendado" ? "badge-info" : "badge-warning"}>{c.status}</span></td><td className="text-xs">{c.data}</td></tr>)}</tbody>
           </table>

@@ -14,7 +14,7 @@ export default function UsuariosInternos() {
         <div><h1 className="page-header">Usuários Internos</h1><p className="page-subtitle">Equipe interna da operação PlayBet</p></div>
         <button className="btn-primary"><Plus size={14} /> Novo Usuário</button>
       </div>
-      <div className="glass-card overflow-x-auto">
+      <div className="glass-card overflow-x-auto invisible-scroll">
         <table className="data-table">
           <thead><tr><th>Nome</th><th>E-mail</th><th>Função</th><th>Último Acesso</th><th>Status</th></tr></thead>
           <tbody>

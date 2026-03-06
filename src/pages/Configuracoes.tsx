@@ -15,7 +15,7 @@ export default function Configuracoes() {
     <div className="space-y-6">
       <div><h1 className="page-header">Configurações</h1><p className="page-subtitle">Configurações gerais da plataforma PlayBet</p></div>
 
-      <div className="flex gap-1 bg-secondary/50 p-1 rounded-xl overflow-x-auto">
+      <div className="flex gap-1 bg-secondary/50 p-1 rounded-xl overflow-x-auto invisible-scroll">
         {tabs.map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)} className={`${tab === t.key ? "tab-btn-active" : "tab-btn"} flex items-center gap-1.5 whitespace-nowrap`}>
             <t.icon size={13} /> {t.label}

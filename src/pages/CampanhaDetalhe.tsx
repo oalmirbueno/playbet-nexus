@@ -71,7 +71,7 @@ export default function CampanhaDetalhe() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 border-b border-border">
+      <div className="flex gap-1.5 overflow-x-auto invisible-scroll pb-1 border-b border-border">
         {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-1.5 px-4 py-2.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors ${tab === t.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`}>
             <t.icon size={14} /> {t.label}
@@ -119,7 +119,7 @@ export default function CampanhaDetalhe() {
       )}
 
       {tab === "influencers" && (
-        <div className="glass-card overflow-x-auto rounded-lg">
+        <div className="glass-card overflow-x-auto invisible-scroll rounded-lg">
           <table className="data-table"><thead><tr><th>Nome</th><th>Instagram</th><th>Receita</th><th>Status</th></tr></thead>
             <tbody>{campInfluencers.map(inf => <tr key={inf.id}><td className="font-medium cursor-pointer hover:text-primary transition-colors" onClick={() => navigate(`/influencers/${inf.id}`)}>{inf.nome}</td><td className="text-sm text-muted-foreground">{inf.insta}</td><td>R$ {inf.receita.toLocaleString()}</td><td><span className={inf.status === "Ativo" ? "badge-success" : "badge-warning"}>{inf.status}</span></td></tr>)}</tbody>
           </table>
@@ -128,7 +128,7 @@ export default function CampanhaDetalhe() {
       )}
 
       {tab === "lps" && (
-        <div className="glass-card overflow-x-auto rounded-lg">
+        <div className="glass-card overflow-x-auto invisible-scroll rounded-lg">
           <table className="data-table"><thead><tr><th>Nome</th><th>Rota</th><th>Cliques</th><th>CTR</th><th>Status</th></tr></thead>
             <tbody>{campLPs.map(l => <tr key={l.id}><td className="font-medium">{l.nome}</td><td className="font-mono text-sm text-muted-foreground">{l.rota}</td><td>{l.cliques.toLocaleString()}</td><td>{l.ctr}</td><td><span className={l.status === "Ativo" ? "badge-success" : "badge-warning"}>{l.status}</span></td></tr>)}</tbody>
           </table>
@@ -136,7 +136,7 @@ export default function CampanhaDetalhe() {
       )}
 
       {tab === "links" && (
-        <div className="glass-card overflow-x-auto rounded-lg">
+        <div className="glass-card overflow-x-auto invisible-scroll rounded-lg">
           <table className="data-table"><thead><tr><th>Nome</th><th>Plataforma</th><th>UTM</th><th>Cliques</th><th>Status</th></tr></thead>
             <tbody>{campLinks.map(l => <tr key={l.id}><td className="font-medium">{l.nome}</td><td>{l.plat}</td><td className="font-mono text-sm text-muted-foreground">{l.source}/{l.medium}/{l.campaign}</td><td>{l.cliques.toLocaleString()}</td><td><span className={l.status === "Ativo" ? "badge-success" : "badge-danger"}>{l.status}</span></td></tr>)}</tbody>
           </table>
@@ -144,7 +144,7 @@ export default function CampanhaDetalhe() {
       )}
 
       {tab === "conteudo" && (
-        <div className="glass-card overflow-x-auto rounded-lg">
+        <div className="glass-card overflow-x-auto invisible-scroll rounded-lg">
           <table className="data-table"><thead><tr><th>Tema</th><th>Tipo</th><th>Influencer</th><th>Status</th><th>Data</th></tr></thead>
             <tbody>{campConteudos.map(c => <tr key={c.id}><td className="font-medium">{c.tema}</td><td><span className="badge-neutral">{c.tipo}</span></td><td>{c.influencer}</td><td><span className={c.status === "Publicado" ? "badge-success" : c.status === "Agendado" ? "badge-info" : "badge-neutral"}>{c.status}</span></td><td className="text-sm text-muted-foreground">{c.data}</td></tr>)}</tbody>
           </table>

@@ -110,7 +110,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto sidebar-scroll py-1.5">
+        <nav className="flex-1 overflow-y-auto invisible-scroll sidebar-scroll py-1.5">
           {sections.map((section) => {
             const isCollapsed = collapsed[section.title];
             return (
@@ -210,7 +210,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
           </div>
         </header>
-        <main className="flex-1 p-6 lg:p-8 overflow-y-auto main-scroll animate-fade-in">{children}</main>
+        <main className="flex-1 p-6 lg:p-8 overflow-y-auto invisible-scroll main-scroll animate-fade-in">{children}</main>
       </div>
     </div>
   );
