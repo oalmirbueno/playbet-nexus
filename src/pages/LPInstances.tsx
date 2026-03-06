@@ -356,8 +356,20 @@ export default function LPInstances() {
               <>
                 {generatedUrl && (
                   <div className="bg-secondary/30 border border-border rounded-lg p-4">
-                    <span className="text-xs text-muted-foreground">URL Pública Gerada</span>
-                    <p className="font-mono text-sm text-accent mt-1 break-all">{generatedUrl}</p>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-muted-foreground">URL Pública Gerada</span>
+                      <button
+                        type="button"
+                        className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"
+                        title="Copiar URL"
+                        onClick={() => { navigator.clipboard.writeText(generatedUrl); toast({ title: "URL copiada!" }); }}
+                      >
+                        <Copy size={12} />
+                      </button>
+                    </div>
+                    <div className="overflow-x-auto invisible-scroll">
+                      <p className="font-mono text-sm text-accent whitespace-nowrap">{generatedUrl}</p>
+                    </div>
                   </div>
                 )}
                 <div>
