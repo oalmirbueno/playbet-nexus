@@ -222,6 +222,57 @@ export default function Configuracoes() {
               </Button>
             </div>
           </div>
+
+          {/* Audit Panel */}
+          <div className="glass-card p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="section-title">Auditoria da Simulação</h3>
+                <p className="text-xs text-muted-foreground">Contagem por módulo e alertas de dados ausentes</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">{totalItems} registros</span>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${completionPct === 100 ? "bg-success/10 text-success" : "bg-warning/10 text-warning"}`}>
+                  {completionPct}%
+                </span>
+              </div>
+            </div>
+
+            {missingModules.length > 0 && (
+              <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/5 border border-destructive/10 mb-4">
+                <AlertTriangle size={14} className="text-destructive mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs font-medium text-destructive">Módulos sem dados</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {missingModules.map(m => m.label).join(", ")}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {missingModules.length === 0 && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-success/5 border border-success/10 mb-4">
+                <CheckCircle2 size={14} className="text-success shrink-0" />
+                <p className="text-xs font-medium text-success">Todos os módulos possuem dados — simulação 100% completa</p>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+              {auditModules.map((m) => (
+                <div
+                  key={m.label}
+                  className={`p-3 rounded-lg border text-center transition-all ${
+                    m.count > 0
+                      ? "border-success/20 bg-success/5"
+                      : "border-destructive/20 bg-destructive/5"
+                  }`}
+                >
+                  <p className="text-lg font-bold tracking-tight">{m.count}</p>
+                  <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider mt-0.5">{m.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
