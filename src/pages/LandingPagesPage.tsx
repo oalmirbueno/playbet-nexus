@@ -119,7 +119,7 @@ export default function LandingPagesPage() {
       </div>
 
       {/* Table */}
-      <div className="glass-card overflow-x-auto">
+      <div className="glass-card overflow-x-auto invisible-scroll">
         <table className="data-table">
           <thead><tr><th>Nome</th><th>Rota</th><th>Tipo</th><th>Jogo</th><th>Plataformas</th><th>Influencers</th><th>Cliques</th><th>CTR</th><th>Saída</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody>

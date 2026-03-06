@@ -169,7 +169,7 @@ export default function PlataformasPage() {
       </div>
 
       {/* Table */}
-      <div className="glass-card overflow-x-auto">
+      <div className="glass-card overflow-x-auto invisible-scroll">
         <table className="data-table">
           <thead>
             <tr>

@@ -98,7 +98,7 @@ export default function LPTemplates() {
       </div>
 
       {/* Table */}
-      <div className="glass-card overflow-x-auto">
+      <div className="glass-card overflow-x-auto invisible-scroll">
         <table className="data-table">
           <thead><tr><th>Nome</th><th>Rota Base</th><th>Tipo</th><th>Jogo Vinculado</th><th>LPs Usando</th><th>Influencers</th><th>Cliques</th><th>Conversões</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody>
