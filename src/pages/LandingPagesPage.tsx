@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Plus, Edit, Copy, Eye, XCircle, CheckCircle, Search, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useLandingPages } from "@/hooks/useSupabaseQuery";
+import { useLandingPages, useGames, usePlatforms, useTemplates } from "@/hooks/useSupabaseQuery";
 import type { LandingPageRow } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
 import Breadcrumbs from "@/components/Breadcrumbs";
@@ -14,22 +14,33 @@ type EditingState = {
   slug: string;
   route: string;
   type: string;
+  game_id: string;
+  platform_id: string;
+  template_id: string;
   is_active: boolean;
 };
 
 const emptyEditing: EditingState = {
-  name: "", slug: "", route: "", type: "Jogo", is_active: true,
+  name: "", slug: "", route: "", type: "Jogo",
+  game_id: "", platform_id: "", template_id: "", is_active: true,
 };
 
 export default function LandingPagesPage() {
   const navigate = useNavigate();
   const { data, isLoading, create, update, toggle, isCreating, isUpdating } = useLandingPages();
+  const { data: games } = useGames();
+  const { data: platforms } = usePlatforms();
+  const { data: templates } = useTemplates();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<EditingState | null>(null);
   const [previewOpen, setPreviewOpen] = useState<LandingPageRow | null>(null);
   const [search, setSearch] = useState("");
   const [filterTipo, setFilterTipo] = useState("Todos");
   const [filterStatus, setFilterStatus] = useState("Todos");
+
+  const getGameName = (id: string | null) => games.find(g => g.id === id)?.name || "—";
+  const getPlatformName = (id: string | null) => platforms.find(p => p.id === id)?.name || "—";
+  const getTemplateName = (id: string | null) => templates.find(t => t.id === id)?.name || "—";
 
   const filtered = data.filter(p => {
     if (search && !p.name.toLowerCase().includes(search.toLowerCase()) && !p.route.toLowerCase().includes(search.toLowerCase())) return false;
@@ -50,7 +61,9 @@ export default function LandingPagesPage() {
   const openEdit = (p: LandingPageRow) => {
     setEditing({
       id: p.id, name: p.name, slug: p.slug, route: p.route,
-      type: p.type || "Jogo", is_active: p.is_active ?? true,
+      type: p.type || "Jogo", game_id: p.game_id || "",
+      platform_id: p.platform_id || "", template_id: p.template_id || "",
+      is_active: p.is_active ?? true,
     });
     setModalOpen(true);
   };
@@ -61,16 +74,17 @@ export default function LandingPagesPage() {
       return;
     }
     try {
+      const payload = {
+        name: editing.name, slug: editing.slug, route: editing.route,
+        type: editing.type || null, is_active: editing.is_active,
+        game_id: editing.game_id || null,
+        platform_id: editing.platform_id || null,
+        template_id: editing.template_id || null,
+      };
       if (editing.id) {
-        await update({ id: editing.id, updates: {
-          name: editing.name, slug: editing.slug, route: editing.route,
-          type: editing.type || null, is_active: editing.is_active,
-        }});
+        await update({ id: editing.id, updates: payload });
       } else {
-        await create({
-          name: editing.name, slug: editing.slug, route: editing.route,
-          type: editing.type || null, is_active: editing.is_active,
-        });
+        await create(payload);
       }
       setModalOpen(false);
     } catch { /* hook handles toast */ }
@@ -82,7 +96,9 @@ export default function LandingPagesPage() {
 
   const exportableData = data.map(p => ({
     id: p.id, name: p.name, slug: p.slug, route: p.route,
-    type: p.type || "", status: p.is_active ? "Ativo" : "Inativo",
+    type: p.type || "", game: getGameName(p.game_id),
+    platform: getPlatformName(p.platform_id), template: getTemplateName(p.template_id),
+    status: p.is_active ? "Ativo" : "Inativo",
   }));
 
   if (isLoading) {
@@ -143,16 +159,19 @@ export default function LandingPagesPage() {
       {/* Table */}
       <div className="glass-card overflow-x-auto invisible-scroll">
         <table className="data-table">
-          <thead><tr><th>Nome</th><th>Slug</th><th>Rota</th><th>Tipo</th><th>Status</th><th>Ações</th></tr></thead>
+          <thead><tr><th>Nome</th><th>Slug</th><th>Rota</th><th>Tipo</th><th>Jogo</th><th>Plataforma</th><th>Template</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={6} className="text-center text-muted-foreground py-8">Nenhuma LP encontrada</td></tr>
+              <tr><td colSpan={9} className="text-center text-muted-foreground py-8">Nenhuma LP encontrada</td></tr>
             ) : filtered.map(p => (
               <tr key={p.id}>
                 <td className="font-medium">{p.name}</td>
                 <td className="font-mono text-xs text-accent">{p.slug}</td>
                 <td className="font-mono text-xs text-accent">{p.route}</td>
                 <td><span className="badge-neutral">{p.type || "—"}</span></td>
+                <td className="text-xs">{getGameName(p.game_id)}</td>
+                <td className="text-xs">{getPlatformName(p.platform_id)}</td>
+                <td className="text-xs">{getTemplateName(p.template_id)}</td>
                 <td><span className={p.is_active ? "badge-success" : "badge-danger"}>{p.is_active ? "Ativo" : "Inativo"}</span></td>
                 <td>
                   <div className="flex gap-0.5">
@@ -179,7 +198,9 @@ export default function LandingPagesPage() {
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div><span className="text-xs text-muted-foreground">URL Pública</span><p className="font-mono text-accent">playbet.com{previewOpen.route}</p></div>
                 <div><span className="text-xs text-muted-foreground">Tipo</span><p><span className="badge-neutral">{previewOpen.type || "—"}</span></p></div>
-                <div><span className="text-xs text-muted-foreground">Slug</span><p className="font-mono text-accent">{previewOpen.slug}</p></div>
+                <div><span className="text-xs text-muted-foreground">Jogo</span><p>{getGameName(previewOpen.game_id)}</p></div>
+                <div><span className="text-xs text-muted-foreground">Plataforma</span><p>{getPlatformName(previewOpen.platform_id)}</p></div>
+                <div><span className="text-xs text-muted-foreground">Template</span><p>{getTemplateName(previewOpen.template_id)}</p></div>
                 <div><span className="text-xs text-muted-foreground">Status</span><p><span className={previewOpen.is_active ? "badge-success" : "badge-warning"}>{previewOpen.is_active ? "Ativo" : "Inativo"}</span></p></div>
               </div>
               <div className="border border-dashed border-border rounded-lg p-8 text-center text-muted-foreground bg-secondary/20">
@@ -217,6 +238,24 @@ export default function LandingPagesPage() {
                   <option>Ativo</option><option>Inativo</option>
                 </select>
               </div>
+            </div>
+            <div><label className="text-xs font-medium text-muted-foreground">Jogo</label>
+              <select className="select-field mt-1 w-full" value={editing?.game_id || ""} onChange={e => setEditing(p => p ? { ...p, game_id: e.target.value } : p)}>
+                <option value="">Nenhum</option>
+                {games.filter(g => g.is_active).map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+              </select>
+            </div>
+            <div><label className="text-xs font-medium text-muted-foreground">Plataforma</label>
+              <select className="select-field mt-1 w-full" value={editing?.platform_id || ""} onChange={e => setEditing(p => p ? { ...p, platform_id: e.target.value } : p)}>
+                <option value="">Nenhuma</option>
+                {platforms.filter(p => p.is_active).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+            <div><label className="text-xs font-medium text-muted-foreground">Template</label>
+              <select className="select-field mt-1 w-full" value={editing?.template_id || ""} onChange={e => setEditing(p => p ? { ...p, template_id: e.target.value } : p)}>
+                <option value="">Nenhum</option>
+                {templates.filter(t => t.is_active).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
             </div>
           </div>
           <DialogFooter>

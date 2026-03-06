@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Copy, Edit, Eye, Pause, Play, AlertTriangle, Plus, BarChart3 } from "lucide-react";
+import { Copy, Edit, Eye, Pause, Play, Plus, BarChart3 } from "lucide-react";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ExportDropdown from "@/components/ExportDropdown";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { useUtms } from "@/hooks/useSupabaseQuery";
+import { useUtms, useInfluencers, useLandingPages, useGames, usePlatforms, useTemplates } from "@/hooks/useSupabaseQuery";
 import type { UtmRow } from "@/services/supabaseService";
 
 type EditingState = {
@@ -15,18 +15,30 @@ type EditingState = {
   utm_campaign: string;
   utm_content: string;
   subid: string;
+  influencer_id: string;
+  landing_page_id: string;
+  game_id: string;
+  platform_id: string;
+  template_id: string;
   notes: string;
   is_active: boolean;
 };
 
 const emptyEditing: EditingState = {
   utm_source: "playbet", utm_medium: "", utm_campaign: "", utm_content: "",
-  subid: "", notes: "", is_active: true,
+  subid: "", influencer_id: "", landing_page_id: "", game_id: "",
+  platform_id: "", template_id: "", notes: "", is_active: true,
 };
 
 export default function UtmsSubids() {
   const navigate = useNavigate();
   const { data, isLoading, create, update, toggle, isCreating, isUpdating } = useUtms();
+  const { data: influencers } = useInfluencers();
+  const { data: landingPages } = useLandingPages();
+  const { data: games } = useGames();
+  const { data: platforms } = usePlatforms();
+  const { data: templates } = useTemplates();
+
   const [detail, setDetail] = useState<UtmRow | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<EditingState | null>(null);
@@ -34,12 +46,19 @@ export default function UtmsSubids() {
   const [filterMedium, setFilterMedium] = useState("Todos");
   const [search, setSearch] = useState("");
 
+  const getInfluencerName = (id: string | null) => influencers.find(i => i.id === id)?.name || "—";
+  const getLPName = (id: string | null) => landingPages.find(l => l.id === id)?.name || "—";
+  const getGameName = (id: string | null) => games.find(g => g.id === id)?.name || "—";
+  const getPlatformName = (id: string | null) => platforms.find(p => p.id === id)?.name || "—";
+  const getTemplateName = (id: string | null) => templates.find(t => t.id === id)?.name || "—";
+
   const filtered = data.filter(u => {
     if (filterSource !== "Todos" && u.utm_source !== filterSource) return false;
     if (filterMedium !== "Todos" && u.utm_medium !== filterMedium) return false;
     if (search) {
       const q = search.toLowerCase();
-      const searchable = [u.utm_source, u.utm_medium, u.utm_campaign, u.utm_content, u.subid, u.notes].filter(Boolean).join(" ").toLowerCase();
+      const searchable = [u.utm_source, u.utm_medium, u.utm_campaign, u.utm_content, u.subid, u.notes,
+        getInfluencerName(u.influencer_id), getGameName(u.game_id)].filter(Boolean).join(" ").toLowerCase();
       if (!searchable.includes(q)) return false;
     }
     return true;
@@ -62,7 +81,10 @@ export default function UtmsSubids() {
     setEditing({
       id: u.id, utm_source: u.utm_source || "playbet", utm_medium: u.utm_medium || "",
       utm_campaign: u.utm_campaign || "", utm_content: u.utm_content || "",
-      subid: u.subid || "", notes: u.notes || "", is_active: u.is_active ?? true,
+      subid: u.subid || "", influencer_id: u.influencer_id || "",
+      landing_page_id: u.landing_page_id || "", game_id: u.game_id || "",
+      platform_id: u.platform_id || "", template_id: u.template_id || "",
+      notes: u.notes || "", is_active: u.is_active ?? true,
     });
     setModalOpen(true);
   };
@@ -73,18 +95,20 @@ export default function UtmsSubids() {
       return;
     }
     try {
+      const payload = {
+        utm_source: editing.utm_source || null, utm_medium: editing.utm_medium || null,
+        utm_campaign: editing.utm_campaign || null, utm_content: editing.utm_content || null,
+        subid: editing.subid || null, notes: editing.notes || null, is_active: editing.is_active,
+        influencer_id: editing.influencer_id || null,
+        landing_page_id: editing.landing_page_id || null,
+        game_id: editing.game_id || null,
+        platform_id: editing.platform_id || null,
+        template_id: editing.template_id || null,
+      };
       if (editing.id) {
-        await update({ id: editing.id, updates: {
-          utm_source: editing.utm_source || null, utm_medium: editing.utm_medium || null,
-          utm_campaign: editing.utm_campaign || null, utm_content: editing.utm_content || null,
-          subid: editing.subid || null, notes: editing.notes || null, is_active: editing.is_active,
-        }});
+        await update({ id: editing.id, updates: payload });
       } else {
-        await create({
-          utm_source: editing.utm_source || null, utm_medium: editing.utm_medium || null,
-          utm_campaign: editing.utm_campaign || null, utm_content: editing.utm_content || null,
-          subid: editing.subid || null, notes: editing.notes || null, is_active: editing.is_active,
-        });
+        await create(payload);
       }
       setModalOpen(false);
       setEditing(null);
@@ -97,7 +121,9 @@ export default function UtmsSubids() {
   const exportableData = data.map(u => ({
     id: u.id, utm_source: u.utm_source || "", utm_medium: u.utm_medium || "",
     utm_campaign: u.utm_campaign || "", utm_content: u.utm_content || "",
-    subid: u.subid || "", status: u.is_active ? "Ativo" : "Inativo",
+    subid: u.subid || "", influencer: getInfluencerName(u.influencer_id),
+    landing_page: getLPName(u.landing_page_id), game: getGameName(u.game_id),
+    platform: getPlatformName(u.platform_id), status: u.is_active ? "Ativo" : "Inativo",
   }));
 
   if (isLoading) {
@@ -136,7 +162,7 @@ export default function UtmsSubids() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
-        <input className="input-field w-64" placeholder="Buscar subid, campaign..." value={search} onChange={e => setSearch(e.target.value)} />
+        <input className="input-field w-64" placeholder="Buscar subid, campaign, influencer..." value={search} onChange={e => setSearch(e.target.value)} />
         <select className="select-field text-xs w-auto" value={filterSource} onChange={e => setFilterSource(e.target.value)}>
           <option value="Todos">Source: Todos</option>
           {sources.map(n => <option key={n} value={n!}>{n}</option>)}
@@ -151,11 +177,11 @@ export default function UtmsSubids() {
       <div className="glass-card overflow-x-auto invisible-scroll">
         <table className="data-table">
           <thead>
-            <tr><th>Source</th><th>Medium</th><th>Campaign</th><th>Content</th><th>SubID</th><th>Status</th><th>Ações</th></tr>
+            <tr><th>Source</th><th>Medium</th><th>Campaign</th><th>Content</th><th>SubID</th><th>Influencer</th><th>LP</th><th>Jogo</th><th>Plat.</th><th>Status</th><th>Ações</th></tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={7} className="text-center text-muted-foreground py-8">Nenhum UTM encontrado</td></tr>
+              <tr><td colSpan={11} className="text-center text-muted-foreground py-8">Nenhum UTM encontrado</td></tr>
             ) : filtered.map(u => (
               <tr key={u.id}>
                 <td className="font-mono text-[11px]">{u.utm_source || "—"}</td>
@@ -163,6 +189,10 @@ export default function UtmsSubids() {
                 <td className="font-mono text-[11px] text-primary">{u.utm_campaign || "—"}</td>
                 <td className="font-mono text-[11px]">{u.utm_content || "—"}</td>
                 <td className="font-mono text-[11px] font-medium">{u.subid || "—"}</td>
+                <td className="text-xs">{getInfluencerName(u.influencer_id)}</td>
+                <td className="text-xs">{getLPName(u.landing_page_id)}</td>
+                <td className="text-xs">{getGameName(u.game_id)}</td>
+                <td className="text-xs">{getPlatformName(u.platform_id)}</td>
                 <td><span className={u.is_active ? "badge-success" : "badge-danger"}>{u.is_active ? "Ativo" : "Inativo"}</span></td>
                 <td>
                   <div className="flex items-center gap-1">
@@ -202,6 +232,40 @@ export default function UtmsSubids() {
               <div><label className="text-xs font-medium text-muted-foreground">UTM Content</label><input className="input-field mt-1" value={editing?.utm_content || ""} onChange={e => setEditing(p => p ? { ...p, utm_content: e.target.value } : p)} /></div>
             </div>
             <div><label className="text-xs font-medium text-muted-foreground">SubID *</label><input className="input-field mt-1" value={editing?.subid || ""} onChange={e => setEditing(p => p ? { ...p, subid: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") } : p)} placeholder="ex: rafa001" /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="text-xs font-medium text-muted-foreground">Influencer</label>
+                <select className="select-field mt-1 w-full" value={editing?.influencer_id || ""} onChange={e => setEditing(p => p ? { ...p, influencer_id: e.target.value } : p)}>
+                  <option value="">Nenhum</option>
+                  {influencers.filter(i => i.is_active).map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+                </select>
+              </div>
+              <div><label className="text-xs font-medium text-muted-foreground">Landing Page</label>
+                <select className="select-field mt-1 w-full" value={editing?.landing_page_id || ""} onChange={e => setEditing(p => p ? { ...p, landing_page_id: e.target.value } : p)}>
+                  <option value="">Nenhuma</option>
+                  {landingPages.filter(l => l.is_active).map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="text-xs font-medium text-muted-foreground">Jogo</label>
+                <select className="select-field mt-1 w-full" value={editing?.game_id || ""} onChange={e => setEditing(p => p ? { ...p, game_id: e.target.value } : p)}>
+                  <option value="">Nenhum</option>
+                  {games.filter(g => g.is_active).map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                </select>
+              </div>
+              <div><label className="text-xs font-medium text-muted-foreground">Plataforma</label>
+                <select className="select-field mt-1 w-full" value={editing?.platform_id || ""} onChange={e => setEditing(p => p ? { ...p, platform_id: e.target.value } : p)}>
+                  <option value="">Nenhuma</option>
+                  {platforms.filter(p => p.is_active).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <div><label className="text-xs font-medium text-muted-foreground">Template</label>
+              <select className="select-field mt-1 w-full" value={editing?.template_id || ""} onChange={e => setEditing(p => p ? { ...p, template_id: e.target.value } : p)}>
+                <option value="">Nenhum</option>
+                {templates.filter(t => t.is_active).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+              </select>
+            </div>
             <div><label className="text-xs font-medium text-muted-foreground">Status</label>
               <select className="select-field mt-1 w-full" value={editing?.is_active ? "Ativo" : "Inativo"} onChange={e => setEditing(p => p ? { ...p, is_active: e.target.value === "Ativo" } : p)}>
                 <option>Ativo</option><option>Inativo</option>
@@ -251,6 +315,11 @@ export default function UtmsSubids() {
                   { l: "Campaign", v: detail.utm_campaign || "—" },
                   { l: "Content", v: detail.utm_content || "—" },
                   { l: "SubID", v: detail.subid || "—" },
+                  { l: "Influencer", v: getInfluencerName(detail.influencer_id) },
+                  { l: "Landing Page", v: getLPName(detail.landing_page_id) },
+                  { l: "Jogo", v: getGameName(detail.game_id) },
+                  { l: "Plataforma", v: getPlatformName(detail.platform_id) },
+                  { l: "Template", v: getTemplateName(detail.template_id) },
                   { l: "Status", v: detail.is_active ? "Ativo" : "Inativo" },
                 ].map(f => (
                   <div key={f.l}>
