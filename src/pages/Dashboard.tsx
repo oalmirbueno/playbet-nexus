@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MousePointerClick, UserPlus, DollarSign, Gamepad2, Monitor, Users, Link2, FileText, ArrowRight, CheckCircle, Database, Trash2, Loader2 } from "lucide-react";
-import { useInfluencers, useGames, usePlatforms, useLandingPages, useTemplates, useUtms } from "@/hooks/useSupabaseQuery";
+import { useInfluencers, useGames, usePlatforms, useLandingPages, useTemplates, useUtms, useCampanhas, useSocios, useSaques, useConteudo } from "@/hooks/useSupabaseQuery";
 import { useQueryClient } from "@tanstack/react-query";
 import { seedDemoData, clearDemoData } from "@/services/seedDemoData";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,10 @@ export default function Dashboard() {
   const { data: landingPages } = useLandingPages();
   const { data: templates } = useTemplates();
   const { data: utms } = useUtms();
+  const { data: campanhas } = useCampanhas();
+  const { data: socios } = useSocios();
+  const { data: saques } = useSaques();
+  const { data: conteudos } = useConteudo();
 
   const counts: Record<string, number> = {
     platforms: platforms.length,
@@ -38,6 +42,10 @@ export default function Dashboard() {
     templates: templates.length,
     landingPages: landingPages.length,
     utms: utms.length,
+    campanhas: campanhas.length,
+    socios: socios.length,
+    saques: saques.length,
+    conteudo: conteudos.length,
   };
 
   const totalItems = Object.values(counts).reduce((a, b) => a + b, 0);
