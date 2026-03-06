@@ -14,16 +14,481 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      clicks: {
+        Row: {
+          clicked_at: string | null
+          id: string
+          influencer_id: string | null
+          ip_address: string | null
+          landing_page_id: string | null
+          referrer: string | null
+          route: string | null
+          source: string | null
+          template_id: string | null
+          user_agent: string | null
+          utm_id: string | null
+        }
+        Insert: {
+          clicked_at?: string | null
+          id?: string
+          influencer_id?: string | null
+          ip_address?: string | null
+          landing_page_id?: string | null
+          referrer?: string | null
+          route?: string | null
+          source?: string | null
+          template_id?: string | null
+          user_agent?: string | null
+          utm_id?: string | null
+        }
+        Update: {
+          clicked_at?: string | null
+          id?: string
+          influencer_id?: string | null
+          ip_address?: string | null
+          landing_page_id?: string | null
+          referrer?: string | null
+          route?: string | null
+          source?: string | null
+          template_id?: string | null
+          user_agent?: string | null
+          utm_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clicks_influencer_id_fkey"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clicks_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "landing_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clicks_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clicks_utm_id_fkey"
+            columns: ["utm_id"]
+            isOneToOne: false
+            referencedRelation: "utms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_platforms: {
+        Row: {
+          game_id: string
+          platform_id: string
+        }
+        Insert: {
+          game_id: string
+          platform_id: string
+        }
+        Update: {
+          game_id?: string
+          platform_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_platforms_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_platforms_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "platforms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      games: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          trend_status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          trend_status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          trend_status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      influencers: {
+        Row: {
+          affiliate_link: string | null
+          commission_percent: number | null
+          created_at: string | null
+          followers: number | null
+          id: string
+          instagram: string | null
+          is_active: boolean | null
+          name: string
+          notes: string | null
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          affiliate_link?: string | null
+          commission_percent?: number | null
+          created_at?: string | null
+          followers?: number | null
+          id?: string
+          instagram?: string | null
+          is_active?: boolean | null
+          name: string
+          notes?: string | null
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          affiliate_link?: string | null
+          commission_percent?: number | null
+          created_at?: string | null
+          followers?: number | null
+          id?: string
+          instagram?: string | null
+          is_active?: boolean | null
+          name?: string
+          notes?: string | null
+          slug?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      landing_pages: {
+        Row: {
+          created_at: string | null
+          game_id: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          platform_id: string | null
+          route: string
+          slug: string
+          template_id: string | null
+          type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          game_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          platform_id?: string | null
+          route: string
+          slug: string
+          template_id?: string | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          game_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          platform_id?: string | null
+          route?: string
+          slug?: string
+          template_id?: string | null
+          type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_pages_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "landing_pages_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "platforms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "landing_pages_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platforms: {
+        Row: {
+          affiliate_manager: string | null
+          commission_type: string | null
+          cpa: number | null
+          created_at: string | null
+          currency: string | null
+          hybrid: boolean | null
+          id: string
+          is_active: boolean | null
+          name: string
+          notes: string | null
+          payout_method: string | null
+          revshare: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          affiliate_manager?: string | null
+          commission_type?: string | null
+          cpa?: number | null
+          created_at?: string | null
+          currency?: string | null
+          hybrid?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          notes?: string | null
+          payout_method?: string | null
+          revshare?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          affiliate_manager?: string | null
+          commission_type?: string | null
+          cpa?: number | null
+          created_at?: string | null
+          currency?: string | null
+          hybrid?: boolean | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          notes?: string | null
+          payout_method?: string | null
+          revshare?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string | null
+          full_name: string | null
+          id: string
+          is_active: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id: string
+          is_active?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      templates: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          main_game: string | null
+          name: string
+          type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          main_game?: string | null
+          name: string
+          type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          main_game?: string | null
+          name?: string
+          type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      utms: {
+        Row: {
+          created_at: string | null
+          game_id: string | null
+          id: string
+          influencer_id: string | null
+          is_active: boolean | null
+          landing_page_id: string | null
+          notes: string | null
+          platform_id: string | null
+          subid: string | null
+          template_id: string | null
+          updated_at: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          game_id?: string | null
+          id?: string
+          influencer_id?: string | null
+          is_active?: boolean | null
+          landing_page_id?: string | null
+          notes?: string | null
+          platform_id?: string | null
+          subid?: string | null
+          template_id?: string | null
+          updated_at?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          game_id?: string | null
+          id?: string
+          influencer_id?: string | null
+          is_active?: boolean | null
+          landing_page_id?: string | null
+          notes?: string | null
+          platform_id?: string | null
+          subid?: string | null
+          template_id?: string | null
+          updated_at?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "utms_game_id_fkey"
+            columns: ["game_id"]
+            isOneToOne: false
+            referencedRelation: "games"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "utms_influencer_id_fkey"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "utms_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "landing_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "utms_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "platforms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "utms_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role:
+        | "admin_master"
+        | "socio"
+        | "financeiro"
+        | "operacao"
+        | "conteudo"
+        | "visualizacao"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +615,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: [
+        "admin_master",
+        "socio",
+        "financeiro",
+        "operacao",
+        "conteudo",
+        "visualizacao",
+      ],
+    },
   },
 } as const
