@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { MousePointerClick, UserPlus, DollarSign, Gamepad2, Monitor, Users, Link2, FileText, ArrowRight, CheckCircle, Database, Trash2, Loader2 } from "lucide-react";
 import { useInfluencers, useGames, usePlatforms, useLandingPages, useTemplates, useUtms, useCampanhas, useSocios, useSaques, useConteudo } from "@/hooks/useSupabaseQuery";
 import { useQueryClient } from "@tanstack/react-query";
+import { useDemoMode } from "@/contexts/DemoModeContext";
 import { seedDemoData, clearDemoData } from "@/services/seedDemoData";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
@@ -20,6 +21,7 @@ const steps = [
 export default function Dashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { setDemoMode } = useDemoMode();
   const [seeding, setSeeding] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -54,8 +56,9 @@ export default function Dashboard() {
     setSeeding(true);
     try {
       await seedDemoData();
-      queryClient.invalidateQueries();
-      toast({ title: "Dados demo criados com sucesso!" });
+      setDemoMode("all");
+      await queryClient.invalidateQueries();
+      toast({ title: "Dados demo criados com sucesso!", description: "Modo alterado para: Todos os dados." });
     } catch (e: any) {
       toast({ title: "Erro ao criar dados demo", description: e.message, variant: "destructive" });
     } finally {
