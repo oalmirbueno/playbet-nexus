@@ -177,26 +177,33 @@
 }
 
 /* Scrollbars */
-.sidebar-scroll::-webkit-scrollbar,
-.main-scroll::-webkit-scrollbar {
-  width: 3px;
+/* Sidebar scroll — fully invisible */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 0px;
+  display: none;
 }
-.sidebar-scroll::-webkit-scrollbar-track,
+.sidebar-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* Main content scroll — thin and subtle */
+.main-scroll::-webkit-scrollbar {
+  width: 4px;
+}
 .main-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
-.sidebar-scroll::-webkit-scrollbar-thumb,
 .main-scroll::-webkit-scrollbar-thumb {
-  background: hsl(0 0% 22%);
+  background: hsl(0 0% 20%);
   border-radius: 100px;
 }
-.sidebar-scroll::-webkit-scrollbar-thumb:hover,
 .main-scroll::-webkit-scrollbar-thumb:hover {
-  background: hsl(0 0% 32%);
+  background: hsl(0 0% 30%);
 }
-.sidebar-scroll, .main-scroll {
+.main-scroll {
   scrollbar-width: thin;
-  scrollbar-color: hsl(0 0% 22%) transparent;
+  scrollbar-color: hsl(0 0% 20%) transparent;
 }
 
 /* Tooltip chart styles */
