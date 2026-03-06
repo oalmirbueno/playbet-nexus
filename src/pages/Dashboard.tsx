@@ -1,6 +1,12 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MousePointerClick, UserPlus, DollarSign, Gamepad2, Monitor, Users, Link2, FileText, ArrowRight, CheckCircle } from "lucide-react";
+import { MousePointerClick, UserPlus, DollarSign, Gamepad2, Monitor, Users, Link2, FileText, ArrowRight, CheckCircle, Database, Trash2, Loader2 } from "lucide-react";
 import { useInfluencers, useGames, usePlatforms, useLandingPages, useTemplates, useUtms } from "@/hooks/useSupabaseQuery";
+import { useQueryClient } from "@tanstack/react-query";
+import { seedDemoData, clearDemoData } from "@/services/seedDemoData";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 const steps = [
   { label: "Cadastrar primeira plataforma", path: "/plataformas", icon: Monitor, key: "platforms" },
