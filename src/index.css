@@ -6,44 +6,44 @@
 
 @layer base {
   :root {
-    --background: 0 0% 5.5%;
-    --foreground: 0 0% 100%;
-    --card: 0 0% 8%;
-    --card-foreground: 0 0% 100%;
-    --card-elevated: 0 0% 10%;
-    --popover: 0 0% 9%;
-    --popover-foreground: 0 0% 100%;
-    --primary: 217 85% 30%;
+    --background: 0 0% 6%;
+    --foreground: 0 0% 95%;
+    --card: 0 0% 8.5%;
+    --card-foreground: 0 0% 95%;
+    --card-elevated: 0 0% 10.5%;
+    --popover: 0 0% 9.5%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 220 78% 28%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 217 85% 40%;
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 0 0% 14%;
-    --muted-foreground: 0 0% 55%;
-    --accent: 45 100% 50%;
+    --primary-glow: 220 70% 36%;
+    --secondary: 0 0% 11%;
+    --secondary-foreground: 0 0% 90%;
+    --muted: 0 0% 13%;
+    --muted-foreground: 0 0% 50%;
+    --accent: 43 72% 50%;
     --accent-foreground: 0 0% 5%;
-    --destructive: 0 72% 51%;
+    --destructive: 0 62% 48%;
     --destructive-foreground: 0 0% 100%;
-    --success: 152 69% 41%;
+    --success: 152 55% 38%;
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
+    --warning: 38 72% 48%;
     --warning-foreground: 0 0% 5%;
-    --info: 199 89% 48%;
+    --info: 205 70% 45%;
     --info-foreground: 0 0% 100%;
-    --border: 0 0% 15%;
-    --border-subtle: 0 0% 12%;
-    --input: 0 0% 15%;
-    --ring: 217 85% 30%;
-    --radius: 0.75rem;
-    --sidebar-background: 0 0% 6%;
-    --sidebar-foreground: 0 0% 55%;
-    --sidebar-primary: 217 85% 30%;
+    --border: 0 0% 14%;
+    --border-subtle: 0 0% 11%;
+    --input: 0 0% 14%;
+    --ring: 220 78% 28%;
+    --radius: 0.625rem;
+    --sidebar-background: 0 0% 7%;
+    --sidebar-foreground: 0 0% 48%;
+    --sidebar-primary: 220 78% 28%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 10%;
-    --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-accent: 0 0% 11%;
+    --sidebar-accent-foreground: 0 0% 85%;
     --sidebar-border: 0 0% 12%;
-    --sidebar-ring: 217 85% 30%;
-    --sidebar-section: 0 0% 40%;
+    --sidebar-ring: 220 78% 28%;
+    --sidebar-section: 0 0% 38%;
   }
 }
 
@@ -51,133 +51,157 @@
   * { @apply border-border; }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
 @layer components {
+  /* ── Cards ─────────────────────────────────── */
   .glass-card {
-    @apply bg-card border border-border rounded-xl transition-all duration-200;
+    @apply bg-card border border-border rounded-lg transition-all duration-200;
   }
   .glass-card-elevated {
     background: hsl(var(--card-elevated));
-    @apply border border-border rounded-xl;
+    @apply border border-border rounded-lg;
   }
   .glass-card-hover {
-    @apply glass-card hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300;
+    @apply glass-card hover:border-[hsl(220,78%,28%,0.25)] hover:shadow-md transition-all duration-300;
   }
+
+  /* ── Stat Cards ────────────────────────────── */
   .stat-card {
-    @apply glass-card p-5 flex flex-col gap-2;
+    @apply glass-card p-6 flex flex-col gap-3;
   }
   .stat-card-accent {
-    @apply glass-card p-5 flex flex-col gap-2 border-l-2 border-l-accent;
+    @apply glass-card p-6 flex flex-col gap-3 border-l-2 border-l-accent;
   }
   .stat-card-primary {
-    @apply glass-card p-5 flex flex-col gap-2 border-l-2 border-l-primary;
+    @apply glass-card p-6 flex flex-col gap-3 border-l-2 border-l-primary;
   }
   .stat-card-success {
-    @apply glass-card p-5 flex flex-col gap-2 border-l-2 border-l-success;
+    @apply glass-card p-6 flex flex-col gap-3 border-l-2 border-l-success;
   }
   .stat-card-warning {
-    @apply glass-card p-5 flex flex-col gap-2 border-l-2 border-l-warning;
+    @apply glass-card p-6 flex flex-col gap-3 border-l-2 border-l-warning;
   }
   .stat-card-info {
-    @apply glass-card p-5 flex flex-col gap-2 border-l-2 border-l-info;
+    @apply glass-card p-6 flex flex-col gap-3 border-l-2 border-l-info;
   }
+
+  /* ── Data Tables ───────────────────────────── */
   .data-table {
     @apply w-full text-sm;
   }
   .data-table thead th {
-    @apply text-left text-muted-foreground font-medium text-xs uppercase tracking-wider px-4 py-3 border-b border-border bg-secondary/30;
+    @apply text-left text-muted-foreground font-medium text-[11px] uppercase tracking-wider px-5 py-3.5 border-b border-border bg-secondary/20;
   }
   .data-table tbody td {
-    @apply px-4 py-3 border-b border-border-subtle text-sm;
+    @apply px-5 py-4 border-b border-border-subtle text-sm text-foreground/85;
   }
   .data-table tbody tr {
     @apply transition-colors duration-150;
   }
   .data-table tbody tr:hover {
-    @apply bg-secondary/40;
+    @apply bg-secondary/30;
   }
+
+  /* ── Page Structure ────────────────────────── */
   .page-header {
-    @apply text-2xl font-bold tracking-tight;
+    @apply text-[1.625rem] font-semibold tracking-tight text-foreground;
   }
   .page-subtitle {
-    @apply text-sm text-muted-foreground mt-1;
+    @apply text-sm text-muted-foreground mt-1.5 leading-relaxed;
   }
   .section-title {
-    @apply text-base font-semibold tracking-tight mb-4;
+    @apply text-[15px] font-semibold tracking-tight mb-5 text-foreground;
   }
+
+  /* ── Badges ────────────────────────────────── */
   .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold uppercase tracking-wider;
+    @apply inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-medium tracking-wide;
   }
   .badge-success {
-    @apply badge bg-success/15 text-success;
+    @apply badge bg-success/10 text-[hsl(152,55%,52%)];
   }
   .badge-warning {
-    @apply badge bg-warning/15 text-warning;
+    @apply badge bg-warning/10 text-[hsl(38,72%,62%)];
   }
   .badge-danger {
-    @apply badge bg-destructive/15 text-destructive;
+    @apply badge bg-destructive/10 text-[hsl(0,62%,62%)];
   }
   .badge-info {
-    @apply badge bg-info/15 text-info;
+    @apply badge bg-info/10 text-[hsl(205,70%,60%)];
   }
   .badge-neutral {
     @apply badge bg-muted text-muted-foreground;
   }
   .badge-primary {
-    @apply badge bg-primary/15 text-[hsl(217,85%,60%)];
+    @apply badge bg-primary/10 text-[hsl(220,70%,56%)];
   }
   .badge-accent {
-    @apply badge bg-accent/15 text-accent;
+    @apply badge bg-accent/8 text-[hsl(43,60%,58%)];
   }
+
+  /* ── Buttons ───────────────────────────────── */
   .btn-primary {
-    @apply inline-flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-[hsl(var(--primary-glow))] transition-all duration-200 shadow-lg shadow-primary/20;
+    @apply inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-[hsl(var(--primary-glow))] transition-all duration-200;
   }
   .btn-secondary {
-    @apply inline-flex items-center gap-2 px-4 py-2.5 bg-secondary text-secondary-foreground rounded-lg text-sm font-medium hover:bg-muted transition-colors;
+    @apply inline-flex items-center gap-2 px-5 py-2.5 bg-secondary text-secondary-foreground rounded-lg text-sm font-medium hover:bg-muted transition-colors border border-border;
   }
   .btn-accent {
-    @apply inline-flex items-center gap-2 px-4 py-2.5 bg-accent text-accent-foreground rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity;
+    @apply inline-flex items-center gap-2 px-5 py-2.5 bg-accent text-accent-foreground rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity;
   }
   .btn-ghost {
-    @apply inline-flex items-center gap-2 px-3 py-2 text-muted-foreground rounded-lg text-sm hover:bg-secondary hover:text-foreground transition-colors;
+    @apply inline-flex items-center gap-2 px-4 py-2.5 text-muted-foreground rounded-lg text-sm hover:bg-secondary hover:text-foreground transition-colors;
   }
   .btn-danger {
-    @apply inline-flex items-center gap-2 px-4 py-2.5 bg-destructive text-destructive-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity;
+    @apply inline-flex items-center gap-2 px-5 py-2.5 bg-destructive text-destructive-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity;
   }
   .btn-success {
-    @apply inline-flex items-center gap-2 px-4 py-2.5 bg-success text-success-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity;
+    @apply inline-flex items-center gap-2 px-5 py-2.5 bg-success text-success-foreground rounded-lg text-sm font-medium hover:opacity-90 transition-opacity;
   }
+
+  /* ── Form Controls ─────────────────────────── */
   .input-field {
-    @apply w-full bg-secondary text-foreground border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all placeholder:text-muted-foreground;
+    @apply w-full bg-secondary text-foreground border border-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary/40 transition-all placeholder:text-muted-foreground;
   }
   .select-field {
-    @apply bg-secondary text-foreground border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all appearance-none cursor-pointer;
+    @apply bg-secondary text-foreground border border-border rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all appearance-none cursor-pointer;
   }
+
+  /* ── Tabs ───────────────────────────────────── */
   .tab-btn {
     @apply px-4 py-2 text-sm font-medium text-muted-foreground rounded-lg transition-all duration-200 hover:text-foreground hover:bg-secondary;
   }
   .tab-btn-active {
-    @apply px-4 py-2 text-sm font-medium text-primary-foreground bg-primary rounded-lg shadow-lg shadow-primary/20;
+    @apply px-4 py-2 text-sm font-medium text-primary-foreground bg-primary rounded-lg;
   }
+
+  /* ── Alerts & Panels ───────────────────────── */
   .alert-card {
-    @apply glass-card p-4 flex items-start gap-3 border-l-2;
+    @apply glass-card p-5 flex items-start gap-3 border-l-2;
   }
+
+  /* ── Kanban ────────────────────────────────── */
   .kanban-col {
-    @apply flex-1 min-w-[260px] glass-card p-4 rounded-xl;
+    @apply flex-1 min-w-[280px] glass-card p-5 rounded-lg;
   }
   .kanban-item {
-    @apply glass-card-elevated p-3 rounded-lg mb-2 cursor-pointer hover:border-primary/30 transition-colors;
+    @apply glass-card-elevated p-4 rounded-lg mb-2.5 cursor-pointer hover:border-primary/20 transition-colors;
   }
+
+  /* ── Sidebar ───────────────────────────────── */
   .sidebar-section-label {
-    @apply text-[10px] font-bold uppercase tracking-[0.15em] text-[hsl(var(--sidebar-section))] px-4 pt-5 pb-2;
+    @apply text-[10px] font-semibold uppercase tracking-[0.14em] text-[hsl(var(--sidebar-section))] px-5 pt-6 pb-2;
   }
 }
 
-/* Scrollbars */
-/* Sidebar scroll — fully invisible */
+/* ── Scrollbars ──────────────────────────────── */
 .sidebar-scroll::-webkit-scrollbar {
   width: 0px;
   display: none;
@@ -187,28 +211,28 @@
   -ms-overflow-style: none;
 }
 
-/* Main content scroll — thin and subtle */
 .main-scroll::-webkit-scrollbar {
-  width: 4px;
+  width: 5px;
 }
 .main-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
 .main-scroll::-webkit-scrollbar-thumb {
-  background: hsl(0 0% 20%);
+  background: hsl(0 0% 18%);
   border-radius: 100px;
 }
 .main-scroll::-webkit-scrollbar-thumb:hover {
-  background: hsl(0 0% 30%);
+  background: hsl(0 0% 26%);
 }
 .main-scroll {
   scrollbar-width: thin;
-  scrollbar-color: hsl(0 0% 20%) transparent;
+  scrollbar-color: hsl(0 0% 18%) transparent;
 }
 
-/* Tooltip chart styles */
+/* ── Chart Overrides ─────────────────────────── */
 .recharts-default-tooltip {
   background: hsl(0 0% 9%) !important;
-  border: 1px solid hsl(0 0% 18%) !important;
+  border: 1px solid hsl(0 0% 16%) !important;
   border-radius: 8px !important;
+  font-size: 12px !important;
 }
