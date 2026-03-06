@@ -1,15 +1,53 @@
-import { DollarSign, Users, Wallet, BarChart3, Target, Zap, ArrowRight } from "lucide-react";
+import { useState } from "react";
+import { DollarSign, Users, Wallet, BarChart3, Target, Zap, ArrowRight, Database, Trash2, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useInfluencers, useGames, usePlatforms } from "@/hooks/useSupabaseQuery";
+import { useQueryClient } from "@tanstack/react-query";
+import { seedDemoData, clearDemoData } from "@/services/seedDemoData";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { toast } from "@/hooks/use-toast";
 import EmptyState from "@/components/EmptyState";
 
 export default function DashboardExecutivo() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: influencers } = useInfluencers();
   const { data: games } = useGames();
   const { data: platforms } = usePlatforms();
 
+  const [seeding, setSeeding] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
+
   const hasData = influencers.length > 0 || games.length > 0 || platforms.length > 0;
+
+  const handleSeed = async () => {
+    setSeeding(true);
+    try {
+      await seedDemoData();
+      queryClient.invalidateQueries();
+      toast({ title: "Dados demo criados com sucesso!" });
+    } catch (e: any) {
+      toast({ title: "Erro ao criar dados demo", description: e.message, variant: "destructive" });
+    } finally {
+      setSeeding(false);
+    }
+  };
+
+  const handleClear = async () => {
+    setClearing(true);
+    setConfirmClear(false);
+    try {
+      await clearDemoData();
+      queryClient.invalidateQueries();
+      toast({ title: "Todos os dados foram removidos" });
+    } catch (e: any) {
+      toast({ title: "Erro ao limpar dados", description: e.message, variant: "destructive" });
+    } finally {
+      setClearing(false);
+    }
+  };
 
   const kpis = [
     { label: "Total Influencers", value: String(influencers.length), icon: Users, path: "/influencers" },
@@ -22,9 +60,25 @@ export default function DashboardExecutivo() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard Executivo</h1>
-        <p className="text-sm text-muted-foreground mt-1">Visão consolidada da operação — dados em tempo real</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Dashboard Executivo</h1>
+          <p className="text-sm text-muted-foreground mt-1">Visão consolidada da operação — dados em tempo real</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {!hasData && (
+            <Button onClick={handleSeed} disabled={seeding} size="sm">
+              {seeding ? <Loader2 size={14} className="animate-spin" /> : <Database size={14} />}
+              {seeding ? "Criando..." : "Povoar dados demo"}
+            </Button>
+          )}
+          {hasData && (
+            <Button onClick={() => setConfirmClear(true)} disabled={clearing} variant="destructive" size="sm">
+              {clearing ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+              {clearing ? "Removendo..." : "Remover dados demo"}
+            </Button>
+          )}
+        </div>
       </div>
 
       {!hasData ? (
