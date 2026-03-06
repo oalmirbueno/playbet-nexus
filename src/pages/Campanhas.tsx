@@ -1,29 +1,22 @@
 import { useState } from "react";
-import { Plus, Edit, Eye, Copy, Pause, Play, CheckCircle, Search, Target, TrendingUp, DollarSign, Users, AlertTriangle, Gamepad2, Link2 } from "lucide-react";
+import { Plus, Edit, Eye, Copy, Pause, Play, CheckCircle, Search, Target } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { initialCampanhas, initialLinks, initialLandingPages, initialInfluencers, initialConteudos } from "@/data/mockData";
 import type { Campanha } from "@/types";
 import { toast } from "@/hooks/use-toast";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ExportDropdown from "@/components/ExportDropdown";
+import EmptyState from "@/components/EmptyState";
 
 const TIPOS_CAMPANHA = ["Lançamento de Jogo", "Evergreen", "Relâmpago", "Por Influencer", "Por Plataforma", "Sazonal", "VIP / Grupo"];
 
 export default function Campanhas() {
   const navigate = useNavigate();
-  const [data, setData] = useState<Campanha[]>(initialCampanhas);
+  const [data, setData] = useState<Campanha[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Partial<Campanha & { tipo_campanha?: string; lp?: string; hub?: string; orcamento?: number; responsavel?: string }> | null>(null);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("Todos");
-  const [alertsOpen, setAlertsOpen] = useState(false);
-
-  const links = initialLinks;
-  const conteudos = initialConteudos;
-
-  const getCliques = (c: Campanha) => links.filter(l => l.campaign === c.nome.toLowerCase().replace(/ /g, "-") || l.jogo === c.jogo).reduce((s, l) => s + l.cliques, 0);
-  const getConteudoCount = (c: Campanha) => conteudos.filter(ct => ct.campanha === c.nome || ct.campanha === "—").length;
 
   const filtered = data.filter(c => {
     if (search && !c.nome.toLowerCase().includes(search.toLowerCase())) return false;
@@ -31,17 +24,11 @@ export default function Campanhas() {
     return true;
   });
 
-  const semInfluencer = data.filter(c => c.status === "Ativa" && !c.influencer);
-  const semConteudo = data.filter(c => c.status === "Ativa" && getConteudoCount(c) === 0);
-  const hasAlerts = semInfluencer.length > 0 || semConteudo.length > 0;
-
   const stats = [
     { label: "Total Campanhas", value: String(data.length), variant: "border-l-2 border-l-primary" },
     { label: "Ativas", value: String(data.filter(c => c.status === "Ativa").length), variant: "border-l-2 border-l-success" },
     { label: "Planejadas", value: String(data.filter(c => c.status === "Planejada").length), variant: "border-l-2 border-l-info" },
     { label: "Finalizadas", value: String(data.filter(c => c.status === "Finalizada").length), variant: "border-l-2 border-l-muted-foreground" },
-    { label: "Cliques Total", value: data.reduce((s, c) => s + getCliques(c), 0).toLocaleString(), variant: "" },
-    { label: "Influencers", value: String(new Set(data.map(c => c.influencer).filter(Boolean)).size), variant: "" },
   ];
 
   const openCreate = () => {
@@ -74,8 +61,6 @@ export default function Campanhas() {
     toast({ title: "Campanha duplicada" });
   };
 
-  const exportableData = data.map(c => ({ ...c, cliques: getCliques(c), conteudos: getConteudoCount(c) }));
-
   return (
     <div className="space-y-8">
       <Breadcrumbs items={[{ label: "Marketing e Conteúdo", path: "/conteudo" }, { label: "Campanhas" }]} />
@@ -86,94 +71,79 @@ export default function Campanhas() {
           <p className="text-sm text-muted-foreground mt-1">Centro de operação de campanhas de afiliados, performance e distribuição</p>
         </div>
         <div className="flex gap-2 flex-wrap items-center">
-          <ExportDropdown data={exportableData} filename="campanhas-playbet" />
+          {data.length > 0 && <ExportDropdown data={data} filename="campanhas-playbet" />}
           <button className="btn-primary" onClick={openCreate}><Plus size={15} /> Criar Campanha</button>
         </div>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-        {stats.map(s => (
-          <div key={s.label} className={`glass-card p-5 ${s.variant}`}>
-            <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">{s.label}</span>
-            <p className="text-2xl font-semibold mt-1">{s.value}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Alerts */}
-      {hasAlerts && (
-        <div className="glass-card p-5 border-l-2 border-l-warning cursor-pointer" onClick={() => setAlertsOpen(!alertsOpen)}>
-          <p className="text-sm font-medium text-foreground/80 flex items-center gap-2"><AlertTriangle size={14} className="text-warning" /> Alertas Operacionais ({semInfluencer.length + semConteudo.length})</p>
-          {alertsOpen && (
-            <div className="space-y-2 mt-3 pt-3 border-t border-border-subtle">
-              {semInfluencer.map(c => <p key={c.id} className="text-sm text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={e => { e.stopPropagation(); openEdit(c); }}>• {c.nome} sem influencer vinculado</p>)}
-              {semConteudo.map(c => <p key={c.id} className="text-sm text-muted-foreground cursor-pointer hover:text-primary transition-colors" onClick={e => { e.stopPropagation(); navigate(`/campanhas/${c.id}`); }}>• {c.nome} ativa sem conteúdo vinculado</p>)}
-            </div>
-          )}
+      {data.length === 0 ? (
+        <div className="glass-card">
+          <EmptyState
+            icon={Target}
+            title="Nenhuma campanha cadastrada"
+            description="Crie sua primeira campanha para organizar a operação de afiliados por jogo, plataforma e influencer."
+            actionLabel="Criar Campanha"
+            onAction={openCreate}
+          />
         </div>
-      )}
-
-      {/* Quick Nav */}
-      <div className="flex flex-wrap gap-2">
-        <button className="btn-ghost text-sm" onClick={() => navigate("/jogos")}>Jogos</button>
-        <button className="btn-ghost text-sm" onClick={() => navigate("/plataformas")}>Plataformas</button>
-        <button className="btn-ghost text-sm" onClick={() => navigate("/influencers")}>Influencers</button>
-        <button className="btn-ghost text-sm" onClick={() => navigate("/landing-pages")}>Landing Pages</button>
-        <button className="btn-ghost text-sm" onClick={() => navigate("/conteudo")}>Conteúdo</button>
-        <button className="btn-ghost text-sm" onClick={() => navigate("/analytics")}>Analytics</button>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <div className="flex items-center gap-2.5 bg-secondary/40 border border-border rounded-lg px-4 py-2 flex-1 max-w-sm">
-          <Search size={14} className="text-muted-foreground shrink-0" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar campanha..." className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none w-full" />
-        </div>
-        <select className="select-field text-sm" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-          <option>Todos</option><option>Ativa</option><option>Planejada</option><option>Finalizada</option>
-        </select>
-      </div>
-
-      {/* Table */}
-      <div className="glass-card overflow-x-auto invisible-scroll rounded-lg">
-        <table className="data-table">
-          <thead><tr><th>Nome</th><th>Objetivo</th><th>Jogo</th><th>Plataforma</th><th>Influencer</th><th>Período</th><th>Cliques</th><th>Status</th><th>Resultado</th><th>Ações</th></tr></thead>
-          <tbody>
-            {filtered.map(c => (
-              <tr key={c.id}>
-                <td>
-                  <div className="cursor-pointer" onClick={() => navigate(`/campanhas/${c.id}`)}>
-                    <span className="font-medium hover:text-primary transition-colors">{c.nome}</span>
-                  </div>
-                </td>
-                <td className="text-sm max-w-[200px] truncate text-muted-foreground">{c.objetivo}</td>
-                <td className="text-sm cursor-pointer hover:text-primary transition-colors" onClick={() => navigate("/jogos")}>{c.jogo}</td>
-                <td className="text-sm cursor-pointer hover:text-primary transition-colors" onClick={() => navigate("/plataformas")}>{c.plat}</td>
-                <td className="text-sm cursor-pointer hover:text-primary transition-colors" onClick={() => navigate("/influencers")}>{c.influencer}</td>
-                <td className="text-sm whitespace-nowrap text-muted-foreground">{c.inicio} - {c.fim}</td>
-                <td className="font-medium">{getCliques(c).toLocaleString()}</td>
-                <td><span className={c.status === "Ativa" ? "badge-success" : c.status === "Planejada" ? "badge-info" : "badge-neutral"}>{c.status}</span></td>
-                <td className="text-sm font-medium">{c.resultado}</td>
-                <td>
-                  <div className="flex gap-0.5" onClick={e => e.stopPropagation()}>
-                    <button onClick={() => navigate(`/campanhas/${c.id}`)} className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Ver detalhe"><Eye size={14} /></button>
-                    <button onClick={() => openEdit(c)} className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Editar"><Edit size={14} /></button>
-                    <button onClick={() => duplicar(c)} className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Duplicar"><Copy size={14} /></button>
-                    {c.status === "Planejada" && <button onClick={() => setStatus(c, "Ativa")} className="p-1.5 rounded-md hover:bg-success/10 text-muted-foreground hover:text-success transition-colors" title="Ativar"><Play size={14} /></button>}
-                    {c.status === "Ativa" && (
-                      <>
-                        <button onClick={() => setStatus(c, "Planejada")} className="p-1.5 rounded-md hover:bg-warning/10 text-muted-foreground hover:text-warning transition-colors" title="Pausar"><Pause size={14} /></button>
-                        <button onClick={() => setStatus(c, "Finalizada")} className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors" title="Finalizar"><CheckCircle size={14} /></button>
-                      </>
-                    )}
-                  </div>
-                </td>
-              </tr>
+      ) : (
+        <>
+          {/* KPIs */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {stats.map(s => (
+              <div key={s.label} className={`glass-card p-5 ${s.variant}`}>
+                <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">{s.label}</span>
+                <p className="text-2xl font-semibold mt-1">{s.value}</p>
+              </div>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </div>
+
+          {/* Filters */}
+          <div className="flex flex-wrap gap-3 items-center">
+            <div className="flex items-center gap-2.5 bg-secondary/40 border border-border rounded-lg px-4 py-2 flex-1 max-w-sm">
+              <Search size={14} className="text-muted-foreground shrink-0" />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar campanha..." className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none w-full" />
+            </div>
+            <select className="select-field text-sm" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+              <option>Todos</option><option>Ativa</option><option>Planejada</option><option>Finalizada</option>
+            </select>
+          </div>
+
+          {/* Table */}
+          <div className="glass-card overflow-x-auto invisible-scroll rounded-lg">
+            <table className="data-table">
+              <thead><tr><th>Nome</th><th>Objetivo</th><th>Jogo</th><th>Plataforma</th><th>Influencer</th><th>Período</th><th>Status</th><th>Ações</th></tr></thead>
+              <tbody>
+                {filtered.map(c => (
+                  <tr key={c.id}>
+                    <td><span className="font-medium cursor-pointer hover:text-primary transition-colors" onClick={() => navigate(`/campanhas/${c.id}`)}>{c.nome}</span></td>
+                    <td className="text-sm max-w-[200px] truncate text-muted-foreground">{c.objetivo}</td>
+                    <td className="text-sm">{c.jogo}</td>
+                    <td className="text-sm">{c.plat}</td>
+                    <td className="text-sm">{c.influencer}</td>
+                    <td className="text-sm whitespace-nowrap text-muted-foreground">{c.inicio} - {c.fim}</td>
+                    <td><span className={c.status === "Ativa" ? "badge-success" : c.status === "Planejada" ? "badge-info" : "badge-neutral"}>{c.status}</span></td>
+                    <td>
+                      <div className="flex gap-0.5" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => navigate(`/campanhas/${c.id}`)} className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"><Eye size={14} /></button>
+                        <button onClick={() => openEdit(c)} className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"><Edit size={14} /></button>
+                        <button onClick={() => duplicar(c)} className="p-1.5 rounded-md hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"><Copy size={14} /></button>
+                        {c.status === "Planejada" && <button onClick={() => setStatus(c, "Ativa")} className="p-1.5 rounded-md hover:bg-success/10 text-muted-foreground hover:text-success transition-colors"><Play size={14} /></button>}
+                        {c.status === "Ativa" && (
+                          <>
+                            <button onClick={() => setStatus(c, "Planejada")} className="p-1.5 rounded-md hover:bg-warning/10 text-muted-foreground hover:text-warning transition-colors"><Pause size={14} /></button>
+                            <button onClick={() => setStatus(c, "Finalizada")} className="p-1.5 rounded-md hover:bg-primary/10 text-muted-foreground hover:text-primary transition-colors"><CheckCircle size={14} /></button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
 
       {/* Create/Edit Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
@@ -183,7 +153,7 @@ export default function Campanhas() {
             <div><label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Nome *</label><input className="input-field mt-1.5" value={editing?.nome || ""} onChange={e => setEditing(p => ({ ...p, nome: e.target.value }))} /></div>
             <div><label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Objetivo</label><input className="input-field mt-1.5" value={editing?.objetivo || ""} onChange={e => setEditing(p => ({ ...p, objetivo: e.target.value }))} /></div>
             <div className="grid grid-cols-2 gap-4">
-              <div><label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tipo de Campanha</label>
+              <div><label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Tipo</label>
                 <select className="select-field mt-1.5 w-full" value={(editing as any)?.tipo_campanha || "Evergreen"} onChange={e => setEditing(p => ({ ...p, tipo_campanha: e.target.value }))}>
                   {TIPOS_CAMPANHA.map(t => <option key={t}>{t}</option>)}
                 </select>
@@ -202,10 +172,6 @@ export default function Campanhas() {
               <div><label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Influencer</label><input className="input-field mt-1.5" value={editing?.influencer || ""} onChange={e => setEditing(p => ({ ...p, influencer: e.target.value }))} /></div>
               <div><label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Início</label><input className="input-field mt-1.5" value={editing?.inicio || ""} onChange={e => setEditing(p => ({ ...p, inicio: e.target.value }))} /></div>
               <div><label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Fim</label><input className="input-field mt-1.5" value={editing?.fim || ""} onChange={e => setEditing(p => ({ ...p, fim: e.target.value }))} /></div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div><label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">LP Vinculada</label><input className="input-field mt-1.5" value={(editing as any)?.lp || ""} onChange={e => setEditing(p => ({ ...p, lp: e.target.value }))} /></div>
-              <div><label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Responsável</label><input className="input-field mt-1.5" value={(editing as any)?.responsavel || ""} onChange={e => setEditing(p => ({ ...p, responsavel: e.target.value }))} /></div>
             </div>
           </div>
           <DialogFooter>
