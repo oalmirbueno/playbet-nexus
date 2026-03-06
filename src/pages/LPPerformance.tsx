@@ -9,7 +9,9 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import ExportDropdown from "@/components/ExportDropdown";
 
 function buildPublicUrl(domain: string | null, slug: string) {
-  const base = domain ? domain.replace(/\/+$/, "") : "";
+  if (!domain) return `/i/${slug}`;
+  let base = domain.replace(/\/+$/, "");
+  if (!/^https?:\/\//i.test(base)) base = `https://${base}`;
   return `${base}/i/${slug}`;
 }
 
