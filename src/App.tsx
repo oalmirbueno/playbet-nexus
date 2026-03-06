@@ -40,6 +40,7 @@ import RegrasFinanceiras from "./pages/RegrasFinanceiras";
 import Permissoes from "./pages/Permissoes";
 import Integracoes from "./pages/Integracoes";
 import NotFound from "./pages/NotFound";
+import InfluencerLanding from "./pages/InfluencerLanding";
 
 const queryClient = new QueryClient();
 
@@ -107,6 +108,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/i/:slug" element={<InfluencerLanding />} />
             <Route path="*" element={<ProtectedRoutes />} />
           </Routes>
         </AuthProvider>

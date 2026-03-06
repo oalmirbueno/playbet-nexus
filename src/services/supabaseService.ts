@@ -22,6 +22,11 @@ export const influencerService = {
     if (error) throw error;
     return data;
   },
+  async getBySlug(slug: string) {
+    const { data, error } = await supabase.from("influencers").select("*").eq("slug", slug).eq("is_active", true).single();
+    if (error) throw error;
+    return data;
+  },
   async create(item: Database["public"]["Tables"]["influencers"]["Insert"]) {
     const { data, error } = await supabase.from("influencers").insert(item).select().single();
     if (error) throw error;
