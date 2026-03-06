@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Plus, Copy, Edit, XCircle, CopyPlus, Search, Eye, Link2, CheckCircle, Globe, AlertTriangle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { initialInfluencerLPs, initialLPTemplates, initialInfluencers, initialLinks, initialJogos, initialPlataformas } from "@/data/mockData";
+import { initialInfluencerLPs, initialLPTemplates, initialInfluencers } from "@/data/mockData";
 import type { InfluencerLP } from "@/types";
 import { toast } from "@/hooks/use-toast";
 import Breadcrumbs from "@/components/Breadcrumbs";
