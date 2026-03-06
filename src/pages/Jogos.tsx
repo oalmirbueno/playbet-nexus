@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { Plus, Edit, XCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { initialJogos } from "@/data/mockData";
 import type { Jogo } from "@/types";
 import { toast } from "@/hooks/use-toast";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import ExportDropdown from "@/components/ExportDropdown";
 
 export default function Jogos() {
+  const navigate = useNavigate();
   const [data, setData] = useState<Jogo[]>(initialJogos);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Partial<Jogo> | null>(null);
@@ -31,12 +35,26 @@ export default function Jogos() {
     toast({ title: j.status === "Ativo" ? "Jogo desativado" : "Jogo ativado" });
   };
 
+  const exportableData = data.map(({ id, nome, cat, lp, plats, links, cliques, ctr, cadastros, receita, status }) => ({ id, nome, cat, lp, plats, links, cliques, ctr, cadastros, receita, status }));
+
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[{ label: "Gestão de Ativos", path: "/jogos" }, { label: "Jogos" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div><h1 className="page-header">Jogos</h1><p className="page-subtitle">Centro de gestão de jogos cadastrados na operação</p></div>
-        <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Adicionar Jogo</button>
+        <div className="flex gap-2">
+          <ExportDropdown data={exportableData} filename="jogos-playbet" />
+          <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Adicionar Jogo</button>
+        </div>
       </div>
+
+      {/* Atalhos rápidos */}
+      <div className="flex flex-wrap gap-2">
+        <button className="btn-ghost text-xs" onClick={() => navigate("/landing-pages")}>→ Landing Pages</button>
+        <button className="btn-ghost text-xs" onClick={() => navigate("/links")}>→ Links Afiliados</button>
+        <button className="btn-ghost text-xs" onClick={() => navigate("/analytics")}>→ Analytics</button>
+      </div>
+
       <div className="glass-card overflow-x-auto">
         <table className="data-table">
           <thead><tr><th>Jogo</th><th>Categoria</th><th>LP Vinculada</th><th>Plataformas</th><th>Links</th><th>Cliques</th><th>CTR</th><th>Cadastros</th><th>Receita Est.</th><th>Status</th><th>Ações</th></tr></thead>

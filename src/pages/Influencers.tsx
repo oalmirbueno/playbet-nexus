@@ -5,6 +5,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { initialInfluencers } from "@/data/mockData";
 import type { Influencer } from "@/types";
 import { toast } from "@/hooks/use-toast";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import ExportDropdown from "@/components/ExportDropdown";
 
 const emptyInfluencer: Partial<Influencer> = {
   nome: "", slug: "", insta: "", seg: "", tipo: "Standard", perc: 15,
@@ -73,14 +75,20 @@ export default function Influencers() {
     setConfirmDeactivate(null);
   };
 
+  const exportableData = data.map(({ id, nome, slug, insta, seg, tipo, perc, jogos, links, receita, saldo, status }) => ({ id, nome, slug, insta, seg, tipo, perc, jogos, links, receita, saldo, status }));
+
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[{ label: "Gestão de Pessoas", path: "/influencers" }, { label: "Influencers" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="page-header">Influencers</h1>
           <p className="page-subtitle">Gestão completa de influenciadores e performance de afiliados</p>
         </div>
-        <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Adicionar Influencer</button>
+        <div className="flex gap-2">
+          <ExportDropdown data={exportableData} filename="influencers-playbet" />
+          <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Adicionar Influencer</button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
@@ -92,7 +100,6 @@ export default function Influencers() {
         ))}
       </div>
 
-      {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center">
         <div className="flex items-center gap-2 bg-secondary/50 border border-border rounded-lg px-3 py-1.5 flex-1 max-w-xs">
           <Search size={13} className="text-muted-foreground shrink-0" />
@@ -152,7 +159,15 @@ export default function Influencers() {
         )}
       </div>
 
-      {/* Create/Edit Modal */}
+      {/* Atalhos rápidos */}
+      <div className="flex flex-wrap gap-2">
+        <button className="btn-ghost text-xs" onClick={() => navigate("/links")}>→ Links Afiliados</button>
+        <button className="btn-ghost text-xs" onClick={() => navigate("/link-engine")}>→ Engine de Links</button>
+        <button className="btn-ghost text-xs" onClick={() => navigate("/landing-pages")}>→ Landing Pages</button>
+        <button className="btn-ghost text-xs" onClick={() => navigate("/saques")}>→ Saques</button>
+        <button className="btn-ghost text-xs" onClick={() => navigate("/campanhas")}>→ Campanhas</button>
+      </div>
+
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -187,7 +202,6 @@ export default function Influencers() {
         </DialogContent>
       </Dialog>
 
-      {/* Deactivate Confirmation */}
       <Dialog open={!!confirmDeactivate} onOpenChange={() => setConfirmDeactivate(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
