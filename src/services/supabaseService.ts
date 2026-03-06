@@ -416,24 +416,3 @@ export const conteudoService = {
     if (error) throw error;
   },
 };
-  async record(click: Database["public"]["Tables"]["clicks"]["Insert"]) {
-    const { data, error } = await supabase.from("clicks").insert(click).select().single();
-    if (error) throw error;
-    return data;
-  },
-  async getByInfluencer(influencerId: string) {
-    const { data, error } = await supabase.from("clicks").select("*").eq("influencer_id", influencerId).order("clicked_at", { ascending: false }).limit(100);
-    if (error) throw error;
-    return data;
-  },
-  async getByLandingPage(lpId: string) {
-    const { data, error } = await supabase.from("clicks").select("*").eq("landing_page_id", lpId).order("clicked_at", { ascending: false }).limit(100);
-    if (error) throw error;
-    return data;
-  },
-  async getAll() {
-    const { data, error } = await supabase.from("clicks").select("*").order("clicked_at", { ascending: false }).limit(500);
-    if (error) throw error;
-    return data;
-  },
-};
