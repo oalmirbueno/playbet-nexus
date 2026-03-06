@@ -126,25 +126,25 @@
     @apply inline-flex items-center px-2 py-0.5 rounded text-[10.5px] font-medium tracking-wide;
   }
   .badge-success {
-    @apply badge bg-success/8 text-[hsl(152,45%,50%)];
+    @apply badge bg-success/10 text-[hsl(152,45%,50%)];
   }
   .badge-warning {
-    @apply badge bg-warning/8 text-[hsl(38,55%,58%)];
+    @apply badge bg-warning/10 text-[hsl(38,55%,58%)];
   }
   .badge-danger {
-    @apply badge bg-destructive/8 text-[hsl(0,50%,58%)];
+    @apply badge bg-destructive/10 text-[hsl(0,50%,58%)];
   }
   .badge-info {
-    @apply badge bg-info/8 text-[hsl(205,55%,56%)];
+    @apply badge bg-info/10 text-[hsl(205,55%,56%)];
   }
   .badge-neutral {
     @apply badge bg-muted text-muted-foreground;
   }
   .badge-primary {
-    @apply badge bg-primary/8 text-[hsl(220,55%,52%)];
+    @apply badge bg-primary/10 text-[hsl(220,55%,52%)];
   }
   .badge-accent {
-    @apply badge bg-accent/8 text-[hsl(43,45%,54%)];
+    @apply badge bg-accent/10 text-[hsl(43,45%,54%)];
   }
 
   /* ── Buttons ───────────────────────────────── */
