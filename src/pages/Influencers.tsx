@@ -117,8 +117,18 @@ export default function Influencers() {
 
   const copyLink = (inf: InfluencerRow) => {
     const url = inf.affiliate_link;
-    if (url) { navigator.clipboard.writeText(url); toast({ title: "Link copiado!", description: url }); }
-    else { toast({ title: "Sem link", description: "Nenhum link disponível.", variant: "destructive" }); }
+    if (url) { navigator.clipboard.writeText(url); toast({ title: "Link afiliado copiado!", description: url }); }
+    else { toast({ title: "Sem link", description: "Nenhum link de afiliado disponível.", variant: "destructive" }); }
+  };
+
+  const copyPublicUrl = (inf: InfluencerRow) => {
+    const url = `${window.location.origin}/i/${inf.slug}`;
+    navigator.clipboard.writeText(url);
+    toast({ title: "URL pública copiada!", description: url });
+  };
+
+  const openPublicUrl = (inf: InfluencerRow) => {
+    window.open(`/i/${inf.slug}`, "_blank");
   };
 
   const handleWizardSave = () => {
@@ -230,7 +240,9 @@ export default function Influencers() {
                     <div className="flex gap-0.5" onClick={e => e.stopPropagation()}>
                       <button onClick={() => navigate(`/influencers/${inf.id}`)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Ver perfil"><Eye size={12} /></button>
                       <button onClick={() => openEdit(inf)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Editar"><Edit size={12} /></button>
-                      <button onClick={() => copyLink(inf)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Copiar link"><Copy size={12} /></button>
+                      <button onClick={() => copyPublicUrl(inf)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Copiar URL pública"><Copy size={12} /></button>
+                      <button onClick={() => openPublicUrl(inf)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-accent transition-colors" title="Abrir landing pública"><Globe size={12} /></button>
+                      <button onClick={() => copyLink(inf)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Copiar link afiliado"><Link2 size={12} /></button>
                       {inf.is_active ? (
                         <button onClick={() => handleToggle(inf)} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors" title="Desativar"><XCircle size={12} /></button>
                       ) : (
