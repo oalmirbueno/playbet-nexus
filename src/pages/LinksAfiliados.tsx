@@ -59,10 +59,13 @@ export default function LinksAfiliados() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Breadcrumbs items={[{ label: "Gestão de Ativos", path: "/links" }, { label: "Links Afiliados" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div><h1 className="page-header">Links Afiliados</h1><p className="page-subtitle">Centro de links — rastreio, UTMs e gestão completa</p></div>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Links Afiliados</h1>
+          <p className="text-sm text-muted-foreground mt-1">Centro de links — rastreio, UTMs e gestão completa</p>
+        </div>
         <div className="flex gap-2">
           <ExportDropdown data={data.map(({ id, nome, jogo, plat, influencer, uso, source, medium, campaign, subid, cliques, status }) => ({ id, nome, jogo, plat, influencer, uso, source, medium, campaign, subid, cliques, status }))} filename="links-playbet" />
           <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Adicionar Link</button>

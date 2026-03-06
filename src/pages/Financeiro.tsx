@@ -125,12 +125,12 @@ export default function Financeiro() {
   const exportData = filtered.map(({ id, ...rest }) => ({ ...rest }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Breadcrumbs items={[{ label: "Financeiro" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="page-header">Financeiro</h1>
-          <p className="page-subtitle">Controle financeiro completo — receitas, comissões, fluxo de caixa e alertas</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Financeiro</h1>
+          <p className="text-sm text-muted-foreground mt-1">Controle financeiro completo — receitas, comissões, fluxo de caixa e alertas</p>
         </div>
         <ExportDropdown data={exportData} filename="financeiro-playbet" />
       </div>

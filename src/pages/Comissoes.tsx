@@ -67,12 +67,12 @@ export default function Comissoes() {
   const exportData = influencers.map(({ historico, origemPlat, ...rest }) => rest);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Breadcrumbs items={[{ label: "Gestão de Receita", path: "/financeiro" }, { label: "Comissões" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="page-header">Comissões</h1>
-          <p className="page-subtitle">Regras de cálculo e distribuição de comissões entre influencers e sócios</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Comissões</h1>
+          <p className="text-sm text-muted-foreground mt-1">Regras de cálculo e distribuição de comissões entre influencers e sócios</p>
         </div>
         <ExportDropdown data={exportData} filename="comissoes-playbet" />
       </div>
