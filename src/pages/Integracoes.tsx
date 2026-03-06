@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plug, CheckCircle, AlertTriangle, Clock, RefreshCw, Play, Settings, Database, CreditCard, BarChart3, Cloud, Webhook, Zap, ExternalLink } from "lucide-react";
+import { Plug, CheckCircle, AlertTriangle, Clock, RefreshCw, Play, Settings, Database, CreditCard, BarChart3, Cloud, Webhook, Zap, ExternalLink, Eye } from "lucide-react";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
