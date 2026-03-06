@@ -3,10 +3,16 @@ import { useNavigate } from "react-router-dom";
 import { Copy, Edit, Eye, Pause, Play, AlertTriangle, ExternalLink, Plus, BarChart3 } from "lucide-react";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ExportDropdown from "@/components/ExportDropdown";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
-const initialUtms = [
+type UtmItem = {
+  id: number; source: string; medium: string; campaign: string; content: string; subid: string;
+  jogo: string; plat: string; influencer: string; lp: string; template: string;
+  cliques: number; ultimaAtividade: string; status: string; observacoes?: string;
+};
+
+const initialUtms: UtmItem[] = [
   { id: 1, source: "playbet", medium: "telegram", campaign: "marco-turbo", content: "cta-azul", subid: "rafa001", jogo: "Fortune Tiger", plat: "Bet365", influencer: "Rafael M.", lp: "Fortune Tiger LP", template: "Fortune Tiger LP", cliques: 4520, ultimaAtividade: "05/03/2026 14:32", status: "Ativo" },
   { id: 2, source: "playbet", medium: "instagram", campaign: "aviator-promo", content: "reels", subid: "pedro001", jogo: "Aviator", plat: "Pixbet", influencer: "Pedro L.", lp: "Aviator Promo", template: "Aviator Promo", cliques: 3200, ultimaAtividade: "05/03/2026 13:18", status: "Ativo" },
   { id: 3, source: "playbet", medium: "whatsapp", campaign: "mines-vip", content: "msg-direta", subid: "carlos001", jogo: "Mines", plat: "Betano", influencer: "Carlos S.", lp: "Fortune Tiger LP", template: "Fortune Tiger LP", cliques: 2100, ultimaAtividade: "05/03/2026 11:45", status: "Ativo" },
@@ -21,10 +27,16 @@ const validationAlerts = [
   { msg: "Rota /i/marcos sem parâmetro de rastreio configurado", type: "danger" },
 ];
 
+const emptyUtm: Partial<UtmItem> = {
+  source: "playbet", medium: "", campaign: "", content: "", subid: "", jogo: "", plat: "", influencer: "", lp: "", template: "", status: "Ativo", observacoes: "",
+};
+
 export default function UtmsSubids() {
   const navigate = useNavigate();
   const [data, setData] = useState(initialUtms);
-  const [detail, setDetail] = useState<typeof initialUtms[0] | null>(null);
+  const [detail, setDetail] = useState<UtmItem | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<Partial<UtmItem> | null>(null);
   const [filterSource, setFilterSource] = useState("Todos");
   const [filterMedium, setFilterMedium] = useState("Todos");
   const [filterCampaign, setFilterCampaign] = useState("Todas");
@@ -41,21 +53,56 @@ export default function UtmsSubids() {
     return true;
   });
 
+  const buildUrl = (u: Partial<UtmItem>) =>
+    `https://playbet.com/i/${u.subid || "..."}?utm_source=${u.source || ""}&utm_medium=${u.medium || ""}&utm_campaign=${u.campaign || ""}&utm_content=${u.content || ""}&subid=${u.subid || ""}`;
+
   const toggleStatus = (id: number) => {
     setData(prev => prev.map(u => u.id === id ? { ...u, status: u.status === "Ativo" ? "Inativo" : "Ativo" } : u));
     toast.success("Status atualizado");
   };
 
-  const copyUrl = (u: typeof initialUtms[0]) => {
-    const url = `https://playbet.com/i/${u.subid}?utm_source=${u.source}&utm_medium=${u.medium}&utm_campaign=${u.campaign}&utm_content=${u.content}&subid=${u.subid}`;
-    navigator.clipboard.writeText(url);
+  const copyUrl = (u: Partial<UtmItem>) => {
+    navigator.clipboard.writeText(buildUrl(u));
     toast.success("URL copiada");
   };
 
-  const duplicate = (u: typeof initialUtms[0]) => {
-    const newU = { ...u, id: Date.now(), subid: u.subid + "-copy", cliques: 0, status: "Ativo" as const };
+  const duplicate = (u: UtmItem) => {
+    const newU = { ...u, id: Date.now(), subid: u.subid + "-copy", cliques: 0, status: "Ativo" };
     setData(prev => [newU, ...prev]);
     toast.success("UTM duplicado");
+  };
+
+  const openCreate = () => {
+    setEditing({ ...emptyUtm, id: 0 });
+    setModalOpen(true);
+  };
+
+  const openEdit = (u: UtmItem) => {
+    setEditing({ ...u });
+    setModalOpen(true);
+  };
+
+  const handleSave = () => {
+    if (!editing?.subid || !editing?.medium) {
+      toast.error("SubID e Medium são obrigatórios.");
+      return;
+    }
+    if (editing.id && editing.id > 0) {
+      setData(prev => prev.map(u => u.id === editing.id ? { ...u, ...editing } as UtmItem : u));
+      toast.success(`UTM ${editing.subid} atualizado`);
+    } else {
+      const newItem: UtmItem = {
+        ...emptyUtm as UtmItem,
+        ...editing,
+        id: Date.now(),
+        cliques: 0,
+        ultimaAtividade: new Date().toLocaleString("pt-BR"),
+      };
+      setData(prev => [newItem, ...prev]);
+      toast.success(`UTM ${editing.subid} criado`);
+    }
+    setModalOpen(false);
+    setEditing(null);
   };
 
   return (
@@ -67,7 +114,7 @@ export default function UtmsSubids() {
           <p className="text-sm text-muted-foreground mt-1">Centro de rastreio — parâmetros, validação e performance de cada link</p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="btn-primary text-xs"><Plus size={13} />Criar UTM</button>
+          <button className="btn-primary text-xs" onClick={openCreate}><Plus size={13} />Criar UTM</button>
           <ExportDropdown data={data} filename="utms-subids" />
         </div>
       </div>
@@ -112,7 +159,7 @@ export default function UtmsSubids() {
       </div>
 
       {/* Table */}
-      <div className="glass-card overflow-x-auto">
+      <div className="glass-card overflow-x-auto invisible-scroll">
         <table className="data-table">
           <thead>
             <tr><th>Source</th><th>Medium</th><th>Campaign</th><th>Content</th><th>SubID</th><th>Influencer</th><th>LP</th><th>Jogo</th><th>Plat.</th><th>Cliques</th><th>Última Ativ.</th><th>Status</th><th>Ações</th></tr>
@@ -134,14 +181,14 @@ export default function UtmsSubids() {
                 <td><span className={u.status === "Ativo" ? "badge-success" : "badge-danger"}>{u.status}</span></td>
                 <td>
                   <div className="flex items-center gap-1">
-                    <button onClick={() => setDetail(u)} className="p-1.5 hover:bg-secondary rounded" title="Ver detalhe"><Eye size={13} className="text-muted-foreground" /></button>
-                    <button className="p-1.5 hover:bg-secondary rounded" title="Editar"><Edit size={13} className="text-muted-foreground" /></button>
-                    <button onClick={() => copyUrl(u)} className="p-1.5 hover:bg-secondary rounded" title="Copiar URL"><Copy size={13} className="text-muted-foreground" /></button>
-                    <button onClick={() => duplicate(u)} className="p-1.5 hover:bg-secondary rounded" title="Duplicar"><Plus size={13} className="text-muted-foreground" /></button>
-                    <button onClick={() => toggleStatus(u.id)} className="p-1.5 hover:bg-secondary rounded" title={u.status === "Ativo" ? "Desativar" : "Ativar"}>
+                    <button onClick={() => setDetail(u)} className="p-1.5 hover:bg-secondary rounded cursor-pointer" title="Ver detalhe"><Eye size={13} className="text-muted-foreground" /></button>
+                    <button onClick={() => openEdit(u)} className="p-1.5 hover:bg-secondary rounded cursor-pointer" title="Editar"><Edit size={13} className="text-muted-foreground" /></button>
+                    <button onClick={() => copyUrl(u)} className="p-1.5 hover:bg-secondary rounded cursor-pointer" title="Copiar URL"><Copy size={13} className="text-muted-foreground" /></button>
+                    <button onClick={() => duplicate(u)} className="p-1.5 hover:bg-secondary rounded cursor-pointer" title="Duplicar"><Plus size={13} className="text-muted-foreground" /></button>
+                    <button onClick={() => toggleStatus(u.id)} className="p-1.5 hover:bg-secondary rounded cursor-pointer" title={u.status === "Ativo" ? "Desativar" : "Ativar"}>
                       {u.status === "Ativo" ? <Pause size={13} className="text-muted-foreground" /> : <Play size={13} className="text-muted-foreground" />}
                     </button>
-                    <button onClick={() => navigate("/analytics")} className="p-1.5 hover:bg-secondary rounded" title="Analytics"><BarChart3 size={13} className="text-muted-foreground" /></button>
+                    <button onClick={() => navigate("/analytics")} className="p-1.5 hover:bg-secondary rounded cursor-pointer" title="Analytics"><BarChart3 size={13} className="text-muted-foreground" /></button>
                   </div>
                 </td>
               </tr>
@@ -149,6 +196,87 @@ export default function UtmsSubids() {
           </tbody>
         </table>
       </div>
+
+      {/* Create/Edit Modal */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{editing?.id ? "Editar UTM" : "Criar UTM"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto invisible-scroll">
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="text-xs font-medium text-muted-foreground">UTM Source</label><input className="input-field mt-1" value={editing?.source || ""} onChange={e => setEditing(p => ({ ...p, source: e.target.value }))} /></div>
+              <div><label className="text-xs font-medium text-muted-foreground">UTM Medium *</label>
+                <select className="select-field mt-1 w-full" value={editing?.medium || ""} onChange={e => setEditing(p => ({ ...p, medium: e.target.value }))}>
+                  <option value="">Selecionar...</option>
+                  <option>telegram</option><option>instagram</option><option>whatsapp</option><option>bio</option><option>youtube</option><option>tiktok</option><option>email</option>
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="text-xs font-medium text-muted-foreground">UTM Campaign</label><input className="input-field mt-1" value={editing?.campaign || ""} onChange={e => setEditing(p => ({ ...p, campaign: e.target.value }))} /></div>
+              <div><label className="text-xs font-medium text-muted-foreground">UTM Content</label><input className="input-field mt-1" value={editing?.content || ""} onChange={e => setEditing(p => ({ ...p, content: e.target.value }))} /></div>
+            </div>
+            <div><label className="text-xs font-medium text-muted-foreground">SubID *</label><input className="input-field mt-1" value={editing?.subid || ""} onChange={e => setEditing(p => ({ ...p, subid: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") }))} placeholder="ex: rafa001" /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="text-xs font-medium text-muted-foreground">Influencer</label>
+                <select className="select-field mt-1 w-full" value={editing?.influencer || ""} onChange={e => setEditing(p => ({ ...p, influencer: e.target.value }))}>
+                  <option value="">Selecionar...</option>
+                  {["Rafael M.", "Pedro L.", "Carlos S.", "Ana S.", "Julia C."].map(n => <option key={n}>{n}</option>)}
+                </select>
+              </div>
+              <div><label className="text-xs font-medium text-muted-foreground">Landing Page</label>
+                <select className="select-field mt-1 w-full" value={editing?.lp || ""} onChange={e => setEditing(p => ({ ...p, lp: e.target.value, template: e.target.value }))}>
+                  <option value="">Selecionar...</option>
+                  {["Fortune Tiger LP", "Aviator Promo", "Cadastro Geral", "Mines Special"].map(n => <option key={n}>{n}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="text-xs font-medium text-muted-foreground">Jogo</label>
+                <select className="select-field mt-1 w-full" value={editing?.jogo || ""} onChange={e => setEditing(p => ({ ...p, jogo: e.target.value }))}>
+                  <option value="">Selecionar...</option>
+                  {["Fortune Tiger", "Aviator", "Mines", "Gates of Olympus", "Spaceman"].map(n => <option key={n}>{n}</option>)}
+                </select>
+              </div>
+              <div><label className="text-xs font-medium text-muted-foreground">Plataforma</label>
+                <select className="select-field mt-1 w-full" value={editing?.plat || ""} onChange={e => setEditing(p => ({ ...p, plat: e.target.value }))}>
+                  <option value="">Selecionar...</option>
+                  {["Bet365", "Betano", "Sportingbet", "Pixbet"].map(n => <option key={n}>{n}</option>)}
+                </select>
+              </div>
+            </div>
+            <div><label className="text-xs font-medium text-muted-foreground">Campanha vinculada</label>
+              <select className="select-field mt-1 w-full" value={editing?.campaign || ""} onChange={e => setEditing(p => ({ ...p, campaign: e.target.value }))}>
+                <option value="">Nenhuma</option>
+                {["marco-turbo", "aviator-promo", "mines-vip", "geral", "spaceman"].map(n => <option key={n}>{n}</option>)}
+              </select>
+            </div>
+            <div><label className="text-xs font-medium text-muted-foreground">Status</label>
+              <select className="select-field mt-1 w-full" value={editing?.status || "Ativo"} onChange={e => setEditing(p => ({ ...p, status: e.target.value }))}>
+                <option>Ativo</option><option>Inativo</option>
+              </select>
+            </div>
+            <div><label className="text-xs font-medium text-muted-foreground">Observações</label>
+              <textarea className="input-field mt-1 min-h-[60px]" value={editing?.observacoes || ""} onChange={e => setEditing(p => ({ ...p, observacoes: e.target.value }))} />
+            </div>
+            {/* URL Preview */}
+            {editing?.subid && (
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">URL Gerada</label>
+                <div className="bg-secondary/50 border border-border rounded-md p-3 mt-1 font-mono text-[11px] break-all flex items-center gap-2">
+                  <span className="flex-1">{buildUrl(editing)}</span>
+                  <button onClick={() => copyUrl(editing)} className="btn-ghost text-xs shrink-0 px-2 py-1"><Copy size={11} /></button>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <button className="btn-ghost" onClick={() => setModalOpen(false)}>Cancelar</button>
+            <button className="btn-primary" onClick={handleSave}>Salvar</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Detail Dialog */}
       <Dialog open={!!detail} onOpenChange={() => setDetail(null)}>
@@ -160,8 +288,9 @@ export default function UtmsSubids() {
             <div className="space-y-6">
               <div>
                 <p className="text-[10.5px] uppercase tracking-wider text-muted-foreground mb-2">URL Completa</p>
-                <div className="bg-secondary/50 border border-border rounded-md p-3 font-mono text-[11px] break-all">
-                  https://playbet.com/i/{detail.subid}?utm_source={detail.source}&utm_medium={detail.medium}&utm_campaign={detail.campaign}&utm_content={detail.content}&subid={detail.subid}
+                <div className="bg-secondary/50 border border-border rounded-md p-3 font-mono text-[11px] break-all flex items-center gap-2">
+                  <span className="flex-1">{buildUrl(detail)}</span>
+                  <button onClick={() => copyUrl(detail)} className="btn-ghost text-xs shrink-0 px-2 py-1"><Copy size={11} /></button>
                 </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -179,6 +308,7 @@ export default function UtmsSubids() {
                 ))}
               </div>
               <div className="flex gap-2 pt-2 border-t border-border">
+                <button className="btn-ghost text-xs" onClick={() => { setDetail(null); openEdit(detail); }}>Editar</button>
                 <button className="btn-ghost text-xs" onClick={() => { setDetail(null); navigate("/analytics"); }}>Ver Analytics</button>
                 <button className="btn-ghost text-xs" onClick={() => { setDetail(null); navigate("/campanhas"); }}>Ver Campanha</button>
                 <button className="btn-ghost text-xs" onClick={() => copyUrl(detail)}>Copiar URL</button>
