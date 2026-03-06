@@ -9,6 +9,7 @@ import {
   utmService,
   landingPageInstanceService,
 } from "@/services/supabaseService";
+import { useDemoMode } from "@/contexts/DemoModeContext";
 
 // ── Generic hook factory ──
 function useEntityCrud<Row extends Record<string, any>>(
@@ -21,12 +22,21 @@ function useEntityCrud<Row extends Record<string, any>>(
     remove?: (id: string) => Promise<void>;
   },
   entityName: string,
+  demoMode: "all" | "real" | "demo",
 ) {
   const queryClient = useQueryClient();
 
   const query = useQuery({
     queryKey: [key],
     queryFn: service.getAll,
+  });
+
+  // Filter data based on demo mode
+  const filteredData = (query.data ?? []).filter((row) => {
+    if (demoMode === "all") return true;
+    if (demoMode === "real") return !(row as any).is_demo;
+    if (demoMode === "demo") return (row as any).is_demo;
+    return true;
   });
 
   const createMutation = useMutation({
@@ -76,7 +86,7 @@ function useEntityCrud<Row extends Record<string, any>>(
   });
 
   return {
-    data: query.data ?? [],
+    data: filteredData,
     isLoading: query.isLoading,
     error: query.error,
     refetch: query.refetch,
@@ -91,10 +101,31 @@ function useEntityCrud<Row extends Record<string, any>>(
 }
 
 // ── Entity hooks ──
-export const useInfluencers = () => useEntityCrud("influencers", influencerService, "Influencer");
-export const usePlatforms = () => useEntityCrud("platforms", platformService, "Plataforma");
-export const useGames = () => useEntityCrud("games", gameService, "Jogo");
-export const useTemplates = () => useEntityCrud("templates", templateService, "Template");
-export const useLandingPages = () => useEntityCrud("landing_pages", landingPageService, "Landing Page");
-export const useUtms = () => useEntityCrud("utms", utmService, "UTM");
-export const useLandingPageInstances = () => useEntityCrud("landing_page_instances", landingPageInstanceService, "Instância de LP");
+export const useInfluencers = () => {
+  const { demoMode } = useDemoMode();
+  return useEntityCrud("influencers", influencerService, "Influencer", demoMode);
+};
+export const usePlatforms = () => {
+  const { demoMode } = useDemoMode();
+  return useEntityCrud("platforms", platformService, "Plataforma", demoMode);
+};
+export const useGames = () => {
+  const { demoMode } = useDemoMode();
+  return useEntityCrud("games", gameService, "Jogo", demoMode);
+};
+export const useTemplates = () => {
+  const { demoMode } = useDemoMode();
+  return useEntityCrud("templates", templateService, "Template", demoMode);
+};
+export const useLandingPages = () => {
+  const { demoMode } = useDemoMode();
+  return useEntityCrud("landing_pages", landingPageService, "Landing Page", demoMode);
+};
+export const useUtms = () => {
+  const { demoMode } = useDemoMode();
+  return useEntityCrud("utms", utmService, "UTM", demoMode);
+};
+export const useLandingPageInstances = () => {
+  const { demoMode } = useDemoMode();
+  return useEntityCrud("landing_page_instances", landingPageInstanceService, "Instância de LP", demoMode);
+};
