@@ -152,9 +152,19 @@ export interface ConteudoItem {
   id: number;
   tema: string;
   tipo: string;
+  formato?: string;
+  canal?: string;
   jogo: string;
   influencer: string;
   campanha: string;
-  status: "Ideia" | "Roteiro" | "Produção" | "Revisão" | "Agendado" | "Publicado";
+  lp?: string;
+  status: "Ideia" | "Roteiro" | "Produção" | "Revisão" | "Agendado" | "Publicado" | "Pausado";
+  prioridade?: "Alta" | "Média" | "Baixa";
   data: string;
+  dataPublicacao?: string;
+  responsavel?: string;
+  cta?: string;
+  roteiro?: string;
+  objetivo?: string;
+  observacoes?: string;
 }
