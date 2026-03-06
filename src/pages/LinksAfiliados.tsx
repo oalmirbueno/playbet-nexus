@@ -1,16 +1,16 @@
 import { useState } from "react";
-import { Copy, Edit, XCircle, CopyPlus, Plus, Search } from "lucide-react";
+import { Copy, Edit, XCircle, CopyPlus, Plus, Search, Link2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { initialLinks } from "@/data/mockData";
 import type { LinkAfiliado } from "@/types";
 import { toast } from "@/hooks/use-toast";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ExportDropdown from "@/components/ExportDropdown";
+import EmptyState from "@/components/EmptyState";
 
 export default function LinksAfiliados() {
   const navigate = useNavigate();
-  const [data, setData] = useState<LinkAfiliado[]>(initialLinks);
+  const [data, setData] = useState<LinkAfiliado[]>([]);
   const [search, setSearch] = useState("");
   const [filterJogo, setFilterJogo] = useState("Todos");
   const [filterStatus, setFilterStatus] = useState("Todos");
@@ -67,67 +67,67 @@ export default function LinksAfiliados() {
           <p className="text-sm text-muted-foreground mt-1">Centro de links — rastreio, UTMs e gestão completa</p>
         </div>
         <div className="flex gap-2">
-          <ExportDropdown data={data.map(({ id, nome, jogo, plat, influencer, uso, source, medium, campaign, subid, cliques, status }) => ({ id, nome, jogo, plat, influencer, uso, source, medium, campaign, subid, cliques, status }))} filename="links-playbet" />
+          {data.length > 0 && <ExportDropdown data={data.map(l => ({ ...l }))} filename="links-playbet" />}
           <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Adicionar Link</button>
         </div>
       </div>
 
-      {/* Atalhos rápidos */}
       <div className="flex flex-wrap gap-2">
         <button className="btn-ghost text-xs" onClick={() => navigate("/link-engine")}>→ Engine de Links</button>
         <button className="btn-ghost text-xs" onClick={() => navigate("/landing-pages")}>→ Landing Pages</button>
         <button className="btn-ghost text-xs" onClick={() => navigate("/utms")}>→ UTMs / SubIDs</button>
       </div>
 
-      <div className="flex flex-wrap gap-3 items-center">
-        <div className="flex items-center gap-2 bg-secondary/50 border border-border rounded-lg px-3 py-1.5 flex-1 max-w-xs">
-          <Search size={13} className="text-muted-foreground shrink-0" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar link ou influencer..." className="bg-transparent text-xs text-foreground placeholder:text-muted-foreground focus:outline-none w-full" />
+      {data.length === 0 ? (
+        <div className="glass-card">
+          <EmptyState
+            icon={Link2}
+            title="Nenhum link cadastrado"
+            description="Crie links afiliados para rastrear cliques, conversões e performance por influencer, jogo e plataforma."
+            actionLabel="Adicionar Link"
+            onAction={openCreate}
+          />
         </div>
-        <select className="select-field" value={filterJogo} onChange={e => setFilterJogo(e.target.value)}>
-          {jogos.map(j => <option key={j}>{j}</option>)}
-        </select>
-        <select className="select-field" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-          <option>Todos</option><option>Ativo</option><option>Inativo</option>
-        </select>
-      </div>
-
-      <div className="glass-card overflow-x-auto invisible-scroll">
-        {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-            <p className="text-sm font-medium">Nenhum link encontrado</p>
+      ) : (
+        <>
+          <div className="flex flex-wrap gap-3 items-center">
+            <div className="flex items-center gap-2 bg-secondary/50 border border-border rounded-lg px-3 py-1.5 flex-1 max-w-xs">
+              <Search size={13} className="text-muted-foreground shrink-0" />
+              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar link ou influencer..." className="bg-transparent text-xs text-foreground placeholder:text-muted-foreground focus:outline-none w-full" />
+            </div>
+            <select className="select-field" value={filterJogo} onChange={e => setFilterJogo(e.target.value)}>{jogos.map(j => <option key={j}>{j}</option>)}</select>
+            <select className="select-field" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}><option>Todos</option><option>Ativo</option><option>Inativo</option></select>
           </div>
-        ) : (
-          <table className="data-table">
-            <thead><tr><th>Nome</th><th>Jogo</th><th>Plataforma</th><th>Influencer</th><th>Uso</th><th>Source</th><th>Medium</th><th>Campaign</th><th>SubID</th><th>Cliques</th><th>Status</th><th>Ações</th></tr></thead>
-            <tbody>
-              {filtered.map((l) => (
-                <tr key={l.id}>
-                  <td className="font-medium text-xs">{l.nome}</td>
-                  <td className="text-xs">{l.jogo}</td>
-                  <td className="text-xs">{l.plat}</td>
-                  <td className="text-xs">{l.influencer}</td>
-                  <td><span className="badge-neutral">{l.uso}</span></td>
-                  <td className="font-mono text-[10px] text-muted-foreground">{l.source}</td>
-                  <td className="font-mono text-[10px] text-muted-foreground">{l.medium}</td>
-                  <td className="font-mono text-[10px] text-muted-foreground">{l.campaign}</td>
-                  <td className="font-mono text-[10px] text-accent">{l.subid}</td>
-                  <td className="font-medium">{l.cliques.toLocaleString()}</td>
-                  <td><span className={l.status === "Ativo" ? "badge-success" : "badge-danger"}>{l.status}</span></td>
-                  <td>
-                    <div className="flex gap-1">
-                      <button onClick={() => copyLink(l)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Copiar"><Copy size={12} /></button>
-                      <button onClick={() => openEdit(l)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Editar"><Edit size={12} /></button>
-                      <button onClick={() => duplicateLink(l)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Duplicar"><CopyPlus size={12} /></button>
-                      <button onClick={() => deactivate(l)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-destructive transition-colors" title="Desativar"><XCircle size={12} /></button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+
+          <div className="glass-card overflow-x-auto invisible-scroll">
+            <table className="data-table">
+              <thead><tr><th>Nome</th><th>Jogo</th><th>Plataforma</th><th>Influencer</th><th>Source</th><th>Medium</th><th>SubID</th><th>Status</th><th>Ações</th></tr></thead>
+              <tbody>
+                {filtered.map((l) => (
+                  <tr key={l.id}>
+                    <td className="font-medium text-xs">{l.nome}</td>
+                    <td className="text-xs">{l.jogo}</td>
+                    <td className="text-xs">{l.plat}</td>
+                    <td className="text-xs">{l.influencer}</td>
+                    <td className="font-mono text-[10px] text-muted-foreground">{l.source}</td>
+                    <td className="font-mono text-[10px] text-muted-foreground">{l.medium}</td>
+                    <td className="font-mono text-[10px] text-accent">{l.subid}</td>
+                    <td><span className={l.status === "Ativo" ? "badge-success" : "badge-danger"}>{l.status}</span></td>
+                    <td>
+                      <div className="flex gap-1">
+                        <button onClick={() => copyLink(l)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"><Copy size={12} /></button>
+                        <button onClick={() => openEdit(l)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"><Edit size={12} /></button>
+                        <button onClick={() => duplicateLink(l)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors"><CopyPlus size={12} /></button>
+                        <button onClick={() => deactivate(l)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-destructive transition-colors"><XCircle size={12} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-lg">
@@ -147,7 +147,6 @@ export default function LinksAfiliados() {
               <div><label className="text-xs font-medium text-muted-foreground">UTM Medium</label><input className="input-field mt-1" value={editing?.medium || ""} onChange={e => setEditing(p => ({ ...p, medium: e.target.value }))} /></div>
               <div><label className="text-xs font-medium text-muted-foreground">SubID</label><input className="input-field mt-1" value={editing?.subid || ""} onChange={e => setEditing(p => ({ ...p, subid: e.target.value }))} /></div>
             </div>
-            <div><label className="text-xs font-medium text-muted-foreground">Campaign</label><input className="input-field mt-1" value={editing?.campaign || ""} onChange={e => setEditing(p => ({ ...p, campaign: e.target.value }))} /></div>
           </div>
           <DialogFooter>
             <button className="btn-ghost" onClick={() => setModalOpen(false)}>Cancelar</button>
