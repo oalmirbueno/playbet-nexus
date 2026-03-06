@@ -24,6 +24,34 @@ export default function Configuracoes() {
   const [clearing, setClearing] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
 
+  const { data: influencers } = useInfluencers();
+  const { data: games } = useGames();
+  const { data: platforms } = usePlatforms();
+  const { data: landingPages } = useLandingPages();
+  const { data: templates } = useTemplates();
+  const { data: utms } = useUtms();
+  const { data: campanhas } = useCampanhas();
+  const { data: socios } = useSocios();
+  const { data: saques } = useSaques();
+  const { data: conteudos } = useConteudo();
+
+  const auditModules = [
+    { label: "Plataformas", count: platforms.length, category: "infra" },
+    { label: "Jogos", count: games.length, category: "infra" },
+    { label: "Influencers", count: influencers.length, category: "infra" },
+    { label: "Templates", count: templates.length, category: "infra" },
+    { label: "Landing Pages", count: landingPages.length, category: "infra" },
+    { label: "UTMs / SubIDs", count: utms.length, category: "infra" },
+    { label: "Campanhas", count: campanhas.length, category: "marketing" },
+    { label: "Conteúdo / Calendário", count: conteudos.length, category: "marketing" },
+    { label: "Sócios", count: socios.length, category: "financeiro" },
+    { label: "Saques", count: saques.length, category: "financeiro" },
+  ];
+
+  const missingModules = auditModules.filter(m => m.count === 0);
+  const totalItems = auditModules.reduce((a, b) => a + b.count, 0);
+  const completionPct = Math.round((auditModules.filter(m => m.count > 0).length / auditModules.length) * 100);
+
   const handleSeed = async () => {
     setSeeding(true);
     try {
