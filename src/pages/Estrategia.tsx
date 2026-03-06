@@ -233,7 +233,7 @@ export default function Estrategia() {
       {/* HIPÓTESES */}
       {activeTab === "Hipóteses" && (
         <div className="space-y-6">
-          <div className="glass-card overflow-x-auto rounded-lg">
+          <div className="glass-card overflow-x-auto invisible-scroll rounded-lg">
             <table className="data-table">
               <thead><tr><th>Hipótese</th><th>Objetivo</th><th>Responsável</th><th>Status</th><th>Resultado</th></tr></thead>
               <tbody>
@@ -295,7 +295,7 @@ export default function Estrategia() {
 
       {/* PLANO SEMANAL */}
       {activeTab === "Plano Semanal" && (
-        <div className="glass-card overflow-x-auto rounded-lg">
+        <div className="glass-card overflow-x-auto invisible-scroll rounded-lg">
           <table className="data-table">
             <thead><tr><th className="w-10"></th><th>Meta</th><th>Conteúdo</th><th>Campanha</th><th>Jogo</th><th>Influencer</th><th>Responsável</th><th>Prazo</th></tr></thead>
             <tbody>

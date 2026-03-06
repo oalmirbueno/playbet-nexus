@@ -108,7 +108,7 @@ export default function Comissoes() {
       {/* Influencer Commissions */}
       <div className="glass-card p-5">
         <h3 className="section-title">Comissões por Influencer</h3>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto invisible-scroll">
           <table className="data-table">
             <thead><tr><th>Nome</th><th>%</th><th>Bruto Gerado</th><th>Valor Devido</th><th>Já Pago</th><th>Saldo Pendente</th><th>Disponível p/ Saque</th><th>Último Pgto</th><th>Status</th><th>Ações</th></tr></thead>
             <tbody>

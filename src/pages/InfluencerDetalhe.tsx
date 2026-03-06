@@ -113,7 +113,7 @@ export default function InfluencerDetalhe() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 bg-secondary/50 p-1 rounded-xl overflow-x-auto">
+      <div className="flex gap-1 bg-secondary/50 p-1 rounded-xl overflow-x-auto invisible-scroll">
         {tabs.map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)} className={`${tab === t.key ? "tab-btn-active" : "tab-btn"} whitespace-nowrap flex items-center gap-1.5`}>
             <t.icon size={13} /> {t.label}
@@ -217,7 +217,7 @@ export default function InfluencerDetalhe() {
           {links.length === 0 ? (
             <div className="glass-card p-12 text-center text-muted-foreground"><p className="font-medium">Nenhum link encontrado.</p></div>
           ) : (
-            <div className="glass-card overflow-x-auto">
+            <div className="glass-card overflow-x-auto invisible-scroll">
               <table className="data-table">
                 <thead><tr><th>Nome</th><th>Jogo</th><th>Plataforma</th><th>UTM Source</th><th>SubID</th><th>Cliques</th><th>Último Clique</th><th>Status</th><th>Ações</th></tr></thead>
                 <tbody>{links.map((l) => (
@@ -245,7 +245,7 @@ export default function InfluencerDetalhe() {
           {campanhas.length === 0 ? (
             <div className="glass-card p-12 text-center text-muted-foreground"><p className="font-medium">Nenhuma campanha vinculada.</p></div>
           ) : (
-            <div className="glass-card overflow-x-auto">
+            <div className="glass-card overflow-x-auto invisible-scroll">
               <table className="data-table">
                 <thead><tr><th>Nome</th><th>Objetivo</th><th>Jogo</th><th>Plataforma</th><th>Início</th><th>Fim</th><th>Status</th><th>Resultado</th></tr></thead>
                 <tbody>{campanhas.map(c => (
@@ -281,7 +281,7 @@ export default function InfluencerDetalhe() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div className="glass-card overflow-x-auto">
+          <div className="glass-card overflow-x-auto invisible-scroll">
             <table className="data-table">
               <thead><tr><th>Período</th><th>Receita</th><th>Comissão ({influencer.perc}%)</th><th>Status</th></tr></thead>
               <tbody>{ganhos.map((g, i) => (
@@ -303,7 +303,7 @@ export default function InfluencerDetalhe() {
           {saques.length === 0 ? (
             <div className="glass-card p-12 text-center text-muted-foreground"><p className="font-medium">Nenhum saque registrado.</p></div>
           ) : (
-            <div className="glass-card overflow-x-auto">
+            <div className="glass-card overflow-x-auto invisible-scroll">
               <table className="data-table">
                 <thead><tr><th>ID</th><th>Valor</th><th>Data</th><th>Conta</th><th>Status</th></tr></thead>
                 <tbody>{saques.map(s => (
@@ -339,7 +339,7 @@ export default function InfluencerDetalhe() {
           </div>
           <div className="glass-card p-5">
             <h3 className="section-title">Cliques Recentes</h3>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto invisible-scroll">
               <table className="data-table">
                 <thead><tr><th>Data/Hora</th><th>Referrer</th><th>Device</th><th>Rota</th><th>IP</th></tr></thead>
                 <tbody>{clicksRecentes.map(c => (
@@ -363,7 +363,7 @@ export default function InfluencerDetalhe() {
           {conteudos.length === 0 ? (
             <div className="glass-card p-12 text-center text-muted-foreground"><p className="font-medium">Nenhum conteúdo vinculado.</p></div>
           ) : (
-            <div className="glass-card overflow-x-auto">
+            <div className="glass-card overflow-x-auto invisible-scroll">
               <table className="data-table">
                 <thead><tr><th>Data</th><th>Tipo</th><th>Tema</th><th>Jogo</th><th>Campanha</th><th>Status</th></tr></thead>
                 <tbody>{conteudos.map(c => (

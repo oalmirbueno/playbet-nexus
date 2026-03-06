@@ -78,7 +78,7 @@ export default function Auditoria() {
       </div>
 
       {/* Table */}
-      <div className="glass-card overflow-x-auto">
+      <div className="glass-card overflow-x-auto invisible-scroll">
         <table className="data-table">
           <thead>
             <tr><th>Data/Hora</th><th>Usuário</th><th>Perfil</th><th>Módulo</th><th>Ação</th><th>Item Afetado</th><th>Antes</th><th>Depois</th><th>Origem</th><th>Status</th><th></th></tr>

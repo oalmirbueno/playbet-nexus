@@ -72,7 +72,7 @@ export default function PlataformaDetalhe() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 overflow-x-auto pb-1">
+      <div className="flex gap-1 overflow-x-auto invisible-scroll pb-1">
         {tabs.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${tab === t.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary"}`}>
             <t.icon size={13} /> {t.label}
@@ -126,7 +126,7 @@ export default function PlataformaDetalhe() {
       )}
 
       {tab === "jogos" && (
-        <div className="glass-card overflow-x-auto">
+        <div className="glass-card overflow-x-auto invisible-scroll">
           <table className="data-table"><thead><tr><th>Jogo</th><th>Categoria</th><th>CTR</th><th>Receita</th><th>Cadastros</th><th>Status</th></tr></thead>
             <tbody>{platJogos.map(j => <tr key={j.id}><td className="font-medium cursor-pointer hover:text-accent" onClick={() => navigate(`/jogos/${j.id}`)}>{j.nome}</td><td><span className="badge-neutral">{j.cat}</span></td><td className="text-accent">{j.ctr}</td><td>R$ {j.receita.toLocaleString()}</td><td>{j.cadastros}</td><td><span className={j.status === "Ativo" ? "badge-success" : "badge-danger"}>{j.status}</span></td></tr>)}</tbody>
           </table>
@@ -134,7 +134,7 @@ export default function PlataformaDetalhe() {
       )}
 
       {tab === "lps" && (
-        <div className="glass-card overflow-x-auto">
+        <div className="glass-card overflow-x-auto invisible-scroll">
           <table className="data-table"><thead><tr><th>Nome</th><th>Rota</th><th>Tipo</th><th>Jogo</th><th>Cliques</th><th>CTR</th><th>Status</th></tr></thead>
             <tbody>{platLPs.map(l => <tr key={l.id}><td className="font-medium">{l.nome}</td><td className="font-mono text-xs text-accent">{l.rota}</td><td><span className="badge-neutral">{l.tipo}</span></td><td>{l.jogo}</td><td>{l.cliques.toLocaleString()}</td><td className="text-accent">{l.ctr}</td><td><span className={l.status === "Ativo" ? "badge-success" : "badge-warning"}>{l.status}</span></td></tr>)}</tbody>
           </table>
@@ -142,7 +142,7 @@ export default function PlataformaDetalhe() {
       )}
 
       {tab === "campanhas" && (
-        <div className="glass-card overflow-x-auto">
+        <div className="glass-card overflow-x-auto invisible-scroll">
           <table className="data-table"><thead><tr><th>Nome</th><th>Jogo</th><th>Influencer</th><th>Período</th><th>Status</th><th>Resultado</th></tr></thead>
             <tbody>{platCampanhas.map(c => <tr key={c.id}><td className="font-medium cursor-pointer hover:text-accent" onClick={() => navigate(`/campanhas/${c.id}`)}>{c.nome}</td><td>{c.jogo}</td><td>{c.influencer}</td><td className="text-xs">{c.inicio} - {c.fim}</td><td><span className={c.status === "Ativa" ? "badge-success" : c.status === "Planejada" ? "badge-info" : "badge-neutral"}>{c.status}</span></td><td className="text-xs">{c.resultado}</td></tr>)}</tbody>
           </table>
@@ -150,7 +150,7 @@ export default function PlataformaDetalhe() {
       )}
 
       {tab === "influencers" && (
-        <div className="glass-card overflow-x-auto">
+        <div className="glass-card overflow-x-auto invisible-scroll">
           <table className="data-table"><thead><tr><th>Nome</th><th>Instagram</th><th>Tipo</th><th>Receita</th><th>Status</th></tr></thead>
             <tbody>{platInfluencers.map(inf => <tr key={inf.id}><td className="font-medium cursor-pointer hover:text-accent" onClick={() => navigate(`/influencers/${inf.id}`)}>{inf.nome}</td><td className="text-accent text-xs">{inf.insta}</td><td><span className="badge-primary">{inf.tipo}</span></td><td>R$ {inf.receita.toLocaleString()}</td><td><span className={inf.status === "Ativo" ? "badge-success" : "badge-warning"}>{inf.status}</span></td></tr>)}</tbody>
           </table>
@@ -158,7 +158,7 @@ export default function PlataformaDetalhe() {
       )}
 
       {tab === "links" && (
-        <div className="glass-card overflow-x-auto">
+        <div className="glass-card overflow-x-auto invisible-scroll">
           <table className="data-table"><thead><tr><th>Nome</th><th>Jogo</th><th>Influencer</th><th>Cliques</th><th>Status</th></tr></thead>
             <tbody>{platLinks.map(l => <tr key={l.id}><td className="font-medium">{l.nome}</td><td>{l.jogo}</td><td>{l.influencer}</td><td>{l.cliques.toLocaleString()}</td><td><span className={l.status === "Ativo" ? "badge-success" : "badge-danger"}>{l.status}</span></td></tr>)}</tbody>
           </table>

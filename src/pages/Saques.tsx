@@ -142,7 +142,7 @@ export default function Saques() {
       </div>
 
       {/* Table */}
-      <div className="glass-card overflow-x-auto animate-fade-in">
+      <div className="glass-card overflow-x-auto invisible-scroll animate-fade-in">
         <table className="data-table">
           <thead><tr><th>ID</th><th>Nome</th><th>Tipo</th><th>Valor</th><th>Saldo Disp.</th><th>Conta</th><th>Solicitação</th><th>Aprovação</th><th>Pagamento</th><th>Status</th><th>Aprovador</th><th>Ações</th></tr></thead>
           <tbody>

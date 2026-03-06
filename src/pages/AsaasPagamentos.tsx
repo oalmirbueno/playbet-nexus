@@ -195,7 +195,7 @@ export default function AsaasPagamentos() {
               </div>
               <div className="border-t border-border pt-3">
                 <h4 className="text-xs font-medium text-muted-foreground uppercase mb-2">Payload de Pagamento</h4>
-                <pre className="bg-secondary/50 rounded-lg p-3 text-xs font-mono overflow-x-auto">{JSON.stringify(JSON.parse(detailOpen.payload), null, 2)}</pre>
+                <pre className="bg-secondary/50 rounded-lg p-3 text-xs font-mono overflow-x-auto invisible-scroll">{JSON.stringify(JSON.parse(detailOpen.payload), null, 2)}</pre>
               </div>
             </div>
           )}
