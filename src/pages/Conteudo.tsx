@@ -439,8 +439,8 @@ function CalendarView({ items, onClickItem, onCreateAt }: { items: ConteudoItem[
     return (
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <button className={viewType === "mensal" ? "tab-btn" : "tab-btn"} onClick={() => setViewType("mensal")}>Mensal</button>
-          <button className={viewType === "semanal" ? "tab-btn-active" : "tab-btn"} onClick={() => setViewType("semanal")}>Semanal</button>
+          <button className="tab-btn" onClick={() => setViewType("mensal")}>Mensal</button>
+          <button className="tab-btn-active" onClick={() => setViewType("semanal")}>Semanal</button>
         </div>
         <div className="grid grid-cols-7 gap-2">
           {weekDays.map(d => <div key={d} className="text-center text-[10px] text-muted-foreground font-semibold uppercase py-1">{d}</div>)}
@@ -470,8 +470,8 @@ function CalendarView({ items, onClickItem, onCreateAt }: { items: ConteudoItem[
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <button className={viewType === "mensal" ? "tab-btn-active" : "tab-btn"} onClick={() => setViewType("mensal")}>Mensal</button>
-        <button className={viewType === "semanal" ? "tab-btn-active" : "tab-btn"} onClick={() => setViewType("semanal")}>Semanal</button>
+        <button className="tab-btn-active" onClick={() => setViewType("mensal")}>Mensal</button>
+        <button className="tab-btn" onClick={() => setViewType("semanal")}>Semanal</button>
         <span className="text-sm font-medium ml-2">Março 2026</span>
       </div>
       <div className="grid grid-cols-7 gap-1">
