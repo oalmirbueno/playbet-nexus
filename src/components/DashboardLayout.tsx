@@ -5,6 +5,7 @@ import {
   Users, UserCheck, ShieldCheck, Gamepad2, Monitor, Link2, FileText, GitBranch,
   Calendar, PenTool, Lightbulb, Megaphone, BarChart3, ArrowRightLeft, Tag, ClipboardList,
   Settings, Scale, Lock, Plug, Menu, X, Bell, Search, ChevronDown, PanelLeftClose, PanelLeft,
+  Command,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 
@@ -97,19 +98,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <aside
         className={`fixed z-50 inset-y-0 left-0 bg-sidebar flex flex-col transition-all duration-300 ease-out md:translate-x-0 md:static md:shrink-0 border-r border-sidebar-border ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } ${sidebarCollapsed ? "w-[68px]" : "w-[270px]"}`}
+        } ${sidebarCollapsed ? "w-[64px]" : "w-[260px]"}`}
       >
         {/* Logo */}
-        <div className={`flex items-center ${sidebarCollapsed ? "justify-center px-2" : "justify-between px-6"} h-[60px] border-b border-sidebar-border shrink-0`}>
-          {!sidebarCollapsed && <img src={logo} alt="PlayBet" className="h-8" />}
-          {sidebarCollapsed && <img src={logo} alt="PlayBet" className="h-6 w-6 object-contain" />}
+        <div className={`flex items-center ${sidebarCollapsed ? "justify-center px-2" : "justify-between px-5"} h-[60px] border-b border-sidebar-border shrink-0`}>
+          {!sidebarCollapsed && <img src={logo} alt="PlayBet" className="h-7 opacity-90" />}
+          {sidebarCollapsed && <img src={logo} alt="PlayBet" className="h-5 w-5 object-contain opacity-90" />}
           <button className="md:hidden text-sidebar-foreground hover:text-foreground transition-colors" onClick={() => setSidebarOpen(false)}>
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto sidebar-scroll py-1">
+        <nav className="flex-1 overflow-y-auto sidebar-scroll py-1.5">
           {sections.map((section) => {
             const isCollapsed = collapsed[section.title];
             return (
@@ -117,16 +118,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {!sidebarCollapsed ? (
                   <button
                     onClick={() => toggleSection(section.title)}
-                    className="sidebar-section-label w-full flex items-center justify-between pr-5 hover:text-foreground/50 transition-colors cursor-pointer"
+                    className="sidebar-section-label w-full flex items-center justify-between pr-5 hover:text-foreground/40 transition-colors cursor-pointer"
                   >
                     <span>{section.title}</span>
-                    <ChevronDown size={10} className={`transition-transform duration-200 opacity-50 ${isCollapsed ? "-rotate-90" : ""}`} />
+                    <ChevronDown size={9} className={`transition-transform duration-200 opacity-40 ${isCollapsed ? "-rotate-90" : ""}`} />
                   </button>
                 ) : (
-                  <div className="h-px bg-sidebar-border mx-3 my-2" />
+                  <div className="h-px bg-sidebar-border mx-3 my-3" />
                 )}
                 {!isCollapsed && (
-                  <div className={sidebarCollapsed ? "px-2 pb-1 space-y-px" : "px-3 pb-1 space-y-px"}>
+                  <div className={sidebarCollapsed ? "px-2 pb-1 space-y-0.5" : "px-3 pb-1.5 space-y-0.5"}>
                     {section.items.map((item) => {
                       const active = location.pathname === item.path;
                       return (
@@ -135,13 +136,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           to={item.path}
                           onClick={() => setSidebarOpen(false)}
                           title={sidebarCollapsed ? item.label : undefined}
-                          className={`group flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2" : "gap-3 px-3 py-2"} rounded-md text-[13px] font-medium transition-all duration-150 ${
+                          className={`group flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-[9px]"} rounded-md text-[13px] transition-all duration-150 ${
                             active
-                              ? "bg-primary text-primary-foreground"
-                              : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                              ? "bg-primary/12 text-foreground font-medium"
+                              : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground font-normal"
                           }`}
                         >
-                          <item.icon size={sidebarCollapsed ? 17 : 15} strokeWidth={active ? 2 : 1.6} className="shrink-0" />
+                          <item.icon size={sidebarCollapsed ? 16 : 14} strokeWidth={active ? 2 : 1.5} className={`shrink-0 ${active ? "text-primary" : ""}`} />
                           {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
                         </Link>
                       );
@@ -154,55 +155,58 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
 
         {/* Collapse toggle (desktop only) */}
-        <div className="hidden md:flex px-3 py-2 border-t border-sidebar-border shrink-0">
+        <div className="hidden md:flex px-3 py-2.5 border-t border-sidebar-border shrink-0">
           <button
             onClick={() => setSidebarCollapsed((c) => !c)}
             className={`flex items-center ${sidebarCollapsed ? "justify-center w-full" : "gap-2 w-full"} px-2 py-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors text-xs`}
             title={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
           >
-            {sidebarCollapsed ? <PanelLeft size={16} /> : <PanelLeftClose size={16} />}
-            {!sidebarCollapsed && <span>Recolher</span>}
+            {sidebarCollapsed ? <PanelLeft size={15} /> : <PanelLeftClose size={15} />}
+            {!sidebarCollapsed && <span className="text-[12px]">Recolher</span>}
           </button>
         </div>
 
         {/* User */}
         {!sidebarCollapsed && (
-          <div className="px-4 py-4 border-t border-sidebar-border shrink-0">
-            <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-sidebar-accent transition-colors cursor-pointer">
-              <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary text-xs font-semibold">A</div>
+          <div className="px-3 py-3.5 border-t border-sidebar-border shrink-0">
+            <div className="flex items-center gap-3 px-2.5 py-2 rounded-md hover:bg-sidebar-accent transition-colors cursor-pointer">
+              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[11px] font-semibold">A</div>
               <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-medium text-foreground/90 truncate">Admin PlayBet</p>
-                <p className="text-[11px] text-muted-foreground truncate">Gestor Principal</p>
+                <p className="text-[12px] font-medium text-foreground/85 truncate">Admin PlayBet</p>
+                <p className="text-[10.5px] text-muted-foreground truncate">Gestor Principal</p>
               </div>
             </div>
           </div>
         )}
         {sidebarCollapsed && (
           <div className="px-2 py-3 border-t border-sidebar-border shrink-0 flex justify-center">
-            <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary text-xs font-semibold cursor-pointer" title="Admin PlayBet">A</div>
+            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[11px] font-semibold cursor-pointer" title="Admin PlayBet">A</div>
           </div>
         )}
       </aside>
 
       {/* ── Main ─────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        <header className="h-[56px] border-b border-border flex items-center px-6 gap-4 bg-card/50 backdrop-blur-xl sticky top-0 z-30 shrink-0">
+        <header className="h-[52px] border-b border-border flex items-center px-6 gap-4 bg-background sticky top-0 z-30 shrink-0">
           <button className="md:hidden text-muted-foreground hover:text-foreground transition-colors" onClick={() => setSidebarOpen(true)}>
-            <Menu size={18} />
+            <Menu size={17} />
           </button>
-          <div className="hidden md:flex items-center gap-2.5 bg-secondary/40 border border-border rounded-lg px-4 py-2 flex-1 max-w-sm">
-            <Search size={14} className="text-muted-foreground shrink-0" />
-            <input placeholder="Buscar módulo, influencer, jogo..." className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none w-full" />
+          <div className="hidden md:flex items-center gap-2.5 bg-secondary/50 border border-border rounded-md px-3.5 py-[7px] flex-1 max-w-sm">
+            <Search size={13} className="text-muted-foreground shrink-0" />
+            <input placeholder="Buscar módulo, influencer, jogo..." className="bg-transparent text-[13px] text-foreground placeholder:text-muted-foreground focus:outline-none w-full" />
+            <kbd className="hidden lg:inline-flex items-center gap-0.5 text-[10px] text-muted-foreground bg-background border border-border rounded px-1.5 py-0.5 font-mono">
+              <Command size={9} />K
+            </kbd>
           </div>
-          <div className="ml-auto flex items-center gap-3">
-            <button className="relative p-2.5 rounded-lg hover:bg-secondary/50 transition-colors text-muted-foreground hover:text-foreground">
-              <Bell size={16} />
-              <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-destructive rounded-full" />
+          <div className="ml-auto flex items-center gap-2.5">
+            <button className="relative p-2 rounded-md hover:bg-secondary/50 transition-colors text-muted-foreground hover:text-foreground">
+              <Bell size={15} />
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-destructive rounded-full" />
             </button>
-            <div className="h-5 w-px bg-border" />
-            <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-secondary/30 transition-colors cursor-pointer">
-              <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary text-xs font-semibold">A</div>
-              <span className="text-sm font-medium hidden sm:block text-foreground/80">Admin</span>
+            <div className="h-4 w-px bg-border" />
+            <div className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-secondary/30 transition-colors cursor-pointer">
+              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[11px] font-semibold">A</div>
+              <span className="text-[13px] font-medium hidden sm:block text-foreground/75">Admin</span>
             </div>
           </div>
         </header>
