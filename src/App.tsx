@@ -63,7 +63,9 @@ const App = () => (
                 <Route path="/socios/:id" element={<SocioDetalhe />} />
                 <Route path="/usuarios" element={<UsuariosInternos />} />
                 <Route path="/jogos" element={<Jogos />} />
+                <Route path="/jogos/:id" element={<JogoDetalhe />} />
                 <Route path="/plataformas" element={<PlataformasPage />} />
+                <Route path="/plataformas/:id" element={<PlataformaDetalhe />} />
                 <Route path="/links" element={<LinksAfiliados />} />
                 <Route path="/landing-pages" element={<LandingPagesPage />} />
                 <Route path="/lp-templates" element={<LPTemplates />} />
