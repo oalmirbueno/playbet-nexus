@@ -177,6 +177,3 @@ export default function Integracoes() {
     </div>
   );
 }
-
-// Eye icon import
-import { Eye } from "lucide-react";
