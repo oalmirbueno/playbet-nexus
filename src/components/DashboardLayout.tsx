@@ -4,7 +4,7 @@ import {
   LayoutDashboard, Activity, DollarSign, Wallet, PieChart, CreditCard,
   Users, UserCheck, ShieldCheck, Gamepad2, Monitor, Link2, FileText, GitBranch,
   Calendar, PenTool, Lightbulb, Megaphone, BarChart3, ArrowRightLeft, Tag, ClipboardList,
-  Settings, Scale, Lock, Plug, Menu, X, Bell, Search, ChevronDown,
+  Settings, Scale, Lock, Plug, Menu, X, Bell, Search, ChevronDown, PanelLeftClose, PanelLeft,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 
@@ -80,6 +80,7 @@ const sections: MenuSection[] = [
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
 
   const toggleSection = (title: string) => {
@@ -93,28 +94,39 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       )}
 
       {/* ── Sidebar ──────────────────────────── */}
-      <aside className={`fixed z-50 inset-y-0 left-0 w-[270px] bg-sidebar flex flex-col transition-transform duration-300 ease-out md:translate-x-0 md:static md:shrink-0 border-r border-sidebar-border ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        <div className="flex items-center justify-between px-6 h-[60px] border-b border-sidebar-border shrink-0">
-          <img src={logo} alt="PlayBet" className="h-8" />
+      <aside
+        className={`fixed z-50 inset-y-0 left-0 bg-sidebar flex flex-col transition-all duration-300 ease-out md:translate-x-0 md:static md:shrink-0 border-r border-sidebar-border ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } ${sidebarCollapsed ? "w-[68px]" : "w-[270px]"}`}
+      >
+        {/* Logo */}
+        <div className={`flex items-center ${sidebarCollapsed ? "justify-center px-2" : "justify-between px-6"} h-[60px] border-b border-sidebar-border shrink-0`}>
+          {!sidebarCollapsed && <img src={logo} alt="PlayBet" className="h-8" />}
+          {sidebarCollapsed && <img src={logo} alt="PlayBet" className="h-6 w-6 object-contain" />}
           <button className="md:hidden text-sidebar-foreground hover:text-foreground transition-colors" onClick={() => setSidebarOpen(false)}>
             <X size={18} />
           </button>
         </div>
 
+        {/* Nav */}
         <nav className="flex-1 overflow-y-auto sidebar-scroll py-1">
           {sections.map((section) => {
             const isCollapsed = collapsed[section.title];
             return (
               <div key={section.title}>
-                <button
-                  onClick={() => toggleSection(section.title)}
-                  className="sidebar-section-label w-full flex items-center justify-between pr-5 hover:text-foreground/50 transition-colors cursor-pointer"
-                >
-                  <span>{section.title}</span>
-                  <ChevronDown size={10} className={`transition-transform duration-200 opacity-50 ${isCollapsed ? "-rotate-90" : ""}`} />
-                </button>
+                {!sidebarCollapsed ? (
+                  <button
+                    onClick={() => toggleSection(section.title)}
+                    className="sidebar-section-label w-full flex items-center justify-between pr-5 hover:text-foreground/50 transition-colors cursor-pointer"
+                  >
+                    <span>{section.title}</span>
+                    <ChevronDown size={10} className={`transition-transform duration-200 opacity-50 ${isCollapsed ? "-rotate-90" : ""}`} />
+                  </button>
+                ) : (
+                  <div className="h-px bg-sidebar-border mx-3 my-2" />
+                )}
                 {!isCollapsed && (
-                  <div className="px-3 pb-1 space-y-px">
+                  <div className={sidebarCollapsed ? "px-2 pb-1 space-y-px" : "px-3 pb-1 space-y-px"}>
                     {section.items.map((item) => {
                       const active = location.pathname === item.path;
                       return (
@@ -122,14 +134,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           key={item.path}
                           to={item.path}
                           onClick={() => setSidebarOpen(false)}
-                          className={`group flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-all duration-150 ${
+                          title={sidebarCollapsed ? item.label : undefined}
+                          className={`group flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2" : "gap-3 px-3 py-2"} rounded-md text-[13px] font-medium transition-all duration-150 ${
                             active
                               ? "bg-primary text-primary-foreground"
                               : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                           }`}
                         >
-                          <item.icon size={15} strokeWidth={active ? 2 : 1.6} className="shrink-0" />
-                          <span className="truncate">{item.label}</span>
+                          <item.icon size={sidebarCollapsed ? 17 : 15} strokeWidth={active ? 2 : 1.6} className="shrink-0" />
+                          {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
                         </Link>
                       );
                     })}
@@ -140,15 +153,35 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
-        <div className="px-4 py-4 border-t border-sidebar-border shrink-0">
-          <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-sidebar-accent transition-colors cursor-pointer">
-            <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary text-xs font-semibold">A</div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[12px] font-medium text-foreground/90 truncate">Admin PlayBet</p>
-              <p className="text-[11px] text-muted-foreground truncate">Gestor Principal</p>
+        {/* Collapse toggle (desktop only) */}
+        <div className="hidden md:flex px-3 py-2 border-t border-sidebar-border shrink-0">
+          <button
+            onClick={() => setSidebarCollapsed((c) => !c)}
+            className={`flex items-center ${sidebarCollapsed ? "justify-center w-full" : "gap-2 w-full"} px-2 py-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors text-xs`}
+            title={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
+          >
+            {sidebarCollapsed ? <PanelLeft size={16} /> : <PanelLeftClose size={16} />}
+            {!sidebarCollapsed && <span>Recolher</span>}
+          </button>
+        </div>
+
+        {/* User */}
+        {!sidebarCollapsed && (
+          <div className="px-4 py-4 border-t border-sidebar-border shrink-0">
+            <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-sidebar-accent transition-colors cursor-pointer">
+              <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary text-xs font-semibold">A</div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[12px] font-medium text-foreground/90 truncate">Admin PlayBet</p>
+                <p className="text-[11px] text-muted-foreground truncate">Gestor Principal</p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
+        {sidebarCollapsed && (
+          <div className="px-2 py-3 border-t border-sidebar-border shrink-0 flex justify-center">
+            <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary text-xs font-semibold cursor-pointer" title="Admin PlayBet">A</div>
+          </div>
+        )}
       </aside>
 
       {/* ── Main ─────────────────────────────── */}
