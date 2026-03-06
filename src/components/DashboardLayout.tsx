@@ -84,6 +84,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const { user, role, signOut } = useAuth();
 
   const toggleSection = (title: string) => {
     setCollapsed((prev) => ({ ...prev, [title]: !prev[title] }));
@@ -206,9 +207,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </button>
             <div className="h-4 w-px bg-border" />
             <div className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-secondary/30 transition-colors cursor-pointer">
-              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[11px] font-semibold">A</div>
-              <span className="text-[13px] font-medium hidden sm:block text-foreground/75">Admin</span>
+              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[11px] font-semibold">
+                {user?.email?.charAt(0).toUpperCase() || "U"}
+              </div>
+              <span className="text-[13px] font-medium hidden sm:block text-foreground/75">{role || "user"}</span>
             </div>
+            <button onClick={signOut} className="p-2 rounded-md hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive" title="Sair">
+              <LogOut size={15} />
+            </button>
           </div>
         </header>
         <main className="flex-1 p-6 lg:p-8 overflow-y-auto invisible-scroll main-scroll animate-fade-in">{children}</main>
