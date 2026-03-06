@@ -50,7 +50,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="glass-card w-full max-w-md p-8 space-y-6">
         <div className="text-center space-y-2">
-          <img src={logo} alt="PlayBet" className="h-14 mx-auto" />
+          <img src={logo} alt="PlayBet" className="h-20 mx-auto" />
           <h1 className="text-xl font-bold text-foreground">
             {isSignUp ? "Criar Conta" : "Entrar no Painel"}
           </h1>
