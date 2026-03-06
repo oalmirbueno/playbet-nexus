@@ -99,12 +99,12 @@ const blockIcons: Record<string, any> = {
   "Próximas Ações": ArrowRight,
   "Oportunidades": TrendingUp,
 };
-const blockColors: Record<string, string> = {
-  "Objetivos da Semana": "border-l-accent",
-  "Objetivos do Mês": "border-l-primary",
-  "Gargalos": "border-l-destructive",
-  "Próximas Ações": "border-l-info",
-  "Oportunidades": "border-l-success",
+const blockBorders: Record<string, string> = {
+  "Objetivos da Semana": "border-l-primary",
+  "Objetivos do Mês": "border-l-primary/60",
+  "Gargalos": "border-l-destructive/60",
+  "Próximas Ações": "border-l-info/60",
+  "Oportunidades": "border-l-success/60",
 };
 const hypoStatusColors: Record<string, string> = { Testando: "badge-info", Validada: "badge-success", Invalidada: "badge-danger", Pendente: "badge-neutral" };
 
@@ -120,13 +120,11 @@ export default function Estrategia() {
 
   const tabs = ["Visão Geral", "Hipóteses", "Aprendizados", "Plano Semanal", "Prioridades", "Alertas"];
 
-  // Priorities
   const campsPrioritarias = initialCampanhas.filter(c => c.status === "Ativa").slice(0, 3);
   const jogosPrioritarios = initialJogos.sort((a, b) => b.receita - a.receita).slice(0, 3);
   const platsPrioritarias = initialPlataformas.filter(p => p.status === "Ativo").slice(0, 3);
 
-  // Alerts
-  const alerts = [];
+  const alerts: { msg: string; path: string; type: string }[] = [];
   const campsAtivas = initialCampanhas.filter(c => c.status === "Ativa");
   campsAtivas.forEach(c => {
     if (!initialConteudos.some(ct => ct.campanha === c.nome)) alerts.push({ msg: `Campanha "${c.nome}" sem conteúdo`, path: "/campanhas", type: "danger" });
@@ -163,53 +161,68 @@ export default function Estrategia() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Breadcrumbs items={[{ label: "Marketing e Conteúdo", path: "/conteudo" }, { label: "Estratégia" }]} />
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div><h1 className="page-header">Estratégia</h1><p className="page-subtitle">Centro tático da operação — objetivos, testes, aprendizados e execução</p></div>
+
+      <div className="flex items-start justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Estratégia</h1>
+          <p className="text-sm text-muted-foreground mt-1">Centro tático da operação — objetivos, testes, aprendizados e execução</p>
+        </div>
         <div className="flex gap-2">
-          <button className="btn-ghost text-xs" onClick={() => navigate("/conteudo")}>→ Conteúdos</button>
-          <button className="btn-ghost text-xs" onClick={() => navigate("/calendario")}>→ Calendário</button>
-          <button className="btn-ghost text-xs" onClick={() => navigate("/campanhas")}>→ Campanhas</button>
+          <button className="btn-ghost text-sm" onClick={() => navigate("/conteudo")}>Conteúdos</button>
+          <button className="btn-ghost text-sm" onClick={() => navigate("/calendario")}>Calendário</button>
+          <button className="btn-ghost text-sm" onClick={() => navigate("/campanhas")}>Campanhas</button>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex flex-wrap gap-1">
-        {tabs.map(t => <button key={t} className={activeTab === t ? "tab-btn-active" : "tab-btn"} onClick={() => setActiveTab(t)}>{t}</button>)}
+      <div className="flex flex-wrap gap-1.5 border-b border-border pb-3">
+        {tabs.map(t => (
+          <button key={t} className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === t ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary hover:text-foreground"}`} onClick={() => setActiveTab(t)}>{t}</button>
+        ))}
       </div>
 
       {/* VISÃO GERAL */}
       {activeTab === "Visão Geral" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           {Object.entries(blocks).map(([title, items]) => {
             const Icon = blockIcons[title] || Lightbulb;
-            const color = blockColors[title] || "border-l-muted";
+            const border = blockBorders[title] || "border-l-muted";
             return (
-              <div key={title} className={`glass-card p-5 border-l-2 ${color}`}>
-                <div className="flex items-center gap-2 mb-3">
-                  <Icon size={15} className="text-muted-foreground" />
+              <div key={title} className={`glass-card p-6 border-l-2 ${border}`}>
+                <div className="flex items-center gap-2.5 mb-4">
+                  <Icon size={16} className="text-muted-foreground" />
                   <h3 className="text-sm font-semibold flex-1">{title}</h3>
-                  <span className="text-[10px] text-muted-foreground">{items.filter(i => i.done).length}/{items.length}</span>
+                  <span className="text-xs text-muted-foreground">{items.filter(i => i.done).length}/{items.length}</span>
                 </div>
-                <ul className="space-y-2">
+                <ul className="space-y-3">
                   {items.map(item => (
-                    <li key={item.id} className="flex items-start gap-2 text-xs group">
-                      <button onClick={() => toggleItem(title, item.id)} className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 mt-0.5 transition-colors ${item.done ? "bg-success border-success" : "border-border hover:border-primary"}`}>
-                        {item.done && <Check size={10} className="text-success-foreground" />}
+                    <li key={item.id} className="flex items-start gap-3 text-sm group">
+                      <button onClick={() => toggleItem(title, item.id)} className={`w-[18px] h-[18px] rounded border flex items-center justify-center shrink-0 mt-0.5 transition-colors ${item.done ? "bg-success/80 border-success" : "border-border hover:border-primary/50"}`}>
+                        {item.done && <Check size={11} className="text-success-foreground" />}
                       </button>
-                      <span className={`flex-1 ${item.done ? "line-through text-muted-foreground" : ""}`}>{item.text}</span>
-                      <button onClick={() => removeItem(title, item.id)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive"><Trash2 size={10} /></button>
+                      <div className="flex-1 min-w-0">
+                        <span className={`${item.done ? "line-through text-muted-foreground" : "text-foreground/90"}`}>{item.text}</span>
+                        {(item.responsavel || item.prazo) && (
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            {item.responsavel && <span>{item.responsavel}</span>}
+                            {item.responsavel && item.prazo && <span> · </span>}
+                            {item.prazo && <span>{item.prazo}</span>}
+                          </p>
+                        )}
+                      </div>
+                      <button onClick={() => removeItem(title, item.id)} className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"><Trash2 size={12} /></button>
                     </li>
                   ))}
                 </ul>
                 {addingTo === title ? (
-                  <div className="flex gap-1 mt-3">
-                    <input className="input-field text-xs flex-1" value={newItemText} onChange={e => setNewItemText(e.target.value)} placeholder="Novo item..." onKeyDown={e => e.key === "Enter" && addItem(title)} autoFocus />
-                    <button className="btn-primary text-xs px-2 py-1" onClick={() => addItem(title)}>+</button>
+                  <div className="flex gap-2 mt-4 pt-3 border-t border-border-subtle">
+                    <input className="input-field text-sm flex-1" value={newItemText} onChange={e => setNewItemText(e.target.value)} placeholder="Novo item..." onKeyDown={e => e.key === "Enter" && addItem(title)} autoFocus />
+                    <button className="btn-primary text-sm px-3 py-1.5" onClick={() => addItem(title)}>+</button>
                   </div>
                 ) : (
-                  <button className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground mt-3" onClick={() => { setAddingTo(title); setNewItemText(""); }}><Plus size={10} /> Adicionar</button>
+                  <button className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mt-4 pt-3 border-t border-border-subtle transition-colors" onClick={() => { setAddingTo(title); setNewItemText(""); }}><Plus size={12} /> Adicionar</button>
                 )}
               </div>
             );
@@ -219,8 +232,8 @@ export default function Estrategia() {
 
       {/* HIPÓTESES */}
       {activeTab === "Hipóteses" && (
-        <div className="space-y-4">
-          <div className="glass-card overflow-x-auto">
+        <div className="space-y-6">
+          <div className="glass-card overflow-x-auto rounded-lg">
             <table className="data-table">
               <thead><tr><th>Hipótese</th><th>Objetivo</th><th>Responsável</th><th>Status</th><th>Resultado</th></tr></thead>
               <tbody>
@@ -230,22 +243,22 @@ export default function Estrategia() {
                     <td className="text-muted-foreground">{h.objetivo}</td>
                     <td>{h.responsavel}</td>
                     <td><span className={hypoStatusColors[h.status]}>{h.status}</span></td>
-                    <td>{h.resultado}</td>
+                    <td className="text-muted-foreground">{h.resultado}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          <h3 className="section-title">Testes Ativos</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <h3 className="text-[15px] font-semibold tracking-tight">Testes Ativos</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[
               { name: "A/B teste LP Fortune Tiger (CTA azul vs amarelo)", status: "Em andamento" },
               { name: "Teste de copy Telegram (curto vs longo)", status: "Em andamento" },
               { name: "Novo modelo de comissão escalonada", status: "Planejado" },
             ].map((t, i) => (
-              <div key={i} className="glass-card p-4 border-l-2 border-l-info">
-                <p className="text-xs font-medium">{t.name}</p>
-                <span className="badge-info mt-2">{t.status}</span>
+              <div key={i} className="glass-card p-5 border-l-2 border-l-info/50">
+                <p className="text-sm font-medium leading-snug">{t.name}</p>
+                <span className="badge-info mt-3 inline-block">{t.status}</span>
               </div>
             ))}
           </div>
@@ -254,25 +267,25 @@ export default function Estrategia() {
 
       {/* APRENDIZADOS */}
       {activeTab === "Aprendizados" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <h3 className="section-title flex items-center gap-2"><CheckCircle size={14} className="text-success" /> O que funcionou</h3>
+            <h3 className="text-[15px] font-semibold tracking-tight mb-4 flex items-center gap-2"><CheckCircle size={15} className="text-success" /> O que funcionou</h3>
             <div className="space-y-3">
               {learnings.filter(l => l.tipo === "Funcionou").map(l => (
-                <div key={l.id} className="glass-card p-4 border-l-2 border-l-success">
-                  <p className="text-xs font-medium mb-1">{l.descricao}</p>
-                  <p className="text-[10px] text-muted-foreground">Ajuste: {l.ajuste}</p>
+                <div key={l.id} className="glass-card p-5 border-l-2 border-l-success/50">
+                  <p className="text-sm font-medium mb-2">{l.descricao}</p>
+                  <p className="text-xs text-muted-foreground">Ajuste: {l.ajuste}</p>
                 </div>
               ))}
             </div>
           </div>
           <div>
-            <h3 className="section-title flex items-center gap-2"><AlertTriangle size={14} className="text-destructive" /> O que não funcionou</h3>
+            <h3 className="text-[15px] font-semibold tracking-tight mb-4 flex items-center gap-2"><AlertTriangle size={15} className="text-destructive" /> O que não funcionou</h3>
             <div className="space-y-3">
               {learnings.filter(l => l.tipo === "Não funcionou").map(l => (
-                <div key={l.id} className="glass-card p-4 border-l-2 border-l-destructive">
-                  <p className="text-xs font-medium mb-1">{l.descricao}</p>
-                  <p className="text-[10px] text-muted-foreground">Ajuste: {l.ajuste}</p>
+                <div key={l.id} className="glass-card p-5 border-l-2 border-l-destructive/40">
+                  <p className="text-sm font-medium mb-2">{l.descricao}</p>
+                  <p className="text-xs text-muted-foreground">Ajuste: {l.ajuste}</p>
                 </div>
               ))}
             </div>
@@ -282,24 +295,24 @@ export default function Estrategia() {
 
       {/* PLANO SEMANAL */}
       {activeTab === "Plano Semanal" && (
-        <div className="glass-card overflow-x-auto">
+        <div className="glass-card overflow-x-auto rounded-lg">
           <table className="data-table">
-            <thead><tr><th></th><th>Meta</th><th>Conteúdo</th><th>Campanha</th><th>Jogo</th><th>Influencer</th><th>Responsável</th><th>Prazo</th></tr></thead>
+            <thead><tr><th className="w-10"></th><th>Meta</th><th>Conteúdo</th><th>Campanha</th><th>Jogo</th><th>Influencer</th><th>Responsável</th><th>Prazo</th></tr></thead>
             <tbody>
               {weeklyPlan.map(item => (
                 <tr key={item.id} className={item.done ? "opacity-50" : ""}>
                   <td>
-                    <button onClick={() => toggleWeeklyItem(item.id)} className={`w-4 h-4 rounded border flex items-center justify-center ${item.done ? "bg-success border-success" : "border-border"}`}>
-                      {item.done && <Check size={10} className="text-success-foreground" />}
+                    <button onClick={() => toggleWeeklyItem(item.id)} className={`w-[18px] h-[18px] rounded border flex items-center justify-center ${item.done ? "bg-success/80 border-success" : "border-border hover:border-primary/50"}`}>
+                      {item.done && <Check size={11} className="text-success-foreground" />}
                     </button>
                   </td>
                   <td className={`font-medium ${item.done ? "line-through" : ""}`}>{item.meta}</td>
-                  <td>{item.conteudo}</td>
-                  <td><button className="text-primary hover:underline text-xs" onClick={() => navigate("/campanhas")}>{item.campanha}</button></td>
-                  <td><button className="text-primary hover:underline text-xs" onClick={() => navigate("/jogos")}>{item.jogo}</button></td>
+                  <td className="text-muted-foreground">{item.conteudo}</td>
+                  <td><button className="text-primary hover:underline text-sm" onClick={() => navigate("/campanhas")}>{item.campanha}</button></td>
+                  <td><button className="text-primary hover:underline text-sm" onClick={() => navigate("/jogos")}>{item.jogo}</button></td>
                   <td>{item.influencer}</td>
-                  <td>{item.responsavel}</td>
-                  <td className="whitespace-nowrap">{item.prazo}</td>
+                  <td className="text-muted-foreground">{item.responsavel}</td>
+                  <td className="whitespace-nowrap text-muted-foreground">{item.prazo}</td>
                 </tr>
               ))}
             </tbody>
@@ -309,39 +322,39 @@ export default function Estrategia() {
 
       {/* PRIORIDADES */}
       {activeTab === "Prioridades" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           <div>
-            <h3 className="section-title flex items-center gap-2"><Monitor size={14} /> Campanhas Prioritárias</h3>
-            <div className="space-y-2">
+            <h3 className="text-[15px] font-semibold tracking-tight mb-4 flex items-center gap-2"><Target size={15} className="text-muted-foreground" /> Campanhas Prioritárias</h3>
+            <div className="space-y-3">
               {campsPrioritarias.map(c => (
-                <div key={c.id} className="glass-card p-3 cursor-pointer hover:border-primary/30 transition-colors" onClick={() => navigate(`/campanhas/${c.id}`)}>
-                  <p className="text-xs font-medium">{c.nome}</p>
-                  <p className="text-[10px] text-muted-foreground">{c.objetivo}</p>
-                  <span className="badge-success mt-1">{c.status}</span>
+                <div key={c.id} className="glass-card p-5 cursor-pointer hover:border-primary/20 transition-colors" onClick={() => navigate(`/campanhas/${c.id}`)}>
+                  <p className="text-sm font-medium">{c.nome}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{c.objetivo}</p>
+                  <span className="badge-success mt-2 inline-block">{c.status}</span>
                 </div>
               ))}
             </div>
           </div>
           <div>
-            <h3 className="section-title flex items-center gap-2"><Gamepad2 size={14} /> Jogos Prioritários</h3>
-            <div className="space-y-2">
+            <h3 className="text-[15px] font-semibold tracking-tight mb-4 flex items-center gap-2"><Gamepad2 size={15} className="text-muted-foreground" /> Jogos Prioritários</h3>
+            <div className="space-y-3">
               {jogosPrioritarios.map(j => (
-                <div key={j.id} className="glass-card p-3 cursor-pointer hover:border-primary/30 transition-colors" onClick={() => navigate(`/jogos/${j.id}`)}>
-                  <p className="text-xs font-medium">{j.nome}</p>
-                  <p className="text-[10px] text-muted-foreground">Receita: R$ {j.receita.toLocaleString()} · CTR: {j.ctr}</p>
-                  <span className="badge-primary mt-1">{j.cat}</span>
+                <div key={j.id} className="glass-card p-5 cursor-pointer hover:border-primary/20 transition-colors" onClick={() => navigate(`/jogos/${j.id}`)}>
+                  <p className="text-sm font-medium">{j.nome}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Receita: R$ {j.receita.toLocaleString()} · CTR: {j.ctr}</p>
+                  <span className="badge-neutral mt-2 inline-block">{j.cat}</span>
                 </div>
               ))}
             </div>
           </div>
           <div>
-            <h3 className="section-title flex items-center gap-2"><Users size={14} /> Plataformas Prioritárias</h3>
-            <div className="space-y-2">
+            <h3 className="text-[15px] font-semibold tracking-tight mb-4 flex items-center gap-2"><Monitor size={15} className="text-muted-foreground" /> Plataformas Prioritárias</h3>
+            <div className="space-y-3">
               {platsPrioritarias.map(p => (
-                <div key={p.id} className="glass-card p-3 cursor-pointer hover:border-primary/30 transition-colors" onClick={() => navigate(`/plataformas/${p.id}`)}>
-                  <p className="text-xs font-medium">{p.nome}</p>
-                  <p className="text-[10px] text-muted-foreground">{p.tipo} · {p.jogos} jogos · {p.links} links</p>
-                  <span className="badge-success mt-1">{p.status}</span>
+                <div key={p.id} className="glass-card p-5 cursor-pointer hover:border-primary/20 transition-colors" onClick={() => navigate(`/plataformas/${p.id}`)}>
+                  <p className="text-sm font-medium">{p.nome}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{p.tipo} · {p.jogos} jogos · {p.links} links</p>
+                  <span className="badge-success mt-2 inline-block">{p.status}</span>
                 </div>
               ))}
             </div>
@@ -352,13 +365,13 @@ export default function Estrategia() {
       {/* ALERTAS */}
       {activeTab === "Alertas" && (
         <div className="space-y-3">
-          {alerts.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">Nenhum alerta operacional no momento</p>}
+          {alerts.length === 0 && <p className="text-sm text-muted-foreground text-center py-12">Nenhum alerta operacional no momento</p>}
           {alerts.map((a, i) => (
-            <div key={i} className={`alert-card cursor-pointer ${a.type === "danger" ? "border-l-destructive" : a.type === "warning" ? "border-l-warning" : "border-l-info"}`} onClick={() => navigate(a.path)}>
-              <AlertTriangle size={14} className={a.type === "danger" ? "text-destructive" : a.type === "warning" ? "text-warning" : "text-info"} />
+            <div key={i} className={`glass-card p-5 flex items-start gap-4 border-l-2 cursor-pointer hover:border-primary/20 transition-colors ${a.type === "danger" ? "border-l-destructive/60" : a.type === "warning" ? "border-l-warning/60" : "border-l-info/60"}`} onClick={() => navigate(a.path)}>
+              <AlertTriangle size={15} className={`shrink-0 mt-0.5 ${a.type === "danger" ? "text-destructive" : a.type === "warning" ? "text-warning" : "text-info"}`} />
               <div>
-                <p className="text-xs font-medium">{a.msg}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">Clique para resolver →</p>
+                <p className="text-sm font-medium">{a.msg}</p>
+                <p className="text-xs text-muted-foreground mt-1">Clique para resolver →</p>
               </div>
             </div>
           ))}
