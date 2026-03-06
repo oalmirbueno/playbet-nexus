@@ -92,28 +92,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm md:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
-      <aside className={`fixed z-50 inset-y-0 left-0 w-[260px] bg-sidebar flex flex-col transition-transform duration-300 ease-out md:translate-x-0 md:static md:shrink-0 border-r border-sidebar-border ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        <div className="flex items-center justify-between px-5 h-16 border-b border-sidebar-border shrink-0">
-          <img src={logo} alt="PlayBet" className="h-9" />
+      {/* ── Sidebar ──────────────────────────── */}
+      <aside className={`fixed z-50 inset-y-0 left-0 w-[270px] bg-sidebar flex flex-col transition-transform duration-300 ease-out md:translate-x-0 md:static md:shrink-0 border-r border-sidebar-border ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        <div className="flex items-center justify-between px-6 h-[60px] border-b border-sidebar-border shrink-0">
+          <img src={logo} alt="PlayBet" className="h-8" />
           <button className="md:hidden text-sidebar-foreground hover:text-foreground transition-colors" onClick={() => setSidebarOpen(false)}>
             <X size={18} />
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto sidebar-scroll py-2">
+        <nav className="flex-1 overflow-y-auto sidebar-scroll py-1">
           {sections.map((section) => {
             const isCollapsed = collapsed[section.title];
             return (
               <div key={section.title}>
                 <button
                   onClick={() => toggleSection(section.title)}
-                  className="sidebar-section-label w-full flex items-center justify-between pr-4 hover:text-foreground/60 transition-colors cursor-pointer"
+                  className="sidebar-section-label w-full flex items-center justify-between pr-5 hover:text-foreground/50 transition-colors cursor-pointer"
                 >
                   <span>{section.title}</span>
-                  <ChevronDown size={10} className={`transition-transform duration-200 ${isCollapsed ? "-rotate-90" : ""}`} />
+                  <ChevronDown size={10} className={`transition-transform duration-200 opacity-50 ${isCollapsed ? "-rotate-90" : ""}`} />
                 </button>
                 {!isCollapsed && (
-                  <div className="px-2 pb-1 space-y-0.5">
+                  <div className="px-3 pb-1 space-y-px">
                     {section.items.map((item) => {
                       const active = location.pathname === item.path;
                       return (
@@ -121,13 +122,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           key={item.path}
                           to={item.path}
                           onClick={() => setSidebarOpen(false)}
-                          className={`group flex items-center gap-2.5 px-3 py-[7px] rounded-lg text-[12.5px] font-medium transition-all duration-200 ${
+                          className={`group flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-all duration-150 ${
                             active
-                              ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
+                              ? "bg-primary text-primary-foreground"
                               : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                           }`}
                         >
-                          <item.icon size={15} strokeWidth={active ? 2.2 : 1.8} className={`shrink-0 transition-all duration-200 ${!active ? "group-hover:scale-105" : ""}`} />
+                          <item.icon size={15} strokeWidth={active ? 2 : 1.6} className="shrink-0" />
                           <span className="truncate">{item.label}</span>
                         </Link>
                       );
@@ -139,39 +140,40 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           })}
         </nav>
 
-        <div className="px-3 py-3 border-t border-sidebar-border shrink-0">
-          <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-sidebar-accent transition-colors cursor-pointer">
-            <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-accent text-[10px] font-bold ring-1 ring-primary/30">A</div>
+        <div className="px-4 py-4 border-t border-sidebar-border shrink-0">
+          <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-sidebar-accent transition-colors cursor-pointer">
+            <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary text-xs font-semibold">A</div>
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-semibold text-foreground truncate">Admin PlayBet</p>
-              <p className="text-[10px] text-muted-foreground truncate">Gestor Principal</p>
+              <p className="text-[12px] font-medium text-foreground/90 truncate">Admin PlayBet</p>
+              <p className="text-[11px] text-muted-foreground truncate">Gestor Principal</p>
             </div>
           </div>
         </div>
       </aside>
 
+      {/* ── Main ─────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        <header className="h-14 border-b border-border flex items-center px-5 gap-3 bg-card/60 backdrop-blur-xl sticky top-0 z-30 shrink-0">
+        <header className="h-[56px] border-b border-border flex items-center px-6 gap-4 bg-card/50 backdrop-blur-xl sticky top-0 z-30 shrink-0">
           <button className="md:hidden text-muted-foreground hover:text-foreground transition-colors" onClick={() => setSidebarOpen(true)}>
             <Menu size={18} />
           </button>
-          <div className="hidden md:flex items-center gap-2 bg-secondary/50 border border-border rounded-lg px-3 py-1.5 flex-1 max-w-xs">
-            <Search size={13} className="text-muted-foreground shrink-0" />
-            <input placeholder="Buscar módulo, influencer, jogo..." className="bg-transparent text-xs text-foreground placeholder:text-muted-foreground focus:outline-none w-full" />
+          <div className="hidden md:flex items-center gap-2.5 bg-secondary/40 border border-border rounded-lg px-4 py-2 flex-1 max-w-sm">
+            <Search size={14} className="text-muted-foreground shrink-0" />
+            <input placeholder="Buscar módulo, influencer, jogo..." className="bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none w-full" />
           </div>
-          <div className="ml-auto flex items-center gap-2">
-            <button className="relative p-2 rounded-lg hover:bg-secondary/60 transition-colors text-muted-foreground hover:text-foreground">
+          <div className="ml-auto flex items-center gap-3">
+            <button className="relative p-2.5 rounded-lg hover:bg-secondary/50 transition-colors text-muted-foreground hover:text-foreground">
               <Bell size={16} />
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-accent rounded-full animate-pulse-subtle" />
+              <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-destructive rounded-full" />
             </button>
-            <div className="h-6 w-px bg-border mx-1" />
-            <div className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-secondary/40 transition-colors cursor-pointer">
-              <div className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-[10px] font-bold">A</div>
-              <span className="text-xs font-medium hidden sm:block">Admin</span>
+            <div className="h-5 w-px bg-border" />
+            <div className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-secondary/30 transition-colors cursor-pointer">
+              <div className="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center text-primary text-xs font-semibold">A</div>
+              <span className="text-sm font-medium hidden sm:block text-foreground/80">Admin</span>
             </div>
           </div>
         </header>
-        <main className="flex-1 p-5 lg:p-6 overflow-y-auto main-scroll animate-fade-in">{children}</main>
+        <main className="flex-1 p-6 lg:p-8 overflow-y-auto main-scroll animate-fade-in">{children}</main>
       </div>
     </div>
   );
