@@ -187,9 +187,61 @@ export type Database = {
         }
         Relationships: []
       }
+      landing_page_instances: {
+        Row: {
+          affiliate_link: string
+          created_at: string | null
+          id: string
+          influencer_id: string
+          is_active: boolean | null
+          landing_page_id: string
+          notes: string | null
+          slug: string
+          updated_at: string | null
+        }
+        Insert: {
+          affiliate_link: string
+          created_at?: string | null
+          id?: string
+          influencer_id: string
+          is_active?: boolean | null
+          landing_page_id: string
+          notes?: string | null
+          slug: string
+          updated_at?: string | null
+        }
+        Update: {
+          affiliate_link?: string
+          created_at?: string | null
+          id?: string
+          influencer_id?: string
+          is_active?: boolean | null
+          landing_page_id?: string
+          notes?: string | null
+          slug?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "landing_page_instances_influencer_id_fkey"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "landing_page_instances_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "landing_pages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       landing_pages: {
         Row: {
           created_at: string | null
+          domain: string | null
           game_id: string | null
           id: string
           is_active: boolean | null
@@ -203,6 +255,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          domain?: string | null
           game_id?: string | null
           id?: string
           is_active?: boolean | null
@@ -216,6 +269,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          domain?: string | null
           game_id?: string | null
           id?: string
           is_active?: boolean | null
