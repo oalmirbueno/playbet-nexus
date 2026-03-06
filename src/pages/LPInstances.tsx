@@ -24,7 +24,10 @@ const emptyEditing: EditingState = {
 };
 
 function buildPublicUrl(domain: string | null, slug: string) {
-  const base = domain ? domain.replace(/\/+$/, "") : "";
+  if (!domain) return `/i/${slug}`;
+  let base = domain.replace(/\/+$/, "");
+  // Ensure https:// prefix
+  if (!/^https?:\/\//i.test(base)) base = `https://${base}`;
   return `${base}/i/${slug}`;
 }
 
