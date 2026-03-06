@@ -87,6 +87,10 @@ export default function Dashboard() {
     { label: "Landing Pages", value: String(landingPages.length), icon: FileText },
     { label: "Templates", value: String(templates.length), icon: Link2 },
     { label: "UTMs / SubIDs", value: String(utms.length), icon: MousePointerClick },
+    { label: "Campanhas", value: String(campanhas.length), icon: UserPlus },
+    { label: "Sócios", value: String(socios.length), icon: Users },
+    { label: "Saques", value: String(saques.length), icon: DollarSign },
+    { label: "Conteúdos", value: String(conteudos.length), icon: FileText },
   ];
 
   return (
