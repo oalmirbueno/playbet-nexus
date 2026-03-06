@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Edit, Copy, Eye, XCircle, CheckCircle, Search, ExternalLink, Users, Layers } from "lucide-react";
+import { Plus, Edit, Copy, Eye, XCircle, CheckCircle, Search, ExternalLink, Users, Layers, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useLandingPages, useGames, usePlatforms, useTemplates, useLandingPageInstances } from "@/hooks/useSupabaseQuery";
@@ -28,7 +28,7 @@ const emptyEditing: EditingState = {
 
 export default function LandingPagesPage() {
   const navigate = useNavigate();
-  const { data, isLoading, create, update, toggle, isCreating, isUpdating } = useLandingPages();
+  const { data, isLoading, create, update, toggle, remove, isCreating, isUpdating } = useLandingPages();
   const { data: games } = useGames();
   const { data: platforms } = usePlatforms();
   const { data: templates } = useTemplates();
@@ -36,6 +36,7 @@ export default function LandingPagesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<EditingState | null>(null);
   const [previewOpen, setPreviewOpen] = useState<LandingPageRow | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<LandingPageRow | null>(null);
   const [search, setSearch] = useState("");
   const [filterTipo, setFilterTipo] = useState("Todos");
   const [filterStatus, setFilterStatus] = useState("Todos");
@@ -196,6 +197,7 @@ export default function LandingPagesPage() {
                     <button onClick={() => handleToggle(p)} className={`p-1 rounded transition-colors text-muted-foreground ${p.is_active ? "hover:bg-destructive/15 hover:text-destructive" : "hover:bg-success/15 hover:text-success"}`} title={p.is_active ? "Desativar" : "Ativar"}>
                       {p.is_active ? <XCircle size={12} /> : <CheckCircle size={12} />}
                     </button>
+                    <button onClick={() => setConfirmDelete(p)} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors" title="Apagar"><Trash2 size={12} /></button>
                   </div>
                 </td>
               </tr>
@@ -279,6 +281,18 @@ export default function LandingPagesPage() {
             <button className="btn-primary" onClick={handleSave} disabled={isCreating || isUpdating}>
               {isCreating || isUpdating ? "Salvando..." : "Salvar"}
             </button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm */}
+      <Dialog open={!!confirmDelete} onOpenChange={() => setConfirmDelete(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Apagar Landing Page</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Tem certeza que deseja apagar <strong>{confirmDelete?.name}</strong> permanentemente? Esta ação não pode ser desfeita.</p>
+          <DialogFooter>
+            <button className="btn-ghost" onClick={() => setConfirmDelete(null)}>Cancelar</button>
+            <button className="btn-primary bg-destructive hover:bg-destructive/90" onClick={async () => { if (confirmDelete) { await remove(confirmDelete.id); setConfirmDelete(null); } }}>Apagar</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

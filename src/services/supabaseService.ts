@@ -132,6 +132,10 @@ export const landingPageService = {
   async toggleActive(id: string, current: boolean) {
     return this.update(id, { is_active: !current });
   },
+  async remove(id: string) {
+    const { error } = await supabase.from("landing_pages").delete().eq("id", id);
+    if (error) throw error;
+  },
 };
 
 // ── UTMs ──
