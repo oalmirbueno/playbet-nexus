@@ -36,6 +36,7 @@ export default function LandingPagesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<EditingState | null>(null);
   const [previewOpen, setPreviewOpen] = useState<LandingPageRow | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<LandingPageRow | null>(null);
   const [search, setSearch] = useState("");
   const [filterTipo, setFilterTipo] = useState("Todos");
   const [filterStatus, setFilterStatus] = useState("Todos");
@@ -196,6 +197,7 @@ export default function LandingPagesPage() {
                     <button onClick={() => handleToggle(p)} className={`p-1 rounded transition-colors text-muted-foreground ${p.is_active ? "hover:bg-destructive/15 hover:text-destructive" : "hover:bg-success/15 hover:text-success"}`} title={p.is_active ? "Desativar" : "Ativar"}>
                       {p.is_active ? <XCircle size={12} /> : <CheckCircle size={12} />}
                     </button>
+                    <button onClick={() => setConfirmDelete(p)} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors" title="Apagar"><Trash2 size={12} /></button>
                   </div>
                 </td>
               </tr>
