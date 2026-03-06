@@ -250,6 +250,7 @@ export default function Influencers() {
                       ) : (
                         <button onClick={() => handleToggle(inf)} className="p-1 rounded hover:bg-success/15 text-muted-foreground hover:text-success transition-colors" title="Ativar"><CheckCircle size={12} /></button>
                       )}
+                      <button onClick={() => setConfirmDelete(inf)} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors" title="Apagar"><Trash2 size={12} /></button>
                     </div>
                   </td>
                 </tr>
@@ -317,6 +318,18 @@ export default function Influencers() {
           <DialogFooter>
             <button className="btn-ghost" onClick={() => setConfirmDeactivate(null)}>Cancelar</button>
             <button className="btn-primary bg-destructive hover:bg-destructive/90" onClick={handleDeactivate}>Desativar</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm */}
+      <Dialog open={!!confirmDelete} onOpenChange={() => setConfirmDelete(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Apagar Influencer</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Tem certeza que deseja apagar <strong>{confirmDelete?.name}</strong> permanentemente? Esta ação não pode ser desfeita.</p>
+          <DialogFooter>
+            <button className="btn-ghost" onClick={() => setConfirmDelete(null)}>Cancelar</button>
+            <button className="btn-primary bg-destructive hover:bg-destructive/90" onClick={async () => { if (confirmDelete) { await remove(confirmDelete.id); setConfirmDelete(null); } }}>Apagar</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
