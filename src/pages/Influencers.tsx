@@ -2,101 +2,122 @@ import { useState } from "react";
 import { Plus, Users, TrendingUp, MousePointerClick, DollarSign, ArrowRight, Search, Edit, XCircle, Copy, Globe, CheckCircle, Wallet, Link2, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { initialInfluencers, initialInfluencerLPs, initialLPTemplates } from "@/data/mockData";
-import type { Influencer } from "@/types";
+import { initialInfluencerLPs, initialLPTemplates } from "@/data/mockData";
+import { useInfluencers } from "@/hooks/useSupabaseQuery";
+import type { InfluencerRow } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ExportDropdown from "@/components/ExportDropdown";
 
-const emptyInfluencer: Partial<Influencer> = {
-  nome: "", slug: "", insta: "", seg: "", tipo: "Standard", perc: 15,
-  affiliate_link: "", landing_template: "", observacoes: "", status: "Novo",
+type EditingState = {
+  id?: string;
+  name: string;
+  slug: string;
+  instagram: string;
+  followers: number | null;
+  commission_percent: number | null;
+  affiliate_link: string;
+  notes: string;
+  is_active: boolean;
+};
+
+const emptyEditing: EditingState = {
+  name: "", slug: "", instagram: "", followers: null,
+  commission_percent: 15, affiliate_link: "", notes: "", is_active: true,
 };
 
 export default function Influencers() {
   const navigate = useNavigate();
-  const [data, setData] = useState<Influencer[]>(initialInfluencers);
+  const { data, isLoading, create, update, toggle, isCreating, isUpdating } = useInfluencers();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("Todos");
-  const [filterTipo, setFilterTipo] = useState("Todos");
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Partial<Influencer> | null>(null);
-  const [confirmDeactivate, setConfirmDeactivate] = useState<Influencer | null>(null);
+  const [editing, setEditing] = useState<EditingState | null>(null);
+  const [confirmDeactivate, setConfirmDeactivate] = useState<InfluencerRow | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
-  const [wizardData, setWizardData] = useState({ influencerId: 0, slug: "", templateId: 0, affiliateLink: "" });
+  const [wizardData, setWizardData] = useState({ influencerId: "", slug: "", templateId: 0, affiliateLink: "" });
 
   const lps = initialInfluencerLPs;
   const templates = initialLPTemplates;
 
   const filtered = data.filter((inf) => {
-    if (search && !inf.nome.toLowerCase().includes(search.toLowerCase()) && !inf.insta.toLowerCase().includes(search.toLowerCase()) && !inf.slug.toLowerCase().includes(search.toLowerCase())) return false;
-    if (filterStatus !== "Todos" && inf.status !== filterStatus) return false;
-    if (filterTipo !== "Todos" && inf.tipo !== filterTipo) return false;
+    const q = search.toLowerCase();
+    if (search && !inf.name.toLowerCase().includes(q) && !(inf.instagram || "").toLowerCase().includes(q) && !inf.slug.toLowerCase().includes(q)) return false;
+    if (filterStatus === "Ativo" && !inf.is_active) return false;
+    if (filterStatus === "Inativo" && inf.is_active) return false;
     return true;
   });
 
-  const topReceita = [...data].sort((a, b) => b.receita - a.receita)[0];
-  const topSaldo = [...data].sort((a, b) => b.saldo - a.saldo)[0];
+  const activeCount = data.filter(i => i.is_active).length;
+  const inactiveCount = data.filter(i => !i.is_active).length;
 
   const stats = [
     { label: "Total Influencers", value: String(data.length), icon: Users, variant: "border-l-primary" },
-    { label: "Ativos", value: String(data.filter(i => i.status === "Ativo").length), icon: CheckCircle, variant: "border-l-success" },
-    { label: "Pausados", value: String(data.filter(i => i.status === "Pausado").length), icon: Users, variant: "border-l-warning" },
-    { label: "Maior Faturamento", value: topReceita ? `${topReceita.nome.split(" ")[0]} — R$ ${(topReceita.receita / 1000).toFixed(1)}K` : "—", icon: DollarSign, variant: "border-l-accent", path: topReceita ? `/influencers/${topReceita.id}` : undefined },
-    { label: "Maior CTR", value: "Pedro L. — 12.8%", icon: MousePointerClick, variant: "border-l-info" },
-    { label: "Maior Saldo Disp.", value: topSaldo ? `${topSaldo.nome.split(" ")[0]} — R$ ${topSaldo.saldo.toLocaleString()}` : "—", icon: Wallet, variant: "border-l-success", path: topSaldo ? `/influencers/${topSaldo.id}` : undefined },
+    { label: "Ativos", value: String(activeCount), icon: CheckCircle, variant: "border-l-success" },
+    { label: "Inativos", value: String(inactiveCount), icon: Users, variant: "border-l-warning" },
+    { label: "Com Link", value: String(data.filter(i => i.affiliate_link).length), icon: Link2, variant: "border-l-accent" },
+    { label: "Comissão Média", value: data.length ? `${(data.reduce((s, i) => s + (i.commission_percent || 0), 0) / data.length).toFixed(0)}%` : "—", icon: DollarSign, variant: "border-l-info" },
+    { label: "Total Seguidores", value: data.reduce((s, i) => s + (i.followers || 0), 0).toLocaleString(), icon: TrendingUp, variant: "border-l-success" },
   ];
 
-  const openCreate = () => { setEditing({ ...emptyInfluencer, id: 0 }); setModalOpen(true); };
-  const openEdit = (inf: Influencer) => { setEditing({ ...inf }); setModalOpen(true); };
+  const openCreate = () => { setEditing({ ...emptyEditing }); setModalOpen(true); };
+  const openEdit = (inf: InfluencerRow) => {
+    setEditing({
+      id: inf.id,
+      name: inf.name,
+      slug: inf.slug,
+      instagram: inf.instagram || "",
+      followers: inf.followers,
+      commission_percent: inf.commission_percent,
+      affiliate_link: inf.affiliate_link || "",
+      notes: inf.notes || "",
+      is_active: inf.is_active ?? true,
+    });
+    setModalOpen(true);
+  };
 
-  const handleSave = () => {
-    if (!editing?.nome || !editing?.slug) {
+  const handleSave = async () => {
+    if (!editing?.name || !editing?.slug) {
       toast({ title: "Erro", description: "Nome e slug são obrigatórios.", variant: "destructive" });
       return;
     }
-    // Check slug duplicity
-    const slugExists = data.some(i => i.slug === editing.slug && i.id !== editing.id);
-    if (slugExists) {
-      toast({ title: "Erro", description: "Esse slug já está em uso por outro influencer.", variant: "destructive" });
-      return;
-    }
-    if (editing.id && editing.id > 0) {
-      setData(prev => prev.map(i => i.id === editing.id ? { ...i, ...editing } as Influencer : i));
-      toast({ title: "Influencer atualizado", description: `${editing.nome} foi atualizado com sucesso.` });
+    try {
+      if (editing.id) {
+        await update({ id: editing.id, updates: {
+          name: editing.name, slug: editing.slug, instagram: editing.instagram || null,
+          followers: editing.followers, commission_percent: editing.commission_percent,
+          affiliate_link: editing.affiliate_link || null, notes: editing.notes || null,
+          is_active: editing.is_active,
+        }});
+      } else {
+        await create({
+          name: editing.name, slug: editing.slug, instagram: editing.instagram || null,
+          followers: editing.followers, commission_percent: editing.commission_percent,
+          affiliate_link: editing.affiliate_link || null, notes: editing.notes || null,
+          is_active: editing.is_active,
+        });
+      }
+      setModalOpen(false);
+      setEditing(null);
+    } catch { /* toast handled by hook */ }
+  };
+
+  const handleToggle = async (inf: InfluencerRow) => {
+    if (inf.is_active) {
+      setConfirmDeactivate(inf);
     } else {
-      const newId = Math.max(...data.map(i => i.id)) + 1;
-      const newInf: Influencer = {
-        ...emptyInfluencer as Influencer,
-        ...editing,
-        id: newId,
-        jogos: 0, links: 0, receita: 0, saldo: 0, ultimoSaque: "—",
-        is_active: true,
-        created_at: new Date().toISOString().split("T")[0],
-        updated_at: new Date().toISOString().split("T")[0],
-      };
-      setData(prev => [...prev, newInf]);
-      toast({ title: "Influencer criado", description: `${editing.nome} foi adicionado com sucesso.` });
+      await toggle({ id: inf.id, current: inf.is_active ?? false });
     }
-    setModalOpen(false);
-    setEditing(null);
   };
 
-  const handleActivate = (inf: Influencer) => {
-    setData(prev => prev.map(i => i.id === inf.id ? { ...i, status: "Ativo" as const, is_active: true } : i));
-    toast({ title: "Influencer ativado", description: `${inf.nome} foi reativado.` });
-  };
-
-  const handleDeactivate = () => {
+  const handleDeactivate = async () => {
     if (!confirmDeactivate) return;
-    setData(prev => prev.map(i => i.id === confirmDeactivate.id ? { ...i, status: "Inativo" as const, is_active: false } : i));
-    toast({ title: "Influencer desativado", description: `${confirmDeactivate.nome} foi desativado.` });
+    await toggle({ id: confirmDeactivate.id, current: confirmDeactivate.is_active ?? true });
     setConfirmDeactivate(null);
   };
 
-  const copyLink = (inf: Influencer) => {
-    const lp = lps.find(l => l.influencerId === inf.id);
-    const url = lp ? `https://playbet.com${lp.urlPublica}` : inf.affiliate_link;
+  const copyLink = (inf: InfluencerRow) => {
+    const url = inf.affiliate_link;
     if (url) { navigator.clipboard.writeText(url); toast({ title: "Link copiado!", description: url }); }
     else { toast({ title: "Sem link", description: "Nenhum link disponível.", variant: "destructive" }); }
   };
@@ -108,16 +129,28 @@ export default function Influencers() {
     }
     toast({ title: "LP gerada com sucesso!", description: `URL: /i/${wizardData.slug}` });
     setWizardOpen(false);
-    setWizardData({ influencerId: 0, slug: "", templateId: 0, affiliateLink: "" });
+    setWizardData({ influencerId: "", slug: "", templateId: 0, affiliateLink: "" });
   };
 
-  const getInfLP = (infId: number) => lps.find(l => l.influencerId === infId);
+  const exportableData = data.map(({ id, name, slug, instagram, followers, commission_percent, affiliate_link, is_active }) => ({
+    id, name, slug, instagram: instagram || "", followers: followers || 0,
+    commission_percent: commission_percent || 0, affiliate_link: affiliate_link || "",
+    status: is_active ? "Ativo" : "Inativo",
+  }));
 
-  const exportableData = data.map(({ id, nome, slug, insta, seg, tipo, perc, jogos, links, receita, saldo, status, affiliate_link }) => ({ id, nome, slug, insta, seg, tipo, perc, jogos, links, receita, saldo, status, affiliate_link }));
+  const infSemLink = data.filter(i => (i.is_active) && !i.affiliate_link);
 
-  // Validation alerts
-  const infSemLP = data.filter(i => i.status === "Ativo" && !lps.some(l => l.influencerId === i.id));
-  const infSemLink = data.filter(i => i.status === "Ativo" && !i.affiliate_link);
+  if (isLoading) {
+    return (
+      <div className="space-y-8">
+        <Breadcrumbs items={[{ label: "Gestão de Pessoas", path: "/influencers" }, { label: "Influencers" }]} />
+        <div className="flex items-center justify-center py-20 text-muted-foreground">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3" />
+          <span className="text-sm">Carregando influencers...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -137,7 +170,7 @@ export default function Influencers() {
       {/* KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {stats.map((s) => (
-          <div key={s.label} onClick={() => s.path && navigate(s.path)} className={`glass-card p-5 border-l-2 ${s.variant} ${s.path ? "cursor-pointer hover:bg-secondary/30" : ""} transition-colors`}>
+          <div key={s.label} className={`glass-card p-5 border-l-2 ${s.variant} transition-colors`}>
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{s.label}</span>
               <s.icon size={14} className="text-muted-foreground" />
@@ -148,11 +181,10 @@ export default function Influencers() {
       </div>
 
       {/* Validation Alerts */}
-      {(infSemLP.length > 0 || infSemLink.length > 0) && (
+      {infSemLink.length > 0 && (
         <div className="glass-card p-4 border-warning/30 space-y-1">
           <p className="text-xs font-medium text-warning flex items-center gap-1"><XCircle size={13} /> Validação de Estrutura</p>
-          {infSemLP.length > 0 && <p className="text-xs text-muted-foreground">⚠ {infSemLP.length} influencer(s) ativo(s) sem LP vinculada: {infSemLP.map(i => i.nome).join(", ")}</p>}
-          {infSemLink.length > 0 && <p className="text-xs text-muted-foreground">⚠ {infSemLink.length} influencer(s) ativo(s) sem affiliate link: {infSemLink.map(i => i.nome).join(", ")}</p>}
+          <p className="text-xs text-muted-foreground">⚠ {infSemLink.length} influencer(s) ativo(s) sem affiliate link: {infSemLink.map(i => i.name).join(", ")}</p>
         </div>
       )}
 
@@ -163,10 +195,7 @@ export default function Influencers() {
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por nome, instagram ou slug..." className="bg-transparent text-xs text-foreground placeholder:text-muted-foreground focus:outline-none w-full" />
         </div>
         <select className="select-field" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
-          <option>Todos</option><option>Ativo</option><option>Pausado</option><option>Novo</option><option>Inativo</option>
-        </select>
-        <select className="select-field" value={filterTipo} onChange={e => setFilterTipo(e.target.value)}>
-          <option>Todos</option><option>Premium</option><option>Standard</option><option>Starter</option>
+          <option>Todos</option><option>Ativo</option><option>Inativo</option>
         </select>
       </div>
 
@@ -181,46 +210,37 @@ export default function Influencers() {
         ) : (
           <table className="data-table">
             <thead>
-              <tr><th>Nome</th><th>Instagram</th><th>Seg.</th><th>Tipo</th><th>%</th><th>Slug</th><th>LP Principal</th><th>Links</th><th>Receita</th><th>Saldo Disp.</th><th>Último Saque</th><th>Status</th><th>Ações</th></tr>
+              <tr><th>Nome</th><th>Instagram</th><th>Seguidores</th><th>%</th><th>Slug</th><th>Link Afiliado</th><th>Status</th><th>Ações</th></tr>
             </thead>
             <tbody>
-              {filtered.map((inf) => {
-                const infLp = getInfLP(inf.id);
-                return (
-                  <tr key={inf.id}>
-                    <td>
-                      <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate(`/influencers/${inf.id}`)}>
-                        <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-accent">{inf.nome.charAt(0)}</div>
-                        <span className="font-medium hover:text-accent transition-colors">{inf.nome}</span>
-                      </div>
-                    </td>
-                    <td className="text-accent text-xs">{inf.insta}</td>
-                    <td className="text-xs">{inf.seg}</td>
-                    <td><span className={inf.tipo === "Premium" ? "badge-accent" : inf.tipo === "Standard" ? "badge-primary" : "badge-neutral"}>{inf.tipo}</span></td>
-                    <td>{inf.perc}%</td>
-                    <td className="font-mono text-xs text-accent">{inf.slug}</td>
-                    <td className="text-xs">{infLp ? <span className="cursor-pointer hover:text-accent transition-colors" onClick={() => navigate("/link-engine")}>{infLp.templateNome}</span> : <span className="text-muted-foreground">—</span>}</td>
-                    <td>{inf.links}</td>
-                    <td className="font-medium">R$ {inf.receita.toLocaleString()}</td>
-                    <td className="text-success font-medium">R$ {inf.saldo.toLocaleString()}</td>
-                    <td className="text-xs text-muted-foreground whitespace-nowrap">{inf.ultimoSaque}</td>
-                    <td><span className={inf.status === "Ativo" ? "badge-success" : inf.status === "Pausado" ? "badge-warning" : inf.status === "Novo" ? "badge-info" : "badge-danger"}>{inf.status}</span></td>
-                    <td>
-                      <div className="flex gap-0.5" onClick={e => e.stopPropagation()}>
-                        <button onClick={() => navigate(`/influencers/${inf.id}`)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Ver perfil"><Eye size={12} /></button>
-                        <button onClick={() => openEdit(inf)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Editar"><Edit size={12} /></button>
-                        <button onClick={() => copyLink(inf)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Copiar link"><Copy size={12} /></button>
-                        {infLp && <button onClick={() => window.open(`/i/${inf.slug}`, "_blank")} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Abrir LP"><Globe size={12} /></button>}
-                        {inf.status === "Inativo" ? (
-                          <button onClick={() => handleActivate(inf)} className="p-1 rounded hover:bg-success/15 text-muted-foreground hover:text-success transition-colors" title="Ativar"><CheckCircle size={12} /></button>
-                        ) : inf.status !== "Novo" ? (
-                          <button onClick={() => setConfirmDeactivate(inf)} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors" title="Desativar"><XCircle size={12} /></button>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+              {filtered.map((inf) => (
+                <tr key={inf.id}>
+                  <td>
+                    <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate(`/influencers/${inf.id}`)}>
+                      <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-accent">{inf.name.charAt(0)}</div>
+                      <span className="font-medium hover:text-accent transition-colors">{inf.name}</span>
+                    </div>
+                  </td>
+                  <td className="text-accent text-xs">{inf.instagram || "—"}</td>
+                  <td className="text-xs">{(inf.followers || 0).toLocaleString()}</td>
+                  <td>{inf.commission_percent || 0}%</td>
+                  <td className="font-mono text-xs text-accent">{inf.slug}</td>
+                  <td className="text-xs max-w-[200px] truncate">{inf.affiliate_link || "—"}</td>
+                  <td><span className={inf.is_active ? "badge-success" : "badge-danger"}>{inf.is_active ? "Ativo" : "Inativo"}</span></td>
+                  <td>
+                    <div className="flex gap-0.5" onClick={e => e.stopPropagation()}>
+                      <button onClick={() => navigate(`/influencers/${inf.id}`)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Ver perfil"><Eye size={12} /></button>
+                      <button onClick={() => openEdit(inf)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Editar"><Edit size={12} /></button>
+                      <button onClick={() => copyLink(inf)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Copiar link"><Copy size={12} /></button>
+                      {inf.is_active ? (
+                        <button onClick={() => handleToggle(inf)} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors" title="Desativar"><XCircle size={12} /></button>
+                      ) : (
+                        <button onClick={() => handleToggle(inf)} className="p-1 rounded hover:bg-success/15 text-muted-foreground hover:text-success transition-colors" title="Ativar"><CheckCircle size={12} /></button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         )}
@@ -243,34 +263,23 @@ export default function Influencers() {
           <DialogHeader><DialogTitle>{editing?.id ? "Editar Influencer" : "Adicionar Influencer"}</DialogTitle></DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-3">
-              <div><label className="text-xs font-medium text-muted-foreground">Nome *</label><input className="input-field mt-1" value={editing?.nome || ""} onChange={e => setEditing(prev => ({ ...prev, nome: e.target.value }))} /></div>
-              <div><label className="text-xs font-medium text-muted-foreground">Slug *</label><input className="input-field mt-1" value={editing?.slug || ""} onChange={e => setEditing(prev => ({ ...prev, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") }))} placeholder="ex: rafa" /></div>
+              <div><label className="text-xs font-medium text-muted-foreground">Nome *</label><input className="input-field mt-1" value={editing?.name || ""} onChange={e => setEditing(prev => prev ? { ...prev, name: e.target.value } : prev)} /></div>
+              <div><label className="text-xs font-medium text-muted-foreground">Slug *</label><input className="input-field mt-1" value={editing?.slug || ""} onChange={e => setEditing(prev => prev ? { ...prev, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") } : prev)} placeholder="ex: rafa" /></div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div><label className="text-xs font-medium text-muted-foreground">Instagram</label><input className="input-field mt-1" value={editing?.insta || ""} onChange={e => setEditing(prev => ({ ...prev, insta: e.target.value }))} /></div>
-              <div><label className="text-xs font-medium text-muted-foreground">Seguidores</label><input className="input-field mt-1" value={editing?.seg || ""} onChange={e => setEditing(prev => ({ ...prev, seg: e.target.value }))} /></div>
+              <div><label className="text-xs font-medium text-muted-foreground">Instagram</label><input className="input-field mt-1" value={editing?.instagram || ""} onChange={e => setEditing(prev => prev ? { ...prev, instagram: e.target.value } : prev)} /></div>
+              <div><label className="text-xs font-medium text-muted-foreground">Seguidores</label><input type="number" className="input-field mt-1" value={editing?.followers || ""} onChange={e => setEditing(prev => prev ? { ...prev, followers: e.target.value ? Number(e.target.value) : null } : prev)} /></div>
             </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div><label className="text-xs font-medium text-muted-foreground">Tipo</label>
-                <select className="select-field mt-1 w-full" value={editing?.tipo || "Standard"} onChange={e => setEditing(prev => ({ ...prev, tipo: e.target.value as Influencer["tipo"] }))}>
-                  <option>Premium</option><option>Standard</option><option>Starter</option>
-                </select>
-              </div>
-              <div><label className="text-xs font-medium text-muted-foreground">% Comissão</label><input type="number" className="input-field mt-1" value={editing?.perc || 15} onChange={e => setEditing(prev => ({ ...prev, perc: Number(e.target.value) }))} /></div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><label className="text-xs font-medium text-muted-foreground">% Comissão</label><input type="number" className="input-field mt-1" value={editing?.commission_percent || 15} onChange={e => setEditing(prev => prev ? { ...prev, commission_percent: Number(e.target.value) } : prev)} /></div>
               <div><label className="text-xs font-medium text-muted-foreground">Status</label>
-                <select className="select-field mt-1 w-full" value={editing?.status || "Novo"} onChange={e => setEditing(prev => ({ ...prev, status: e.target.value as Influencer["status"] }))}>
-                  <option>Ativo</option><option>Pausado</option><option>Novo</option><option>Inativo</option>
+                <select className="select-field mt-1 w-full" value={editing?.is_active ? "Ativo" : "Inativo"} onChange={e => setEditing(prev => prev ? { ...prev, is_active: e.target.value === "Ativo" } : prev)}>
+                  <option>Ativo</option><option>Inativo</option>
                 </select>
               </div>
             </div>
-            <div><label className="text-xs font-medium text-muted-foreground">Link de Afiliado</label><input className="input-field mt-1" value={editing?.affiliate_link || ""} onChange={e => setEditing(prev => ({ ...prev, affiliate_link: e.target.value }))} /></div>
-            <div><label className="text-xs font-medium text-muted-foreground">Landing Template</label>
-              <select className="select-field mt-1 w-full" value={editing?.landing_template || ""} onChange={e => setEditing(prev => ({ ...prev, landing_template: e.target.value }))}>
-                <option value="">Selecionar...</option>
-                {templates.map(t => <option key={t.id} value={t.nome}>{t.nome}</option>)}
-              </select>
-            </div>
-            <div><label className="text-xs font-medium text-muted-foreground">Observações</label><textarea className="input-field mt-1 min-h-[60px]" value={editing?.observacoes || ""} onChange={e => setEditing(prev => ({ ...prev, observacoes: e.target.value }))} /></div>
+            <div><label className="text-xs font-medium text-muted-foreground">Link de Afiliado</label><input className="input-field mt-1" value={editing?.affiliate_link || ""} onChange={e => setEditing(prev => prev ? { ...prev, affiliate_link: e.target.value } : prev)} /></div>
+            <div><label className="text-xs font-medium text-muted-foreground">Observações</label><textarea className="input-field mt-1 min-h-[60px]" value={editing?.notes || ""} onChange={e => setEditing(prev => prev ? { ...prev, notes: e.target.value } : prev)} /></div>
             {editing?.slug && (
               <div className="p-3 rounded-lg bg-secondary/50 border border-border">
                 <span className="text-[10px] text-muted-foreground uppercase">URL pública gerada</span>
@@ -280,7 +289,9 @@ export default function Influencers() {
           </div>
           <DialogFooter>
             <button className="btn-ghost" onClick={() => setModalOpen(false)}>Cancelar</button>
-            <button className="btn-primary" onClick={handleSave}>Salvar</button>
+            <button className="btn-primary" onClick={handleSave} disabled={isCreating || isUpdating}>
+              {isCreating || isUpdating ? "Salvando..." : "Salvar"}
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -289,7 +300,7 @@ export default function Influencers() {
       <Dialog open={!!confirmDeactivate} onOpenChange={() => setConfirmDeactivate(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader><DialogTitle>Desativar Influencer</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Tem certeza que deseja desativar <strong>{confirmDeactivate?.nome}</strong>? Seus links e LPs serão pausados.</p>
+          <p className="text-sm text-muted-foreground">Tem certeza que deseja desativar <strong>{confirmDeactivate?.name}</strong>? Seus links e LPs serão pausados.</p>
           <DialogFooter>
             <button className="btn-ghost" onClick={() => setConfirmDeactivate(null)}>Cancelar</button>
             <button className="btn-primary bg-destructive hover:bg-destructive/90" onClick={handleDeactivate}>Desativar</button>
@@ -305,11 +316,11 @@ export default function Influencers() {
             <p className="text-xs text-muted-foreground">Vincule um influenciador a um template de LP e gere uma URL pública única.</p>
             <div><label className="text-xs font-medium text-muted-foreground">Influenciador *</label>
               <select className="select-field mt-1 w-full" value={wizardData.influencerId} onChange={e => {
-                const inf = data.find(i => i.id === Number(e.target.value));
-                setWizardData(p => ({ ...p, influencerId: Number(e.target.value), slug: inf?.slug || "", affiliateLink: inf?.affiliate_link || "" }));
+                const inf = data.find(i => i.id === e.target.value);
+                setWizardData(p => ({ ...p, influencerId: e.target.value, slug: inf?.slug || "", affiliateLink: inf?.affiliate_link || "" }));
               }}>
-                <option value={0}>Selecionar...</option>
-                {data.filter(i => i.status !== "Inativo").map(i => <option key={i.id} value={i.id}>{i.nome}</option>)}
+                <option value="">Selecionar...</option>
+                {data.filter(i => i.is_active).map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
               </select>
             </div>
             <div><label className="text-xs font-medium text-muted-foreground">Slug *</label><input className="input-field mt-1" value={wizardData.slug} onChange={e => setWizardData(p => ({ ...p, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") }))} /></div>
