@@ -9,10 +9,10 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import ExportDropdown from "@/components/ExportDropdown";
 
 function buildPublicUrl(domain: string | null, slug: string) {
-  if (!domain) return `/i/${slug}`;
+  if (!domain) return `/?ref=${slug}`;
   let base = domain.replace(/\/+$/, "");
   if (!/^https?:\/\//i.test(base)) base = `https://${base}`;
-  return `${base}/i/${slug}`;
+  return `${base}/?ref=${slug}`;
 }
 
 export default function LPPerformance() {

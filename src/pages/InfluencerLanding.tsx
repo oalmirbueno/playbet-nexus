@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Gamepad2, Star, Shield, ArrowRight, Zap, Trophy, Gift } from "lucide-react";
 import logo from "@/assets/logo.png";
@@ -47,7 +47,9 @@ async function findLPBaseByHostname(hostname: string) {
 }
 
 export default function InfluencerLanding() {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug: pathSlug } = useParams<{ slug: string }>();
+  const [searchParams] = useSearchParams();
+  const slug = searchParams.get("ref") || pathSlug; // ?ref= takes priority, /i/:slug as fallback
   const [state, setState] = useState<LoadState>("loading");
   const [resolved, setResolved] = useState<ResolvedLanding | null>(null);
   const [clicking, setClicking] = useState(false);
@@ -151,7 +153,7 @@ export default function InfluencerLanding() {
         clicked_at: new Date().toISOString(),
         user_agent: navigator.userAgent,
         referrer: document.referrer || null,
-        route: `/i/${slug}`,
+        route: `/?ref=${slug}`,
         source: resolved.instance_id ? "lp_instance" : "legacy_influencer",
       });
     } catch {

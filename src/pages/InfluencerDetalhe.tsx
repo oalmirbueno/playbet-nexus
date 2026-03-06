@@ -35,11 +35,11 @@ const mockClicks = [
 ];
 
 const clicksRecentes = [
-  { id: 1, hora: "05/03 14:32", referrer: "instagram.com/stories", device: "iPhone 15 / iOS 18", rota: "/i/rafa", ip: "189.***.***.42" },
-  { id: 2, hora: "05/03 14:28", referrer: "t.me/canal_bet", device: "Samsung S24 / Android 14", rota: "/i/rafa", ip: "177.***.***.18" },
-  { id: 3, hora: "05/03 14:15", referrer: "wa.me/redirect", device: "Chrome / Windows", rota: "/i/rafa", ip: "201.***.***.91" },
-  { id: 4, hora: "05/03 13:55", referrer: "bio.link/rafa", device: "iPhone 14 / iOS 17", rota: "/i/rafa", ip: "191.***.***.65" },
-  { id: 5, hora: "05/03 13:40", referrer: "instagram.com/reels", device: "Pixel 8 / Android 14", rota: "/i/rafa", ip: "200.***.***.33" },
+  { id: 1, hora: "05/03 14:32", referrer: "instagram.com/stories", device: "iPhone 15 / iOS 18", rota: "/?ref=rafa", ip: "189.***.***.42" },
+  { id: 2, hora: "05/03 14:28", referrer: "t.me/canal_bet", device: "Samsung S24 / Android 14", rota: "/?ref=rafa", ip: "177.***.***.18" },
+  { id: 3, hora: "05/03 14:15", referrer: "wa.me/redirect", device: "Chrome / Windows", rota: "/?ref=rafa", ip: "201.***.***.91" },
+  { id: 4, hora: "05/03 13:55", referrer: "bio.link/rafa", device: "iPhone 14 / iOS 17", rota: "/?ref=rafa", ip: "191.***.***.65" },
+  { id: 5, hora: "05/03 13:40", referrer: "instagram.com/reels", device: "Pixel 8 / Android 14", rota: "/?ref=rafa", ip: "200.***.***.33" },
 ];
 
 export default function InfluencerDetalhe() {

@@ -65,7 +65,7 @@ export default function UtmsSubids() {
   });
 
   const buildUrl = (u: { subid?: string | null; utm_source?: string | null; utm_medium?: string | null; utm_campaign?: string | null; utm_content?: string | null }) =>
-    `https://playbet.com/i/${u.subid || "..."}?utm_source=${u.utm_source || ""}&utm_medium=${u.utm_medium || ""}&utm_campaign=${u.utm_campaign || ""}&utm_content=${u.utm_content || ""}&subid=${u.subid || ""}`;
+    `https://playbet.app.br/?ref=${u.subid || "..."}&utm_source=${u.utm_source || ""}&utm_medium=${u.utm_medium || ""}&utm_campaign=${u.utm_campaign || ""}&utm_content=${u.utm_content || ""}&subid=${u.subid || ""}`;
 
   const handleToggle = async (u: UtmRow) => {
     await toggle({ id: u.id, current: u.is_active ?? true });

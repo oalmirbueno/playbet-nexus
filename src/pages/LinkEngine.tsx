@@ -32,7 +32,7 @@ export default function LinkEngine() {
       toast({ title: "Erro", description: "Influencer e slug são obrigatórios.", variant: "destructive" });
       return;
     }
-    const urlPublica = `/i/${editing.slug}`;
+    const urlPublica = `/?ref=${editing.slug}`;
     if (editing.id && editing.id > 0) {
       setData(prev => prev.map(lp => lp.id === editing.id ? { ...lp, ...editing, urlPublica } as InfluencerLP : lp));
       toast({ title: "Vínculo atualizado" });
@@ -45,7 +45,7 @@ export default function LinkEngine() {
   };
 
   const copyUrl = (lp: InfluencerLP) => {
-    const fullUrl = `https://playbet.com${lp.urlPublica}`;
+    const fullUrl = lp.urlPublica?.startsWith("http") ? lp.urlPublica : `https://playbet.app.br${lp.urlPublica}`;
     navigator.clipboard.writeText(fullUrl);
     toast({ title: "URL copiada!", description: fullUrl });
   };
@@ -144,7 +144,7 @@ export default function LinkEngine() {
             {editing?.slug && (
               <div className="p-3 rounded-lg bg-secondary/50 border border-border">
                 <span className="text-[10px] text-muted-foreground uppercase">URL pública gerada</span>
-                <p className="font-mono text-sm text-accent mt-1">https://playbet.com/i/{editing.slug}</p>
+                <p className="font-mono text-sm text-accent mt-1">dominio-da-lp.playbet.app.br/?ref={editing.slug}</p>
               </div>
             )}
           </div>

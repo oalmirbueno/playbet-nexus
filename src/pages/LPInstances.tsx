@@ -24,11 +24,10 @@ const emptyEditing: EditingState = {
 };
 
 function buildPublicUrl(domain: string | null, slug: string) {
-  if (!domain) return `/i/${slug}`;
+  if (!domain) return `/?ref=${slug}`;
   let base = domain.replace(/\/+$/, "");
-  // Ensure https:// prefix
   if (!/^https?:\/\//i.test(base)) base = `https://${base}`;
-  return `${base}/i/${slug}`;
+  return `${base}/?ref=${slug}`;
 }
 
 export default function LPInstances() {
