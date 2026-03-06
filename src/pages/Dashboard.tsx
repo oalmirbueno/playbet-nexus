@@ -1,6 +1,12 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MousePointerClick, UserPlus, DollarSign, Gamepad2, Monitor, Users, Link2, FileText, ArrowRight, CheckCircle } from "lucide-react";
+import { MousePointerClick, UserPlus, DollarSign, Gamepad2, Monitor, Users, Link2, FileText, ArrowRight, CheckCircle, Database, Trash2, Loader2 } from "lucide-react";
 import { useInfluencers, useGames, usePlatforms, useLandingPages, useTemplates, useUtms } from "@/hooks/useSupabaseQuery";
+import { useQueryClient } from "@tanstack/react-query";
+import { seedDemoData, clearDemoData } from "@/services/seedDemoData";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 
 const steps = [
   { label: "Cadastrar primeira plataforma", path: "/plataformas", icon: Monitor, key: "platforms" },
@@ -13,6 +19,11 @@ const steps = [
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [seeding, setSeeding] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
+
   const { data: influencers } = useInfluencers();
   const { data: games } = useGames();
   const { data: platforms } = usePlatforms();
@@ -29,6 +40,35 @@ export default function Dashboard() {
     utms: utms.length,
   };
 
+  const totalItems = Object.values(counts).reduce((a, b) => a + b, 0);
+
+  const handleSeed = async () => {
+    setSeeding(true);
+    try {
+      await seedDemoData();
+      queryClient.invalidateQueries();
+      toast({ title: "Dados demo criados com sucesso!" });
+    } catch (e: any) {
+      toast({ title: "Erro ao criar dados demo", description: e.message, variant: "destructive" });
+    } finally {
+      setSeeding(false);
+    }
+  };
+
+  const handleClear = async () => {
+    setClearing(true);
+    setConfirmClear(false);
+    try {
+      await clearDemoData();
+      queryClient.invalidateQueries();
+      toast({ title: "Todos os dados foram removidos" });
+    } catch (e: any) {
+      toast({ title: "Erro ao limpar dados", description: e.message, variant: "destructive" });
+    } finally {
+      setClearing(false);
+    }
+  };
+
   const completedSteps = steps.filter(s => counts[s.key] > 0).length;
   const hasData = completedSteps > 0;
 
@@ -43,9 +83,25 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground mt-1">Visão geral consolidada da operação</p>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-1">Visão geral consolidada da operação</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {totalItems === 0 && (
+            <Button onClick={handleSeed} disabled={seeding} size="sm">
+              {seeding ? <Loader2 size={14} className="animate-spin" /> : <Database size={14} />}
+              {seeding ? "Criando..." : "Povoar dados demo"}
+            </Button>
+          )}
+          {totalItems > 0 && (
+            <Button onClick={() => setConfirmClear(true)} disabled={clearing} variant="destructive" size="sm">
+              {clearing ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+              {clearing ? "Removendo..." : "Remover dados demo"}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Stats */}
@@ -110,6 +166,22 @@ export default function Dashboard() {
           })}
         </div>
       </div>
+
+      {/* Confirm clear dialog */}
+      <Dialog open={confirmClear} onOpenChange={setConfirmClear}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remover todos os dados demo?</DialogTitle>
+            <DialogDescription>
+              Isso apagará permanentemente todos os registros de plataformas, jogos, influencers, landing pages, templates, UTMs e cliques. Essa ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmClear(false)}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleClear}>Sim, remover tudo</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
