@@ -67,7 +67,7 @@ export default function InfluencerLanding() {
   if (state === "not_found") {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center text-white px-6 text-center">
-        <img src={logo} alt="PlayBet" className="h-10 mb-8 opacity-80" />
+        <img src={logo} alt="PlayBet" className="h-14 mb-8 opacity-80" />
         <h1 className="text-2xl font-bold mb-2">Página não encontrada</h1>
         <p className="text-sm text-gray-400 max-w-sm">O link que você acessou não está disponível ou não existe. Verifique o endereço e tente novamente.</p>
       </div>
@@ -78,7 +78,7 @@ export default function InfluencerLanding() {
   if (state === "inactive") {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center text-white px-6 text-center">
-        <img src={logo} alt="PlayBet" className="h-10 mb-8 opacity-80" />
+        <img src={logo} alt="PlayBet" className="h-14 mb-8 opacity-80" />
         <h1 className="text-2xl font-bold mb-2">Página temporariamente indisponível</h1>
         <p className="text-sm text-gray-400 max-w-sm">Este link está temporariamente fora do ar. Tente novamente mais tarde.</p>
       </div>
@@ -92,7 +92,7 @@ export default function InfluencerLanding() {
       <header className="relative pt-8 pb-16 px-6">
         <div className="absolute inset-0 bg-gradient-to-b from-emerald-600/10 via-transparent to-transparent pointer-events-none" />
         <div className="max-w-xl mx-auto relative z-10 text-center">
-          <img src={logo} alt="PlayBet" className="h-9 mx-auto mb-10 opacity-90" />
+          <img src={logo} alt="PlayBet" className="h-14 mx-auto mb-10 opacity-90" />
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium mb-6">
             <Zap size={12} /> Oferta Exclusiva
           </div>
