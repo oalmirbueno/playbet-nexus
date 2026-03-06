@@ -83,3 +83,4 @@ export const useGames = () => useEntityCrud("games", gameService, "Jogo");
 export const useTemplates = () => useEntityCrud("templates", templateService, "Template");
 export const useLandingPages = () => useEntityCrud("landing_pages", landingPageService, "Landing Page");
 export const useUtms = () => useEntityCrud("utms", utmService, "UTM");
+export const useLandingPageInstances = () => useEntityCrud("landing_page_instances", landingPageInstanceService, "Instância de LP");
