@@ -153,7 +153,7 @@ export default function Jogos() {
       </div>
 
       {/* Table */}
-      <div className="glass-card overflow-x-auto">
+      <div className="glass-card overflow-x-auto invisible-scroll">
         <table className="data-table">
           <thead><tr><th>Jogo</th><th>Categoria</th><th>Tendência</th><th>Plataformas</th><th>LP Principal</th><th>LPs</th><th>Influencers</th><th>Campanhas</th><th>Cliques</th><th>CTR</th><th>Cadastros</th><th>Receita</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody>

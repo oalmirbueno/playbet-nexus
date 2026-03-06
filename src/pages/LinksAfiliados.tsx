@@ -92,7 +92,7 @@ export default function LinksAfiliados() {
         </select>
       </div>
 
-      <div className="glass-card overflow-x-auto">
+      <div className="glass-card overflow-x-auto invisible-scroll">
         {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <p className="text-sm font-medium">Nenhum link encontrado</p>

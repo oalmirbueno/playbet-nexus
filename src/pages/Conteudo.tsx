@@ -191,7 +191,7 @@ export default function Conteudo() {
 
       {/* KANBAN VIEW */}
       {view === "kanban" && (
-        <div className="flex gap-4 overflow-x-auto pb-6">
+        <div className="flex gap-4 overflow-x-auto invisible-scroll pb-6">
           {statusCols.map(col => {
             const items = filtered.filter(c => c.status === col);
             return (
@@ -237,7 +237,7 @@ export default function Conteudo() {
 
       {/* TABLE VIEW */}
       {view === "tabela" && (
-        <div className="glass-card overflow-x-auto rounded-lg">
+        <div className="glass-card overflow-x-auto invisible-scroll rounded-lg">
           <table className="data-table">
             <thead><tr>
               <th>Título</th><th>Tipo</th><th>Canal</th><th>Influencer</th><th>Jogo</th><th>Campanha</th><th>LP</th><th>Prioridade</th><th>Status</th><th>Data</th><th>Responsável</th><th>Ações</th>

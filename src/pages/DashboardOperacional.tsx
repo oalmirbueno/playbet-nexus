@@ -79,7 +79,7 @@ export default function DashboardOperacional() {
         {/* Atividades Recentes */}
         <div className="lg:col-span-2 glass-card p-6">
           <h3 className="text-sm font-semibold text-foreground mb-5">Atividades Recentes</h3>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto invisible-scroll">
             <table className="data-table">
               <thead>
                 <tr>

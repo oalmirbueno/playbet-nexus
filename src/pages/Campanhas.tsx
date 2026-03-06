@@ -136,7 +136,7 @@ export default function Campanhas() {
       </div>
 
       {/* Table */}
-      <div className="glass-card overflow-x-auto rounded-lg">
+      <div className="glass-card overflow-x-auto invisible-scroll rounded-lg">
         <table className="data-table">
           <thead><tr><th>Nome</th><th>Objetivo</th><th>Jogo</th><th>Plataforma</th><th>Influencer</th><th>Período</th><th>Cliques</th><th>Status</th><th>Resultado</th><th>Ações</th></tr></thead>
           <tbody>

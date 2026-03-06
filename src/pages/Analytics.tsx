@@ -206,7 +206,7 @@ export default function Analytics() {
       </div>
 
       {/* Drill-down Table */}
-      <div className="glass-card overflow-x-auto">
+      <div className="glass-card overflow-x-auto invisible-scroll">
         <div className="px-6 py-4 border-b border-border">
           <h3 className="text-sm font-semibold">Tabela Analítica — Drill-down</h3>
           <p className="text-[11px] text-muted-foreground mt-0.5">Clique em uma linha para navegar ao módulo relacionado</p>

@@ -133,7 +133,7 @@ export default function AsaasPagamentos() {
         ))}
       </div>
 
-      <div className="glass-card overflow-x-auto animate-fade-in">
+      <div className="glass-card overflow-x-auto invisible-scroll animate-fade-in">
         <table className="data-table">
           <thead><tr><th>ID</th><th>Destinatário</th><th>Tipo</th><th>Valor</th><th>Método</th><th>Data</th><th>Status</th><th>Origem</th><th>Integração</th><th>Ações</th></tr></thead>
           <tbody>
