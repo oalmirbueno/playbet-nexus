@@ -132,6 +132,21 @@ export default function DashboardExecutivo() {
           </div>
         </>
       )}
+
+      <Dialog open={confirmClear} onOpenChange={setConfirmClear}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remover todos os dados demo?</DialogTitle>
+            <DialogDescription>
+              Isso apagará permanentemente todos os registros de plataformas, jogos, influencers, landing pages, templates, UTMs e cliques. Essa ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmClear(false)}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleClear}>Sim, remover tudo</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
