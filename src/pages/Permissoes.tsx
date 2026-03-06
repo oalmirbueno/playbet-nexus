@@ -1,29 +1,210 @@
-const permissoes = [
-  { role: "Super Admin", modulos: "Todos", acoes: "Leitura, Escrita, Exclusão, Configurações", users: 1 },
-  { role: "Gestor Financeiro", modulos: "Financeiro, Saques, Comissões, Asaas", acoes: "Leitura, Escrita, Aprovação", users: 1 },
-  { role: "Marketing", modulos: "Conteúdo, Campanhas, LPs, Links, Calendário", acoes: "Leitura, Escrita", users: 1 },
-  { role: "Suporte", modulos: "Influencers, Saques (leitura)", acoes: "Leitura", users: 1 },
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Edit, Eye, Copy, UserMinus, UserPlus, Shield, Check, X } from "lucide-react";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "sonner";
+
+interface Perfil {
+  id: number; nome: string; descricao: string; modulos: string[]; acoes: string[];
+}
+
+const perfis: Perfil[] = [
+  { id: 1, nome: "Admin Master", descricao: "Acesso total ao sistema", modulos: ["Todos"], acoes: ["Leitura", "Escrita", "Exclusão", "Configurações", "Aprovação"] },
+  { id: 2, nome: "Sócio", descricao: "Visão financeira e operacional", modulos: ["Dashboard", "Financeiro", "Saques", "Comissões", "Analytics"], acoes: ["Leitura", "Aprovação"] },
+  { id: 3, nome: "Financeiro", descricao: "Gestão de receitas e pagamentos", modulos: ["Financeiro", "Saques", "Comissões", "Asaas", "Regras Financeiras"], acoes: ["Leitura", "Escrita", "Aprovação"] },
+  { id: 4, nome: "Operação", descricao: "Gestão de ativos e links", modulos: ["Jogos", "Plataformas", "Links", "LPs", "Hubs", "UTMs"], acoes: ["Leitura", "Escrita"] },
+  { id: 5, nome: "Conteúdo", descricao: "Produção editorial e campanhas", modulos: ["Conteúdo", "Calendário", "Campanhas", "Estratégia"], acoes: ["Leitura", "Escrita"] },
+  { id: 6, nome: "Influenciador", descricao: "Acesso limitado ao próprio perfil", modulos: ["Meu Perfil", "Meus Links", "Meus Saques"], acoes: ["Leitura"] },
+  { id: 7, nome: "Visualização", descricao: "Somente leitura em todos os módulos", modulos: ["Todos (leitura)"], acoes: ["Leitura"] },
 ];
 
+interface Usuario {
+  id: number; nome: string; email: string; perfil: string; status: string; ultimoAcesso: string; modulosPermitidos: string[];
+}
+
+const usuarios: Usuario[] = [
+  { id: 1, nome: "Admin PlayBet", email: "admin@playbet.com", perfil: "Admin Master", status: "Ativo", ultimoAcesso: "05/03/2026 14:32", modulosPermitidos: ["Todos"] },
+  { id: 2, nome: "Ricardo Almeida", email: "ricardo@playbet.com", perfil: "Sócio", status: "Ativo", ultimoAcesso: "05/03/2026 10:15", modulosPermitidos: ["Dashboard", "Financeiro", "Saques", "Comissões", "Analytics"] },
+  { id: 3, nome: "Fernanda Rocha", email: "fernanda@playbet.com", perfil: "Sócio", status: "Ativo", ultimoAcesso: "04/03/2026 18:45", modulosPermitidos: ["Dashboard", "Financeiro", "Saques", "Comissões", "Analytics"] },
+  { id: 4, nome: "Maria Santos", email: "maria@playbet.com", perfil: "Financeiro", status: "Ativo", ultimoAcesso: "04/03/2026 16:20", modulosPermitidos: ["Financeiro", "Saques", "Comissões", "Asaas", "Regras Financeiras"] },
+  { id: 5, nome: "Lucas Martins", email: "lucas@playbet.com", perfil: "Operação", status: "Ativo", ultimoAcesso: "04/03/2026 14:10", modulosPermitidos: ["Jogos", "Plataformas", "Links", "LPs", "Hubs", "UTMs"] },
+  { id: 6, nome: "Carla Lima", email: "carla@playbet.com", perfil: "Conteúdo", status: "Ativo", ultimoAcesso: "03/03/2026 11:30", modulosPermitidos: ["Conteúdo", "Calendário", "Campanhas", "Estratégia"] },
+  { id: 7, nome: "João Viewer", email: "joao@playbet.com", perfil: "Visualização", status: "Inativo", ultimoAcesso: "01/03/2026 09:00", modulosPermitidos: ["Todos (leitura)"] },
+];
+
+const allModulos = ["Dashboard", "Financeiro", "Saques", "Comissões", "Asaas", "Influencers", "Sócios", "Usuários", "Jogos", "Plataformas", "Links", "LPs", "Templates", "Hubs", "Calendário", "Conteúdo", "Estratégia", "Campanhas", "Analytics", "Conversões", "UTMs", "Auditoria", "Configurações", "Regras Fin.", "Permissões", "Integrações"];
+
+const matrizPerms: Record<string, Record<string, boolean>> = {
+  "Admin Master": Object.fromEntries(allModulos.map(m => [m, true])),
+  "Sócio": Object.fromEntries(allModulos.map(m => [m, ["Dashboard", "Financeiro", "Saques", "Comissões", "Analytics"].includes(m)])),
+  "Financeiro": Object.fromEntries(allModulos.map(m => [m, ["Financeiro", "Saques", "Comissões", "Asaas", "Regras Fin."].includes(m)])),
+  "Operação": Object.fromEntries(allModulos.map(m => [m, ["Jogos", "Plataformas", "Links", "LPs", "Templates", "Hubs", "UTMs"].includes(m)])),
+  "Conteúdo": Object.fromEntries(allModulos.map(m => [m, ["Calendário", "Conteúdo", "Estratégia", "Campanhas"].includes(m)])),
+  "Influenciador": Object.fromEntries(allModulos.map(m => [m, false])),
+  "Visualização": Object.fromEntries(allModulos.map(m => [m, true])),
+};
+
 export default function Permissoes() {
+  const navigate = useNavigate();
+  const [tab, setTab] = useState<"usuarios" | "perfis" | "matriz">("usuarios");
+  const [userDetail, setUserDetail] = useState<Usuario | null>(null);
+  const [search, setSearch] = useState("");
+
+  const filteredUsers = usuarios.filter(u => {
+    if (search && !(u.nome + u.email + u.perfil).toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
+
   return (
-    <div className="space-y-6">
-      <div><h1 className="page-header">Permissões</h1><p className="page-subtitle">Gestão de permissões e funções de acesso</p></div>
-      <div className="glass-card overflow-x-auto">
-        <table className="data-table">
-          <thead><tr><th>Função</th><th>Módulos Acessíveis</th><th>Ações Permitidas</th><th>Usuários</th></tr></thead>
-          <tbody>
-            {permissoes.map((p, i) => (
-              <tr key={i}>
-                <td><span className="badge-primary">{p.role}</span></td>
-                <td className="text-xs max-w-[300px]">{p.modulos}</td>
-                <td className="text-xs">{p.acoes}</td>
-                <td>{p.users}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="space-y-8">
+      <Breadcrumbs items={[{ label: "Permissões" }]} />
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Permissões</h1>
+          <p className="text-sm text-muted-foreground mt-1">Gestão de perfis, usuários e acessos — matriz de permissões completa</p>
+        </div>
+        <button className="btn-primary text-xs"><UserPlus size={13} />Adicionar Usuário</button>
       </div>
+
+      {/* Tabs */}
+      <div className="flex gap-1 bg-secondary/30 border border-border rounded-md p-1 w-fit">
+        {(["usuarios", "perfis", "matriz"] as const).map(t => (
+          <button key={t} onClick={() => setTab(t)} className={t === tab ? "tab-btn-active" : "tab-btn"}>
+            {t === "usuarios" ? "Usuários" : t === "perfis" ? "Perfis" : "Matriz"}
+          </button>
+        ))}
+      </div>
+
+      {/* Usuários Tab */}
+      {tab === "usuarios" && (
+        <>
+          <input className="input-field w-72" placeholder="Buscar usuário..." value={search} onChange={e => setSearch(e.target.value)} />
+          <div className="glass-card overflow-x-auto">
+            <table className="data-table">
+              <thead><tr><th>Nome</th><th>Email</th><th>Perfil</th><th>Status</th><th>Último Acesso</th><th>Módulos</th><th>Ações</th></tr></thead>
+              <tbody>
+                {filteredUsers.map(u => (
+                  <tr key={u.id}>
+                    <td className="font-medium">{u.nome}</td>
+                    <td className="text-xs text-muted-foreground">{u.email}</td>
+                    <td><span className="badge-primary">{u.perfil}</span></td>
+                    <td><span className={u.status === "Ativo" ? "badge-success" : "badge-danger"}>{u.status}</span></td>
+                    <td className="text-xs text-muted-foreground whitespace-nowrap">{u.ultimoAcesso}</td>
+                    <td className="text-xs max-w-[200px] truncate">{u.modulosPermitidos.join(", ")}</td>
+                    <td>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => setUserDetail(u)} className="p-1.5 hover:bg-secondary rounded" title="Ver detalhe"><Eye size={13} className="text-muted-foreground" /></button>
+                        <button className="p-1.5 hover:bg-secondary rounded" title="Editar"><Edit size={13} className="text-muted-foreground" /></button>
+                        <button className="p-1.5 hover:bg-secondary rounded" title="Clonar perfil"><Copy size={13} className="text-muted-foreground" /></button>
+                        <button className="p-1.5 hover:bg-secondary rounded" title="Desativar"><UserMinus size={13} className="text-muted-foreground" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {/* Perfis Tab */}
+      {tab === "perfis" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {perfis.map(p => (
+            <div key={p.id} className="glass-card p-6">
+              <div className="flex items-center gap-3 mb-3">
+                <Shield size={16} className="text-primary" />
+                <div>
+                  <h3 className="text-sm font-semibold">{p.nome}</h3>
+                  <p className="text-[11px] text-muted-foreground">{p.descricao}</p>
+                </div>
+              </div>
+              <div className="mb-3">
+                <p className="text-[10.5px] uppercase tracking-wider text-muted-foreground mb-1.5">Módulos</p>
+                <div className="flex flex-wrap gap-1">
+                  {p.modulos.map(m => <span key={m} className="badge-neutral">{m}</span>)}
+                </div>
+              </div>
+              <div>
+                <p className="text-[10.5px] uppercase tracking-wider text-muted-foreground mb-1.5">Ações</p>
+                <div className="flex flex-wrap gap-1">
+                  {p.acoes.map(a => <span key={a} className="badge-info">{a}</span>)}
+                </div>
+              </div>
+              <div className="flex gap-2 mt-4 pt-3 border-t border-border">
+                <button className="btn-ghost text-xs">Editar</button>
+                <button className="btn-ghost text-xs">Clonar</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Matriz Tab */}
+      {tab === "matriz" && (
+        <div className="glass-card overflow-x-auto">
+          <div className="px-6 py-4 border-b border-border">
+            <h3 className="text-sm font-semibold">Matriz de Permissões — Módulos × Perfis</h3>
+          </div>
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th className="sticky left-0 bg-card z-10">Módulo</th>
+                {Object.keys(matrizPerms).map(p => <th key={p} className="text-center whitespace-nowrap">{p}</th>)}
+              </tr>
+            </thead>
+            <tbody>
+              {allModulos.map(m => (
+                <tr key={m}>
+                  <td className="font-medium sticky left-0 bg-card text-xs">{m}</td>
+                  {Object.keys(matrizPerms).map(p => (
+                    <td key={p} className="text-center">
+                      {matrizPerms[p][m] ? <Check size={14} className="text-success mx-auto" /> : <X size={14} className="text-muted-foreground/30 mx-auto" />}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* User Detail Dialog */}
+      <Dialog open={!!userDetail} onOpenChange={() => setUserDetail(null)}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Detalhe do Usuário</DialogTitle>
+          </DialogHeader>
+          {userDetail && (
+            <div className="space-y-5">
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { l: "Nome", v: userDetail.nome }, { l: "Email", v: userDetail.email },
+                  { l: "Perfil", v: userDetail.perfil }, { l: "Status", v: userDetail.status },
+                  { l: "Último Acesso", v: userDetail.ultimoAcesso },
+                ].map(f => (
+                  <div key={f.l}>
+                    <p className="text-[10.5px] uppercase tracking-wider text-muted-foreground mb-1">{f.l}</p>
+                    <p className="text-sm font-medium">{f.v}</p>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <p className="text-[10.5px] uppercase tracking-wider text-muted-foreground mb-2">Módulos Permitidos</p>
+                <div className="flex flex-wrap gap-1">
+                  {userDetail.modulosPermitidos.map(m => <span key={m} className="badge-neutral">{m}</span>)}
+                </div>
+              </div>
+              <div className="flex gap-2 pt-2 border-t border-border">
+                <button className="btn-ghost text-xs" onClick={() => { setUserDetail(null); navigate("/auditoria"); }}>Ver Histórico</button>
+                <button className="btn-ghost text-xs">Editar Permissões</button>
+                <button className="btn-ghost text-xs">Redefinir Perfil</button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
