@@ -1,61 +1,85 @@
 import { useState } from "react";
-import { Plus, Edit, XCircle, Eye, Copy, Users, Search, Link2 } from "lucide-react";
+import { Plus, Edit, XCircle, CheckCircle, Eye, Copy, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { initialLPTemplates, initialInfluencerLPs, initialLandingPages } from "@/data/mockData";
-import type { LPTemplate } from "@/types";
+import { useTemplates } from "@/hooks/useSupabaseQuery";
+import type { TemplateRow } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ExportDropdown from "@/components/ExportDropdown";
 
+type EditingState = {
+  id?: string;
+  name: string;
+  type: string;
+  main_game: string;
+  is_active: boolean;
+};
+
+const emptyEditing: EditingState = {
+  name: "", type: "Jogo", main_game: "", is_active: true,
+};
+
 export default function LPTemplates() {
   const navigate = useNavigate();
-  const [data, setData] = useState<LPTemplate[]>(initialLPTemplates);
+  const { data, isLoading, create, update, toggle, isCreating, isUpdating } = useTemplates();
   const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Partial<LPTemplate> | null>(null);
-  const [detailOpen, setDetailOpen] = useState<LPTemplate | null>(null);
+  const [editing, setEditing] = useState<EditingState | null>(null);
+  const [detailOpen, setDetailOpen] = useState<TemplateRow | null>(null);
   const [search, setSearch] = useState("");
 
-  const infLPs = initialInfluencerLPs;
-  const landingPages = initialLandingPages;
-
   const filtered = data.filter(t => {
-    if (search && !t.nome.toLowerCase().includes(search.toLowerCase())) return false;
+    if (search && !t.name.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
 
-  const getInfluencersUsing = (tplNome: string) => infLPs.filter(l => l.templateNome === tplNome);
-  const getLPsUsing = (tplNome: string) => landingPages.filter(lp => lp.nome === tplNome);
-
-  // Validation
-  const templatesSemUso = data.filter(t => t.status === "Ativo" && getInfluencersUsing(t.nome).length === 0);
-
-  const openCreate = () => { setEditing({ id: 0, nome: "", rotaBase: "", tipo: "Jogo", jogoVinculado: "", status: "Ativo", cliquesTotais: 0, conversoesEstimadas: 0 }); setModalOpen(true); };
-  const openEdit = (t: LPTemplate) => { setEditing({ ...t }); setModalOpen(true); };
-
-  const handleSave = () => {
-    if (!editing?.nome) { toast({ title: "Erro", description: "Nome é obrigatório.", variant: "destructive" }); return; }
-    if (editing.id && editing.id > 0) {
-      setData(prev => prev.map(t => t.id === editing.id ? { ...t, ...editing } as LPTemplate : t));
-      toast({ title: "Template atualizado" });
-    } else {
-      const newId = Math.max(...data.map(t => t.id), 0) + 1;
-      setData(prev => [...prev, { ...editing, id: newId } as LPTemplate]);
-      toast({ title: "Template criado" });
-    }
-    setModalOpen(false);
+  const openCreate = () => { setEditing({ ...emptyEditing }); setModalOpen(true); };
+  const openEdit = (t: TemplateRow) => {
+    setEditing({
+      id: t.id, name: t.name, type: t.type || "Jogo",
+      main_game: t.main_game || "", is_active: t.is_active ?? true,
+    });
+    setModalOpen(true);
   };
 
-  const toggleStatus = (t: LPTemplate) => {
-    setData(prev => prev.map(item => item.id === t.id ? { ...item, status: item.status === "Ativo" ? "Inativo" as const : "Ativo" as const } : item));
-    toast({ title: t.status === "Ativo" ? "Template desativado" : "Template ativado" });
+  const handleSave = async () => {
+    if (!editing?.name) { toast({ title: "Erro", description: "Nome é obrigatório.", variant: "destructive" }); return; }
+    try {
+      if (editing.id) {
+        await update({ id: editing.id, updates: {
+          name: editing.name, type: editing.type || null,
+          main_game: editing.main_game || null, is_active: editing.is_active,
+        }});
+      } else {
+        await create({
+          name: editing.name, type: editing.type || null,
+          main_game: editing.main_game || null, is_active: editing.is_active,
+        });
+      }
+      setModalOpen(false);
+    } catch { /* hook handles toast */ }
   };
 
-  const duplicateTemplate = (t: LPTemplate) => {
-    const newId = Math.max(...data.map(x => x.id), 0) + 1;
-    setData(prev => [...prev, { ...t, id: newId, nome: `${t.nome} (cópia)`, cliquesTotais: 0, conversoesEstimadas: 0 }]);
-    toast({ title: "Template duplicado" });
+  const handleToggle = async (t: TemplateRow) => {
+    await toggle({ id: t.id, current: t.is_active ?? true });
   };
+
+  const exportableData = data.map(t => ({
+    id: t.id, name: t.name, type: t.type || "",
+    main_game: t.main_game || "", status: t.is_active ? "Ativo" : "Inativo",
+  }));
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Breadcrumbs items={[{ label: "Gestão de Ativos", path: "/lp-templates" }, { label: "Templates de LP" }]} />
+        <div className="flex items-center justify-center py-20 text-muted-foreground">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mr-3" />
+          <span className="text-sm">Carregando templates...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -63,25 +87,17 @@ export default function LPTemplates() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div><h1 className="page-header">Templates de LP</h1><p className="page-subtitle">Central de templates — base para distribuição por influenciador</p></div>
         <div className="flex gap-2">
-          <ExportDropdown data={data.map(({ id, nome, rotaBase, tipo, jogoVinculado, cliquesTotais, conversoesEstimadas, status }) => ({ id, nome, rotaBase, tipo, jogoVinculado, cliquesTotais, conversoesEstimadas, status }))} filename="templates-lp-playbet" />
+          <ExportDropdown data={exportableData} filename="templates-lp-playbet" />
           <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Criar Template</button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="stat-card border-l-2 border-l-primary"><span className="text-[10px] text-muted-foreground uppercase">Total Templates</span><p className="text-xl font-bold">{data.length}</p></div>
-        <div className="stat-card border-l-2 border-l-success"><span className="text-[10px] text-muted-foreground uppercase">Ativos</span><p className="text-xl font-bold">{data.filter(t => t.status === "Ativo").length}</p></div>
-        <div className="stat-card border-l-2 border-l-accent"><span className="text-[10px] text-muted-foreground uppercase">Cliques Totais</span><p className="text-xl font-bold">{data.reduce((a, t) => a + t.cliquesTotais, 0).toLocaleString()}</p></div>
-        <div className="stat-card border-l-2 border-l-info"><span className="text-[10px] text-muted-foreground uppercase">Conversões</span><p className="text-xl font-bold">{data.reduce((a, t) => a + t.conversoesEstimadas, 0).toLocaleString()}</p></div>
-        <div className="stat-card border-l-2 border-l-warning"><span className="text-[10px] text-muted-foreground uppercase">Sem Uso</span><p className="text-xl font-bold">{templatesSemUso.length}</p></div>
+        <div className="stat-card border-l-2 border-l-success"><span className="text-[10px] text-muted-foreground uppercase">Ativos</span><p className="text-xl font-bold">{data.filter(t => t.is_active).length}</p></div>
+        <div className="stat-card border-l-2 border-l-warning"><span className="text-[10px] text-muted-foreground uppercase">Inativos</span><p className="text-xl font-bold">{data.filter(t => !t.is_active).length}</p></div>
+        <div className="stat-card border-l-2 border-l-info"><span className="text-[10px] text-muted-foreground uppercase">Tipos</span><p className="text-xl font-bold">{new Set(data.map(t => t.type).filter(Boolean)).size}</p></div>
       </div>
-
-      {/* Validation */}
-      {templatesSemUso.length > 0 && (
-        <div className="glass-card p-4 border-warning/30">
-          <p className="text-xs font-medium text-warning">⚠ {templatesSemUso.length} template(s) ativo(s) sem influencer vinculado: {templatesSemUso.map(t => t.nome).join(", ")}</p>
-        </div>
-      )}
 
       {/* Atalhos */}
       <div className="flex flex-wrap gap-2">
@@ -100,79 +116,39 @@ export default function LPTemplates() {
       {/* Table */}
       <div className="glass-card overflow-x-auto invisible-scroll">
         <table className="data-table">
-          <thead><tr><th>Nome</th><th>Rota Base</th><th>Tipo</th><th>Jogo Vinculado</th><th>LPs Usando</th><th>Influencers</th><th>Cliques</th><th>Conversões</th><th>Status</th><th>Ações</th></tr></thead>
+          <thead><tr><th>Nome</th><th>Tipo</th><th>Jogo Vinculado</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody>
-            {filtered.map(t => {
-              const infs = getInfluencersUsing(t.nome);
-              const lpsUsing = getLPsUsing(t.nome);
-              return (
-                <tr key={t.id}>
-                  <td className="font-medium">{t.nome}</td>
-                  <td className="font-mono text-xs text-accent">{t.rotaBase}</td>
-                  <td><span className="badge-neutral">{t.tipo}</span></td>
-                  <td>{t.jogoVinculado}</td>
-                  <td>{lpsUsing.length > 0 ? <span className="badge-info">{lpsUsing.length}</span> : <span className="text-xs text-muted-foreground">0</span>}</td>
-                  <td>{infs.length > 0 ? <span className="badge-accent cursor-pointer" onClick={() => setDetailOpen(t)}>{infs.length}</span> : <span className="text-xs text-muted-foreground">0</span>}</td>
-                  <td>{t.cliquesTotais.toLocaleString()}</td>
-                  <td className="font-medium">{t.conversoesEstimadas.toLocaleString()}</td>
-                  <td><span className={t.status === "Ativo" ? "badge-success" : "badge-danger"}>{t.status}</span></td>
-                  <td>
-                    <div className="flex gap-0.5">
-                      <button onClick={() => setDetailOpen(t)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Detalhes"><Eye size={12} /></button>
-                      <button onClick={() => openEdit(t)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Editar"><Edit size={12} /></button>
-                      <button onClick={() => duplicateTemplate(t)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Duplicar"><Copy size={12} /></button>
-                      <button onClick={() => toggleStatus(t)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-destructive transition-colors" title="Ativar/Desativar"><XCircle size={12} /></button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
+            {filtered.map(t => (
+              <tr key={t.id}>
+                <td className="font-medium">{t.name}</td>
+                <td><span className="badge-neutral">{t.type || "—"}</span></td>
+                <td>{t.main_game || "—"}</td>
+                <td><span className={t.is_active ? "badge-success" : "badge-danger"}>{t.is_active ? "Ativo" : "Inativo"}</span></td>
+                <td>
+                  <div className="flex gap-0.5">
+                    <button onClick={() => setDetailOpen(t)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Detalhes"><Eye size={12} /></button>
+                    <button onClick={() => openEdit(t)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Editar"><Edit size={12} /></button>
+                    <button onClick={() => handleToggle(t)} className={`p-1 rounded transition-colors text-muted-foreground ${t.is_active ? "hover:bg-destructive/15 hover:text-destructive" : "hover:bg-success/15 hover:text-success"}`} title={t.is_active ? "Desativar" : "Ativar"}>
+                      {t.is_active ? <XCircle size={12} /> : <CheckCircle size={12} />}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
 
       {/* Detail Modal */}
       <Dialog open={!!detailOpen} onOpenChange={() => setDetailOpen(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>Template — {detailOpen?.nome}</DialogTitle></DialogHeader>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Template — {detailOpen?.name}</DialogTitle></DialogHeader>
           {detailOpen && (
             <div className="space-y-4 py-2">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
-                <div className="p-2 bg-secondary/50 rounded text-center"><span className="text-[10px] text-muted-foreground">Tipo</span><p className="font-medium">{detailOpen.tipo}</p></div>
-                <div className="p-2 bg-secondary/50 rounded text-center"><span className="text-[10px] text-muted-foreground">Jogo</span><p className="font-medium">{detailOpen.jogoVinculado || "—"}</p></div>
-                <div className="p-2 bg-secondary/50 rounded text-center"><span className="text-[10px] text-muted-foreground">Cliques</span><p className="font-bold">{detailOpen.cliquesTotais.toLocaleString()}</p></div>
-                <div className="p-2 bg-secondary/50 rounded text-center"><span className="text-[10px] text-muted-foreground">Conversões</span><p className="font-bold">{detailOpen.conversoesEstimadas.toLocaleString()}</p></div>
-              </div>
-              <div className="border-t border-border pt-3">
-                <h4 className="text-xs font-medium text-muted-foreground uppercase mb-2">Influencers Usando Este Template</h4>
-                {getInfluencersUsing(detailOpen.nome).length > 0 ? (
-                  <div className="space-y-2">
-                    {getInfluencersUsing(detailOpen.nome).map(l => (
-                      <div key={l.id} className="flex items-center justify-between p-2 rounded bg-secondary/30">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[9px] font-bold text-accent">{l.influencerNome.charAt(0)}</div>
-                          <span className="text-sm font-medium">{l.influencerNome}</span>
-                          <span className="font-mono text-xs text-accent">/i/{l.slug}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">{l.cliques.toLocaleString()} cliques</span>
-                          <span className={l.status === "Ativo" ? "badge-success" : "badge-danger"}>{l.status}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : <p className="text-sm text-muted-foreground">Nenhum influencer usando este template.</p>}
-              </div>
-              <div className="border-t border-border pt-3">
-                <h4 className="text-xs font-medium text-muted-foreground uppercase mb-2">LPs Derivadas</h4>
-                {getLPsUsing(detailOpen.nome).length > 0 ? (
-                  getLPsUsing(detailOpen.nome).map(lp => (
-                    <div key={lp.id} className="flex items-center justify-between p-2 rounded bg-secondary/30 mb-1">
-                      <span className="text-sm">{lp.nome}</span>
-                      <span className="font-mono text-xs text-accent">{lp.rota}</span>
-                    </div>
-                  ))
-                ) : <p className="text-sm text-muted-foreground">Nenhuma LP derivada encontrada.</p>}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+                <div className="p-2 bg-secondary/50 rounded text-center"><span className="text-[10px] text-muted-foreground">Tipo</span><p className="font-medium">{detailOpen.type || "—"}</p></div>
+                <div className="p-2 bg-secondary/50 rounded text-center"><span className="text-[10px] text-muted-foreground">Jogo</span><p className="font-medium">{detailOpen.main_game || "—"}</p></div>
+                <div className="p-2 bg-secondary/50 rounded text-center"><span className="text-[10px] text-muted-foreground">Status</span><p className="font-medium">{detailOpen.is_active ? "Ativo" : "Inativo"}</p></div>
               </div>
             </div>
           )}
@@ -188,20 +164,21 @@ export default function LPTemplates() {
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>{editing?.id ? "Editar Template" : "Criar Template"}</DialogTitle></DialogHeader>
           <div className="space-y-3 py-2">
-            <div><label className="text-xs font-medium text-muted-foreground">Nome *</label><input className="input-field mt-1" value={editing?.nome || ""} onChange={e => setEditing(p => ({ ...p, nome: e.target.value }))} /></div>
-            <div><label className="text-xs font-medium text-muted-foreground">Rota Base</label><input className="input-field mt-1" value={editing?.rotaBase || ""} onChange={e => setEditing(p => ({ ...p, rotaBase: e.target.value }))} placeholder="/meu-template" /></div>
+            <div><label className="text-xs font-medium text-muted-foreground">Nome *</label><input className="input-field mt-1" value={editing?.name || ""} onChange={e => setEditing(p => p ? { ...p, name: e.target.value } : p)} /></div>
             <div className="grid grid-cols-2 gap-3">
               <div><label className="text-xs font-medium text-muted-foreground">Tipo</label>
-                <select className="select-field mt-1 w-full" value={editing?.tipo || "Jogo"} onChange={e => setEditing(p => ({ ...p, tipo: e.target.value }))}>
+                <select className="select-field mt-1 w-full" value={editing?.type || "Jogo"} onChange={e => setEditing(p => p ? { ...p, type: e.target.value } : p)}>
                   <option>Jogo</option><option>Promoção</option><option>Geral</option>
                 </select>
               </div>
-              <div><label className="text-xs font-medium text-muted-foreground">Jogo Vinculado</label><input className="input-field mt-1" value={editing?.jogoVinculado || ""} onChange={e => setEditing(p => ({ ...p, jogoVinculado: e.target.value }))} /></div>
+              <div><label className="text-xs font-medium text-muted-foreground">Jogo Vinculado</label><input className="input-field mt-1" value={editing?.main_game || ""} onChange={e => setEditing(p => p ? { ...p, main_game: e.target.value } : p)} /></div>
             </div>
           </div>
           <DialogFooter>
             <button className="btn-ghost" onClick={() => setModalOpen(false)}>Cancelar</button>
-            <button className="btn-primary" onClick={handleSave}>Salvar</button>
+            <button className="btn-primary" onClick={handleSave} disabled={isCreating || isUpdating}>
+              {isCreating || isUpdating ? "Salvando..." : "Salvar"}
+            </button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
