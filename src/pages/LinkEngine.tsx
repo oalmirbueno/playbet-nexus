@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { Plus, Copy, Edit, XCircle, CopyPlus, Search, Eye, Link2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { initialInfluencerLPs, initialLPTemplates, initialInfluencers } from "@/data/mockData";
 import type { InfluencerLP } from "@/types";
 import { toast } from "@/hooks/use-toast";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import ExportDropdown from "@/components/ExportDropdown";
 
 export default function LinkEngine() {
+  const navigate = useNavigate();
   const [data, setData] = useState<InfluencerLP[]>(initialInfluencerLPs);
   const [search, setSearch] = useState("");
   const [filterTemplate, setFilterTemplate] = useState("Todos");
@@ -68,9 +72,20 @@ export default function LinkEngine() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[{ label: "Gestão de Ativos", path: "/link-engine" }, { label: "Engine de Links" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div><h1 className="page-header">Engine de Links</h1><p className="page-subtitle">Distribuição de LPs por influenciador — gestão centralizada de vínculos</p></div>
-        <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Criar Vínculo</button>
+        <div className="flex gap-2">
+          <ExportDropdown data={data.map(({ id, influencerNome, slug, templateNome, affiliateLink, urlPublica, cliques, status }) => ({ id, influencerNome, slug, templateNome, affiliateLink, urlPublica, cliques, status }))} filename="engine-links-playbet" />
+          <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Criar Vínculo</button>
+        </div>
+      </div>
+
+      {/* Atalhos rápidos */}
+      <div className="flex flex-wrap gap-2">
+        <button className="btn-ghost text-xs" onClick={() => navigate("/influencers")}>→ Influencers</button>
+        <button className="btn-ghost text-xs" onClick={() => navigate("/lp-templates")}>→ Templates de LP</button>
+        <button className="btn-ghost text-xs" onClick={() => navigate("/links")}>→ Links Afiliados</button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">

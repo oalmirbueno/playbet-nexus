@@ -4,6 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { initialCampanhas } from "@/data/mockData";
 import type { Campanha } from "@/types";
 import { toast } from "@/hooks/use-toast";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import ExportDropdown from "@/components/ExportDropdown";
 
 export default function Campanhas() {
   const [data, setData] = useState<Campanha[]>(initialCampanhas);
@@ -28,9 +30,13 @@ export default function Campanhas() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[{ label: "Marketing e Conteúdo", path: "/conteudo" }, { label: "Campanhas" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div><h1 className="page-header">Campanhas</h1><p className="page-subtitle">Gestão de campanhas de marketing e performance</p></div>
-        <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Criar Campanha</button>
+        <div className="flex gap-2">
+          <ExportDropdown data={data.map(({ id, nome, objetivo, jogo, plat, influencer, inicio, fim, status, resultado }) => ({ id, nome, objetivo, jogo, plat, influencer, inicio, fim, status, resultado }))} filename="campanhas-playbet" />
+          <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Criar Campanha</button>
+        </div>
       </div>
       <div className="glass-card overflow-x-auto">
         <table className="data-table">

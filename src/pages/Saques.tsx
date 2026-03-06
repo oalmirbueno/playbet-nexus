@@ -4,6 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { initialSaques } from "@/data/mockData";
 import type { Saque } from "@/types";
 import { toast } from "@/hooks/use-toast";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import ExportDropdown from "@/components/ExportDropdown";
 
 export default function Saques() {
   const [data, setData] = useState<Saque[]>(initialSaques);
@@ -32,9 +34,10 @@ export default function Saques() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[{ label: "Gestão de Receita", path: "/financeiro" }, { label: "Saques" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div><h1 className="page-header">Central de Saques</h1><p className="page-subtitle">Gerencie solicitações de saque de influencers e sócios</p></div>
-        <button className="btn-secondary"><Download size={14} /> Exportar</button>
+        <ExportDropdown data={data.map(({ id, nome, tipo, valor, origem, data: d, conta, status, resp }) => ({ id, nome, tipo, valor, origem, data: d, conta, status, resp }))} filename="saques-playbet" />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
