@@ -60,9 +60,10 @@ export default function LPPerformance() {
   const activeLPs = landingPages.filter(lp => lp.is_active).length;
   const activeInstances = instances.filter(i => i.is_active).length;
 
-  const exportData = view === "lps"
+  const exportData = (view === "lps"
     ? lpStats.map(s => ({ nome: s.lp.name, dominio: s.lp.domain, instancias: s.totalInstances, cliques: s.totalClicks, top_influencer: s.topInfluencer, status: s.lp.is_active ? "Ativo" : "Inativo" }))
-    : instanceStats.map(s => ({ lp: s.lpName, influencer: s.influencer, slug: s.inst.slug, cliques: s.clicks, url: s.url, status: s.inst.is_active ? "Ativo" : "Inativo" }));
+    : instanceStats.map(s => ({ nome: s.lpName, dominio: s.domain, instancias: 0, cliques: s.clicks, top_influencer: s.influencer, status: s.inst.is_active ? "Ativo" : "Inativo" }))
+  );
 
   return (
     <div className="space-y-6">
