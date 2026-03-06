@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Save, Settings, DollarSign, Users, Plug, Database, Trash2, Loader2, Eye } from "lucide-react";
+import { Save, Settings, DollarSign, Users, Plug, Database, Trash2, Loader2, Eye, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { useInfluencers, useGames, usePlatforms, useLandingPages, useTemplates, useUtms, useCampanhas, useSocios, useSaques, useConteudo } from "@/hooks/useSupabaseQuery";
 import { useDemoMode } from "@/contexts/DemoModeContext";
 import { seedDemoData, clearDemoData } from "@/services/seedDemoData";
 import { useQueryClient } from "@tanstack/react-query";
