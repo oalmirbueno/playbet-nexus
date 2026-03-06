@@ -2,8 +2,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
+import Login from "./pages/Login";
 import DashboardExecutivo from "./pages/DashboardExecutivo";
 import DashboardOperacional from "./pages/DashboardOperacional";
 import Financeiro from "./pages/Financeiro";
@@ -41,54 +43,73 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+function ProtectedRoutes() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground text-sm">Carregando painel...</div>
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" replace />;
+
+  return (
+    <DashboardLayout>
+      <Routes>
+        <Route path="/" element={<DashboardExecutivo />} />
+        <Route path="/operacional" element={<DashboardOperacional />} />
+        <Route path="/financeiro" element={<Financeiro />} />
+        <Route path="/saques" element={<Saques />} />
+        <Route path="/comissoes" element={<Comissoes />} />
+        <Route path="/asaas" element={<AsaasPagamentos />} />
+        <Route path="/influencers" element={<Influencers />} />
+        <Route path="/influencers/:id" element={<InfluencerDetalhe />} />
+        <Route path="/socios" element={<Socios />} />
+        <Route path="/socios/:id" element={<SocioDetalhe />} />
+        <Route path="/usuarios" element={<UsuariosInternos />} />
+        <Route path="/jogos" element={<Jogos />} />
+        <Route path="/jogos/:id" element={<JogoDetalhe />} />
+        <Route path="/plataformas" element={<PlataformasPage />} />
+        <Route path="/plataformas/:id" element={<PlataformaDetalhe />} />
+        <Route path="/links" element={<LinksAfiliados />} />
+        <Route path="/landing-pages" element={<LandingPagesPage />} />
+        <Route path="/lp-templates" element={<LPTemplates />} />
+        <Route path="/link-engine" element={<LinkEngine />} />
+        <Route path="/hubs" element={<HubsRotas />} />
+        <Route path="/calendario" element={<CalendarioEditorial />} />
+        <Route path="/conteudo" element={<Conteudo />} />
+        <Route path="/estrategia" element={<Estrategia />} />
+        <Route path="/campanhas" element={<Campanhas />} />
+        <Route path="/campanhas/:id" element={<CampanhaDetalhe />} />
+        <Route path="/analytics" element={<Analytics />} />
+        <Route path="/conversoes" element={<Conversoes />} />
+        <Route path="/utms" element={<UtmsSubids />} />
+        <Route path="/auditoria" element={<Auditoria />} />
+        <Route path="/configuracoes" element={<Configuracoes />} />
+        <Route path="/regras" element={<RegrasFinanceiras />} />
+        <Route path="/permissoes" element={<Permissoes />} />
+        <Route path="/integracoes" element={<Integracoes />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </DashboardLayout>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="*" element={
-            <DashboardLayout>
-              <Routes>
-                <Route path="/" element={<DashboardExecutivo />} />
-                <Route path="/operacional" element={<DashboardOperacional />} />
-                <Route path="/financeiro" element={<Financeiro />} />
-                <Route path="/saques" element={<Saques />} />
-                <Route path="/comissoes" element={<Comissoes />} />
-                <Route path="/asaas" element={<AsaasPagamentos />} />
-                <Route path="/influencers" element={<Influencers />} />
-                <Route path="/influencers/:id" element={<InfluencerDetalhe />} />
-                <Route path="/socios" element={<Socios />} />
-                <Route path="/socios/:id" element={<SocioDetalhe />} />
-                <Route path="/usuarios" element={<UsuariosInternos />} />
-                <Route path="/jogos" element={<Jogos />} />
-                <Route path="/jogos/:id" element={<JogoDetalhe />} />
-                <Route path="/plataformas" element={<PlataformasPage />} />
-                <Route path="/plataformas/:id" element={<PlataformaDetalhe />} />
-                <Route path="/links" element={<LinksAfiliados />} />
-                <Route path="/landing-pages" element={<LandingPagesPage />} />
-                <Route path="/lp-templates" element={<LPTemplates />} />
-                <Route path="/link-engine" element={<LinkEngine />} />
-                <Route path="/hubs" element={<HubsRotas />} />
-                <Route path="/calendario" element={<CalendarioEditorial />} />
-                <Route path="/conteudo" element={<Conteudo />} />
-                <Route path="/estrategia" element={<Estrategia />} />
-                <Route path="/campanhas" element={<Campanhas />} />
-                <Route path="/campanhas/:id" element={<CampanhaDetalhe />} />
-                <Route path="/analytics" element={<Analytics />} />
-                <Route path="/conversoes" element={<Conversoes />} />
-                <Route path="/utms" element={<UtmsSubids />} />
-                <Route path="/auditoria" element={<Auditoria />} />
-                <Route path="/configuracoes" element={<Configuracoes />} />
-                <Route path="/regras" element={<RegrasFinanceiras />} />
-                <Route path="/permissoes" element={<Permissoes />} />
-                <Route path="/integracoes" element={<Integracoes />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </DashboardLayout>
-          } />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="*" element={<ProtectedRoutes />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
