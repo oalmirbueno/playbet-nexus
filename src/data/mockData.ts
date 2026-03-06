@@ -76,11 +76,11 @@ export const initialLPTemplates: LPTemplate[] = [
 ];
 
 export const initialInfluencerLPs: InfluencerLP[] = [
-  { id: 1, influencerId: 1, influencerNome: "Rafael Mendes", slug: "rafa", templateId: 1, templateNome: "Fortune Tiger LP", affiliateLink: "https://bet365.com?ref=rafa", urlPublica: "/i/rafa", cliques: 4520, status: "Ativo", ultimaAtividade: "05/03/2026 14:32" },
-  { id: 2, influencerId: 2, influencerNome: "Pedro Lima", slug: "pedro", templateId: 2, templateNome: "Aviator Promo", affiliateLink: "https://pixbet.com?ref=pedro", urlPublica: "/i/pedro", cliques: 3200, status: "Ativo", ultimaAtividade: "05/03/2026 13:18" },
-  { id: 3, influencerId: 3, influencerNome: "Carlos Silva", slug: "carlos", templateId: 1, templateNome: "Fortune Tiger LP", affiliateLink: "https://betano.com?ref=carlos", urlPublica: "/i/carlos", cliques: 2100, status: "Ativo", ultimaAtividade: "05/03/2026 11:45" },
-  { id: 4, influencerId: 4, influencerNome: "Ana Souza", slug: "ana", templateId: 3, templateNome: "Cadastro Geral", affiliateLink: "https://bet365.com?ref=ana", urlPublica: "/i/ana", cliques: 1800, status: "Ativo", ultimaAtividade: "04/03/2026 22:10" },
-  { id: 5, influencerId: 5, influencerNome: "Julia Costa", slug: "julia", templateId: 2, templateNome: "Aviator Promo", affiliateLink: "https://pixbet.com?ref=julia", urlPublica: "/i/julia", cliques: 450, status: "Inativo", ultimaAtividade: "28/02/2026 15:30" },
+  { id: 1, influencerId: 1, influencerNome: "Rafael Mendes", slug: "rafa", templateId: 1, templateNome: "Fortune Tiger LP", affiliateLink: "https://bet365.com?ref=rafa", urlPublica: "/?ref=rafa", cliques: 4520, status: "Ativo", ultimaAtividade: "05/03/2026 14:32" },
+  { id: 2, influencerId: 2, influencerNome: "Pedro Lima", slug: "pedro", templateId: 2, templateNome: "Aviator Promo", affiliateLink: "https://pixbet.com?ref=pedro", urlPublica: "/?ref=pedro", cliques: 3200, status: "Ativo", ultimaAtividade: "05/03/2026 13:18" },
+  { id: 3, influencerId: 3, influencerNome: "Carlos Silva", slug: "carlos", templateId: 1, templateNome: "Fortune Tiger LP", affiliateLink: "https://betano.com?ref=carlos", urlPublica: "/?ref=carlos", cliques: 2100, status: "Ativo", ultimaAtividade: "05/03/2026 11:45" },
+  { id: 4, influencerId: 4, influencerNome: "Ana Souza", slug: "ana", templateId: 3, templateNome: "Cadastro Geral", affiliateLink: "https://bet365.com?ref=ana", urlPublica: "/?ref=ana", cliques: 1800, status: "Ativo", ultimaAtividade: "04/03/2026 22:10" },
+  { id: 5, influencerId: 5, influencerNome: "Julia Costa", slug: "julia", templateId: 2, templateNome: "Aviator Promo", affiliateLink: "https://pixbet.com?ref=julia", urlPublica: "/?ref=julia", cliques: 450, status: "Inativo", ultimaAtividade: "28/02/2026 15:30" },
 ];
 
 export const initialConteudos: ConteudoItem[] = [
