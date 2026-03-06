@@ -151,7 +151,7 @@ export default function InfluencerLanding() {
         clicked_at: new Date().toISOString(),
         user_agent: navigator.userAgent,
         referrer: document.referrer || null,
-        route: `/i/${slug}`,
+        route: `/?ref=${slug}`,
         source: resolved.instance_id ? "lp_instance" : "legacy_influencer",
       });
     } catch {

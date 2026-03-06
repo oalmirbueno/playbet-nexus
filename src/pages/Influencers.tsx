@@ -122,13 +122,14 @@ export default function Influencers() {
   };
 
   const copyPublicUrl = (inf: InfluencerRow) => {
-    const url = `${window.location.origin}/i/${inf.slug}`;
+    // Uses central panel origin as fallback — ideally linked to a LP base domain
+    const url = `${window.location.origin}/?ref=${inf.slug}`;
     navigator.clipboard.writeText(url);
     toast({ title: "URL pública copiada!", description: url });
   };
 
   const openPublicUrl = (inf: InfluencerRow) => {
-    window.open(`/i/${inf.slug}`, "_blank");
+    window.open(`/?ref=${inf.slug}`, "_blank");
   };
 
   const handleWizardSave = () => {
@@ -136,7 +137,7 @@ export default function Influencers() {
       toast({ title: "Erro", description: "Preencha todos os campos obrigatórios.", variant: "destructive" });
       return;
     }
-    toast({ title: "LP gerada com sucesso!", description: `URL: /i/${wizardData.slug}` });
+    toast({ title: "LP gerada com sucesso!", description: `URL: /?ref=${wizardData.slug}` });
     setWizardOpen(false);
     setWizardData({ influencerId: "", slug: "", templateId: 0, affiliateLink: "" });
   };
@@ -294,7 +295,7 @@ export default function Influencers() {
             {editing?.slug && (
               <div className="p-3 rounded-lg bg-secondary/50 border border-border">
                 <span className="text-[10px] text-muted-foreground uppercase">URL pública gerada</span>
-                <p className="font-mono text-sm text-accent mt-1">https://playbet.com/i/{editing.slug}</p>
+                <p className="font-mono text-sm text-accent mt-1">dominio-da-lp.playbet.app.br/?ref={editing.slug}</p>
               </div>
             )}
           </div>
@@ -345,7 +346,7 @@ export default function Influencers() {
             {wizardData.slug && (
               <div className="p-3 rounded-lg bg-secondary/50 border border-border">
                 <span className="text-[10px] text-muted-foreground uppercase">URL Pública</span>
-                <p className="font-mono text-sm text-accent mt-1">https://playbet.com/i/{wizardData.slug}</p>
+                <p className="font-mono text-sm text-accent mt-1">dominio-da-lp.playbet.app.br/?ref={wizardData.slug}</p>
               </div>
             )}
           </div>
