@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Plus, Edit, Copy, Eye, XCircle, CheckCircle, Search, ExternalLink } from "lucide-react";
+import { Plus, Edit, Copy, Eye, XCircle, CheckCircle, Search, ExternalLink, Users, Layers } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useLandingPages, useGames, usePlatforms, useTemplates } from "@/hooks/useSupabaseQuery";
+import { useLandingPages, useGames, usePlatforms, useTemplates, useLandingPageInstances } from "@/hooks/useSupabaseQuery";
 import type { LandingPageRow } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
 import Breadcrumbs from "@/components/Breadcrumbs";
@@ -13,6 +13,7 @@ type EditingState = {
   name: string;
   slug: string;
   route: string;
+  domain: string;
   type: string;
   game_id: string;
   platform_id: string;
@@ -21,7 +22,7 @@ type EditingState = {
 };
 
 const emptyEditing: EditingState = {
-  name: "", slug: "", route: "", type: "Jogo",
+  name: "", slug: "", route: "", domain: "", type: "Jogo",
   game_id: "", platform_id: "", template_id: "", is_active: true,
 };
 
@@ -31,6 +32,7 @@ export default function LandingPagesPage() {
   const { data: games } = useGames();
   const { data: platforms } = usePlatforms();
   const { data: templates } = useTemplates();
+  const { data: instances } = useLandingPageInstances();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<EditingState | null>(null);
   const [previewOpen, setPreviewOpen] = useState<LandingPageRow | null>(null);
@@ -50,17 +52,21 @@ export default function LandingPagesPage() {
     return true;
   });
 
+  const getInstanceCount = (lpId: string) => instances.filter(i => i.landing_page_id === lpId).length;
+  const getActiveInstanceCount = (lpId: string) => instances.filter(i => i.landing_page_id === lpId && i.is_active).length;
+
   const stats = [
     { label: "Total LPs", value: data.length, variant: "border-l-primary" },
     { label: "Ativas", value: data.filter(p => p.is_active).length, variant: "border-l-success" },
     { label: "Inativas", value: data.filter(p => !p.is_active).length, variant: "border-l-warning" },
-    { label: "Tipos", value: new Set(data.map(p => p.type).filter(Boolean)).size, variant: "border-l-info" },
+    { label: "Total Instâncias", value: instances.length, variant: "border-l-info" },
   ];
 
   const openCreate = () => { setEditing({ ...emptyEditing }); setModalOpen(true); };
   const openEdit = (p: LandingPageRow) => {
     setEditing({
       id: p.id, name: p.name, slug: p.slug, route: p.route,
+      domain: p.domain || "",
       type: p.type || "Jogo", game_id: p.game_id || "",
       platform_id: p.platform_id || "", template_id: p.template_id || "",
       is_active: p.is_active ?? true,
@@ -76,6 +82,7 @@ export default function LandingPagesPage() {
     try {
       const payload = {
         name: editing.name, slug: editing.slug, route: editing.route,
+        domain: editing.domain || null,
         type: editing.type || null, is_active: editing.is_active,
         game_id: editing.game_id || null,
         platform_id: editing.platform_id || null,
@@ -95,9 +102,10 @@ export default function LandingPagesPage() {
   };
 
   const exportableData = data.map(p => ({
-    id: p.id, name: p.name, slug: p.slug, route: p.route,
+    id: p.id, name: p.name, slug: p.slug, route: p.route, domain: p.domain || "",
     type: p.type || "", game: getGameName(p.game_id),
     platform: getPlatformName(p.platform_id), template: getTemplateName(p.template_id),
+    instances: getInstanceCount(p.id),
     status: p.is_active ? "Ativo" : "Inativo",
   }));
 
@@ -136,6 +144,8 @@ export default function LandingPagesPage() {
 
       {/* Atalhos */}
       <div className="flex flex-wrap gap-2">
+        <button className="btn-ghost text-xs" onClick={() => navigate("/lp-instances")}>→ Instâncias / Distribuição</button>
+        <button className="btn-ghost text-xs" onClick={() => navigate("/lp-performance")}>→ Performance de LPs</button>
         <button className="btn-ghost text-xs" onClick={() => navigate("/lp-templates")}>→ Templates de LP</button>
         <button className="btn-ghost text-xs" onClick={() => navigate("/link-engine")}>→ Engine de Links</button>
         <button className="btn-ghost text-xs" onClick={() => navigate("/influencers")}>→ Influencers</button>
@@ -159,25 +169,30 @@ export default function LandingPagesPage() {
       {/* Table */}
       <div className="glass-card overflow-x-auto invisible-scroll">
         <table className="data-table">
-          <thead><tr><th>Nome</th><th>Slug</th><th>Rota</th><th>Tipo</th><th>Jogo</th><th>Plataforma</th><th>Template</th><th>Status</th><th>Ações</th></tr></thead>
+          <thead><tr><th>Nome</th><th>Domínio</th><th>Slug</th><th>Rota</th><th>Tipo</th><th>Template</th><th>Instâncias</th><th>Status</th><th>Ações</th></tr></thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr><td colSpan={9} className="text-center text-muted-foreground py-8">Nenhuma LP encontrada</td></tr>
             ) : filtered.map(p => (
               <tr key={p.id}>
                 <td className="font-medium">{p.name}</td>
+                <td className="font-mono text-xs text-accent">{p.domain || <span className="text-destructive text-xs">sem domínio</span>}</td>
                 <td className="font-mono text-xs text-accent">{p.slug}</td>
-                <td className="font-mono text-xs text-accent">{p.route}</td>
+                <td className="font-mono text-xs text-muted-foreground">{p.route}</td>
                 <td><span className="badge-neutral">{p.type || "—"}</span></td>
-                <td className="text-xs">{getGameName(p.game_id)}</td>
-                <td className="text-xs">{getPlatformName(p.platform_id)}</td>
                 <td className="text-xs">{getTemplateName(p.template_id)}</td>
+                <td>
+                  <button onClick={() => navigate("/lp-instances")} className="text-xs text-accent hover:underline flex items-center gap-1">
+                    <Layers size={11} /> {getActiveInstanceCount(p.id)}/{getInstanceCount(p.id)}
+                  </button>
+                </td>
                 <td><span className={p.is_active ? "badge-success" : "badge-danger"}>{p.is_active ? "Ativo" : "Inativo"}</span></td>
                 <td>
                   <div className="flex gap-0.5">
                     <button onClick={() => setPreviewOpen(p)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Preview"><Eye size={12} /></button>
                     <button onClick={() => openEdit(p)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Editar"><Edit size={12} /></button>
-                    <button onClick={() => { navigator.clipboard.writeText(`https://playbet.com${p.route}`); toast({ title: "URL copiada!" }); }} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Copiar"><Copy size={12} /></button>
+                    <button onClick={() => { navigator.clipboard.writeText(p.domain || `https://playbet.app.br${p.route}`); toast({ title: "URL copiada!" }); }} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Copiar"><Copy size={12} /></button>
+                    <button onClick={() => navigate("/lp-instances")} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Instâncias"><Users size={12} /></button>
                     <button onClick={() => handleToggle(p)} className={`p-1 rounded transition-colors text-muted-foreground ${p.is_active ? "hover:bg-destructive/15 hover:text-destructive" : "hover:bg-success/15 hover:text-success"}`} title={p.is_active ? "Desativar" : "Ativar"}>
                       {p.is_active ? <XCircle size={12} /> : <CheckCircle size={12} />}
                     </button>
@@ -196,7 +211,7 @@ export default function LandingPagesPage() {
           {previewOpen && (
             <div className="space-y-4 py-2">
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div><span className="text-xs text-muted-foreground">URL Pública</span><p className="font-mono text-accent">playbet.com{previewOpen.route}</p></div>
+                <div><span className="text-xs text-muted-foreground">URL / Domínio</span><p className="font-mono text-accent">{previewOpen.domain || `playbet.app.br${previewOpen.route}`}</p></div>
                 <div><span className="text-xs text-muted-foreground">Tipo</span><p><span className="badge-neutral">{previewOpen.type || "—"}</span></p></div>
                 <div><span className="text-xs text-muted-foreground">Jogo</span><p>{getGameName(previewOpen.game_id)}</p></div>
                 <div><span className="text-xs text-muted-foreground">Plataforma</span><p>{getPlatformName(previewOpen.platform_id)}</p></div>
@@ -211,7 +226,7 @@ export default function LandingPagesPage() {
             </div>
           )}
           <DialogFooter>
-            {previewOpen && <button className="btn-ghost" onClick={() => { navigator.clipboard.writeText(`https://playbet.com${previewOpen.route}`); toast({ title: "URL copiada!" }); }}>Copiar URL</button>}
+            {previewOpen && <button className="btn-ghost" onClick={() => { navigator.clipboard.writeText(previewOpen.domain || `https://playbet.app.br${previewOpen.route}`); toast({ title: "URL copiada!" }); }}>Copiar URL</button>}
             <button className="btn-ghost" onClick={() => setPreviewOpen(null)}>Fechar</button>
           </DialogFooter>
         </DialogContent>
@@ -223,6 +238,7 @@ export default function LandingPagesPage() {
           <DialogHeader><DialogTitle>{editing?.id ? "Editar Landing Page" : "Adicionar Landing Page"}</DialogTitle></DialogHeader>
           <div className="space-y-3 py-2">
             <div><label className="text-xs font-medium text-muted-foreground">Nome *</label><input className="input-field mt-1" value={editing?.name || ""} onChange={e => setEditing(p => p ? { ...p, name: e.target.value } : p)} /></div>
+            <div><label className="text-xs font-medium text-muted-foreground">Domínio Base</label><input className="input-field mt-1" value={editing?.domain || ""} onChange={e => setEditing(p => p ? { ...p, domain: e.target.value } : p)} placeholder="https://oportunidades.playbet.app.br" /></div>
             <div className="grid grid-cols-2 gap-3">
               <div><label className="text-xs font-medium text-muted-foreground">Slug *</label><input className="input-field mt-1" value={editing?.slug || ""} onChange={e => setEditing(p => p ? { ...p, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") } : p)} placeholder="minha-lp" /></div>
               <div><label className="text-xs font-medium text-muted-foreground">Rota *</label><input className="input-field mt-1" value={editing?.route || ""} onChange={e => setEditing(p => p ? { ...p, route: e.target.value } : p)} placeholder="/minha-landing" /></div>

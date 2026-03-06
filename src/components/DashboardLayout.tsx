@@ -45,6 +45,8 @@ const sections: MenuSection[] = [
       { label: "Plataformas", icon: Monitor, path: "/plataformas" },
       { label: "Links Afiliados", icon: Link2, path: "/links" },
       { label: "Landing Pages", icon: FileText, path: "/landing-pages" },
+      { label: "Distribuição de LPs", icon: GitBranch, path: "/lp-instances" },
+      { label: "Performance de LPs", icon: BarChart3, path: "/lp-performance" },
       { label: "Templates de LP", icon: FileText, path: "/lp-templates" },
       { label: "Engine de Links", icon: Link2, path: "/link-engine" },
       { label: "Hubs / Rotas", icon: GitBranch, path: "/hubs" },
