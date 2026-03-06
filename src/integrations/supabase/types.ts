@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      campanhas: {
+        Row: {
+          created_at: string | null
+          fim: string | null
+          id: string
+          influencer: string | null
+          inicio: string | null
+          is_demo: boolean
+          jogo: string | null
+          nome: string
+          objetivo: string | null
+          plataforma: string | null
+          resultado: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          fim?: string | null
+          id?: string
+          influencer?: string | null
+          inicio?: string | null
+          is_demo?: boolean
+          jogo?: string | null
+          nome: string
+          objetivo?: string | null
+          plataforma?: string | null
+          resultado?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          fim?: string | null
+          id?: string
+          influencer?: string | null
+          inicio?: string | null
+          is_demo?: boolean
+          jogo?: string | null
+          nome?: string
+          objetivo?: string | null
+          plataforma?: string | null
+          resultado?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       clicks: {
         Row: {
           clicked_at: string | null
@@ -87,6 +135,78 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      conteudo: {
+        Row: {
+          campanha: string | null
+          canal: string | null
+          created_at: string | null
+          cta: string | null
+          data: string | null
+          data_publicacao: string | null
+          formato: string | null
+          id: string
+          influencer: string | null
+          is_demo: boolean
+          jogo: string | null
+          lp: string | null
+          objetivo: string | null
+          observacoes: string | null
+          prioridade: string | null
+          responsavel: string | null
+          roteiro: string | null
+          status: string | null
+          tema: string
+          tipo: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          campanha?: string | null
+          canal?: string | null
+          created_at?: string | null
+          cta?: string | null
+          data?: string | null
+          data_publicacao?: string | null
+          formato?: string | null
+          id?: string
+          influencer?: string | null
+          is_demo?: boolean
+          jogo?: string | null
+          lp?: string | null
+          objetivo?: string | null
+          observacoes?: string | null
+          prioridade?: string | null
+          responsavel?: string | null
+          roteiro?: string | null
+          status?: string | null
+          tema: string
+          tipo?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          campanha?: string | null
+          canal?: string | null
+          created_at?: string | null
+          cta?: string | null
+          data?: string | null
+          data_publicacao?: string | null
+          formato?: string | null
+          id?: string
+          influencer?: string | null
+          is_demo?: boolean
+          jogo?: string | null
+          lp?: string | null
+          objetivo?: string | null
+          observacoes?: string | null
+          prioridade?: string | null
+          responsavel?: string | null
+          roteiro?: string | null
+          status?: string | null
+          tema?: string
+          tipo?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       game_platforms: {
         Row: {
@@ -400,6 +520,93 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_active?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      saques: {
+        Row: {
+          codigo: string
+          conta: string | null
+          created_at: string | null
+          data: string | null
+          id: string
+          is_demo: boolean
+          nome: string
+          origem: string | null
+          responsavel: string | null
+          status: string | null
+          tipo: string
+          updated_at: string | null
+          valor: number
+        }
+        Insert: {
+          codigo: string
+          conta?: string | null
+          created_at?: string | null
+          data?: string | null
+          id?: string
+          is_demo?: boolean
+          nome: string
+          origem?: string | null
+          responsavel?: string | null
+          status?: string | null
+          tipo?: string
+          updated_at?: string | null
+          valor?: number
+        }
+        Update: {
+          codigo?: string
+          conta?: string | null
+          created_at?: string | null
+          data?: string | null
+          id?: string
+          is_demo?: boolean
+          nome?: string
+          origem?: string | null
+          responsavel?: string | null
+          status?: string | null
+          tipo?: string
+          updated_at?: string | null
+          valor?: number
+        }
+        Relationships: []
+      }
+      socios: {
+        Row: {
+          created_at: string | null
+          disponivel: number
+          ganhos: number
+          id: string
+          is_demo: boolean
+          nome: string
+          participacao: number
+          status: string | null
+          ultimo_saque: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          disponivel?: number
+          ganhos?: number
+          id?: string
+          is_demo?: boolean
+          nome: string
+          participacao?: number
+          status?: string | null
+          ultimo_saque?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          disponivel?: number
+          ganhos?: number
+          id?: string
+          is_demo?: boolean
+          nome?: string
+          participacao?: number
+          status?: string | null
+          ultimo_saque?: string | null
           updated_at?: string | null
         }
         Relationships: []
