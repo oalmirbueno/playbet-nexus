@@ -64,6 +64,17 @@ function useEntityCrud<Row extends Record<string, any>>(
     },
   });
 
+  const removeMutation = useMutation({
+    mutationFn: (id: string) => service.remove?.(id) ?? Promise.resolve(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [key] });
+      toast({ title: `${entityName} removido(a)` });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    },
+  });
+
   return {
     data: query.data ?? [],
     isLoading: query.isLoading,
@@ -72,8 +83,10 @@ function useEntityCrud<Row extends Record<string, any>>(
     create: createMutation.mutateAsync,
     update: updateMutation.mutateAsync,
     toggle: toggleMutation.mutateAsync,
+    remove: removeMutation.mutateAsync,
     isCreating: createMutation.isPending,
     isUpdating: updateMutation.isPending,
+    isRemoving: removeMutation.isPending,
   };
 }
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Users, TrendingUp, MousePointerClick, DollarSign, ArrowRight, Search, Edit, XCircle, Copy, Globe, CheckCircle, Wallet, Link2, Eye } from "lucide-react";
+import { Plus, Users, TrendingUp, MousePointerClick, DollarSign, ArrowRight, Search, Edit, XCircle, Copy, Globe, CheckCircle, Wallet, Link2, Eye, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useTemplates } from "@/hooks/useSupabaseQuery";
@@ -28,12 +28,13 @@ const emptyEditing: EditingState = {
 
 export default function Influencers() {
   const navigate = useNavigate();
-  const { data, isLoading, create, update, toggle, isCreating, isUpdating } = useInfluencers();
+  const { data, isLoading, create, update, toggle, remove, isCreating, isUpdating } = useInfluencers();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<EditingState | null>(null);
   const [confirmDeactivate, setConfirmDeactivate] = useState<InfluencerRow | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<InfluencerRow | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardData, setWizardData] = useState({ influencerId: "", slug: "", templateId: 0, affiliateLink: "" });
 
