@@ -19,6 +19,11 @@ const steps = [
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [seeding, setSeeding] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
+
   const { data: influencers } = useInfluencers();
   const { data: games } = useGames();
   const { data: platforms } = usePlatforms();
