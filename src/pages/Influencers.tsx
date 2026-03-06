@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Users, TrendingUp, MousePointerClick, DollarSign, ArrowRight, Search, Edit, XCircle, Copy, Globe, CheckCircle, Wallet, Link2, Eye } from "lucide-react";
+import { Plus, Users, TrendingUp, MousePointerClick, DollarSign, ArrowRight, Search, Edit, XCircle, Copy, Globe, CheckCircle, Wallet, Link2, Eye, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useTemplates } from "@/hooks/useSupabaseQuery";
@@ -28,12 +28,13 @@ const emptyEditing: EditingState = {
 
 export default function Influencers() {
   const navigate = useNavigate();
-  const { data, isLoading, create, update, toggle, isCreating, isUpdating } = useInfluencers();
+  const { data, isLoading, create, update, toggle, remove, isCreating, isUpdating } = useInfluencers();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<EditingState | null>(null);
   const [confirmDeactivate, setConfirmDeactivate] = useState<InfluencerRow | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<InfluencerRow | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardData, setWizardData] = useState({ influencerId: "", slug: "", templateId: 0, affiliateLink: "" });
 
@@ -249,6 +250,7 @@ export default function Influencers() {
                       ) : (
                         <button onClick={() => handleToggle(inf)} className="p-1 rounded hover:bg-success/15 text-muted-foreground hover:text-success transition-colors" title="Ativar"><CheckCircle size={12} /></button>
                       )}
+                      <button onClick={() => setConfirmDelete(inf)} className="p-1 rounded hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors" title="Apagar"><Trash2 size={12} /></button>
                     </div>
                   </td>
                 </tr>
@@ -316,6 +318,18 @@ export default function Influencers() {
           <DialogFooter>
             <button className="btn-ghost" onClick={() => setConfirmDeactivate(null)}>Cancelar</button>
             <button className="btn-primary bg-destructive hover:bg-destructive/90" onClick={handleDeactivate}>Desativar</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm */}
+      <Dialog open={!!confirmDelete} onOpenChange={() => setConfirmDelete(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Apagar Influencer</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Tem certeza que deseja apagar <strong>{confirmDelete?.name}</strong> permanentemente? Esta ação não pode ser desfeita.</p>
+          <DialogFooter>
+            <button className="btn-ghost" onClick={() => setConfirmDelete(null)}>Cancelar</button>
+            <button className="btn-primary bg-destructive hover:bg-destructive/90" onClick={async () => { if (confirmDelete) { await remove(confirmDelete.id); setConfirmDelete(null); } }}>Apagar</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
