@@ -20,6 +20,7 @@ export type Database = {
           id: string
           influencer_id: string | null
           ip_address: string | null
+          is_demo: boolean
           landing_page_id: string | null
           referrer: string | null
           route: string | null
@@ -33,6 +34,7 @@ export type Database = {
           id?: string
           influencer_id?: string | null
           ip_address?: string | null
+          is_demo?: boolean
           landing_page_id?: string | null
           referrer?: string | null
           route?: string | null
@@ -46,6 +48,7 @@ export type Database = {
           id?: string
           influencer_id?: string | null
           ip_address?: string | null
+          is_demo?: boolean
           landing_page_id?: string | null
           referrer?: string | null
           route?: string | null
@@ -88,14 +91,17 @@ export type Database = {
       game_platforms: {
         Row: {
           game_id: string
+          is_demo: boolean
           platform_id: string
         }
         Insert: {
           game_id: string
+          is_demo?: boolean
           platform_id: string
         }
         Update: {
           game_id?: string
+          is_demo?: boolean
           platform_id?: string
         }
         Relationships: [
@@ -121,6 +127,7 @@ export type Database = {
           created_at: string | null
           id: string
           is_active: boolean | null
+          is_demo: boolean
           name: string
           trend_status: string | null
           updated_at: string | null
@@ -130,6 +137,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          is_demo?: boolean
           name: string
           trend_status?: string | null
           updated_at?: string | null
@@ -139,6 +147,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          is_demo?: boolean
           name?: string
           trend_status?: string | null
           updated_at?: string | null
@@ -154,6 +163,7 @@ export type Database = {
           id: string
           instagram: string | null
           is_active: boolean | null
+          is_demo: boolean
           name: string
           notes: string | null
           slug: string
@@ -167,6 +177,7 @@ export type Database = {
           id?: string
           instagram?: string | null
           is_active?: boolean | null
+          is_demo?: boolean
           name: string
           notes?: string | null
           slug: string
@@ -180,6 +191,7 @@ export type Database = {
           id?: string
           instagram?: string | null
           is_active?: boolean | null
+          is_demo?: boolean
           name?: string
           notes?: string | null
           slug?: string
@@ -194,6 +206,7 @@ export type Database = {
           id: string
           influencer_id: string
           is_active: boolean | null
+          is_demo: boolean
           landing_page_id: string
           notes: string | null
           slug: string
@@ -205,6 +218,7 @@ export type Database = {
           id?: string
           influencer_id: string
           is_active?: boolean | null
+          is_demo?: boolean
           landing_page_id: string
           notes?: string | null
           slug: string
@@ -216,6 +230,7 @@ export type Database = {
           id?: string
           influencer_id?: string
           is_active?: boolean | null
+          is_demo?: boolean
           landing_page_id?: string
           notes?: string | null
           slug?: string
@@ -245,6 +260,7 @@ export type Database = {
           game_id: string | null
           id: string
           is_active: boolean | null
+          is_demo: boolean
           name: string
           platform_id: string | null
           route: string
@@ -259,6 +275,7 @@ export type Database = {
           game_id?: string | null
           id?: string
           is_active?: boolean | null
+          is_demo?: boolean
           name: string
           platform_id?: string | null
           route: string
@@ -273,6 +290,7 @@ export type Database = {
           game_id?: string | null
           id?: string
           is_active?: boolean | null
+          is_demo?: boolean
           name?: string
           platform_id?: string | null
           route?: string
@@ -315,6 +333,7 @@ export type Database = {
           hybrid: boolean | null
           id: string
           is_active: boolean | null
+          is_demo: boolean
           name: string
           notes: string | null
           payout_method: string | null
@@ -330,6 +349,7 @@ export type Database = {
           hybrid?: boolean | null
           id?: string
           is_active?: boolean | null
+          is_demo?: boolean
           name: string
           notes?: string | null
           payout_method?: string | null
@@ -345,6 +365,7 @@ export type Database = {
           hybrid?: boolean | null
           id?: string
           is_active?: boolean | null
+          is_demo?: boolean
           name?: string
           notes?: string | null
           payout_method?: string | null
@@ -388,6 +409,7 @@ export type Database = {
           created_at: string | null
           id: string
           is_active: boolean | null
+          is_demo: boolean
           main_game: string | null
           name: string
           type: string | null
@@ -397,6 +419,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          is_demo?: boolean
           main_game?: string | null
           name: string
           type?: string | null
@@ -406,6 +429,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           is_active?: boolean | null
+          is_demo?: boolean
           main_game?: string | null
           name?: string
           type?: string | null
@@ -438,6 +462,7 @@ export type Database = {
           id: string
           influencer_id: string | null
           is_active: boolean | null
+          is_demo: boolean
           landing_page_id: string | null
           notes: string | null
           platform_id: string | null
@@ -455,6 +480,7 @@ export type Database = {
           id?: string
           influencer_id?: string | null
           is_active?: boolean | null
+          is_demo?: boolean
           landing_page_id?: string | null
           notes?: string | null
           platform_id?: string | null
@@ -472,6 +498,7 @@ export type Database = {
           id?: string
           influencer_id?: string | null
           is_active?: boolean | null
+          is_demo?: boolean
           landing_page_id?: string | null
           notes?: string | null
           platform_id?: string | null
