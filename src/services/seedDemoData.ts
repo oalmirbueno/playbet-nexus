@@ -87,7 +87,7 @@ export async function seedDemoData() {
   ];
   await supabase.from("utms").insert(utms);
 
-  // 9. Clicks (simulated)
+  // 9. Clicks (simulated — 50 clicks over 30 days)
   const clicks = [];
   const now = new Date();
   for (let i = 0; i < 50; i++) {
@@ -107,6 +107,49 @@ export async function seedDemoData() {
     });
   }
   await supabase.from("clicks").insert(clicks);
+
+  // 10. Campanhas
+  const campanhas = [
+    { nome: "Março Turbo", objetivo: "Aumentar cadastros em 30%", jogo: "Fortune Tiger", plataforma: "Bet365", influencer: "Rafael M.", inicio: "2026-03-01", fim: "2026-03-31", status: "Ativa", resultado: "+18% cadastros", is_demo: true },
+    { nome: "Aviator Week", objetivo: "Promover Aviator em todas plataformas", jogo: "Aviator", plataforma: "Todas", influencer: "Pedro L.", inicio: "2026-03-10", fim: "2026-03-17", status: "Planejada", resultado: "—", is_demo: true },
+    { nome: "Bônus Fev", objetivo: "Divulgar bônus de cadastro", jogo: "Vários", plataforma: "Betano", influencer: "Carlos S.", inicio: "2026-02-01", fim: "2026-02-28", status: "Finalizada", resultado: "+420 cadastros", is_demo: true },
+    { nome: "VIP Mines", objetivo: "Campanha exclusiva grupo VIP", jogo: "Mines", plataforma: "Sportingbet", influencer: "Ana S.", inicio: "2026-02-15", fim: "2026-03-01", status: "Finalizada", resultado: "+180 depósitos", is_demo: true },
+  ];
+  await supabase.from("campanhas").insert(campanhas);
+
+  // 11. Sócios
+  const socios = [
+    { nome: "Ricardo Almeida", participacao: 40, ganhos: 68340, disponivel: 16200, ultimo_saque: "01/03/2026", status: "Ativo", is_demo: true },
+    { nome: "Fernanda Rocha", participacao: 35, ganhos: 59797, disponivel: 14175, ultimo_saque: "28/02/2026", status: "Ativo", is_demo: true },
+    { nome: "Lucas Martins", participacao: 25, ganhos: 42712, disponivel: 10125, ultimo_saque: "25/02/2026", status: "Ativo", is_demo: true },
+  ];
+  await supabase.from("socios").insert(socios);
+
+  // 12. Saques
+  const saques = [
+    { codigo: "SAQ-001", nome: "Rafael Mendes", tipo: "Influencer", valor: 8500, origem: "Comissão afiliado", data: "2026-03-05", conta: "PIX •••4521", status: "Pendente", responsavel: "—", is_demo: true },
+    { codigo: "SAQ-002", nome: "Ricardo Almeida", tipo: "Sócio", valor: 12000, origem: "Divisão societária", data: "2026-03-04", conta: "PIX •••8832", status: "Pendente", responsavel: "—", is_demo: true },
+    { codigo: "SAQ-003", nome: "Ana Souza", tipo: "Influencer", valor: 2800, origem: "Comissão afiliado", data: "2026-03-03", conta: "PIX •••1199", status: "Aprovado", responsavel: "Admin", is_demo: true },
+    { codigo: "SAQ-004", nome: "Fernanda Rocha", tipo: "Sócio", valor: 10500, origem: "Divisão societária", data: "2026-03-02", conta: "PIX •••7744", status: "Aprovado", responsavel: "Admin", is_demo: true },
+    { codigo: "SAQ-005", nome: "Pedro Lima", tipo: "Influencer", valor: 6100, origem: "Comissão afiliado", data: "2026-03-01", conta: "PIX •••2266", status: "Recusado", responsavel: "Admin", is_demo: true },
+    { codigo: "SAQ-006", nome: "Carlos Silva", tipo: "Influencer", valor: 3500, origem: "Comissão afiliado", data: "2026-02-28", conta: "PIX •••3388", status: "Aprovado", responsavel: "Admin", is_demo: true },
+  ];
+  await supabase.from("saques").insert(saques);
+
+  // 13. Conteúdo / Calendário Editorial
+  const conteudo = [
+    { tema: "Compilação top crashes", tipo: "Reels", formato: "Vertical 9:16", canal: "Instagram", jogo: "Aviator", influencer: "Pedro L.", campanha: "Aviator Week", lp: "Aviator Promo", status: "Ideia", prioridade: "Alta", data: "2026-03-10", responsavel: "Equipe", cta: "Link na bio", objetivo: "Engajamento e cliques", is_demo: true },
+    { tema: "Link especial Gates of Olympus", tipo: "Post", formato: "Texto + imagem", canal: "WhatsApp", jogo: "Gates", influencer: "Carlos S.", campanha: "—", lp: "—", status: "Ideia", prioridade: "Média", data: "2026-03-11", responsavel: "Carlos", is_demo: true },
+    { tema: "Ganhos ao vivo Mines", tipo: "Reels", formato: "Vertical 9:16", canal: "TikTok", jogo: "Mines", influencer: "Rafael M.", campanha: "VIP Mines", lp: "Mines Special", status: "Roteiro", prioridade: "Alta", data: "2026-03-08", responsavel: "Rafael", cta: "Cadastre-se agora", roteiro: "Abrir com print de ganho alto. Mostrar gameplay de 30s. CTA no final.", is_demo: true },
+    { tema: "Top 5 jogos da semana", tipo: "Vídeo", formato: "Horizontal 16:9", canal: "YouTube", jogo: "Vários", influencer: "Ana S.", campanha: "—", lp: "Cadastro Geral", status: "Produção", prioridade: "Média", data: "2026-03-07", responsavel: "Ana", cta: "Link na descrição", is_demo: true },
+    { tema: "Bônus Bet365 cadastro", tipo: "Story", formato: "Vertical 9:16", canal: "Instagram", jogo: "Fortune Tiger", influencer: "Carlos S.", campanha: "Março Turbo", lp: "Fortune Tiger LP", status: "Agendado", prioridade: "Alta", data: "2026-03-06", responsavel: "Carlos", cta: "Arrasta pra cima", is_demo: true },
+    { tema: "Link exclusivo Aviator", tipo: "Post", formato: "Texto + link", canal: "Telegram", jogo: "Aviator", influencer: "Pedro L.", campanha: "Aviator Week", lp: "Aviator Promo", status: "Agendado", prioridade: "Alta", data: "2026-03-09", responsavel: "Pedro", cta: "Clique e jogue", is_demo: true },
+    { tema: "Fortune Tiger dicas", tipo: "Reels", formato: "Vertical 9:16", canal: "Instagram", jogo: "Fortune Tiger", influencer: "Rafael M.", campanha: "Março Turbo", lp: "Fortune Tiger LP", status: "Publicado", prioridade: "Alta", data: "2026-03-04", data_publicacao: "2026-03-04", responsavel: "Rafael", cta: "Bio link", is_demo: true },
+    { tema: "Prova social depósitos", tipo: "Story", formato: "Vertical 9:16", canal: "Instagram", jogo: "Fortune Tiger", influencer: "Rafael M.", campanha: "Março Turbo", lp: "Fortune Tiger LP", status: "Produção", prioridade: "Média", data: "2026-03-12", responsavel: "Equipe", cta: "Link na bio", is_demo: true },
+    { tema: "Live tirada de dúvidas", tipo: "Live", formato: "Vertical", canal: "Instagram", jogo: "Vários", influencer: "Ana S.", campanha: "—", lp: "Cadastro Geral", status: "Ideia", prioridade: "Baixa", data: "2026-03-14", responsavel: "Ana", observacoes: "Confirmar horário", is_demo: true },
+    { tema: "Teaser novo jogo Spaceman", tipo: "Reels", formato: "Vertical 9:16", canal: "TikTok", jogo: "Spaceman", influencer: "Pedro L.", campanha: "—", lp: "—", status: "Pausado", prioridade: "Baixa", data: "2026-03-15", responsavel: "Pedro", observacoes: "Jogo inativo, aguardar reativação", is_demo: true },
+  ];
+  await supabase.from("conteudo").insert(conteudo);
 }
 
 export async function clearDemoData() {
@@ -120,4 +163,8 @@ export async function clearDemoData() {
   await supabase.from("games").delete().eq("is_demo", true);
   await supabase.from("platforms").delete().eq("is_demo", true);
   await supabase.from("influencers").delete().eq("is_demo", true);
+  await supabase.from("conteudo").delete().eq("is_demo", true);
+  await supabase.from("campanhas").delete().eq("is_demo", true);
+  await supabase.from("saques").delete().eq("is_demo", true);
+  await supabase.from("socios").delete().eq("is_demo", true);
 }
