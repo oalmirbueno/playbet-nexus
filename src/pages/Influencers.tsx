@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Plus, Users, TrendingUp, MousePointerClick, DollarSign, ArrowRight, Search, Edit, XCircle, Copy, Globe, CheckCircle, Wallet, Link2, Eye } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { initialInfluencerLPs, initialLPTemplates } from "@/data/mockData";
+import { useTemplates } from "@/hooks/useSupabaseQuery";
 import { useInfluencers } from "@/hooks/useSupabaseQuery";
 import type { InfluencerRow } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
@@ -37,8 +37,7 @@ export default function Influencers() {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [wizardData, setWizardData] = useState({ influencerId: "", slug: "", templateId: 0, affiliateLink: "" });
 
-  const lps = initialInfluencerLPs;
-  const templates = initialLPTemplates;
+  const { data: templates } = useTemplates();
 
   const filtered = data.filter((inf) => {
     const q = search.toLowerCase();

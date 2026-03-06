@@ -71,7 +71,7 @@ export default function Campanhas() {
           <p className="text-sm text-muted-foreground mt-1">Centro de operação de campanhas de afiliados, performance e distribuição</p>
         </div>
         <div className="flex gap-2 flex-wrap items-center">
-          {data.length > 0 && <ExportDropdown data={data} filename="campanhas-playbet" />}
+          {data.length > 0 && <ExportDropdown data={data.map(c => ({ ...c }))} filename="campanhas-playbet" />}
           <button className="btn-primary" onClick={openCreate}><Plus size={15} /> Criar Campanha</button>
         </div>
       </div>

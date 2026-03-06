@@ -67,7 +67,7 @@ export default function LinksAfiliados() {
           <p className="text-sm text-muted-foreground mt-1">Centro de links — rastreio, UTMs e gestão completa</p>
         </div>
         <div className="flex gap-2">
-          {data.length > 0 && <ExportDropdown data={data} filename="links-playbet" />}
+          {data.length > 0 && <ExportDropdown data={data.map(l => ({ ...l }))} filename="links-playbet" />}
           <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Adicionar Link</button>
         </div>
       </div>

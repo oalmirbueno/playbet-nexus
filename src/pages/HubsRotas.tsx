@@ -67,7 +67,7 @@ export default function HubsRotas() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div><h1 className="page-header">Hubs / Rotas</h1><p className="page-subtitle">Gestão de páginas-hub, rotas de redirecionamento e distribuição de tráfego</p></div>
         <div className="flex gap-2">
-          {data.length > 0 && <ExportDropdown data={data} filename="hubs-rotas-playbet" />}
+          {data.length > 0 && <ExportDropdown data={data.map(h => ({ ...h }))} filename="hubs-rotas-playbet" />}
           <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Adicionar Hub</button>
         </div>
       </div>
