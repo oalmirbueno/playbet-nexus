@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Edit, Copy, Eye, XCircle, CheckCircle, Search, ExternalLink, Users, Layers } from "lucide-react";
+import { Plus, Edit, Copy, Eye, XCircle, CheckCircle, Search, ExternalLink, Users, Layers, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useLandingPages, useGames, usePlatforms, useTemplates, useLandingPageInstances } from "@/hooks/useSupabaseQuery";
@@ -28,7 +28,7 @@ const emptyEditing: EditingState = {
 
 export default function LandingPagesPage() {
   const navigate = useNavigate();
-  const { data, isLoading, create, update, toggle, isCreating, isUpdating } = useLandingPages();
+  const { data, isLoading, create, update, toggle, remove, isCreating, isUpdating } = useLandingPages();
   const { data: games } = useGames();
   const { data: platforms } = usePlatforms();
   const { data: templates } = useTemplates();
