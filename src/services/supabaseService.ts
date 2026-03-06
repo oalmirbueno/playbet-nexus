@@ -40,6 +40,10 @@ export const influencerService = {
   async toggleActive(id: string, current: boolean) {
     return this.update(id, { is_active: !current });
   },
+  async remove(id: string) {
+    const { error } = await supabase.from("influencers").delete().eq("id", id);
+    if (error) throw error;
+  },
 };
 
 // ── Platforms ──

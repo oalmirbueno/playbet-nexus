@@ -18,6 +18,7 @@ function useEntityCrud<Row extends Record<string, any>>(
     create: (item: any) => Promise<Row>;
     update: (id: string, updates: any) => Promise<Row>;
     toggleActive: (id: string, current: boolean) => Promise<Row>;
+    remove?: (id: string) => Promise<void>;
   },
   entityName: string,
 ) {
