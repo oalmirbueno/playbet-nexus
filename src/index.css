@@ -143,7 +143,7 @@
     @apply badge bg-primary/10 text-[hsl(220,70%,56%)];
   }
   .badge-accent {
-    @apply badge bg-accent/8 text-[hsl(43,60%,58%)];
+    @apply badge bg-accent/10 text-[hsl(43,60%,58%)];
   }
 
   /* ── Buttons ───────────────────────────────── */
