@@ -1,18 +1,19 @@
 import {
   TrendingUp, TrendingDown, DollarSign, Wallet, Users, ArrowUpRight, ArrowDownRight,
-  AlertTriangle, Zap, Target, MousePointerClick, UserPlus, CreditCard, BarChart3, Trophy
+  AlertTriangle, Zap, Target, MousePointerClick, UserPlus, CreditCard, BarChart3, Trophy, ExternalLink
 } from "lucide-react";
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
+import { useNavigate } from "react-router-dom";
 
 const kpis = [
-  { label: "Receita Bruta Total", value: "R$ 284.750", trend: "+18.3%", up: true, icon: DollarSign, variant: "accent" as const },
-  { label: "Receita Líquida", value: "R$ 142.890", trend: "+15.1%", up: true, icon: TrendingUp, variant: "primary" as const },
-  { label: "Valor Operacional (10%)", value: "R$ 28.475", trend: "+18.3%", up: true, icon: BarChart3, variant: "info" as const },
-  { label: "Total Influencers", value: "R$ 85.425", trend: "+22.4%", up: true, icon: Users, variant: "success" as const },
-  { label: "Total Sócios", value: "R$ 170.850", trend: "+14.7%", up: true, icon: Wallet, variant: "primary" as const },
-  { label: "Saques Pendentes", value: "R$ 23.400", trend: "6 pedidos", up: false, icon: AlertTriangle, variant: "warning" as const },
-  { label: "Saques Aprovados", value: "R$ 98.200", trend: "+8.2%", up: true, icon: CreditCard, variant: "success" as const },
-  { label: "Saldo Disponível", value: "R$ 44.615", trend: "atualizado", up: true, icon: Wallet, variant: "accent" as const },
+  { label: "Receita Bruta Total", value: "R$ 284.750", trend: "+18.3%", up: true, icon: DollarSign, variant: "accent" as const, path: "/financeiro" },
+  { label: "Receita Líquida", value: "R$ 142.890", trend: "+15.1%", up: true, icon: TrendingUp, variant: "primary" as const, path: "/financeiro" },
+  { label: "Valor Operacional (10%)", value: "R$ 28.475", trend: "+18.3%", up: true, icon: BarChart3, variant: "info" as const, path: "/comissoes" },
+  { label: "Total Influencers", value: "R$ 85.425", trend: "+22.4%", up: true, icon: Users, variant: "success" as const, path: "/influencers" },
+  { label: "Total Sócios", value: "R$ 170.850", trend: "+14.7%", up: true, icon: Wallet, variant: "primary" as const, path: "/socios" },
+  { label: "Saques Pendentes", value: "R$ 23.400", trend: "6 pedidos", up: false, icon: AlertTriangle, variant: "warning" as const, path: "/saques" },
+  { label: "Saques Aprovados", value: "R$ 98.200", trend: "+8.2%", up: true, icon: CreditCard, variant: "success" as const, path: "/saques" },
+  { label: "Saldo Disponível", value: "R$ 44.615", trend: "atualizado", up: true, icon: Wallet, variant: "accent" as const, path: "/financeiro" },
 ];
 
 const receitaDia = [
@@ -57,20 +58,20 @@ const cadastrosPeriodo = [
 ];
 
 const alertas = [
-  { tipo: "warning", titulo: "3 influencers com saque pendente", desc: "Rafael, Pedro e Carlos aguardam aprovação há 2+ dias", icon: AlertTriangle },
-  { tipo: "danger", titulo: "Bet365 com queda de 12% em conversão", desc: "Taxa caiu de 8.4% para 7.3% na última semana", icon: TrendingDown },
-  { tipo: "success", titulo: "Fortune Tiger com alta performance", desc: "CTR de 14.2% e 320 cadastros na semana", icon: Zap },
-  { tipo: "warning", titulo: "2 Landing Pages com CTR abaixo de 3%", desc: "LP Mines Special e LP Spaceman precisam revisão", icon: Target },
-  { tipo: "danger", titulo: "5 links inativos detectados", desc: "Links de Spaceman e Crash precisam atualização", icon: AlertTriangle },
-  { tipo: "info", titulo: "Campanha 'Março Turbo' sem atualização", desc: "Última modificação há 5 dias", icon: AlertTriangle },
+  { tipo: "warning", titulo: "3 influencers com saque pendente", desc: "Rafael, Pedro e Carlos aguardam aprovação há 2+ dias", icon: AlertTriangle, path: "/saques", cta: "Ver saques pendentes" },
+  { tipo: "danger", titulo: "Bet365 com queda de 12% em conversão", desc: "Taxa caiu de 8.4% para 7.3% na última semana", icon: TrendingDown, path: "/conversoes", cta: "Ver conversões" },
+  { tipo: "success", titulo: "Fortune Tiger com alta performance", desc: "CTR de 14.2% e 320 cadastros na semana", icon: Zap, path: "/jogos", cta: "Ver jogos" },
+  { tipo: "warning", titulo: "2 Landing Pages com CTR abaixo de 3%", desc: "LP Mines Special e LP Spaceman precisam revisão", icon: Target, path: "/landing-pages", cta: "Ver landing pages" },
+  { tipo: "danger", titulo: "5 links inativos detectados", desc: "Links de Spaceman e Crash precisam atualização", icon: AlertTriangle, path: "/link-engine", cta: "Ver engine de links" },
+  { tipo: "info", titulo: "Campanha 'Março Turbo' sem atualização", desc: "Última modificação há 5 dias", icon: AlertTriangle, path: "/campanhas", cta: "Ver campanhas" },
 ];
 
 const resumoRapido = [
-  { label: "Melhor jogo da semana", value: "Fortune Tiger", sub: "R$ 12.400 | CTR 14.2%", icon: Trophy },
-  { label: "Melhor plataforma", value: "Bet365", sub: "R$ 18.200 em receita", icon: Target },
-  { label: "Melhor influencer", value: "Rafael Mendes", sub: "R$ 8.500 gerados", icon: Users },
-  { label: "Maior fonte de receita", value: "Links Diretos + Telegram", sub: "62% do tráfego qualificado", icon: Zap },
-  { label: "Maior gargalo atual", value: "Aprovação de saques", sub: "6 pedidos pendentes há 2+ dias", icon: AlertTriangle },
+  { label: "Melhor jogo da semana", value: "Fortune Tiger", sub: "R$ 12.400 | CTR 14.2%", icon: Trophy, path: "/jogos" },
+  { label: "Melhor plataforma", value: "Bet365", sub: "R$ 18.200 em receita", icon: Target, path: "/plataformas" },
+  { label: "Melhor influencer", value: "Rafael Mendes", sub: "R$ 8.500 gerados", icon: Users, path: "/influencers" },
+  { label: "Maior fonte de receita", value: "Links Diretos + Telegram", sub: "62% do tráfego qualificado", icon: Zap, path: "/analytics" },
+  { label: "Maior gargalo atual", value: "Aprovação de saques", sub: "6 pedidos pendentes há 2+ dias", icon: AlertTriangle, path: "/saques" },
 ];
 
 const chartTooltip = { background: "hsl(0 0% 8%)", border: "1px solid hsl(0 0% 15%)", borderRadius: 8, color: "#fff", fontSize: 12 };
@@ -84,6 +85,8 @@ const variantColors: Record<string, string> = {
 };
 
 export default function DashboardExecutivo() {
+  const navigate = useNavigate();
+
   return (
     <div className="space-y-6">
       <div>
@@ -91,18 +94,23 @@ export default function DashboardExecutivo() {
         <p className="page-subtitle">Visão consolidada da operação PlayBet — atualizado em tempo real</p>
       </div>
 
-      {/* KPIs */}
+      {/* KPIs — clickable drill-down */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {kpis.map((k) => (
-          <div key={k.label} className={`stat-card border-l-2 ${variantColors[k.variant]}`}>
+          <div
+            key={k.label}
+            onClick={() => navigate(k.path)}
+            className={`stat-card border-l-2 ${variantColors[k.variant]} cursor-pointer hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 group`}
+          >
             <div className="flex items-center justify-between">
               <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">{k.label}</span>
-              <k.icon size={15} className="text-muted-foreground" />
+              <k.icon size={15} className="text-muted-foreground group-hover:text-accent transition-colors" />
             </div>
             <div className="text-xl font-bold tracking-tight">{k.value}</div>
             <div className="flex items-center gap-1">
               {k.up ? <ArrowUpRight size={12} className="text-success" /> : <ArrowDownRight size={12} className="text-warning" />}
               <span className={`text-[11px] font-medium ${k.up ? "text-success" : "text-warning"}`}>{k.trend}</span>
+              <ExternalLink size={10} className="ml-auto text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
           </div>
         ))}
@@ -110,7 +118,7 @@ export default function DashboardExecutivo() {
 
       {/* Charts Row 1 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="glass-card p-5">
+        <div className="glass-card p-5 cursor-pointer hover:border-primary/30 transition-all" onClick={() => navigate("/financeiro")}>
           <h3 className="section-title">Receita por Dia (Bruta vs Líquida)</h3>
           <ResponsiveContainer width="100%" height={240}>
             <AreaChart data={receitaDia}>
@@ -123,7 +131,7 @@ export default function DashboardExecutivo() {
             </AreaChart>
           </ResponsiveContainer>
         </div>
-        <div className="glass-card p-5">
+        <div className="glass-card p-5 cursor-pointer hover:border-primary/30 transition-all" onClick={() => navigate("/conversoes")}>
           <h3 className="section-title">Cadastros vs Depósitos Estimados</h3>
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={cadastrosPeriodo}>
@@ -138,14 +146,14 @@ export default function DashboardExecutivo() {
         </div>
       </div>
 
-      {/* Charts Row 2 */}
+      {/* Charts Row 2 — clickable */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
-          { title: "Receita por Plataforma", data: receitaPlat, color: "hsl(45 100% 50%)" },
-          { title: "Receita por Jogo", data: receitaJogo, color: "hsl(217 85% 40%)" },
-          { title: "Receita por Influencer", data: receitaInfluencer, color: "hsl(152 69% 41%)" },
+          { title: "Receita por Plataforma", data: receitaPlat, color: "hsl(45 100% 50%)", path: "/plataformas" },
+          { title: "Receita por Jogo", data: receitaJogo, color: "hsl(217 85% 40%)", path: "/jogos" },
+          { title: "Receita por Influencer", data: receitaInfluencer, color: "hsl(152 69% 41%)", path: "/influencers" },
         ].map((chart) => (
-          <div key={chart.title} className="glass-card p-5">
+          <div key={chart.title} className="glass-card p-5 cursor-pointer hover:border-primary/30 transition-all" onClick={() => navigate(chart.path)}>
             <h3 className="section-title">{chart.title}</h3>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={chart.data} layout="vertical">
@@ -166,12 +174,19 @@ export default function DashboardExecutivo() {
           <h3 className="section-title">Alertas Operacionais</h3>
           <div className="space-y-2">
             {alertas.map((a, i) => (
-              <div key={i} className={`alert-card ${a.tipo === "danger" ? "border-l-destructive" : a.tipo === "success" ? "border-l-success" : a.tipo === "info" ? "border-l-info" : "border-l-warning"}`}>
+              <div
+                key={i}
+                onClick={() => navigate(a.path)}
+                className={`alert-card ${a.tipo === "danger" ? "border-l-destructive" : a.tipo === "success" ? "border-l-success" : a.tipo === "info" ? "border-l-info" : "border-l-warning"} cursor-pointer hover:bg-secondary/40 hover:border-primary/20 transition-all duration-200 group`}
+              >
                 <a.icon size={16} className={a.tipo === "danger" ? "text-destructive" : a.tipo === "success" ? "text-success" : a.tipo === "info" ? "text-info" : "text-warning"} />
-                <div>
+                <div className="flex-1">
                   <p className="text-sm font-medium">{a.titulo}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{a.desc}</p>
                 </div>
+                <span className="text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 shrink-0">
+                  {a.cta} <ExternalLink size={10} />
+                </span>
               </div>
             ))}
           </div>
@@ -181,10 +196,15 @@ export default function DashboardExecutivo() {
           <h3 className="section-title">Resumo Rápido da Semana</h3>
           <div className="space-y-3">
             {resumoRapido.map((r, i) => (
-              <div key={i} className="glass-card-elevated p-3 rounded-lg">
+              <div
+                key={i}
+                onClick={() => navigate(r.path)}
+                className="glass-card-elevated p-3 rounded-lg cursor-pointer hover:border-primary/30 hover:bg-secondary/30 transition-all duration-200 group"
+              >
                 <div className="flex items-center gap-2 mb-1">
                   <r.icon size={13} className="text-accent" />
                   <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">{r.label}</span>
+                  <ExternalLink size={9} className="ml-auto text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 </div>
                 <p className="text-sm font-semibold">{r.value}</p>
                 <p className="text-[11px] text-muted-foreground">{r.sub}</p>

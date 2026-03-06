@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { initialConteudos } from "@/data/mockData";
 import type { ConteudoItem } from "@/types";
 import { toast } from "@/hooks/use-toast";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import ExportDropdown from "@/components/ExportDropdown";
 
 const statusCols: ConteudoItem["status"][] = ["Ideia", "Roteiro", "Produção", "Revisão", "Agendado", "Publicado"];
 const colColors: Record<string, string> = {
@@ -12,6 +15,7 @@ const colColors: Record<string, string> = {
 };
 
 export default function Conteudo() {
+  const navigate = useNavigate();
   const [data, setData] = useState<ConteudoItem[]>(initialConteudos);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Partial<ConteudoItem> | null>(null);
@@ -42,12 +46,26 @@ export default function Conteudo() {
     toast({ title: `Movido para ${statusCols[newIdx]}` });
   };
 
+  const exportableData = data.map(({ id, tema, tipo, jogo, influencer, campanha, status, data: d }) => ({ id, tema, tipo, jogo, influencer, campanha, status, data: d }));
+
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[{ label: "Marketing e Conteúdo", path: "/conteudo" }, { label: "Conteúdos" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div><h1 className="page-header">Conteúdos</h1><p className="page-subtitle">Central editorial — quadro kanban de produção de conteúdo</p></div>
-        <button className="btn-primary" onClick={() => openCreate()}><Plus size={14} /> Criar Conteúdo</button>
+        <div className="flex gap-2">
+          <ExportDropdown data={exportableData} filename="conteudos-playbet" />
+          <button className="btn-primary" onClick={() => openCreate()}><Plus size={14} /> Criar Conteúdo</button>
+        </div>
       </div>
+
+      {/* Atalhos rápidos */}
+      <div className="flex flex-wrap gap-2">
+        <button className="btn-ghost text-xs" onClick={() => navigate("/campanhas")}>→ Campanhas</button>
+        <button className="btn-ghost text-xs" onClick={() => navigate("/calendario")}>→ Calendário Editorial</button>
+        <button className="btn-ghost text-xs" onClick={() => navigate("/estrategia")}>→ Estratégia</button>
+      </div>
+
       <div className="flex gap-3 overflow-x-auto pb-4">
         {statusCols.map(col => {
           const items = data.filter(c => c.status === col);

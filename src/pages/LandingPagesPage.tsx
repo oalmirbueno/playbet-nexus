@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { Plus, Edit, Copy } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { initialLandingPages } from "@/data/mockData";
 import type { LandingPage } from "@/types";
 import { toast } from "@/hooks/use-toast";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import ExportDropdown from "@/components/ExportDropdown";
 
 export default function LandingPagesPage() {
+  const navigate = useNavigate();
   const [data, setData] = useState<LandingPage[]>(initialLandingPages);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Partial<LandingPage> | null>(null);
@@ -28,9 +32,20 @@ export default function LandingPagesPage() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[{ label: "Gestão de Ativos", path: "/landing-pages" }, { label: "Landing Pages" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div><h1 className="page-header">Landing Pages</h1><p className="page-subtitle">Gestão de páginas de conversão e performance</p></div>
-        <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Adicionar LP</button>
+        <div className="flex gap-2">
+          <ExportDropdown data={data.map(({ id, nome, rota, tipo, jogo, plats, cliques, ctr, saida, status }) => ({ id, nome, rota, tipo, jogo, plats, cliques, ctr, saida, status }))} filename="landing-pages-playbet" />
+          <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Adicionar LP</button>
+        </div>
+      </div>
+
+      {/* Atalhos rápidos */}
+      <div className="flex flex-wrap gap-2">
+        <button className="btn-ghost text-xs" onClick={() => navigate("/lp-templates")}>→ Templates de LP</button>
+        <button className="btn-ghost text-xs" onClick={() => navigate("/link-engine")}>→ Engine de Links</button>
+        <button className="btn-ghost text-xs" onClick={() => navigate("/analytics")}>→ Analytics</button>
       </div>
       <div className="glass-card overflow-x-auto">
         <table className="data-table">

@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { Copy, Edit, XCircle, CopyPlus, Plus, Search } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { initialLinks } from "@/data/mockData";
 import type { LinkAfiliado } from "@/types";
 import { toast } from "@/hooks/use-toast";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import ExportDropdown from "@/components/ExportDropdown";
 
 export default function LinksAfiliados() {
+  const navigate = useNavigate();
   const [data, setData] = useState<LinkAfiliado[]>(initialLinks);
   const [search, setSearch] = useState("");
   const [filterJogo, setFilterJogo] = useState("Todos");
@@ -56,9 +60,20 @@ export default function LinksAfiliados() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[{ label: "Gestão de Ativos", path: "/links" }, { label: "Links Afiliados" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div><h1 className="page-header">Links Afiliados</h1><p className="page-subtitle">Centro de links — rastreio, UTMs e gestão completa</p></div>
-        <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Adicionar Link</button>
+        <div className="flex gap-2">
+          <ExportDropdown data={data.map(({ id, nome, jogo, plat, influencer, uso, source, medium, campaign, subid, cliques, status }) => ({ id, nome, jogo, plat, influencer, uso, source, medium, campaign, subid, cliques, status }))} filename="links-playbet" />
+          <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Adicionar Link</button>
+        </div>
+      </div>
+
+      {/* Atalhos rápidos */}
+      <div className="flex flex-wrap gap-2">
+        <button className="btn-ghost text-xs" onClick={() => navigate("/link-engine")}>→ Engine de Links</button>
+        <button className="btn-ghost text-xs" onClick={() => navigate("/landing-pages")}>→ Landing Pages</button>
+        <button className="btn-ghost text-xs" onClick={() => navigate("/utms")}>→ UTMs / SubIDs</button>
       </div>
 
       <div className="flex flex-wrap gap-3 items-center">

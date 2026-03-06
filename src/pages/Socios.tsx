@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Plus, Edit } from "lucide-react";
+import { Plus, Edit, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { initialSocios } from "@/data/mockData";
 import type { Socio } from "@/types";
 import { toast } from "@/hooks/use-toast";
-import { ArrowRight } from "lucide-react";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import ExportDropdown from "@/components/ExportDropdown";
 
 export default function Socios() {
   const navigate = useNavigate();
@@ -31,9 +32,13 @@ export default function Socios() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[{ label: "Gestão de Pessoas", path: "/socios" }, { label: "Sócios" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div><h1 className="page-header">Sócios</h1><p className="page-subtitle">Gestão societária — participação, ganhos e distribuição</p></div>
-        <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Adicionar Sócio</button>
+        <div className="flex gap-2">
+          <ExportDropdown data={data.map(({ id, nome, part, ganhos, disponivel, ultimoSaque, status }) => ({ id, nome, part, ganhos, disponivel, ultimoSaque, status }))} filename="socios-playbet" />
+          <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Adicionar Sócio</button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

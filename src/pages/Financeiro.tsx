@@ -1,6 +1,8 @@
 import { useState } from "react";
-import { DollarSign, TrendingUp, Wallet, CreditCard, Download, Filter } from "lucide-react";
+import { DollarSign, TrendingUp, Wallet, CreditCard } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import ExportDropdown from "@/components/ExportDropdown";
 
 const resumo = [
   { label: "Receita Bruta", value: "R$ 284.750", icon: DollarSign, variant: "accent" },
@@ -32,17 +34,20 @@ const chartTooltip = { background: "hsl(0 0% 8%)", border: "1px solid hsl(0 0% 1
 
 const variants: Record<string, string> = { accent: "border-l-accent", primary: "border-l-primary", info: "border-l-info", success: "border-l-success", warning: "border-l-warning" };
 
+const exportData = fluxo.map(f => ({ data: f.data, origem: f.origem, plataforma: f.plataforma, jogo: f.jogo, influencer: f.influencer, bruto: f.bruto, percInf: f.percInf, valorInf: f.valorInf, operacao: f.operacao, baseSocios: f.baseSocios, liquido: f.liquido, status: f.status }));
+
 export default function Financeiro() {
   const [tab, setTab] = useState<"resumo" | "fluxo" | "centro">("resumo");
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[{ label: "Financeiro" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="page-header">Financeiro</h1>
           <p className="page-subtitle">Controle financeiro completo — receitas, comissões e fluxo de caixa</p>
         </div>
-        <button className="btn-secondary"><Download size={14} /> Exportar Relatório</button>
+        <ExportDropdown data={exportData} filename="financeiro-playbet" />
       </div>
 
       <div className="flex gap-1 bg-secondary/50 p-1 rounded-xl w-fit">

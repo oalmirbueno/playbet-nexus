@@ -1,11 +1,15 @@
 import { useState } from "react";
 import { Plus, Edit, XCircle, Users } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { initialLPTemplates } from "@/data/mockData";
 import type { LPTemplate } from "@/types";
 import { toast } from "@/hooks/use-toast";
+import Breadcrumbs from "@/components/Breadcrumbs";
+import ExportDropdown from "@/components/ExportDropdown";
 
 export default function LPTemplates() {
+  const navigate = useNavigate();
   const [data, setData] = useState<LPTemplate[]>(initialLPTemplates);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Partial<LPTemplate> | null>(null);
@@ -33,9 +37,19 @@ export default function LPTemplates() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumbs items={[{ label: "Gestão de Ativos", path: "/lp-templates" }, { label: "Templates de LP" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div><h1 className="page-header">Templates de LP</h1><p className="page-subtitle">Central de templates de landing pages — base para distribuição por influenciador</p></div>
-        <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Criar Template</button>
+        <div className="flex gap-2">
+          <ExportDropdown data={data.map(({ id, nome, rotaBase, tipo, jogoVinculado, cliquesTotais, conversoesEstimadas, status }) => ({ id, nome, rotaBase, tipo, jogoVinculado, cliquesTotais, conversoesEstimadas, status }))} filename="templates-lp-playbet" />
+          <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Criar Template</button>
+        </div>
+      </div>
+
+      {/* Atalhos rápidos */}
+      <div className="flex flex-wrap gap-2">
+        <button className="btn-ghost text-xs" onClick={() => navigate("/link-engine")}>→ Engine de Links</button>
+        <button className="btn-ghost text-xs" onClick={() => navigate("/landing-pages")}>→ Landing Pages</button>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
