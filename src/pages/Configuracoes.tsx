@@ -27,8 +27,9 @@ export default function Configuracoes() {
     setSeeding(true);
     try {
       await seedDemoData();
-      queryClient.invalidateQueries();
-      toast({ title: "Dados demo criados com sucesso!" });
+      setDemoMode("all");
+      await queryClient.invalidateQueries();
+      toast({ title: "Dados demo criados com sucesso!", description: "Modo alterado para: Todos os dados." });
     } catch (e: any) {
       toast({ title: "Erro ao criar dados demo", description: e.message, variant: "destructive" });
     } finally {

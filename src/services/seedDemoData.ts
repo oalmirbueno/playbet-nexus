@@ -159,8 +159,13 @@ export async function seedDemoData() {
     { tema: "Live tirada de dúvidas", tipo: "Live", formato: "Vertical", canal: "Instagram", jogo: "Vários", influencer: "Ana S.", campanha: "—", lp: "Cadastro Geral", status: "Ideia", prioridade: "Baixa", data: "2026-03-14", responsavel: "Ana", observacoes: "Confirmar horário", is_demo: true },
     { tema: "Teaser novo jogo Spaceman", tipo: "Reels", formato: "Vertical 9:16", canal: "TikTok", jogo: "Spaceman", influencer: "Pedro L.", campanha: "—", lp: "—", status: "Pausado", prioridade: "Baixa", data: "2026-03-15", responsavel: "Pedro", observacoes: "Jogo inativo, aguardar reativação", is_demo: true },
   ];
-  const { error: contErr } = await db.from("conteudo").insert(conteudo);
-  if (contErr) throw contErr;
+  const { error: contErr } = await db.from("conteudo").insert(conteudo as any[]);
+  if (contErr) {
+    for (const item of conteudo) {
+      const { error: rowErr } = await db.from("conteudo").insert(item);
+      if (rowErr) throw rowErr;
+    }
+  }
 }
 
 export async function clearDemoData() {
