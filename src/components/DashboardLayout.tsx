@@ -159,14 +159,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
 
         {/* Collapse toggle (desktop only) */}
-        <div className="hidden md:flex px-3 py-2.5 border-t border-sidebar-border shrink-0">
+        <div className="hidden md:flex px-3 py-2 border-t border-sidebar-border shrink-0">
           <button
             onClick={() => setSidebarCollapsed((c) => !c)}
-            className={`flex items-center ${sidebarCollapsed ? "justify-center w-full" : "gap-2 w-full"} px-2 py-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-sidebar-accent transition-colors text-xs`}
+            className={`flex items-center ${sidebarCollapsed ? "justify-center w-full" : "gap-2 w-full"} px-2 py-1.5 rounded text-muted-foreground/40 hover:text-muted-foreground transition-colors text-[11px]`}
             title={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
           >
-            {sidebarCollapsed ? <PanelLeft size={15} /> : <PanelLeftClose size={15} />}
-            {!sidebarCollapsed && <span className="text-[12px]">Recolher</span>}
+            {sidebarCollapsed ? <PanelLeft size={13} /> : <PanelLeftClose size={13} />}
+            {!sidebarCollapsed && <span>Recolher</span>}
           </button>
         </div>
 
