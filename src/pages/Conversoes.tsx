@@ -9,8 +9,11 @@ const conversoes = [
 
 export default function Conversoes() {
   return (
-    <div className="space-y-6">
-      <div><h1 className="page-header">Conversões</h1><p className="page-subtitle">Análise de conversão por origem e canal</p></div>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Conversões</h1>
+        <p className="text-sm text-muted-foreground mt-1">Análise de conversão por origem e canal</p>
+      </div>
       <div className="glass-card overflow-x-auto">
         <table className="data-table">
           <thead><tr><th>Origem</th><th>Cadastros</th><th>Depósitos</th><th>Taxa Conversão</th><th>Receita Estimada</th><th>Performance</th></tr></thead>
@@ -20,9 +23,9 @@ export default function Conversoes() {
                 <td className="font-medium">{c.origem}</td>
                 <td>{c.cadastros.toLocaleString()}</td>
                 <td>{c.depositos.toLocaleString()}</td>
-                <td className="font-medium text-accent">{c.taxa}</td>
+                <td className="font-medium">{c.taxa}</td>
                 <td className="font-medium">{c.receita}</td>
-                <td><span className={c.status === "Alta" ? "badge-success" : c.status === "Média" ? "badge-warning" : "badge-danger"}>{c.status}</span></td>
+                <td><span className={c.status === "Alta" ? "badge-success" : c.status === "Média" ? "badge-neutral" : "badge-warning"}>{c.status}</span></td>
               </tr>
             ))}
           </tbody>

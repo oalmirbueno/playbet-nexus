@@ -8,8 +8,8 @@ const utms = [
 
 export default function UtmsSubids() {
   return (
-    <div className="space-y-6">
-      <div><h1 className="page-header">UTMs / SubIDs</h1><p className="page-subtitle">Rastreamento detalhado de origens e parâmetros de tráfego</p></div>
+    <div className="space-y-8">
+      <div><h1 className="text-2xl font-semibold tracking-tight">UTMs / SubIDs</h1><p className="text-sm text-muted-foreground mt-1">Rastreamento detalhado de origens e parâmetros de tráfego</p></div>
       <div className="flex flex-wrap gap-3">
         <select className="select-field"><option>Source: Todos</option></select>
         <select className="select-field"><option>Medium: Todos</option></select>

@@ -120,12 +120,12 @@ export default function Influencers() {
   const infSemLink = data.filter(i => i.status === "Ativo" && !i.affiliate_link);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Breadcrumbs items={[{ label: "Gestão de Pessoas", path: "/influencers" }, { label: "Influencers" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="page-header">Influencers</h1>
-          <p className="page-subtitle">Gestão completa de influenciadores, performance e distribuição de tráfego</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Influencers</h1>
+          <p className="text-sm text-muted-foreground mt-1">Gestão completa de influenciadores, performance e distribuição de tráfego</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <ExportDropdown data={exportableData} filename="influencers-playbet" />
@@ -135,14 +135,14 @@ export default function Influencers() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {stats.map((s) => (
-          <div key={s.label} onClick={() => s.path && navigate(s.path)} className={`stat-card border-l-2 ${s.variant} ${s.path ? "cursor-pointer hover:bg-secondary/40" : ""} transition-colors`}>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">{s.label}</span>
+          <div key={s.label} onClick={() => s.path && navigate(s.path)} className={`glass-card p-5 border-l-2 ${s.variant} ${s.path ? "cursor-pointer hover:bg-secondary/30" : ""} transition-colors`}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{s.label}</span>
               <s.icon size={14} className="text-muted-foreground" />
             </div>
-            <div className="text-sm font-bold">{s.value}</div>
+            <div className="text-lg font-bold">{s.value}</div>
           </div>
         ))}
       </div>

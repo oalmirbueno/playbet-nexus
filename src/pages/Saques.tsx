@@ -91,22 +91,25 @@ export default function Saques() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Breadcrumbs items={[{ label: "Gestão de Receita", path: "/financeiro" }, { label: "Saques" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div><h1 className="page-header">Central de Saques</h1><p className="page-subtitle">Gerencie solicitações de saque de influencers e sócios</p></div>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Central de Saques</h1>
+          <p className="text-sm text-muted-foreground mt-1">Gerencie solicitações de saque de influencers e sócios</p>
+        </div>
         <ExportDropdown data={data.map(({ composicao, origemSaldo, observacoes, ...rest }) => rest)} filename="saques-playbet" />
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
         {stats.map(s => (
-          <div key={s.label} className={`stat-card border-l-2 ${s.variant} cursor-pointer hover:bg-secondary/40 transition-colors`} onClick={() => setTab(s.label === "Pagos via Asaas" ? "Pago via Asaas" : s.label === "Pendentes" ? "Pendente" : s.label === "Aprovados" ? "Aprovado" : s.label === "Processando" ? "Processando" : "Recusado")}>
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">{s.label}</span>
+          <div key={s.label} className={`glass-card p-5 border-l-2 ${s.variant} cursor-pointer hover:bg-secondary/30 transition-colors`} onClick={() => setTab(s.label === "Pagos via Asaas" ? "Pago via Asaas" : s.label === "Pendentes" ? "Pendente" : s.label === "Aprovados" ? "Aprovado" : s.label === "Processando" ? "Processando" : "Recusado")}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{s.label}</span>
               <s.icon size={14} className="text-muted-foreground" />
             </div>
-            <div className="text-lg font-bold">{s.value}</div>
+            <div className="text-xl font-bold">{s.value}</div>
             <span className="text-xs text-muted-foreground">R$ {s.total.toLocaleString()}</span>
           </div>
         ))}

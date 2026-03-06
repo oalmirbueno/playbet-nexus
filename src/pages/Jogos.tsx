@@ -93,10 +93,13 @@ export default function Jogos() {
   const exportableData = data.map(j => ({ ...j, trend: getTrend(j.ctr).label, lps_vinculadas: getLPsCount(j), campanhas_vinculadas: getCampanhasCount(j), influencers_vinculados: getInfluencersCount(j) }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Breadcrumbs items={[{ label: "Gestão de Ativos", path: "/jogos" }, { label: "Jogos" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div><h1 className="page-header">Jogos</h1><p className="page-subtitle">Centro de gestão de jogos, performance e distribuição estratégica</p></div>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Jogos</h1>
+          <p className="text-sm text-muted-foreground mt-1">Centro de gestão de jogos, performance e distribuição estratégica</p>
+        </div>
         <div className="flex gap-2 flex-wrap">
           <ExportDropdown data={exportableData} filename="jogos-playbet" />
           <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Adicionar Jogo</button>
@@ -104,11 +107,11 @@ export default function Jogos() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         {stats.map(s => (
-          <div key={s.label} className={`stat-card border-l-2 ${s.variant}`}>
-            <div className="flex items-center justify-between"><span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">{s.label}</span><s.icon size={14} className="text-muted-foreground" /></div>
-            <div className="text-sm font-bold">{s.value}</div>
+          <div key={s.label} className={`glass-card p-5 border-l-2 ${s.variant}`}>
+            <div className="flex items-center justify-between mb-2"><span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{s.label}</span><s.icon size={14} className="text-muted-foreground" /></div>
+            <div className="text-lg font-bold">{s.value}</div>
           </div>
         ))}
       </div>

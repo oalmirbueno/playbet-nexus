@@ -53,29 +53,29 @@ export default function JogoDetalhe() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Breadcrumbs items={[{ label: "Gestão de Ativos", path: "/jogos" }, { label: "Jogos", path: "/jogos" }, { label: jogo.nome }]} />
-      <button onClick={() => navigate("/jogos")} className="text-xs text-muted-foreground hover:text-accent flex items-center gap-1"><ArrowLeft size={14} /> Voltar para Jogos</button>
+      <button onClick={() => navigate("/jogos")} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"><ArrowLeft size={14} /> Voltar para Jogos</button>
 
       <div className="flex items-center gap-4">
-        <div className="w-14 h-14 rounded-xl bg-primary/20 flex items-center justify-center text-2xl font-bold text-accent">{jogo.nome.charAt(0)}</div>
+        <div className="w-14 h-14 rounded-xl bg-secondary flex items-center justify-center text-2xl font-bold text-foreground">{jogo.nome.charAt(0)}</div>
         <div>
-          <h1 className="text-xl font-bold flex items-center gap-2">{jogo.nome}
+          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">{jogo.nome}
             <span className="badge-neutral">{jogo.cat}</span>
-            <span className={jogo.status === "Ativo" ? "badge-success" : "badge-danger"}>{jogo.status}</span>
+            <span className={jogo.status === "Ativo" ? "badge-success" : "badge-neutral"}>{jogo.status}</span>
             <span className={`text-xs font-medium ${trend.color}`}>{trend.label}</span>
           </h1>
-          <p className="text-xs text-muted-foreground">{jogo.plats}</p>
+          <p className="text-sm text-muted-foreground mt-1">{jogo.plats}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <div className="stat-card border-l-2 border-l-accent"><span className="text-[10px] text-muted-foreground uppercase">Receita</span><p className="text-sm font-bold">R$ {jogo.receita.toLocaleString()}</p></div>
-        <div className="stat-card border-l-2 border-l-info"><span className="text-[10px] text-muted-foreground uppercase">Cliques</span><p className="text-sm font-bold">{jogo.cliques.toLocaleString()}</p></div>
-        <div className="stat-card border-l-2 border-l-success"><span className="text-[10px] text-muted-foreground uppercase">CTR</span><p className="text-sm font-bold text-accent">{jogo.ctr}</p></div>
-        <div className="stat-card border-l-2 border-l-primary"><span className="text-[10px] text-muted-foreground uppercase">Cadastros</span><p className="text-sm font-bold">{jogo.cadastros.toLocaleString()}</p></div>
-        <div className="stat-card border-l-2 border-l-warning"><span className="text-[10px] text-muted-foreground uppercase">Plataformas</span><p className="text-sm font-bold">{plats.length}</p></div>
-        <div className="stat-card border-l-2 border-l-primary"><span className="text-[10px] text-muted-foreground uppercase">Influencers</span><p className="text-sm font-bold">{jogoInfluencers.length}</p></div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="glass-card p-5 border-l-2 border-l-accent"><span className="text-xs text-muted-foreground uppercase tracking-wider">Receita</span><p className="text-lg font-bold mt-1">R$ {jogo.receita.toLocaleString()}</p></div>
+        <div className="glass-card p-5 border-l-2 border-l-info"><span className="text-xs text-muted-foreground uppercase tracking-wider">Cliques</span><p className="text-lg font-bold mt-1">{jogo.cliques.toLocaleString()}</p></div>
+        <div className="glass-card p-5 border-l-2 border-l-success"><span className="text-xs text-muted-foreground uppercase tracking-wider">CTR</span><p className="text-lg font-bold mt-1">{jogo.ctr}</p></div>
+        <div className="glass-card p-5 border-l-2 border-l-primary"><span className="text-xs text-muted-foreground uppercase tracking-wider">Cadastros</span><p className="text-lg font-bold mt-1">{jogo.cadastros.toLocaleString()}</p></div>
+        <div className="glass-card p-5 border-l-2 border-l-warning"><span className="text-xs text-muted-foreground uppercase tracking-wider">Plataformas</span><p className="text-lg font-bold mt-1">{plats.length}</p></div>
+        <div className="glass-card p-5 border-l-2 border-l-primary"><span className="text-xs text-muted-foreground uppercase tracking-wider">Influencers</span><p className="text-lg font-bold mt-1">{jogoInfluencers.length}</p></div>
       </div>
 
       <div className="flex gap-1 overflow-x-auto pb-1">

@@ -13,8 +13,8 @@ const logs = [
 
 export default function Auditoria() {
   return (
-    <div className="space-y-6">
-      <div><h1 className="page-header">Auditoria</h1><p className="page-subtitle">Logs completos de ações e alterações na operação</p></div>
+    <div className="space-y-8">
+      <div><h1 className="text-2xl font-semibold tracking-tight">Auditoria</h1><p className="text-sm text-muted-foreground mt-1">Logs completos de ações e alterações na operação</p></div>
       <div className="flex flex-wrap gap-3">
         <select className="select-field"><option>Módulo: Todos</option></select>
         <select className="select-field"><option>Usuário: Todos</option></select>

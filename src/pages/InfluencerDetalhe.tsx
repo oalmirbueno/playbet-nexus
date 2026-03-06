@@ -80,20 +80,20 @@ export default function InfluencerDetalhe() {
   const copyUrl = (url: string) => { navigator.clipboard.writeText(url); toast({ title: "URL copiada!", description: url }); };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Breadcrumbs items={[{ label: "Influencers", path: "/influencers" }, { label: influencer.nome }]} />
       <button onClick={() => navigate("/influencers")} className="btn-ghost"><ArrowLeft size={14} /> Voltar para Influencers</button>
 
       {/* Header */}
       <div className="flex items-center gap-4">
-        <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center text-xl font-bold text-accent">{influencer.nome.charAt(0)}</div>
+        <div className="w-14 h-14 rounded-full bg-secondary flex items-center justify-center text-xl font-bold text-foreground">{influencer.nome.charAt(0)}</div>
         <div className="flex-1">
-          <h1 className="page-header">{influencer.nome}</h1>
-          <p className="text-sm text-muted-foreground flex flex-wrap items-center gap-2">
-            <span className="text-accent">{influencer.insta}</span> · {influencer.seg} seguidores ·
-            <span className={influencer.tipo === "Premium" ? "badge-accent" : influencer.tipo === "Standard" ? "badge-primary" : "badge-neutral"}>{influencer.tipo}</span>
+          <h1 className="text-2xl font-semibold tracking-tight">{influencer.nome}</h1>
+          <p className="text-sm text-muted-foreground flex flex-wrap items-center gap-2 mt-1">
+            <span>{influencer.insta}</span> · {influencer.seg} seguidores ·
+            <span className="badge-neutral">{influencer.tipo}</span>
             <span className={influencer.status === "Ativo" ? "badge-success" : influencer.status === "Pausado" ? "badge-warning" : "badge-neutral"}>{influencer.status}</span>
-            <span className="font-mono text-accent text-xs">slug: {influencer.slug}</span>
+            <span className="font-mono text-xs text-muted-foreground">slug: {influencer.slug}</span>
           </p>
         </div>
         <div className="flex gap-2">

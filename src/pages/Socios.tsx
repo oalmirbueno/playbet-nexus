@@ -46,10 +46,13 @@ export default function Socios() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <Breadcrumbs items={[{ label: "Gestão de Pessoas", path: "/socios" }, { label: "Sócios" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div><h1 className="page-header">Sócios</h1><p className="page-subtitle">Gestão societária — participação, ganhos e distribuição</p></div>
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Sócios</h1>
+          <p className="text-sm text-muted-foreground mt-1">Gestão societária — participação, ganhos e distribuição</p>
+        </div>
         <div className="flex gap-2">
           <ExportDropdown data={data.map(({ id, nome, part, ganhos, disponivel, ultimoSaque, status }) => ({ id, nome, part, ganhos, disponivel, ultimoSaque, status }))} filename="socios-playbet" />
           <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Adicionar Sócio</button>
@@ -57,22 +60,22 @@ export default function Socios() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="stat-card border-l-2 border-l-primary cursor-pointer hover:bg-secondary/40 transition-colors" onClick={() => navigate("/financeiro")}>
-          <div className="flex items-center justify-between"><span className="text-[10px] text-muted-foreground uppercase">Base Societária Acum.</span><DollarSign size={14} className="text-muted-foreground" /></div>
-          <p className="text-xl font-bold text-primary">R$ {totalBase.toLocaleString()}</p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <div className="glass-card p-6 border-l-2 border-l-primary cursor-pointer hover:bg-secondary/30 transition-colors" onClick={() => navigate("/financeiro")}>
+          <div className="flex items-center justify-between mb-2"><span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Base Societária Acum.</span><DollarSign size={14} className="text-muted-foreground" /></div>
+          <p className="text-2xl font-bold">R$ {totalBase.toLocaleString()}</p>
         </div>
-        <div className="stat-card border-l-2 border-l-accent">
-          <div className="flex items-center justify-between"><span className="text-[10px] text-muted-foreground uppercase">Total Ganhos</span><TrendingUp size={14} className="text-muted-foreground" /></div>
-          <p className="text-xl font-bold">R$ {totalGanhos.toLocaleString()}</p>
+        <div className="glass-card p-6 border-l-2 border-l-accent">
+          <div className="flex items-center justify-between mb-2"><span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Total Ganhos</span><TrendingUp size={14} className="text-muted-foreground" /></div>
+          <p className="text-2xl font-bold">R$ {totalGanhos.toLocaleString()}</p>
         </div>
-        <div className="stat-card border-l-2 border-l-success">
-          <div className="flex items-center justify-between"><span className="text-[10px] text-muted-foreground uppercase">Total Disponível</span><Wallet size={14} className="text-muted-foreground" /></div>
-          <p className="text-xl font-bold text-success">R$ {totalDisponivel.toLocaleString()}</p>
+        <div className="glass-card p-6 border-l-2 border-l-success">
+          <div className="flex items-center justify-between mb-2"><span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Total Disponível</span><Wallet size={14} className="text-muted-foreground" /></div>
+          <p className="text-2xl font-bold text-success">R$ {totalDisponivel.toLocaleString()}</p>
         </div>
-        <div className="stat-card border-l-2 border-l-info cursor-pointer hover:bg-secondary/40 transition-colors" onClick={() => navigate("/saques")}>
-          <div className="flex items-center justify-between"><span className="text-[10px] text-muted-foreground uppercase">Total Sacado</span><DollarSign size={14} className="text-muted-foreground" /></div>
-          <p className="text-xl font-bold">R$ {totalSacado.toLocaleString()}</p>
+        <div className="glass-card p-6 border-l-2 border-l-info cursor-pointer hover:bg-secondary/30 transition-colors" onClick={() => navigate("/saques")}>
+          <div className="flex items-center justify-between mb-2"><span className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Total Sacado</span><DollarSign size={14} className="text-muted-foreground" /></div>
+          <p className="text-2xl font-bold">R$ {totalSacado.toLocaleString()}</p>
         </div>
       </div>
 

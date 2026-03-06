@@ -40,7 +40,7 @@ const getStatusBadge = (status: string) => {
 };
 
 const getEventColor = (tipo: string) => {
-  const map: Record<string, string> = { saque: "bg-warning", link: "bg-primary", lp: "bg-info", influencer: "bg-success", campanha: "bg-accent" };
+  const map: Record<string, string> = { saque: "bg-warning", link: "bg-primary", lp: "bg-info", influencer: "bg-success", campanha: "bg-muted-foreground" };
   return map[tipo] || "bg-muted";
 };
 
@@ -48,37 +48,37 @@ export default function DashboardOperacional() {
   const navigate = useNavigate();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="page-header">Dashboard Operacional</h1>
-        <p className="page-subtitle">Visão do dia a dia — ações, eventos e métricas em tempo real</p>
+        <h1 className="text-2xl font-semibold tracking-tight">Dashboard Operacional</h1>
+        <p className="text-sm text-muted-foreground mt-1">Visão do dia a dia — ações, eventos e métricas em tempo real</p>
       </div>
 
-      {/* Widgets — clickable drill-down */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {/* Widgets */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {widgets.map((w) => (
           <div
             key={w.label}
             onClick={() => navigate(w.path)}
-            className="stat-card cursor-pointer hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all duration-200 group"
+            className="glass-card p-6 cursor-pointer hover:bg-secondary/30 transition-all duration-200 group"
           >
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">{w.label}</span>
-              <w.icon size={15} className="text-muted-foreground group-hover:text-accent transition-colors" />
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-muted-foreground font-medium uppercase tracking-wider">{w.label}</span>
+              <w.icon size={15} className="text-muted-foreground" />
             </div>
-            <div className="text-xl font-bold">{w.value}</div>
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] text-success font-medium">{w.trend}</span>
+            <div className="text-2xl font-bold tracking-tight">{w.value}</div>
+            <div className="flex items-center justify-between mt-2">
+              <span className="text-xs text-success font-medium">{w.trend}</span>
               <ExternalLink size={10} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Atividades Recentes — with action buttons */}
-        <div className="lg:col-span-2 glass-card p-5">
-          <h3 className="section-title">Atividades Recentes</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Atividades Recentes */}
+        <div className="lg:col-span-2 glass-card p-6">
+          <h3 className="text-sm font-semibold text-foreground mb-5">Atividades Recentes</h3>
           <div className="overflow-x-auto">
             <table className="data-table">
               <thead>
@@ -110,7 +110,7 @@ export default function DashboardOperacional() {
                         </button>
                         <button
                           onClick={() => navigate(a.path)}
-                          className="p-1.5 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-accent"
+                          className="p-1.5 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
                           title={`Ir para ${a.modulo}`}
                         >
                           <ArrowRight size={13} />
@@ -124,25 +124,24 @@ export default function DashboardOperacional() {
           </div>
         </div>
 
-        {/* Feed de Eventos — clickable */}
-        <div className="glass-card p-5">
-          <h3 className="section-title">Feed de Eventos</h3>
+        {/* Feed de Eventos */}
+        <div className="glass-card p-6">
+          <h3 className="text-sm font-semibold text-foreground mb-5">Feed de Eventos</h3>
           <div className="space-y-3">
             {feedEventos.map((e, i) => (
               <div
                 key={i}
                 onClick={() => navigate(e.path)}
-                className="flex items-start gap-3 cursor-pointer hover:bg-secondary/30 rounded-lg p-1.5 -mx-1.5 transition-colors group"
+                className="flex items-start gap-3 cursor-pointer hover:bg-secondary/30 rounded-lg p-2 -mx-2 transition-colors group"
               >
                 <div className="flex flex-col items-center">
                   <div className={`w-2 h-2 rounded-full mt-1.5 ${getEventColor(e.tipo)}`} />
                   {i < feedEventos.length - 1 && <div className="w-px h-full bg-border mt-1 min-h-[20px]" />}
                 </div>
                 <div className="flex-1 min-w-0 pb-3">
-                  <p className="text-xs">{e.msg}</p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{e.time}</p>
+                  <p className="text-sm">{e.msg}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{e.time}</p>
                 </div>
-                <ExternalLink size={10} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-1.5 shrink-0" />
               </div>
             ))}
           </div>
