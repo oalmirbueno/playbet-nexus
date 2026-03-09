@@ -58,7 +58,7 @@ export default function Saques() {
     if (action === "pay") { newStatus = "Pago via Asaas"; msg = "Marcado como pago"; }
     try {
       await update({ id: saque.id, updates: { status: newStatus, responsavel: "Admin" } });
-      toast({ title: msg, description: `${saque.nome} — R$ ${Number(saque.valor).toLocaleString()}` });
+      toast({ title: msg, description: `${saque.nome} — ${Number(saque.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` });
     } catch (e: any) {
       toast({ title: "Erro", description: e.message, variant: "destructive" });
     }
@@ -103,7 +103,7 @@ export default function Saques() {
                   <s.icon size={14} className="text-muted-foreground" />
                 </div>
                 <div className="text-xl font-bold">{s.value}</div>
-                <span className="text-xs text-muted-foreground">R$ {s.total.toLocaleString()}</span>
+                <span className="text-xs text-muted-foreground">{s.total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
               </div>
             ))}
           </div>
@@ -134,7 +134,7 @@ export default function Saques() {
                     <td className="font-mono text-xs text-muted-foreground">{s.codigo}</td>
                     <td className="font-medium">{s.nome}</td>
                     <td><span className={s.tipo === "Influencer" ? "badge-info" : "badge-primary"}>{s.tipo}</span></td>
-                    <td className="font-semibold">R$ {Number(s.valor).toLocaleString()}</td>
+                    <td className="font-semibold">{Number(s.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
                     <td className="font-mono text-xs">{s.conta}</td>
                     <td className="whitespace-nowrap text-xs">{s.data}</td>
                     <td><span className={statusBadge(s.status)}>{s.status}</span></td>
@@ -171,7 +171,7 @@ export default function Saques() {
               <div className="grid grid-cols-2 gap-3">
                 <div><span className="text-xs text-muted-foreground">Nome</span><p className="font-medium">{detailOpen.nome}</p></div>
                 <div><span className="text-xs text-muted-foreground">Tipo</span><p><span className={detailOpen.tipo === "Influencer" ? "badge-info" : "badge-primary"}>{detailOpen.tipo}</span></p></div>
-                <div><span className="text-xs text-muted-foreground">Valor</span><p className="font-bold text-lg">R$ {Number(detailOpen.valor).toLocaleString()}</p></div>
+                <div><span className="text-xs text-muted-foreground">Valor</span><p className="font-bold text-lg">{Number(detailOpen.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p></div>
                 <div><span className="text-xs text-muted-foreground">Status</span><p><span className={statusBadge(detailOpen.status || "")}>{detailOpen.status}</span></p></div>
                 <div><span className="text-xs text-muted-foreground">Origem</span><p>{detailOpen.origem || "—"}</p></div>
                 <div><span className="text-xs text-muted-foreground">Conta</span><p className="font-mono text-xs">{detailOpen.conta || "—"}</p></div>
@@ -191,7 +191,7 @@ export default function Saques() {
           <DialogHeader><DialogTitle>
             {confirmAction?.action === "approve" ? "Aprovar Saque" : confirmAction?.action === "reject" ? "Recusar Saque" : confirmAction?.action === "process" ? "Processar Saque" : "Marcar como Pago"}
           </DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Confirmar ação para <strong>{confirmAction?.saque.nome}</strong> — R$ {Number(confirmAction?.saque.valor || 0).toLocaleString()}?</p>
+          <p className="text-sm text-muted-foreground">Confirmar ação para <strong>{confirmAction?.saque.nome}</strong> — {Number(confirmAction?.saque.valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}?</p>
           <DialogFooter>
             <button className="btn-ghost" onClick={() => setConfirmAction(null)}>Cancelar</button>
             <button className={`btn-primary ${confirmAction?.action === "reject" ? "bg-destructive hover:bg-destructive/90" : ""}`} onClick={handleAction}>Confirmar</button>
