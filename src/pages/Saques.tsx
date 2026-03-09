@@ -171,7 +171,7 @@ export default function Saques() {
               <div className="grid grid-cols-2 gap-3">
                 <div><span className="text-xs text-muted-foreground">Nome</span><p className="font-medium">{detailOpen.nome}</p></div>
                 <div><span className="text-xs text-muted-foreground">Tipo</span><p><span className={detailOpen.tipo === "Influencer" ? "badge-info" : "badge-primary"}>{detailOpen.tipo}</span></p></div>
-                <div><span className="text-xs text-muted-foreground">Valor</span><p className="font-bold text-lg">R$ {Number(detailOpen.valor).toLocaleString()}</p></div>
+                <div><span className="text-xs text-muted-foreground">Valor</span><p className="font-bold text-lg">{Number(detailOpen.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p></div>
                 <div><span className="text-xs text-muted-foreground">Status</span><p><span className={statusBadge(detailOpen.status || "")}>{detailOpen.status}</span></p></div>
                 <div><span className="text-xs text-muted-foreground">Origem</span><p>{detailOpen.origem || "—"}</p></div>
                 <div><span className="text-xs text-muted-foreground">Conta</span><p className="font-mono text-xs">{detailOpen.conta || "—"}</p></div>
