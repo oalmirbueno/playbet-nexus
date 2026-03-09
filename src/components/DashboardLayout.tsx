@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
+import GlobalSearch from "@/components/GlobalSearch";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   LayoutDashboard, Activity, DollarSign, Wallet, PieChart, CreditCard,
@@ -86,7 +87,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [searchOpen, setSearchOpen] = useState(false);
   const { user, role, signOut } = useAuth();
+
+  // ⌘K / Ctrl+K shortcut
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   const toggleSection = (title: string) => {
     setCollapsed((prev) => ({ ...prev, [title]: !prev[title] }));
@@ -195,9 +209,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <button className="md:hidden text-muted-foreground hover:text-foreground transition-colors" onClick={() => setSidebarOpen(true)}>
             <Menu size={17} />
           </button>
-          <div className="hidden md:flex items-center gap-2.5 bg-secondary/50 border border-border rounded-md px-3.5 py-[7px] flex-1 max-w-sm">
+          <div className="hidden md:flex items-center gap-2.5 bg-secondary/50 border border-border rounded-md px-3.5 py-[7px] flex-1 max-w-sm cursor-pointer" onClick={() => setSearchOpen(true)}>
             <Search size={13} className="text-muted-foreground shrink-0" />
-            <input placeholder="Buscar módulo, influencer, jogo..." className="bg-transparent text-[13px] text-foreground placeholder:text-muted-foreground focus:outline-none w-full" />
+            <span className="text-[13px] text-muted-foreground flex-1">Buscar módulo, influencer, jogo...</span>
             <kbd className="hidden lg:inline-flex items-center gap-0.5 text-[10px] text-muted-foreground bg-background border border-border rounded px-1.5 py-0.5 font-mono">
               <Command size={9} />K
             </kbd>
@@ -221,6 +235,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </header>
         <main className="flex-1 p-6 lg:p-8 overflow-y-auto invisible-scroll main-scroll animate-fade-in">{children}</main>
       </div>
+
+      <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
     </div>
   );
 }
