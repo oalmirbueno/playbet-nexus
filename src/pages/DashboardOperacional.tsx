@@ -1,6 +1,6 @@
-import { MousePointerClick, UserPlus, DollarSign, Wallet, Calendar, Megaphone, FileText, Gamepad2, TrendingUp, ArrowRight } from "lucide-react";
+import { MousePointerClick, UserPlus, DollarSign, Wallet, FileText, Gamepad2, TrendingUp, ArrowRight, Target, Megaphone } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useInfluencers, useGames, usePlatforms, useLandingPages } from "@/hooks/useSupabaseQuery";
+import { useInfluencers, useGames, usePlatforms, useLandingPages, useCampanhas, useSaques, useSocios, useConteudo } from "@/hooks/useSupabaseQuery";
 import EmptyState from "@/components/EmptyState";
 
 export default function DashboardOperacional() {
@@ -9,14 +9,22 @@ export default function DashboardOperacional() {
   const { data: games } = useGames();
   const { data: platforms } = usePlatforms();
   const { data: landingPages } = useLandingPages();
+  const { data: campanhas } = useCampanhas();
+  const { data: saques } = useSaques();
+  const { data: socios } = useSocios();
+  const { data: conteudos } = useConteudo();
 
-  const hasData = influencers.length > 0 || games.length > 0 || platforms.length > 0;
+  const hasData = influencers.length > 0 || games.length > 0 || platforms.length > 0 || campanhas.length > 0;
 
   const widgets = [
-    { label: "Influencers Ativos", value: String(influencers.filter(i => i.is_active).length), icon: UserPlus, path: "/influencers" },
-    { label: "Jogos Ativos", value: String(games.filter(g => g.is_active).length), icon: Gamepad2, path: "/jogos" },
-    { label: "Plataformas Ativas", value: String(platforms.filter(p => p.is_active).length), icon: TrendingUp, path: "/plataformas" },
+    { label: "Influencers Ativos", value: String(influencers.filter((i: any) => i.is_active).length), icon: UserPlus, path: "/influencers" },
+    { label: "Jogos Ativos", value: String(games.filter((g: any) => g.is_active).length), icon: Gamepad2, path: "/jogos" },
+    { label: "Plataformas Ativas", value: String(platforms.filter((p: any) => p.is_active).length), icon: TrendingUp, path: "/plataformas" },
     { label: "Landing Pages", value: String(landingPages.length), icon: FileText, path: "/landing-pages" },
+    { label: "Campanhas Ativas", value: String(campanhas.filter((c: any) => c.status === "Ativa").length), icon: Target, path: "/campanhas" },
+    { label: "Saques Pendentes", value: String(saques.filter((s: any) => s.status === "Pendente").length), icon: DollarSign, path: "/saques" },
+    { label: "Sócios", value: String(socios.length), icon: Wallet, path: "/socios" },
+    { label: "Conteúdos", value: String(conteudos.length), icon: Megaphone, path: "/conteudo" },
   ];
 
   return (
@@ -65,6 +73,9 @@ export default function DashboardOperacional() {
                 { label: "Landing Pages", path: "/landing-pages" },
                 { label: "UTMs / SubIDs", path: "/utms" },
                 { label: "Templates de LP", path: "/lp-templates" },
+                { label: "Campanhas", path: "/campanhas" },
+                { label: "Conteúdo", path: "/conteudo" },
+                { label: "Saques", path: "/saques" },
               ].map((item) => (
                 <div
                   key={item.label}

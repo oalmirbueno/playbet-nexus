@@ -18,10 +18,10 @@ export default function Financeiro() {
   const loading = loadingCampanhas || loadingSocios || loadingSaques;
 
   const resumo = useMemo(() => {
-    const totalSaques = saques.reduce((acc, item) => acc + Number(item.valor || 0), 0);
-    const pendentes = saques.filter((item) => item.status === "Pendente");
-    const totalPendentes = pendentes.reduce((acc, item) => acc + Number(item.valor || 0), 0);
-    const totalDisponivelSocios = socios.reduce((acc, item) => acc + Number(item.disponivel || 0), 0);
+    const totalSaques = saques.reduce((acc: number, item: any) => acc + Number(item.valor || 0), 0);
+    const pendentes = saques.filter((item: any) => item.status === "Pendente");
+    const totalPendentes = pendentes.reduce((acc: number, item: any) => acc + Number(item.valor || 0), 0);
+    const totalDisponivelSocios = socios.reduce((acc: number, item: any) => acc + Number(item.disponivel || 0), 0);
 
     return {
       totalCampanhas: campanhas.length,
@@ -93,7 +93,7 @@ export default function Financeiro() {
                 { label: "Saques", path: "/saques" },
                 { label: "Sócios", path: "/socios" },
                 { label: "Regras Financeiras", path: "/regras" },
-                { label: "Pagamentos Asaas", path: "/asaas-pagamentos" },
+                { label: "Pagamentos Asaas", path: "/asaas" },
               ].map((item) => (
                 <div
                   key={item.label}
