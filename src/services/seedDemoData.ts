@@ -127,9 +127,9 @@ export async function seedDemoData() {
 
   // 11. Sócios
   const socios = [
-    { nome: "Ricardo Almeida", participacao: 40, ganhos: 68340, disponivel: 16200, ultimo_saque: "01/03/2026", status: "Ativo", is_demo: true },
-    { nome: "Fernanda Rocha", participacao: 35, ganhos: 59797, disponivel: 14175, ultimo_saque: "28/02/2026", status: "Ativo", is_demo: true },
-    { nome: "Lucas Martins", participacao: 25, ganhos: 42712, disponivel: 10125, ultimo_saque: "25/02/2026", status: "Ativo", is_demo: true },
+    { nome: "Ricardo Almeida", participacao: 40, ganhos: 683400, disponivel: 162000, ultimo_saque: "01/03/2026", status: "Ativo", is_demo: true },
+    { nome: "Fernanda Rocha", participacao: 35, ganhos: 597970, disponivel: 141750, ultimo_saque: "28/02/2026", status: "Ativo", is_demo: true },
+    { nome: "Lucas Martins", participacao: 25, ganhos: 427120, disponivel: 101250, ultimo_saque: "25/02/2026", status: "Ativo", is_demo: true },
   ];
   const { error: socErr } = await db.from("socios").insert(socios);
   if (socErr) throw socErr;
