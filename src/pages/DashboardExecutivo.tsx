@@ -74,13 +74,19 @@ export default function DashboardExecutivo() {
     return Object.entries(map).map(([name, value]) => ({ name, value }));
   }, [campanhas]);
 
+  const totalSaquesValor = useMemo(() => saques.reduce((a: number, s: any) => a + Number(s.valor || 0), 0), [saques]);
+  const totalGanhosSocios = useMemo(() => socios.reduce((a: number, s: any) => a + Number(s.ganhos || 0), 0), [socios]);
+  const totalDisponivelSocios = useMemo(() => socios.reduce((a: number, s: any) => a + Number(s.disponivel || 0), 0), [socios]);
+
+  const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
   const kpis = [
+    { label: "Receita Sócios", value: formatBRL(totalGanhosSocios), icon: DollarSign, path: "/socios" },
+    { label: "Saques Solicitados", value: formatBRL(totalSaquesValor), icon: Wallet, path: "/saques" },
+    { label: "Saldo Disponível", value: formatBRL(totalDisponivelSocios), icon: BarChart3, path: "/financeiro" },
     { label: "Influencers Ativos", value: String(influencers.filter((i: any) => i.is_active).length), icon: Users, path: "/influencers" },
-    { label: "Jogos Ativos", value: String(games.filter((g: any) => g.is_active).length), icon: Zap, path: "/jogos" },
-    { label: "Plataformas Ativas", value: String(platforms.filter((p: any) => p.is_active).length), icon: Target, path: "/plataformas" },
     { label: "Campanhas", value: String(campanhas.length), icon: Megaphone, path: "/campanhas" },
     { label: "Cliques Totais", value: String(clicks.length), icon: MousePointerClick, path: "/analytics" },
-    { label: "Sócios", value: String(socios.length), icon: Wallet, path: "/socios" },
   ];
 
   const chartConfig = {
