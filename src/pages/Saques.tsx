@@ -191,7 +191,7 @@ export default function Saques() {
           <DialogHeader><DialogTitle>
             {confirmAction?.action === "approve" ? "Aprovar Saque" : confirmAction?.action === "reject" ? "Recusar Saque" : confirmAction?.action === "process" ? "Processar Saque" : "Marcar como Pago"}
           </DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Confirmar ação para <strong>{confirmAction?.saque.nome}</strong> — R$ {Number(confirmAction?.saque.valor || 0).toLocaleString()}?</p>
+          <p className="text-sm text-muted-foreground">Confirmar ação para <strong>{confirmAction?.saque.nome}</strong> — {Number(confirmAction?.saque.valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}?</p>
           <DialogFooter>
             <button className="btn-ghost" onClick={() => setConfirmAction(null)}>Cancelar</button>
             <button className={`btn-primary ${confirmAction?.action === "reject" ? "bg-destructive hover:bg-destructive/90" : ""}`} onClick={handleAction}>Confirmar</button>
