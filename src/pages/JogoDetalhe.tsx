@@ -1,81 +1,70 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Gamepad2, DollarSign, Globe, Link2, Users, TrendingUp, FileText, BarChart3, MessageSquare } from "lucide-react";
-import { initialJogos, initialLinks, initialLandingPages, initialCampanhas, initialInfluencers, initialConteudos } from "@/data/mockData";
+import { ArrowLeft, Gamepad2, Globe, Users, TrendingUp, FileText, BarChart3, MessageSquare } from "lucide-react";
 import Breadcrumbs from "@/components/Breadcrumbs";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-
-const getTrend = (ctr: string) => {
-  const v = parseFloat(ctr);
-  if (v >= 12) return { label: "Trending", color: "text-success" };
-  if (v >= 8) return { label: "Estável", color: "text-accent" };
-  if (v >= 5) return { label: "Em Queda", color: "text-warning" };
-  return { label: "Crítico", color: "text-destructive" };
-};
+import { useGames, usePlatforms, useCampanhas, useInfluencers, useConteudo } from "@/hooks/useSupabaseQuery";
 
 export default function JogoDetalhe() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const jogo = initialJogos.find(j => j.id === Number(id));
   const [tab, setTab] = useState("resumo");
-  const [observacoes, setObservacoes] = useState("Jogo com alta performance. Priorizar em campanhas de março.");
+  const [observacoes, setObservacoes] = useState("");
 
-  if (!jogo) return <div className="p-8 text-center text-muted-foreground">Jogo não encontrado.</div>;
+  const { data: games, isLoading, update } = useGames();
+  const { data: platforms } = usePlatforms();
+  const { data: campanhas } = useCampanhas();
+  const { data: influencers } = useInfluencers();
+  const { data: conteudos } = useConteudo();
 
-  const jogoLinks = initialLinks.filter(l => l.jogo === jogo.nome);
-  const jogoLPs = initialLandingPages.filter(l => l.jogo === jogo.nome);
-  const jogoCampanhas = initialCampanhas.filter(c => c.jogo === jogo.nome || c.jogo === "Vários");
-  const jogoInfluencers = initialInfluencers.filter(inf => jogoLinks.some(l => l.influencer.includes(inf.nome.split(" ")[0])));
-  const jogoConteudos = initialConteudos.filter(c => c.jogo === jogo.nome || c.jogo === "Vários");
-  const plats = jogo.plats.split(", ").filter(Boolean);
-  const trend = getTrend(jogo.ctr);
+  const jogo = games.find((g: any) => g.id === id);
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+  }
+
+  if (!jogo) {
+    return (
+      <div className="space-y-6">
+        <Breadcrumbs items={[{ label: "Jogos", path: "/jogos" }, { label: "Não encontrado" }]} />
+        <button onClick={() => navigate("/jogos")} className="btn-ghost"><ArrowLeft size={14} /> Voltar</button>
+        <div className="glass-card p-12 text-center text-muted-foreground">
+          <p className="text-lg font-medium">Jogo não encontrado</p>
+          <p className="text-sm mt-2">O ID informado não corresponde a nenhum registro.</p>
+        </div>
+      </div>
+    );
+  }
+
+  const jogoCampanhas = campanhas.filter((c: any) => c.jogo?.toLowerCase().includes(jogo.name?.toLowerCase() || "---"));
+  const jogoConteudos = conteudos.filter((c: any) => c.jogo?.toLowerCase().includes(jogo.name?.toLowerCase() || "---"));
 
   const tabs = [
     { id: "resumo", label: "Resumo", icon: Gamepad2 },
-    { id: "plataformas", label: "Plataformas", icon: Globe },
-    { id: "lps", label: "Landing Pages", icon: FileText },
-    { id: "influencers", label: "Influencers", icon: Users },
     { id: "campanhas", label: "Campanhas", icon: TrendingUp },
-    { id: "links", label: "Links", icon: Link2 },
-    { id: "metricas", label: "Métricas", icon: BarChart3 },
     { id: "conteudo", label: "Conteúdo", icon: FileText },
     { id: "observacoes", label: "Observações", icon: MessageSquare },
   ];
 
-  const clickData = [
-    { dia: "27/02", cliques: Math.round(jogo.cliques * 0.08) },
-    { dia: "28/02", cliques: Math.round(jogo.cliques * 0.1) },
-    { dia: "01/03", cliques: Math.round(jogo.cliques * 0.14) },
-    { dia: "02/03", cliques: Math.round(jogo.cliques * 0.12) },
-    { dia: "03/03", cliques: Math.round(jogo.cliques * 0.16) },
-    { dia: "04/03", cliques: Math.round(jogo.cliques * 0.18) },
-    { dia: "05/03", cliques: Math.round(jogo.cliques * 0.22) },
-  ];
-
   return (
     <div className="space-y-8">
-      <Breadcrumbs items={[{ label: "Gestão de Ativos", path: "/jogos" }, { label: "Jogos", path: "/jogos" }, { label: jogo.nome }]} />
+      <Breadcrumbs items={[{ label: "Jogos", path: "/jogos" }, { label: jogo.name }]} />
       <button onClick={() => navigate("/jogos")} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"><ArrowLeft size={14} /> Voltar para Jogos</button>
 
       <div className="flex items-center gap-4">
-        <div className="w-14 h-14 rounded-xl bg-secondary flex items-center justify-center text-2xl font-bold text-foreground">{jogo.nome.charAt(0)}</div>
+        <div className="w-14 h-14 rounded-xl bg-secondary flex items-center justify-center text-2xl font-bold text-foreground">{jogo.name?.charAt(0)}</div>
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">{jogo.nome}
-            <span className="badge-neutral">{jogo.cat}</span>
-            <span className={jogo.status === "Ativo" ? "badge-success" : "badge-neutral"}>{jogo.status}</span>
-            <span className={`text-xs font-medium ${trend.color}`}>{trend.label}</span>
+          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">{jogo.name}
+            <span className="badge-neutral">{jogo.category || "Sem categoria"}</span>
+            <span className={jogo.is_active ? "badge-success" : "badge-neutral"}>{jogo.is_active ? "Ativo" : "Inativo"}</span>
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">{jogo.plats}</p>
+          <p className="text-sm text-muted-foreground mt-1">Trend: {jogo.trend_status || "—"}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-        <div className="glass-card p-5 border-l-2 border-l-accent"><span className="text-xs text-muted-foreground uppercase tracking-wider">Receita</span><p className="text-lg font-bold mt-1">R$ {jogo.receita.toLocaleString()}</p></div>
-        <div className="glass-card p-5 border-l-2 border-l-info"><span className="text-xs text-muted-foreground uppercase tracking-wider">Cliques</span><p className="text-lg font-bold mt-1">{jogo.cliques.toLocaleString()}</p></div>
-        <div className="glass-card p-5 border-l-2 border-l-success"><span className="text-xs text-muted-foreground uppercase tracking-wider">CTR</span><p className="text-lg font-bold mt-1">{jogo.ctr}</p></div>
-        <div className="glass-card p-5 border-l-2 border-l-primary"><span className="text-xs text-muted-foreground uppercase tracking-wider">Cadastros</span><p className="text-lg font-bold mt-1">{jogo.cadastros.toLocaleString()}</p></div>
-        <div className="glass-card p-5 border-l-2 border-l-warning"><span className="text-xs text-muted-foreground uppercase tracking-wider">Plataformas</span><p className="text-lg font-bold mt-1">{plats.length}</p></div>
-        <div className="glass-card p-5 border-l-2 border-l-primary"><span className="text-xs text-muted-foreground uppercase tracking-wider">Influencers</span><p className="text-lg font-bold mt-1">{jogoInfluencers.length}</p></div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div className="glass-card p-5 border-l-2 border-l-accent"><span className="text-xs text-muted-foreground uppercase tracking-wider">Campanhas</span><p className="text-lg font-bold mt-1">{jogoCampanhas.length}</p></div>
+        <div className="glass-card p-5 border-l-2 border-l-info"><span className="text-xs text-muted-foreground uppercase tracking-wider">Conteúdos</span><p className="text-lg font-bold mt-1">{jogoConteudos.length}</p></div>
+        <div className="glass-card p-5 border-l-2 border-l-success"><span className="text-xs text-muted-foreground uppercase tracking-wider">Trend</span><p className="text-lg font-bold mt-1">{jogo.trend_status || "—"}</p></div>
       </div>
 
       <div className="flex gap-1 overflow-x-auto pb-1">
@@ -87,85 +76,38 @@ export default function JogoDetalhe() {
       </div>
 
       {tab === "resumo" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="glass-card p-5 space-y-3">
-            <h3 className="section-title">Informações</h3>
-            <div className="grid grid-cols-2 gap-y-3 text-xs">
-              <div><span className="text-muted-foreground">Categoria</span><p className="font-medium">{jogo.cat}</p></div>
-              <div><span className="text-muted-foreground">LP Principal</span><p className="font-medium">{jogo.lp || "—"}</p></div>
-              <div><span className="text-muted-foreground">Plataformas</span><p className="font-medium">{jogo.plats}</p></div>
-              <div><span className="text-muted-foreground">Score</span><p className={`font-bold ${trend.color}`}>{trend.label}</p></div>
-            </div>
+        <div className="glass-card p-5 space-y-3">
+          <h3 className="section-title">Informações</h3>
+          <div className="grid grid-cols-2 gap-y-3 text-xs">
+            <div><span className="text-muted-foreground">Categoria</span><p className="font-medium">{jogo.category || "—"}</p></div>
+            <div><span className="text-muted-foreground">Trend Status</span><p className="font-medium">{jogo.trend_status || "—"}</p></div>
+            <div><span className="text-muted-foreground">Criado em</span><p className="font-medium">{jogo.created_at ? new Date(jogo.created_at).toLocaleDateString("pt-BR") : "—"}</p></div>
+            <div><span className="text-muted-foreground">Atualizado em</span><p className="font-medium">{jogo.updated_at ? new Date(jogo.updated_at).toLocaleDateString("pt-BR") : "—"}</p></div>
           </div>
-          <div className="glass-card p-5 space-y-3">
-            <h3 className="section-title">Top Influencer</h3>
-            {jogoInfluencers[0] ? (
-              <div className="text-xs space-y-1">
-                <p className="font-medium cursor-pointer hover:text-accent" onClick={() => navigate(`/influencers/${jogoInfluencers[0].id}`)}>{jogoInfluencers[0].nome}</p>
-                <p className="text-muted-foreground">Receita: R$ {jogoInfluencers[0].receita.toLocaleString()}</p>
-              </div>
-            ) : <p className="text-xs text-muted-foreground">Nenhum influencer vinculado.</p>}
-          </div>
-        </div>
-      )}
-
-      {tab === "plataformas" && (
-        <div className="glass-card overflow-x-auto invisible-scroll">
-          <table className="data-table"><thead><tr><th>Plataforma</th><th>Status</th></tr></thead>
-            <tbody>{plats.map((p, i) => <tr key={i}><td className="font-medium cursor-pointer hover:text-accent" onClick={() => navigate("/plataformas")}>{p}</td><td><span className="badge-success">Ativo</span></td></tr>)}</tbody>
-          </table>
-        </div>
-      )}
-
-      {tab === "lps" && (
-        <div className="glass-card overflow-x-auto invisible-scroll">
-          <table className="data-table"><thead><tr><th>Nome</th><th>Rota</th><th>Cliques</th><th>CTR</th><th>Status</th></tr></thead>
-            <tbody>{jogoLPs.map(l => <tr key={l.id}><td className="font-medium">{l.nome}</td><td className="font-mono text-xs text-accent">{l.rota}</td><td>{l.cliques.toLocaleString()}</td><td className="text-accent">{l.ctr}</td><td><span className={l.status === "Ativo" ? "badge-success" : "badge-warning"}>{l.status}</span></td></tr>)}</tbody>
-          </table>
-          {jogoLPs.length === 0 && <p className="text-xs text-muted-foreground text-center py-8">Nenhuma LP vinculada a este jogo.</p>}
-        </div>
-      )}
-
-      {tab === "influencers" && (
-        <div className="glass-card overflow-x-auto invisible-scroll">
-          <table className="data-table"><thead><tr><th>Nome</th><th>Instagram</th><th>Receita</th><th>Status</th></tr></thead>
-            <tbody>{jogoInfluencers.map(inf => <tr key={inf.id}><td className="font-medium cursor-pointer hover:text-accent" onClick={() => navigate(`/influencers/${inf.id}`)}>{inf.nome}</td><td className="text-accent text-xs">{inf.insta}</td><td>R$ {inf.receita.toLocaleString()}</td><td><span className={inf.status === "Ativo" ? "badge-success" : "badge-warning"}>{inf.status}</span></td></tr>)}</tbody>
-          </table>
         </div>
       )}
 
       {tab === "campanhas" && (
         <div className="glass-card overflow-x-auto invisible-scroll">
-          <table className="data-table"><thead><tr><th>Nome</th><th>Influencer</th><th>Período</th><th>Status</th><th>Resultado</th></tr></thead>
-            <tbody>{jogoCampanhas.map(c => <tr key={c.id}><td className="font-medium cursor-pointer hover:text-accent" onClick={() => navigate(`/campanhas/${c.id}`)}>{c.nome}</td><td>{c.influencer}</td><td className="text-xs">{c.inicio} - {c.fim}</td><td><span className={c.status === "Ativa" ? "badge-success" : c.status === "Planejada" ? "badge-info" : "badge-neutral"}>{c.status}</span></td><td className="text-xs">{c.resultado}</td></tr>)}</tbody>
-          </table>
-        </div>
-      )}
-
-      {tab === "links" && (
-        <div className="glass-card overflow-x-auto invisible-scroll">
-          <table className="data-table"><thead><tr><th>Nome</th><th>Plataforma</th><th>Influencer</th><th>Cliques</th><th>Status</th></tr></thead>
-            <tbody>{jogoLinks.map(l => <tr key={l.id}><td className="font-medium">{l.nome}</td><td>{l.plat}</td><td>{l.influencer}</td><td>{l.cliques.toLocaleString()}</td><td><span className={l.status === "Ativo" ? "badge-success" : "badge-danger"}>{l.status}</span></td></tr>)}</tbody>
-          </table>
-        </div>
-      )}
-
-      {tab === "metricas" && (
-        <div className="glass-card p-5">
-          <h3 className="section-title mb-4">Cliques por Dia</h3>
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={clickData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" /><XAxis dataKey="dia" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} /><YAxis tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} /><Tooltip /><Line type="monotone" dataKey="cliques" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} /></LineChart>
-            </ResponsiveContainer>
-          </div>
+          {jogoCampanhas.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-12">Nenhuma campanha vinculada a este jogo.</p>
+          ) : (
+            <table className="data-table"><thead><tr><th>Nome</th><th>Influencer</th><th>Período</th><th>Status</th></tr></thead>
+              <tbody>{jogoCampanhas.map((c: any) => <tr key={c.id} className="cursor-pointer hover:bg-secondary/30" onClick={() => navigate(`/campanhas/${c.id}`)}><td className="font-medium">{c.nome}</td><td>{c.influencer || "—"}</td><td className="text-xs">{c.inicio || "—"} - {c.fim || "—"}</td><td><span className={c.status === "Ativa" ? "badge-success" : c.status === "Planejada" ? "badge-info" : "badge-neutral"}>{c.status}</span></td></tr>)}</tbody>
+            </table>
+          )}
         </div>
       )}
 
       {tab === "conteudo" && (
         <div className="glass-card overflow-x-auto invisible-scroll">
-          <table className="data-table"><thead><tr><th>Tema</th><th>Tipo</th><th>Influencer</th><th>Campanha</th><th>Status</th><th>Data</th></tr></thead>
-            <tbody>{jogoConteudos.map(c => <tr key={c.id}><td className="font-medium">{c.tema}</td><td><span className="badge-neutral">{c.tipo}</span></td><td>{c.influencer}</td><td>{c.campanha}</td><td><span className={c.status === "Publicado" ? "badge-success" : c.status === "Agendado" ? "badge-info" : "badge-warning"}>{c.status}</span></td><td className="text-xs">{c.data}</td></tr>)}</tbody>
-          </table>
+          {jogoConteudos.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-12">Nenhum conteúdo vinculado a este jogo.</p>
+          ) : (
+            <table className="data-table"><thead><tr><th>Tema</th><th>Tipo</th><th>Influencer</th><th>Status</th><th>Data</th></tr></thead>
+              <tbody>{jogoConteudos.map((c: any) => <tr key={c.id}><td className="font-medium">{c.tema}</td><td><span className="badge-neutral">{c.tipo || "—"}</span></td><td>{c.influencer || "—"}</td><td><span className={c.status === "Publicado" ? "badge-success" : c.status === "Agendado" ? "badge-info" : "badge-warning"}>{c.status}</span></td><td className="text-xs">{c.data || "—"}</td></tr>)}</tbody>
+            </table>
+          )}
         </div>
       )}
 
