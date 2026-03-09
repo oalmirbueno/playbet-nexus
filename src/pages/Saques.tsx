@@ -58,7 +58,7 @@ export default function Saques() {
     if (action === "pay") { newStatus = "Pago via Asaas"; msg = "Marcado como pago"; }
     try {
       await update({ id: saque.id, updates: { status: newStatus, responsavel: "Admin" } });
-      toast({ title: msg, description: `${saque.nome} — R$ ${Number(saque.valor).toLocaleString()}` });
+      toast({ title: msg, description: `${saque.nome} — ${Number(saque.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` });
     } catch (e: any) {
       toast({ title: "Erro", description: e.message, variant: "destructive" });
     }
