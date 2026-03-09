@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import GlobalSearch from "@/components/GlobalSearch";
+import NotificationPanel from "@/components/NotificationPanel";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   LayoutDashboard, Activity, DollarSign, Wallet, PieChart, CreditCard,
@@ -217,10 +218,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </kbd>
           </div>
           <div className="ml-auto flex items-center gap-2.5">
-            <button className="relative p-2 rounded-md hover:bg-secondary/50 transition-colors text-muted-foreground hover:text-foreground">
-              <Bell size={15} />
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-destructive rounded-full" />
-            </button>
+            <NotificationPanel />
             <div className="h-4 w-px bg-border" />
             <div className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-secondary/30 transition-colors cursor-pointer">
               <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[11px] font-semibold">
