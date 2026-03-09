@@ -103,7 +103,7 @@ export default function Saques() {
                   <s.icon size={14} className="text-muted-foreground" />
                 </div>
                 <div className="text-xl font-bold">{s.value}</div>
-                <span className="text-xs text-muted-foreground">R$ {s.total.toLocaleString()}</span>
+                <span className="text-xs text-muted-foreground">{s.total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</span>
               </div>
             ))}
           </div>
