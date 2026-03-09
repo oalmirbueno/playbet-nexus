@@ -134,7 +134,7 @@ export default function Saques() {
                     <td className="font-mono text-xs text-muted-foreground">{s.codigo}</td>
                     <td className="font-medium">{s.nome}</td>
                     <td><span className={s.tipo === "Influencer" ? "badge-info" : "badge-primary"}>{s.tipo}</span></td>
-                    <td className="font-semibold">R$ {Number(s.valor).toLocaleString()}</td>
+                    <td className="font-semibold">{Number(s.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
                     <td className="font-mono text-xs">{s.conta}</td>
                     <td className="whitespace-nowrap text-xs">{s.data}</td>
                     <td><span className={statusBadge(s.status)}>{s.status}</span></td>
