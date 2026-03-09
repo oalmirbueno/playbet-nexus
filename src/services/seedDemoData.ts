@@ -136,12 +136,14 @@ export async function seedDemoData() {
 
   // 12. Saques
   const saques = [
-    { codigo: "SAQ-001", nome: "Rafael Mendes", tipo: "Influencer", valor: 8500, origem: "Comissão afiliado", data: "2026-03-05", conta: "PIX •••4521", status: "Pendente", responsavel: "—", is_demo: true },
-    { codigo: "SAQ-002", nome: "Ricardo Almeida", tipo: "Sócio", valor: 12000, origem: "Divisão societária", data: "2026-03-04", conta: "PIX •••8832", status: "Pendente", responsavel: "—", is_demo: true },
-    { codigo: "SAQ-003", nome: "Ana Souza", tipo: "Influencer", valor: 2800, origem: "Comissão afiliado", data: "2026-03-03", conta: "PIX •••1199", status: "Aprovado", responsavel: "Admin", is_demo: true },
-    { codigo: "SAQ-004", nome: "Fernanda Rocha", tipo: "Sócio", valor: 10500, origem: "Divisão societária", data: "2026-03-02", conta: "PIX •••7744", status: "Aprovado", responsavel: "Admin", is_demo: true },
-    { codigo: "SAQ-005", nome: "Pedro Lima", tipo: "Influencer", valor: 6100, origem: "Comissão afiliado", data: "2026-03-01", conta: "PIX •••2266", status: "Recusado", responsavel: "Admin", is_demo: true },
-    { codigo: "SAQ-006", nome: "Carlos Silva", tipo: "Influencer", valor: 3500, origem: "Comissão afiliado", data: "2026-02-28", conta: "PIX •••3388", status: "Aprovado", responsavel: "Admin", is_demo: true },
+    { codigo: "SAQ-001", nome: "Rafael Mendes", tipo: "Influencer", valor: 85000, origem: "Comissão afiliado", data: "2026-03-05", conta: "PIX •••4521", status: "Pendente", responsavel: "—", is_demo: true },
+    { codigo: "SAQ-002", nome: "Ricardo Almeida", tipo: "Sócio", valor: 120000, origem: "Divisão societária", data: "2026-03-04", conta: "PIX •••8832", status: "Pendente", responsavel: "—", is_demo: true },
+    { codigo: "SAQ-003", nome: "Ana Souza", tipo: "Influencer", valor: 28000, origem: "Comissão afiliado", data: "2026-03-03", conta: "PIX •••1199", status: "Aprovado", responsavel: "Admin", is_demo: true },
+    { codigo: "SAQ-004", nome: "Fernanda Rocha", tipo: "Sócio", valor: 105000, origem: "Divisão societária", data: "2026-03-02", conta: "PIX •••7744", status: "Aprovado", responsavel: "Admin", is_demo: true },
+    { codigo: "SAQ-005", nome: "Pedro Lima", tipo: "Influencer", valor: 61000, origem: "Comissão afiliado", data: "2026-03-01", conta: "PIX •••2266", status: "Recusado", responsavel: "Admin", is_demo: true },
+    { codigo: "SAQ-006", nome: "Carlos Silva", tipo: "Influencer", valor: 35000, origem: "Comissão afiliado", data: "2026-02-28", conta: "PIX •••3388", status: "Aprovado", responsavel: "Admin", is_demo: true },
+    { codigo: "SAQ-007", nome: "Marcos Oliveira", tipo: "Influencer", valor: 92000, origem: "Comissão afiliado", data: "2026-03-06", conta: "PIX •••5512", status: "Pendente", responsavel: "—", is_demo: true },
+    { codigo: "SAQ-008", nome: "Lucas Martins", tipo: "Sócio", valor: 78000, origem: "Divisão societária", data: "2026-03-07", conta: "PIX •••6643", status: "Aprovado", responsavel: "Admin", is_demo: true },
   ];
   const { error: saqErr } = await db.from("saques").insert(saques);
   if (saqErr) throw saqErr;
