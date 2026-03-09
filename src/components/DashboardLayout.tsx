@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import GlobalSearch from "@/components/GlobalSearch";
+import NotificationPanel from "@/components/NotificationPanel";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   LayoutDashboard, Activity, DollarSign, Wallet, PieChart, CreditCard,
