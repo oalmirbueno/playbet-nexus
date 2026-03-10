@@ -23,6 +23,11 @@ const ALLOWED_TABLES = [
   "game_platforms",
 ];
 
+const TABLE_ORDER_DEFAULTS: Record<string, string> = {
+  clicks: "clicked_at",
+  game_platforms: "game_id",
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
