@@ -23,6 +23,11 @@ const ALLOWED_TABLES = [
   "game_platforms",
 ];
 
+const TABLE_ORDER_DEFAULTS: Record<string, string> = {
+  clicks: "clicked_at",
+  game_platforms: "game_id",
+};
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -84,7 +89,7 @@ Deno.serve(async (req) => {
     url.searchParams.forEach((v, k) => { params[k] = v; });
     const limit = parseInt(params.limit || "100");
     const offset = parseInt(params.offset || "0");
-    const orderBy = params.order_by || "created_at";
+    const orderBy = params.order_by || TABLE_ORDER_DEFAULTS[table] || "created_at";
     const orderDir = params.order_dir === "asc" ? true : false;
 
     switch (method) {
