@@ -42,6 +42,7 @@ import Configuracoes from "./pages/Configuracoes";
 import RegrasFinanceiras from "./pages/RegrasFinanceiras";
 import Permissoes from "./pages/Permissoes";
 import Integracoes from "./pages/Integracoes";
+import DeveloperSettings from "./pages/DeveloperSettings";
 import NotFound from "./pages/NotFound";
 import InfluencerLanding from "./pages/InfluencerLanding";
 
@@ -98,6 +99,7 @@ function ProtectedRoutes() {
         <Route path="/regras" element={<RegrasFinanceiras />} />
         <Route path="/permissoes" element={<Permissoes />} />
         <Route path="/integracoes" element={<Integracoes />} />
+        <Route path="/developer" element={<DeveloperSettings />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </DashboardLayout>

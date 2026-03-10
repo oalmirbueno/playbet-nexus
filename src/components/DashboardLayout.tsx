@@ -8,7 +8,7 @@ import {
   Users, UserCheck, ShieldCheck, Gamepad2, Monitor, Link2, FileText, GitBranch,
   Calendar, PenTool, Lightbulb, Megaphone, BarChart3, ArrowRightLeft, Tag, ClipboardList,
   Settings, Scale, Lock, Plug, Menu, X, Bell, Search, ChevronDown, PanelLeftClose, PanelLeft,
-  Command, LogOut,
+  Command, LogOut, Code2,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 
@@ -79,6 +79,7 @@ const sections: MenuSection[] = [
       { label: "Regras Financeiras", icon: Scale, path: "/regras" },
       { label: "Permissões", icon: Lock, path: "/permissoes" },
       { label: "Integrações", icon: Plug, path: "/integracoes" },
+      { label: "Developer Settings", icon: Code2, path: "/developer" },
     ],
   },
 ];
