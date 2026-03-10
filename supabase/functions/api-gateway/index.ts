@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
     url.searchParams.forEach((v, k) => { params[k] = v; });
     const limit = parseInt(params.limit || "100");
     const offset = parseInt(params.offset || "0");
-    const orderBy = params.order_by || "created_at";
+    const orderBy = params.order_by || TABLE_ORDER_DEFAULTS[table] || "created_at";
     const orderDir = params.order_dir === "asc" ? true : false;
 
     switch (method) {
