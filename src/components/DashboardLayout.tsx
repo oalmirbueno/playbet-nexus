@@ -79,6 +79,7 @@ const sections: MenuSection[] = [
       { label: "Regras Financeiras", icon: Scale, path: "/regras" },
       { label: "Permissões", icon: Lock, path: "/permissoes" },
       { label: "Integrações", icon: Plug, path: "/integracoes" },
+      { label: "Developer Settings", icon: Code2, path: "/developer" },
     ],
   },
 ];

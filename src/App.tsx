@@ -99,6 +99,7 @@ function ProtectedRoutes() {
         <Route path="/regras" element={<RegrasFinanceiras />} />
         <Route path="/permissoes" element={<Permissoes />} />
         <Route path="/integracoes" element={<Integracoes />} />
+        <Route path="/developer" element={<DeveloperSettings />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </DashboardLayout>
