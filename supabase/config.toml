@@ -1,1 +1,4 @@
 project_id = "rcrrbznhatdqcmfyzgbt"
+
+[functions.api-gateway]
+verify_jwt = false
