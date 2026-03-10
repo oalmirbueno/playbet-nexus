@@ -9,36 +9,25 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import {
   Code2, Server, Shield, Key, Globe, FileText, Copy, Eye, EyeOff, Plus, Pencil, Trash2,
   CheckCircle2, AlertTriangle, Database, Lock, Zap, BookOpen, ChevronRight, ExternalLink,
-  Terminal, Loader2, RefreshCw,
+  Terminal, Loader2, RefreshCw, Rocket, Plug,
 } from "lucide-react";
 
 /* ─── types ─── */
 interface Integration {
-  id: string;
-  name: string;
-  base_url: string;
-  auth_type: string;
-  header_name: string;
-  api_key_encrypted: string;
-  description: string;
-  notes: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  id: string; name: string; base_url: string; auth_type: string; header_name: string;
+  api_key_encrypted: string; description: string; notes: string; is_active: boolean;
+  created_at: string; updated_at: string;
 }
-
 interface Endpoint {
-  id: string;
-  integration_id: string;
-  method: string;
-  path: string;
-  description: string;
-  request_example: string;
-  response_example: string;
-  is_active: boolean;
+  id: string; integration_id: string; method: string; path: string; description: string;
+  request_example: string; response_example: string; is_active: boolean;
+}
+interface ApiKeyRow {
+  id: string; name: string; key_prefix: string; is_active: boolean;
+  last_used_at: string | null; created_at: string;
 }
 
-type Tab = "overview" | "integrations" | "endpoints" | "docs";
+type Tab = "overview" | "integrations" | "endpoints" | "docs" | "openclaw";
 
 const METHOD_COLORS: Record<string, string> = {
   GET: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
@@ -53,6 +42,7 @@ const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: "integrations", label: "Integrações", icon: Globe },
   { key: "endpoints", label: "Endpoints", icon: Terminal },
   { key: "docs", label: "Documentação", icon: BookOpen },
+  { key: "openclaw", label: "OpenClaw / API", icon: Plug },
 ];
 
 /* ─── helpers ─── */
@@ -60,11 +50,19 @@ const copyToClipboard = (text: string) => {
   navigator.clipboard.writeText(text);
   toast({ title: "Copiado!", description: "Valor copiado para a área de transferência." });
 };
-
 const maskKey = (key: string) => {
   if (!key || key.length < 8) return "***";
   return key.slice(0, 6) + "•".repeat(Math.max(key.length - 10, 4)) + key.slice(-4);
 };
+
+const PROJECT_ID = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+const GATEWAY_URL = `https://${PROJECT_ID}.supabase.co/functions/v1/api-gateway`;
+
+const AVAILABLE_TABLES = [
+  "influencers", "games", "platforms", "templates", "landing_pages",
+  "landing_page_instances", "utms", "clicks", "campanhas", "socios",
+  "saques", "conteudo", "game_platforms",
+];
 
 /* ─── COMPONENT ─── */
 export default function DeveloperSettings() {
@@ -80,6 +78,12 @@ export default function DeveloperSettings() {
   const [editEp, setEditEp] = useState<Partial<Endpoint> | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // API keys state
+  const [apiKeys, setApiKeys] = useState<ApiKeyRow[]>([]);
+  const [generatedKey, setGeneratedKey] = useState<string | null>(null);
+  const [generatingKey, setGeneratingKey] = useState(false);
+  const [newKeyName, setNewKeyName] = useState("OpenClaw");
+
   const fetchData = async () => {
     setLoading(true);
     const [iRes, eRes] = await Promise.all([
@@ -88,10 +92,39 @@ export default function DeveloperSettings() {
     ]);
     if (iRes.data) setIntegrations(iRes.data as unknown as Integration[]);
     if (eRes.data) setEndpoints(eRes.data as unknown as Endpoint[]);
+    await fetchApiKeys();
     setLoading(false);
   };
 
+  const fetchApiKeys = async () => {
+    const { data } = await (supabase as any).from("api_keys").select("id, name, key_prefix, is_active, last_used_at, created_at").order("created_at", { ascending: false });
+    if (data) setApiKeys(data);
+  };
+
   useEffect(() => { fetchData(); }, []);
+
+  /* ── Generate API Key ── */
+  const generateApiKey = async () => {
+    setGeneratingKey(true);
+    try {
+      const { data, error } = await supabase.rpc("generate_api_key", { _name: newKeyName });
+      if (error) throw error;
+      const result = data as any;
+      setGeneratedKey(result.key);
+      toast({ title: "API Key gerada!", description: "Copie a chave agora — ela não será exibida novamente." });
+      await fetchApiKeys();
+    } catch (e: any) {
+      toast({ title: "Erro ao gerar chave", description: e.message, variant: "destructive" });
+    } finally {
+      setGeneratingKey(false);
+    }
+  };
+
+  const deactivateKey = async (id: string) => {
+    await (supabase as any).from("api_keys").update({ is_active: false }).eq("id", id);
+    toast({ title: "Chave desativada" });
+    fetchApiKeys();
+  };
 
   /* ── CRUD Integration ── */
   const saveIntegration = async () => {
@@ -169,18 +202,18 @@ export default function DeveloperSettings() {
     { name: "VITE_SUPABASE_PROJECT_ID", value: import.meta.env.VITE_SUPABASE_PROJECT_ID, desc: "ID do projeto backend" },
   ];
 
-  /* ── DB tables ── */
   const dbTables = [
     "influencers", "platforms", "games", "templates", "landing_pages", "landing_page_instances",
     "utms", "clicks", "campanhas", "conteudo", "socios", "saques", "profiles", "user_roles",
-    "game_platforms", "api_integrations", "api_endpoints",
+    "game_platforms", "api_integrations", "api_endpoints", "api_keys",
   ];
 
   const dbFunctions = [
     { name: "has_role(user_id, role)", desc: "Verifica se o usuário tem um papel específico" },
     { name: "is_admin(user_id)", desc: "Verifica se o usuário é admin_master ou socio" },
     { name: "handle_new_user()", desc: "Trigger: cria perfil e role ao registrar novo usuário" },
-    { name: "update_updated_at_column()", desc: "Trigger: atualiza campo updated_at automaticamente" },
+    { name: "generate_api_key(name)", desc: "Gera uma API key segura (hash SHA-256)" },
+    { name: "validate_api_key(key)", desc: "Valida uma API key no gateway" },
   ];
 
   if (loading) return (
@@ -205,14 +238,261 @@ export default function DeveloperSettings() {
         ))}
       </div>
 
+      {/* ═══════ OPENCLAW / API TAB ═══════ */}
+      {tab === "openclaw" && (
+        <div className="space-y-4 animate-fade-in">
+          {/* Hero */}
+          <div className="glass-card p-6 border-primary/20">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Rocket size={20} className="text-primary" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base">API Gateway PlayBet</h3>
+                <p className="text-xs text-muted-foreground">Tudo pronto para conectar no OpenClaw ou qualquer sistema externo</p>
+              </div>
+            </div>
+
+            {/* Step 1: Generate Key */}
+            <div className="space-y-4">
+              <div className="glass-card-elevated p-4 rounded-xl">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">1</span>
+                  <p className="text-sm font-semibold">Gerar sua API Key</p>
+                </div>
+                
+                {generatedKey ? (
+                  <div className="space-y-2">
+                    <div className="bg-success/10 border border-success/30 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <CheckCircle2 size={14} className="text-success" />
+                        <p className="text-xs font-semibold text-success">Chave gerada com sucesso!</p>
+                      </div>
+                      <p className="text-[10px] text-warning">⚠️ Copie agora — esta chave NÃO será exibida novamente.</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-xs font-mono bg-secondary/50 px-3 py-2 rounded border border-border-subtle break-all">
+                        {generatedKey}
+                      </code>
+                      <Button size="sm" variant="outline" onClick={() => copyToClipboard(generatedKey)}>
+                        <Copy size={12} /> Copiar
+                      </Button>
+                    </div>
+                    <Button size="sm" variant="ghost" onClick={() => setGeneratedKey(null)} className="text-xs">
+                      Fechar e gerar outra
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={newKeyName}
+                      onChange={(e) => setNewKeyName(e.target.value)}
+                      placeholder="Nome da chave (ex: OpenClaw)"
+                      className="max-w-[200px]"
+                    />
+                    <Button size="sm" onClick={generateApiKey} disabled={generatingKey}>
+                      {generatingKey ? <Loader2 size={13} className="animate-spin" /> : <Key size={13} />}
+                      Gerar API Key
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Step 2: Config for OpenClaw */}
+              <div className="glass-card-elevated p-4 rounded-xl">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">2</span>
+                  <p className="text-sm font-semibold">Configuração para OpenClaw</p>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">Copie os valores abaixo e cole no OpenClaw ao criar sua integração:</p>
+
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Base URL</p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-xs font-mono bg-secondary/50 px-3 py-2 rounded border border-border-subtle break-all">
+                        {GATEWAY_URL}
+                      </code>
+                      <button onClick={() => copyToClipboard(GATEWAY_URL)} className="btn-ghost p-1.5 shrink-0"><Copy size={12} /></button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Header de Autenticação</p>
+                    <div className="flex items-center gap-2">
+                      <code className="text-xs font-mono bg-secondary/50 px-3 py-2 rounded border border-border-subtle">
+                        X-API-Key: {"<sua_chave_gerada_acima>"}
+                      </code>
+                      <button onClick={() => copyToClipboard("X-API-Key")} className="btn-ghost p-1.5 shrink-0"><Copy size={12} /></button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Método de Autenticação</p>
+                    <code className="text-xs font-mono bg-secondary/50 px-3 py-2 rounded border border-border-subtle block">
+                      API Key (Header)
+                    </code>
+                  </div>
+                </div>
+              </div>
+
+              {/* Step 3: Endpoints */}
+              <div className="glass-card-elevated p-4 rounded-xl">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">3</span>
+                  <p className="text-sm font-semibold">Endpoints Disponíveis</p>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">Todos os endpoints seguem o padrão: <code className="font-mono text-primary">{GATEWAY_URL}/{"<tabela>"}</code></p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {AVAILABLE_TABLES.map((t) => (
+                    <div key={t} className="flex items-center justify-between bg-secondary/30 px-3 py-2 rounded-lg border border-border-subtle">
+                      <span className="text-xs font-mono">{t}</span>
+                      <button onClick={() => copyToClipboard(`${GATEWAY_URL}/${t}`)} className="btn-ghost p-0.5"><Copy size={10} /></button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Step 4: Examples */}
+              <div className="glass-card-elevated p-4 rounded-xl">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">4</span>
+                  <p className="text-sm font-semibold">Exemplos Prontos</p>
+                </div>
+
+                <div className="space-y-3">
+                  {[
+                    {
+                      title: "Listar todos os influencers",
+                      method: "GET",
+                      code: `curl -X GET '${GATEWAY_URL}/influencers' \\\n  -H "X-API-Key: <SUA_API_KEY>"`,
+                    },
+                    {
+                      title: "Buscar influencer por ID",
+                      method: "GET",
+                      code: `curl -X GET '${GATEWAY_URL}/influencers/<ID>' \\\n  -H "X-API-Key: <SUA_API_KEY>"`,
+                    },
+                    {
+                      title: "Criar um novo jogo",
+                      method: "POST",
+                      code: `curl -X POST '${GATEWAY_URL}/games' \\\n  -H "X-API-Key: <SUA_API_KEY>" \\\n  -H "Content-Type: application/json" \\\n  -d '{"name": "Fortune Tiger", "category": "Slots", "is_active": true}'`,
+                    },
+                    {
+                      title: "Atualizar campanha",
+                      method: "PUT",
+                      code: `curl -X PUT '${GATEWAY_URL}/campanhas/<ID>' \\\n  -H "X-API-Key: <SUA_API_KEY>" \\\n  -H "Content-Type: application/json" \\\n  -d '{"status": "Ativa", "resultado": "Em andamento"}'`,
+                    },
+                    {
+                      title: "Deletar registro",
+                      method: "DELETE",
+                      code: `curl -X DELETE '${GATEWAY_URL}/saques/<ID>' \\\n  -H "X-API-Key: <SUA_API_KEY>"`,
+                    },
+                    {
+                      title: "Filtrar com query params",
+                      method: "GET",
+                      code: `curl -X GET '${GATEWAY_URL}/influencers?is_active=true&limit=10&order_by=name&order_dir=asc' \\\n  -H "X-API-Key: <SUA_API_KEY>"`,
+                    },
+                  ].map((ex) => (
+                    <div key={ex.title}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${METHOD_COLORS[ex.method]}`}>{ex.method}</span>
+                          <p className="text-xs font-semibold">{ex.title}</p>
+                        </div>
+                        <button onClick={() => copyToClipboard(ex.code)} className="btn-ghost p-0.5"><Copy size={10} /></button>
+                      </div>
+                      <pre className="bg-secondary/50 p-3 rounded-lg text-[11px] font-mono overflow-x-auto whitespace-pre-wrap border border-border-subtle">{ex.code}</pre>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Step 5: Response format */}
+              <div className="glass-card-elevated p-4 rounded-xl">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">5</span>
+                  <p className="text-sm font-semibold">Formato das Respostas</p>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs font-semibold mb-1">GET (lista)</p>
+                    <pre className="bg-secondary/50 p-3 rounded-lg text-[11px] font-mono border border-border-subtle whitespace-pre-wrap">{`{
+  "data": [
+    { "id": "uuid", "name": "...", ... }
+  ],
+  "total": 42,
+  "limit": 100,
+  "offset": 0
+}`}</pre>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold mb-1">GET (por ID)</p>
+                    <pre className="bg-secondary/50 p-3 rounded-lg text-[11px] font-mono border border-border-subtle whitespace-pre-wrap">{`{
+  "id": "uuid",
+  "name": "...",
+  "is_active": true,
+  "created_at": "2026-03-10T...",
+  ...
+}`}</pre>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold mb-1">Erro</p>
+                    <pre className="bg-secondary/50 p-3 rounded-lg text-[11px] font-mono border border-border-subtle whitespace-pre-wrap">{`{
+  "error": "Invalid API key"
+}`}</pre>
+                  </div>
+                </div>
+              </div>
+
+              {/* Managed keys */}
+              <div className="glass-card-elevated p-4 rounded-xl">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-semibold flex items-center gap-2"><Key size={14} /> Chaves Ativas</p>
+                  <Button size="sm" variant="ghost" onClick={fetchApiKeys}><RefreshCw size={12} /></Button>
+                </div>
+                {apiKeys.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Nenhuma chave gerada ainda. Clique em "Gerar API Key" acima.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {apiKeys.map((k) => (
+                      <div key={k.id} className="flex items-center justify-between bg-secondary/30 px-3 py-2 rounded-lg border border-border-subtle">
+                        <div>
+                          <p className="text-xs font-semibold">{k.name}</p>
+                          <p className="text-[10px] font-mono text-muted-foreground">{k.key_prefix}•••••••</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            Criada: {new Date(k.created_at).toLocaleDateString("pt-BR")}
+                            {k.last_used_at && ` | Último uso: ${new Date(k.last_used_at).toLocaleDateString("pt-BR")}`}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full ${k.is_active ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+                            {k.is_active ? "Ativa" : "Desativada"}
+                          </span>
+                          {k.is_active && (
+                            <Button size="sm" variant="ghost" onClick={() => deactivateKey(k.id)} className="text-destructive text-[10px] h-6 px-2">
+                              Desativar
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ═══════ OVERVIEW ═══════ */}
       {tab === "overview" && (
         <div className="space-y-4 animate-fade-in">
-          {/* Summary cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="glass-card p-4">
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1"><Server size={13} /> Backend</div>
-              <p className="font-semibold text-sm">Lovable Cloud (Supabase)</p>
+              <p className="font-semibold text-sm">Lovable Cloud</p>
             </div>
             <div className="glass-card p-4">
               <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1"><Shield size={13} /> Autenticação</div>
@@ -223,24 +503,23 @@ export default function DeveloperSettings() {
               <p className="font-semibold text-sm">{dbTables.length} tabelas públicas</p>
             </div>
             <div className="glass-card p-4">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1"><Zap size={13} /> Endpoints</div>
-              <p className="font-semibold text-sm">{endpoints.length} documentados</p>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1"><Zap size={13} /> API Keys</div>
+              <p className="font-semibold text-sm">{apiKeys.filter(k => k.is_active).length} ativas</p>
             </div>
           </div>
 
-          {/* Architecture */}
           <div className="glass-card p-5">
             <h3 className="section-title">Arquitetura do Backend</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <p className="text-xs text-muted-foreground mb-2">Estrutura</p>
                 <ul className="space-y-1.5 text-sm">
-                  <li className="flex items-center gap-2"><CheckCircle2 size={12} className="text-success shrink-0" /> Banco PostgreSQL gerenciado (Lovable Cloud)</li>
+                  <li className="flex items-center gap-2"><CheckCircle2 size={12} className="text-success shrink-0" /> Banco PostgreSQL gerenciado</li>
                   <li className="flex items-center gap-2"><CheckCircle2 size={12} className="text-success shrink-0" /> API REST automática (PostgREST)</li>
+                  <li className="flex items-center gap-2"><CheckCircle2 size={12} className="text-success shrink-0" /> API Gateway com X-API-Key</li>
                   <li className="flex items-center gap-2"><CheckCircle2 size={12} className="text-success shrink-0" /> Autenticação JWT (GoTrue)</li>
                   <li className="flex items-center gap-2"><CheckCircle2 size={12} className="text-success shrink-0" /> Row Level Security em todas as tabelas</li>
                   <li className="flex items-center gap-2"><CheckCircle2 size={12} className="text-success shrink-0" /> Edge Functions (Deno runtime)</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 size={12} className="text-success shrink-0" /> Realtime via WebSocket</li>
                 </ul>
               </div>
               <div>
@@ -260,7 +539,6 @@ export default function DeveloperSettings() {
             </div>
           </div>
 
-          {/* Tables & Functions */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <div className="glass-card p-5">
               <h3 className="section-title flex items-center gap-2"><Database size={14} /> Tabelas do Banco</h3>
@@ -283,7 +561,6 @@ export default function DeveloperSettings() {
             </div>
           </div>
 
-          {/* Auth flow */}
           <div className="glass-card p-5">
             <h3 className="section-title flex items-center gap-2"><Shield size={14} /> Fluxo de Autenticação</h3>
             <div className="flex flex-wrap items-center gap-2 mt-3 text-xs">
@@ -436,108 +713,59 @@ export default function DeveloperSettings() {
       {/* ═══════ DOCS ═══════ */}
       {tab === "docs" && (
         <div className="space-y-4 animate-fade-in">
-          {/* Quick start */}
           <div className="glass-card p-5">
-            <h3 className="section-title flex items-center gap-2"><BookOpen size={14} /> Quick Start — API PlayBet</h3>
+            <h3 className="section-title flex items-center gap-2"><BookOpen size={14} /> Quick Start — API Gateway</h3>
             <div className="mt-3 space-y-4">
               <div>
-                <p className="text-xs font-semibold mb-1">1. Base URL</p>
+                <p className="text-xs font-semibold mb-1">1. Base URL do Gateway</p>
                 <div className="flex items-center gap-2">
                   <code className="text-xs font-mono bg-secondary/50 px-3 py-1.5 rounded border border-border-subtle">
-                    {import.meta.env.VITE_SUPABASE_URL}/rest/v1
+                    {GATEWAY_URL}
                   </code>
-                  <button onClick={() => copyToClipboard(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1`)} className="btn-ghost p-1"><Copy size={12} /></button>
+                  <button onClick={() => copyToClipboard(GATEWAY_URL)} className="btn-ghost p-1"><Copy size={12} /></button>
                 </div>
               </div>
               <div>
                 <p className="text-xs font-semibold mb-1">2. Autenticação</p>
-                <p className="text-xs text-muted-foreground mb-2">Toda requisição exige dois headers:</p>
-                <pre className="bg-secondary/50 p-3 rounded-lg text-[11px] font-mono border border-border-subtle whitespace-pre-wrap">{`apikey: <SUPABASE_ANON_KEY>
-Authorization: Bearer <JWT_ACCESS_TOKEN>`}</pre>
-                <p className="text-[10px] text-muted-foreground mt-1.5">O JWT é obtido via login (POST /auth/v1/token?grant_type=password).</p>
+                <p className="text-xs text-muted-foreground mb-2">Use o header X-API-Key com a chave gerada na aba "OpenClaw / API":</p>
+                <pre className="bg-secondary/50 p-3 rounded-lg text-[11px] font-mono border border-border-subtle whitespace-pre-wrap">{`X-API-Key: pb_live_xxxxxxxxxxxxxxxxxxxxxxxx`}</pre>
               </div>
               <div>
-                <p className="text-xs font-semibold mb-1">3. Exemplo Completo — Listar Influencers</p>
-                <pre className="bg-secondary/50 p-3 rounded-lg text-[11px] font-mono border border-border-subtle whitespace-pre-wrap">{`curl -X GET '${import.meta.env.VITE_SUPABASE_URL}/rest/v1/influencers?is_active=eq.true' \\
-  -H "apikey: <ANON_KEY>" \\
-  -H "Authorization: Bearer <JWT_TOKEN>" \\
-  -H "Content-Type: application/json"`}</pre>
-              </div>
-              <div>
-                <p className="text-xs font-semibold mb-1">4. Response de Exemplo</p>
-                <pre className="bg-secondary/50 p-3 rounded-lg text-[11px] font-mono border border-border-subtle whitespace-pre-wrap">{`[
-  {
-    "id": "uuid",
-    "name": "João Silva",
-    "slug": "joao-silva",
-    "commission_percent": 15,
-    "is_active": true,
-    "followers": 50000,
-    "instagram": "@joao"
-  }
-]`}</pre>
+                <p className="text-xs font-semibold mb-1">3. Exemplo — Listar Influencers</p>
+                <pre className="bg-secondary/50 p-3 rounded-lg text-[11px] font-mono border border-border-subtle whitespace-pre-wrap">{`curl -X GET '${GATEWAY_URL}/influencers' \\
+  -H "X-API-Key: pb_live_sua_chave_aqui"`}</pre>
               </div>
             </div>
           </div>
 
-          {/* Security notes */}
           <div className="glass-card p-5">
             <h3 className="section-title flex items-center gap-2"><Shield size={14} /> Segurança</h3>
             <div className="space-y-2 mt-3">
               {[
-                "Todas as tabelas usam Row Level Security (RLS) — nenhum dado é acessível sem autenticação válida.",
-                "A chave anon (apikey) é pública e segura — ela só permite acesso conforme as políticas RLS.",
-                "Operações de escrita (INSERT/UPDATE/DELETE) exigem role admin_master ou socio.",
-                "Operações de leitura (SELECT) são permitidas a qualquer usuário autenticado.",
-                "Tokens JWT expiram em 1 hora e são renovados automaticamente pelo client SDK.",
-                "Nunca exponha o service_role_key — ela bypassa RLS e tem acesso total.",
+                "O Gateway usa service_role internamente — a API Key controla o acesso externo.",
+                "Chaves são armazenadas com hash SHA-256 — nunca em texto puro.",
+                "Você pode desativar chaves a qualquer momento na aba OpenClaw / API.",
+                "Cada uso de chave registra o timestamp de último acesso.",
+                "Apenas tabelas da whitelist são acessíveis via Gateway.",
               ].map((note, i) => (
                 <div key={i} className="flex items-start gap-2">
-                  <AlertTriangle size={11} className="text-warning mt-0.5 shrink-0" />
+                  <CheckCircle2 size={11} className="text-success mt-0.5 shrink-0" />
                   <p className="text-xs text-muted-foreground">{note}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Integrating external systems */}
           <div className="glass-card p-5">
-            <h3 className="section-title flex items-center gap-2"><ExternalLink size={14} /> Integrando Sistemas Externos</h3>
-            <div className="space-y-3 mt-3">
-              <div className="glass-card-elevated p-3 rounded-lg">
-                <p className="text-xs font-semibold">Via REST API Direta</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Use qualquer cliente HTTP (curl, Postman, n8n, Python requests) com os headers de autenticação.</p>
-              </div>
-              <div className="glass-card-elevated p-3 rounded-lg">
-                <p className="text-xs font-semibold">Via SDK JavaScript/TypeScript</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
-                  Use <code className="font-mono text-primary">@supabase/supabase-js</code> com a URL e chave anon para integração nativa.
-                </p>
-              </div>
-              <div className="glass-card-elevated p-3 rounded-lg">
-                <p className="text-xs font-semibold">Via Edge Functions</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Crie funções serverless em Deno para lógica customizada, webhooks e integrações com APIs de terceiros.</p>
-              </div>
-              <div className="glass-card-elevated p-3 rounded-lg">
-                <p className="text-xs font-semibold">Via Realtime (WebSocket)</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Assine mudanças em tempo real nas tabelas usando canais WebSocket para dashboards ao vivo.</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Filtros PostgREST */}
-          <div className="glass-card p-5">
-            <h3 className="section-title flex items-center gap-2"><Terminal size={14} /> Filtros PostgREST</h3>
+            <h3 className="section-title flex items-center gap-2"><Terminal size={14} /> Filtros Disponíveis</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
               {[
-                { filter: "eq", desc: "Igual", ex: "?status=eq.Ativa" },
-                { filter: "neq", desc: "Diferente", ex: "?status=neq.Inativa" },
-                { filter: "gt / lt", desc: "Maior / Menor", ex: "?valor=gt.100" },
-                { filter: "gte / lte", desc: "Maior ou igual / Menor ou igual", ex: "?participacao=gte.20" },
-                { filter: "like", desc: "Contém (case sensitive)", ex: "?name=like.*silva*" },
-                { filter: "ilike", desc: "Contém (case insensitive)", ex: "?name=ilike.*silva*" },
-                { filter: "in", desc: "Lista de valores", ex: "?status=in.(Ativa,Pausada)" },
-                { filter: "order", desc: "Ordenação", ex: "?order=created_at.desc" },
+                { filter: "limit", desc: "Limite de resultados", ex: "?limit=10" },
+                { filter: "offset", desc: "Paginação", ex: "?offset=20" },
+                { filter: "order_by", desc: "Ordenar por campo", ex: "?order_by=name" },
+                { filter: "order_dir", desc: "Direção", ex: "?order_dir=asc" },
+                { filter: "campo=valor", desc: "Filtro exato", ex: "?is_active=true" },
+                { filter: "/{id}", desc: "Buscar por ID", ex: "/influencers/uuid-aqui" },
               ].map((f) => (
                 <div key={f.filter} className="glass-card-elevated p-2.5 rounded-lg">
                   <p className="text-xs"><span className="font-mono text-primary font-bold">{f.filter}</span> — {f.desc}</p>
