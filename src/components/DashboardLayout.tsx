@@ -8,7 +8,7 @@ import {
   Users, UserCheck, ShieldCheck, Gamepad2, Monitor, Link2, FileText, GitBranch,
   Calendar, PenTool, Lightbulb, Megaphone, BarChart3, ArrowRightLeft, Tag, ClipboardList,
   Settings, Scale, Lock, Plug, Menu, X, Bell, Search, ChevronDown, PanelLeftClose, PanelLeft,
-  Command, LogOut,
+  Command, LogOut, Code2,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 
