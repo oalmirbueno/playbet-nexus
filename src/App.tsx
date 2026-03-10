@@ -42,6 +42,7 @@ import Configuracoes from "./pages/Configuracoes";
 import RegrasFinanceiras from "./pages/RegrasFinanceiras";
 import Permissoes from "./pages/Permissoes";
 import Integracoes from "./pages/Integracoes";
+import DeveloperSettings from "./pages/DeveloperSettings";
 import NotFound from "./pages/NotFound";
 import InfluencerLanding from "./pages/InfluencerLanding";
 
