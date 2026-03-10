@@ -14,6 +14,95 @@ export type Database = {
   }
   public: {
     Tables: {
+      api_endpoints: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          integration_id: string
+          is_active: boolean
+          method: string
+          path: string
+          request_example: string | null
+          response_example: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          integration_id: string
+          is_active?: boolean
+          method?: string
+          path: string
+          request_example?: string | null
+          response_example?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          integration_id?: string
+          is_active?: boolean
+          method?: string
+          path?: string
+          request_example?: string | null
+          response_example?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_endpoints_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "api_integrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_integrations: {
+        Row: {
+          api_key_encrypted: string | null
+          auth_type: string
+          base_url: string
+          created_at: string
+          description: string | null
+          header_name: string
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          api_key_encrypted?: string | null
+          auth_type?: string
+          base_url?: string
+          created_at?: string
+          description?: string | null
+          header_name?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          api_key_encrypted?: string | null
+          auth_type?: string
+          base_url?: string
+          created_at?: string
+          description?: string | null
+          header_name?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       campanhas: {
         Row: {
           created_at: string | null
