@@ -226,7 +226,7 @@ export default function TrackingDashboard() {
     { label: "Redepósitos", value: fmtNum(effectiveKpis.redepositos), icon: ArrowRightLeft, color: "text-chart-4" },
     { label: "Depósitos Total", value: fmt(effectiveKpis.depositos), icon: DollarSign, color: "text-chart-5" },
     { label: "Revenue", value: fmt(effectiveKpis.revenue), icon: TrendingUp, color: "text-primary" },
-    { label: "Saque Disponível", value: fmt(effectiveKpis.saque), icon: Wallet, color: "text-chart-2" },
+    { label: "Saque Disponível", value: effectiveKpis.saque > 0 ? fmt(effectiveKpis.saque) : "—", icon: Wallet, color: "text-chart-2" },
     { label: "Lucro", value: fmt(effectiveKpis.lucro), icon: Activity, color: effectiveKpis.lucro >= 0 ? "text-green-500" : "text-destructive" },
     { label: "ROI", value: effectiveKpis.roi.toFixed(1) + "%", icon: Activity, color: effectiveKpis.roi >= 0 ? "text-green-500" : "text-destructive" },
   ];
