@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Copy, Check, AlertTriangle, Info } from "lucide-react";
+import { Copy, Check, AlertTriangle, Info, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { TrackingLinkRow } from "@/services/trackingService";
@@ -25,7 +25,7 @@ interface Props {
   platforms: any[];
 }
 
-function CopyBlock({ label, value, help, warn }: { label: string; value: string; help?: string; warn?: string }) {
+function CopyBlock({ label, value, help, warn, primary }: { label: string; value: string; help?: string; warn?: string; primary?: boolean }) {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
@@ -38,11 +38,15 @@ function CopyBlock({ label, value, help, warn }: { label: string; value: string;
   };
 
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-muted-foreground">{label}</p>
+    <div className={`space-y-1 ${primary ? "border border-primary/30 bg-primary/5 rounded-lg p-3" : ""}`}>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          {primary && <CheckCircle2 size={12} className="text-primary shrink-0" />}
+          <p className={`text-xs font-medium ${primary ? "text-primary" : "text-muted-foreground"}`}>{label}</p>
+          {primary && <Badge className="text-[8px] h-3.5 bg-primary/20 text-primary border-0">PRINCIPAL</Badge>}
+        </div>
         {value && (
-          <Button variant="outline" size="sm" className="h-6 text-[10px] px-2" onClick={copy}>
+          <Button variant="outline" size="sm" className="h-6 text-[10px] px-2 shrink-0" onClick={copy}>
             {copied ? <Check size={10} className="mr-1 text-green-500" /> : <Copy size={10} className="mr-1" />}
             Copiar
           </Button>
@@ -70,17 +74,20 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
   const lp = (landingPages as any[]).find((l: any) => l.id === link.landing_page_id);
   const instance = lpInstances.find((i: any) => i.id === link.landing_page_instance_id);
   const instanceAffiliateLink = instance?.affiliate_link || "";
+  const hasInstanceLink = !!instanceAffiliateLink;
   const trackingRole = (link as any).tracking_role || "influencer";
   const roleInfo = ROLE_LABELS[trackingRole] || ROLE_LABELS.influencer;
 
-  // Divergence detection
-  const hasDivergence = instanceAffiliateLink && link.base_url && instanceAffiliateLink !== link.base_url;
+  const hasDivergence = hasInstanceLink && link.base_url && instanceAffiliateLink !== link.base_url;
+
+  // The "primary" link is the instance link if it exists, otherwise base_url
+  const primaryLink = hasInstanceLink ? instanceAffiliateLink : (link.base_url || "");
 
   const buildFinalUrl = () => {
     if (link.final_url) return link.final_url;
-    if (!link.base_url) return "";
-    const sep = link.base_url.includes("?") ? "&" : "?";
-    return `${link.base_url}${sep}${link.click_id_param_name || "sub1"}={click_id}`;
+    if (!primaryLink) return "";
+    const sep = primaryLink.includes("?") ? "&" : "?";
+    return `${primaryLink}${sep}${link.click_id_param_name || "sub1"}={click_id}`;
   };
 
   const buildPostbackUrl = () => {
@@ -91,8 +98,7 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
   const missingFields: string[] = [];
   if (!link.platform_account_id) missingFields.push("Conta");
   if (!link.influencer_id) missingFields.push("Influencer");
-  if (!link.base_url) missingFields.push("Link bruto");
-  if (!link.landing_page_id) missingFields.push("LP");
+  if (!primaryLink) missingFields.push("Link operacional");
 
   return (
     <Dialog open={!!link} onOpenChange={() => onClose()}>
@@ -112,26 +118,13 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
           </div>
         )}
 
-        {hasDivergence && (
-          <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-700 rounded-md px-3 py-2 text-xs">
-            <AlertTriangle size={14} className="shrink-0 mt-0.5" />
-            <div>
-              <strong>Divergência detectada:</strong> O link bruto do tracking está diferente do link de afiliado distribuído na LP.
-              <div className="font-mono mt-1 text-[10px]">
-                LP: {instanceAffiliateLink}<br />
-                Tracking: {link.base_url}
-              </div>
-            </div>
-          </div>
-        )}
-
         {trackingRole === "socio" && (
           <div className="text-xs bg-primary/10 text-primary rounded-md px-3 py-2">
             ℹ️ Vínculo de <strong>sócio(a)</strong> — tracking ativo, mas sem débito/comissão de influenciador na regra financeira.
           </div>
         )}
 
-        {/* Vínculos operacionais */}
+        {/* Operational bindings */}
         <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm border rounded-lg p-3 bg-muted/30">
           <div><span className="text-muted-foreground text-xs">Plataforma:</span> <span className="font-medium text-xs">{platform?.name || "—"}</span></div>
           <div><span className="text-muted-foreground text-xs">Conta:</span> <span className="font-medium text-xs">{account?.nome_conta || "—"}</span></div>
@@ -143,33 +136,46 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
           <div><span className="text-muted-foreground text-xs">Status:</span> <Badge variant={link.status === "active" ? "default" : "secondary"} className="text-[10px] ml-1">{link.status || "active"}</Badge></div>
         </div>
 
-        {/* Copy blocks */}
+        {/* Copy blocks — ordered by operational priority */}
         <div className="space-y-3">
           <CopyBlock
             label="Código interno de tracking"
             value={link.tracking_code}
             help="Identificador único gerado pelo painel. Usado nos SUBIDs para rastrear conversões."
           />
-          {instanceAffiliateLink && (
+
+          {/* Primary: instance link if exists */}
+          {hasInstanceLink && (
             <CopyBlock
-              label="Link atualmente distribuído na LP"
+              label={`Link em uso na LP (/${instance?.slug})`}
               value={instanceAffiliateLink}
-              help={`Este é o link que está na instância /${instance?.slug}. Se o tracking deve usar o mesmo link, mantenha o "Link bruto" igual.`}
+              primary
+              help="Este é o link principal em operação. O tracking é feito sobre ele."
             />
           )}
+
+          {/* Base URL — secondary if instance link exists */}
+          {link.base_url && (
+            <CopyBlock
+              label={hasInstanceLink ? "Link bruto da plataforma (técnico)" : "Link operacional"}
+              value={link.base_url}
+              primary={!hasInstanceLink}
+              help={hasInstanceLink
+                ? "Referência técnica do link original da plataforma. O link principal é o da LP acima."
+                : "URL principal de afiliado configurada neste tracking."}
+              warn={hasDivergence
+                ? "Diferente do link em uso na LP — mantido apenas como referência técnica."
+                : undefined}
+            />
+          )}
+
           <CopyBlock
-            label="Link bruto da plataforma"
-            value={link.base_url || ""}
-            help="URL original de afiliado configurada neste tracking."
-            warn={hasDivergence ? "Diferente do link na LP — verifique qual deve ser usado." : undefined}
-          />
-          <CopyBlock
-            label="Link final para operação"
+            label="Link final rastreado"
             value={buildFinalUrl()}
-            help="URL montada com parâmetro de click ID. Este é o link rastreado."
+            help="URL montada com parâmetro de click ID."
           />
           <CopyBlock
-            label="Link curto para uso"
+            label="Link curto operacional"
             value={link.short_url || ""}
             help="Link encurtado para facilitar compartilhamento (bio, stories, etc)."
           />
@@ -179,6 +185,17 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
             help="Cole esta URL no painel da casa para receber eventos de conversão automaticamente."
           />
         </div>
+
+        {hasDivergence && (
+          <div className="flex items-start gap-2 bg-muted/50 border rounded-md px-3 py-2 text-xs text-muted-foreground">
+            <Info size={14} className="shrink-0 mt-0.5" />
+            <div>
+              O link bruto da plataforma está diferente do link em uso na LP.
+              Isso é normal quando o link foi ajustado na instância.
+              <strong className="text-foreground"> O link da LP é o principal.</strong>
+            </div>
+          </div>
+        )}
 
         {link.notes && (
           <div className="text-xs text-muted-foreground border-t pt-2">
