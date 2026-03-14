@@ -1,6 +1,9 @@
 import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useTrackingEvents, usePlatformAccounts } from "@/hooks/useTrackingData";
 import { usePlatforms } from "@/hooks/useSupabaseQuery";
+import { supabase } from "@/integrations/supabase/client";
+import { useDemoMode } from "@/contexts/DemoModeContext";
 
 export interface ConsolidatedMetrics {
   totalClicks: number;
@@ -18,15 +21,60 @@ export interface ConsolidatedMetrics {
   platformName: string | null;
   hasMultipleCurrencies: boolean;
   byCurrency: Record<string, { total: number; convertedBrl: number; rate: number | null }>;
+  realClicksCount: number;
+}
+
+/** Check if an event is valid for consolidation */
+function isValidEvent(e: any): boolean {
+  // Exclude demo
+  if (e.is_demo) return false;
+  // Exclude invalid_legacy status
+  if (e.status === "invalid_legacy") return false;
+  // Exclude placeholder canonical names
+  if (e.canonical_event_name?.startsWith("{")) return false;
+  // Exclude placeholder click_ids
+  if (e.click_id?.startsWith("{")) return false;
+  return true;
+}
+
+/** Check if a revenue event has trustworthy financial data */
+function isValidRevenue(e: any): boolean {
+  if (!isValidEvent(e)) return false;
+  const evName = e.canonical_event_name;
+  if (evName !== "revenue" && evName !== "ftd" && evName !== "deposit" && evName !== "redeposit") return false;
+  
+  // Must have original_amount AND original_currency for financial trustworthiness
+  const origAmount = e.original_amount;
+  const origCurrency = e.original_currency;
+  if (origAmount == null || !origCurrency) return false;
+  
+  // If not BRL, must have exchange_rate for conversion
+  if (origCurrency !== "BRL" && !e.exchange_rate) return false;
+  
+  return true;
 }
 
 export function useAutoConsolidation() {
   const { data: events, isLoading: eventsLoading } = useTrackingEvents();
   const { data: accounts } = usePlatformAccounts();
   const { data: platforms } = usePlatforms();
+  const { demoMode } = useDemoMode();
 
-  const realEvents = useMemo(() =>
-    events.filter(e => !e.is_demo && !e.click_id?.startsWith("{")),
+  // Fetch real clicks count
+  const { data: realClicksCount = 0 } = useQuery({
+    queryKey: ["real_clicks_count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("clicks")
+        .select("*", { count: "exact", head: true })
+        .eq("is_demo", false);
+      if (error) return 0;
+      return count || 0;
+    },
+  });
+
+  const validEvents = useMemo(() =>
+    events.filter(isValidEvent),
     [events]
   );
 
@@ -43,16 +91,17 @@ export function useAutoConsolidation() {
       lastExchangeRate: null,
       lastExchangeRateTimestamp: null,
       lastEventTimestamp: null,
-      eventCount: realEvents.length,
+      eventCount: validEvents.length,
       platformName: null,
       hasMultipleCurrencies: false,
       byCurrency: {},
+      realClicksCount,
     };
 
-    if (realEvents.length === 0) return result;
+    if (validEvents.length === 0) return result;
 
     // Get platform name from first event
-    const firstPlatformId = realEvents[0]?.platform_id;
+    const firstPlatformId = validEvents[0]?.platform_id;
     if (firstPlatformId) {
       const plat = (platforms as any[]).find((p: any) => p.id === firstPlatformId);
       if (plat) result.platformName = plat.name;
@@ -60,7 +109,7 @@ export function useAutoConsolidation() {
 
     const currencies = new Set<string>();
 
-    for (const ev of realEvents) {
+    for (const ev of validEvents) {
       const evName = ev.canonical_event_name;
       if (evName === "click") result.totalClicks++;
       else if (evName === "registration") result.totalRegistrations++;
@@ -68,13 +117,13 @@ export function useAutoConsolidation() {
       else if (evName === "deposit") result.totalDeposits++;
       else if (evName === "redeposit") result.totalRedeposits++;
 
-      // Currency tracking
-      const origCurrency = (ev as any).original_currency || ev.currency || "BRL";
-      const origAmount = (ev as any).original_amount ?? ev.amount ?? 0;
-      const convertedBrl = (ev as any).converted_amount_brl ?? ev.amount ?? 0;
-      const rate = (ev as any).exchange_rate ?? null;
+      // Only count revenue from financially valid events
+      if (isValidRevenue(ev)) {
+        const origCurrency = (ev as any).original_currency;
+        const origAmount = (ev as any).original_amount;
+        const convertedBrl = (ev as any).converted_amount_brl ?? origAmount;
+        const rate = (ev as any).exchange_rate ?? null;
 
-      if (origAmount && (evName === "revenue" || evName === "ftd" || evName === "deposit" || evName === "redeposit")) {
         currencies.add(origCurrency);
         if (!result.byCurrency[origCurrency]) {
           result.byCurrency[origCurrency] = { total: 0, convertedBrl: 0, rate };
@@ -86,25 +135,25 @@ export function useAutoConsolidation() {
         result.revenueOriginal += origAmount;
         result.revenueBrl += convertedBrl || 0;
         result.revenueOriginalCurrency = origCurrency;
-      }
 
-      if (rate) {
-        result.lastExchangeRate = rate;
-        const rateTs = (ev as any).exchange_rate_timestamp;
-        if (rateTs) result.lastExchangeRateTimestamp = rateTs;
+        if (rate) {
+          result.lastExchangeRate = rate;
+          const rateTs = (ev as any).exchange_rate_timestamp;
+          if (rateTs) result.lastExchangeRateTimestamp = rateTs;
+        }
       }
     }
 
     result.hasMultipleCurrencies = currencies.size > 1;
-    result.lastEventTimestamp = realEvents[0]?.event_timestamp || null;
+    result.lastEventTimestamp = validEvents[0]?.event_timestamp || null;
 
     return result;
-  }, [realEvents, platforms]);
+  }, [validEvents, platforms, realClicksCount]);
 
   return {
     consolidated,
-    realEvents,
+    realEvents: validEvents,
     isLoading: eventsLoading,
-    hasData: realEvents.length > 0,
+    hasData: validEvents.length > 0,
   };
 }

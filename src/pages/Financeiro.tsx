@@ -281,11 +281,11 @@ export default function Financeiro() {
             </div>
             <div className="glass-card p-5 cursor-pointer hover:bg-secondary/30 transition-colors" onClick={() => navigate("/socios")}>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Saldo Disponível</span>
+                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">Saldo Sócios</span>
                 <Wallet size={13} className="text-accent" />
               </div>
               <p className="text-xl font-bold tracking-tight">{formatCompact(metrics.totalDisponivelSocios)}</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">Para saque</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{metrics.totalDisponivelSocios > 0 ? "Declarado pelos sócios" : "Sem saldo declarado"}</p>
             </div>
             <div className="glass-card p-5 cursor-pointer hover:bg-secondary/30 transition-colors" onClick={() => navigate("/saques")}>
               <div className="flex items-center justify-between mb-1">
