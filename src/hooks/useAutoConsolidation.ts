@@ -34,6 +34,8 @@ function isValidEvent(e: any): boolean {
   if (e.canonical_event_name?.startsWith("{")) return false;
   // Exclude placeholder click_ids
   if (e.click_id?.startsWith("{")) return false;
+  // Exclude string "null" artifacts
+  if (e.click_id === "null" || e.transaction_id === "null") return false;
   return true;
 }
 
