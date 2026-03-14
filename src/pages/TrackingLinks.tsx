@@ -11,8 +11,15 @@ import TrackingLinkForm, { emptyForm, formFromRow, type FormState } from "@/comp
 import TrackingLinkDetail from "@/components/tracking/TrackingLinkDetail";
 import { useTrackingLinks, usePlatformAccounts } from "@/hooks/useTrackingData";
 import { useInfluencers, useCampanhas, useLandingPages, useLandingPageInstances, usePlatforms } from "@/hooks/useSupabaseQuery";
-import { Plus, Pencil, Trash2, Link2, Copy, Check, ExternalLink, Zap, AlertTriangle } from "lucide-react";
+import { Plus, Pencil, Trash2, Link2, Copy, Check, ExternalLink, AlertTriangle } from "lucide-react";
 import type { TrackingLinkRow } from "@/services/trackingService";
+
+const ROLE_LABELS: Record<string, string> = {
+  influencer: "Influencer",
+  socio: "Sócio(a)",
+  parceiro: "Parceiro",
+  interno: "Interno",
+};
 import { useToast } from "@/hooks/use-toast";
 
 export default function TrackingLinks() {
@@ -111,8 +118,9 @@ export default function TrackingLinks() {
                       <TableHead>Código</TableHead>
                       <TableHead>Conta / Plataforma</TableHead>
                       <TableHead>Influencer</TableHead>
+                      <TableHead>Papel</TableHead>
                       <TableHead>LP / Slug</TableHead>
-                      <TableHead>Link Final</TableHead>
+                      <TableHead>Link em Uso</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
@@ -140,6 +148,11 @@ export default function TrackingLinks() {
                             </div>
                           </TableCell>
                           <TableCell className="text-xs">{getName(influencers as any[], l.influencer_id)}</TableCell>
+                          <TableCell className="text-xs">
+                            <Badge variant="outline" className="text-[9px]">
+                              {ROLE_LABELS[(l as any).tracking_role || "influencer"] || "Influencer"}
+                            </Badge>
+                          </TableCell>
                           <TableCell className="text-xs">
                             <div className="leading-tight">
                               <div>{getName(landingPages as any[], l.landing_page_id)}</div>

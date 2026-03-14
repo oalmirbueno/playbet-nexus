@@ -1,12 +1,19 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Copy, Check, AlertTriangle } from "lucide-react";
+import { Copy, Check, AlertTriangle, Info } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import type { TrackingLinkRow } from "@/services/trackingService";
 
 const POSTBACK_BASE = "https://rcrrbznhatdqcmfyzgbt.supabase.co/functions/v1/tracking-postback";
+
+const ROLE_LABELS: Record<string, { label: string; color: string }> = {
+  influencer: { label: "Influencer", color: "bg-primary/15 text-primary" },
+  socio: { label: "Sócio(a)", color: "bg-accent text-accent-foreground" },
+  parceiro: { label: "Parceiro", color: "bg-secondary text-secondary-foreground" },
+  interno: { label: "Interno/Teste", color: "bg-muted text-muted-foreground" },
+};
 
 interface Props {
   link: TrackingLinkRow | null;
@@ -18,11 +25,12 @@ interface Props {
   platforms: any[];
 }
 
-function CopyBlock({ label, value, help }: { label: string; value: string; help?: string }) {
+function CopyBlock({ label, value, help, warn }: { label: string; value: string; help?: string; warn?: string }) {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
 
   const copy = () => {
+    if (!value) return;
     navigator.clipboard.writeText(value);
     setCopied(true);
     toast({ title: `${label} copiado!` });
@@ -33,15 +41,22 @@ function CopyBlock({ label, value, help }: { label: string; value: string; help?
     <div className="space-y-1">
       <div className="flex items-center justify-between">
         <p className="text-xs font-medium text-muted-foreground">{label}</p>
-        <Button variant="outline" size="sm" className="h-6 text-[10px] px-2" onClick={copy}>
-          {copied ? <Check size={10} className="mr-1 text-green-500" /> : <Copy size={10} className="mr-1" />}
-          Copiar
-        </Button>
+        {value && (
+          <Button variant="outline" size="sm" className="h-6 text-[10px] px-2" onClick={copy}>
+            {copied ? <Check size={10} className="mr-1 text-green-500" /> : <Copy size={10} className="mr-1" />}
+            Copiar
+          </Button>
+        )}
       </div>
       <code className="block bg-secondary/50 rounded-md p-2.5 text-xs font-mono break-all min-h-[2rem]">
         {value || <span className="text-muted-foreground italic">Não definido</span>}
       </code>
-      {help && <p className="text-[10px] text-muted-foreground">{help}</p>}
+      {warn && (
+        <div className="flex items-start gap-1 text-[10px] text-amber-600">
+          <Info size={10} className="mt-0.5 shrink-0" /> {warn}
+        </div>
+      )}
+      {help && !warn && <p className="text-[10px] text-muted-foreground">{help}</p>}
     </div>
   );
 }
@@ -54,6 +69,12 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
   const influencer = (influencers as any[]).find((i: any) => i.id === link.influencer_id);
   const lp = (landingPages as any[]).find((l: any) => l.id === link.landing_page_id);
   const instance = lpInstances.find((i: any) => i.id === link.landing_page_instance_id);
+  const instanceAffiliateLink = instance?.affiliate_link || "";
+  const trackingRole = (link as any).tracking_role || "influencer";
+  const roleInfo = ROLE_LABELS[trackingRole] || ROLE_LABELS.influencer;
+
+  // Divergence detection
+  const hasDivergence = instanceAffiliateLink && link.base_url && instanceAffiliateLink !== link.base_url;
 
   const buildFinalUrl = () => {
     if (link.final_url) return link.final_url;
@@ -79,6 +100,7 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             Detalhes do Tracking Link
+            <Badge className={`text-[9px] ${roleInfo.color}`}>{roleInfo.label}</Badge>
             {link.is_demo && <Badge variant="secondary" className="text-[9px] bg-yellow-500/15 text-yellow-600">DEMO</Badge>}
           </DialogTitle>
         </DialogHeader>
@@ -90,16 +112,35 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
           </div>
         )}
 
+        {hasDivergence && (
+          <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-700 rounded-md px-3 py-2 text-xs">
+            <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+            <div>
+              <strong>Divergência detectada:</strong> O link bruto do tracking está diferente do link de afiliado distribuído na LP.
+              <div className="font-mono mt-1 text-[10px]">
+                LP: {instanceAffiliateLink}<br />
+                Tracking: {link.base_url}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {trackingRole === "socio" && (
+          <div className="text-xs bg-primary/10 text-primary rounded-md px-3 py-2">
+            ℹ️ Vínculo de <strong>sócio(a)</strong> — tracking ativo, mas sem débito/comissão de influenciador na regra financeira.
+          </div>
+        )}
+
         {/* Vínculos operacionais */}
         <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm border rounded-lg p-3 bg-muted/30">
           <div><span className="text-muted-foreground text-xs">Plataforma:</span> <span className="font-medium text-xs">{platform?.name || "—"}</span></div>
           <div><span className="text-muted-foreground text-xs">Conta:</span> <span className="font-medium text-xs">{account?.nome_conta || "—"}</span></div>
-          <div><span className="text-muted-foreground text-xs">Influencer:</span> <span className="font-medium text-xs">{influencer?.name || "—"}</span></div>
-          <div><span className="text-muted-foreground text-xs">Slug / Instância:</span> <span className="font-mono font-medium text-xs">{instance ? `/${instance.slug}` : "—"}</span></div>
+          <div><span className="text-muted-foreground text-xs">Influencer / Parceiro:</span> <span className="font-medium text-xs">{influencer?.name || "—"}</span></div>
+          <div><span className="text-muted-foreground text-xs">Papel:</span> <Badge className={`text-[9px] ml-1 ${roleInfo.color}`}>{roleInfo.label}</Badge></div>
           <div><span className="text-muted-foreground text-xs">Landing Page:</span> <span className="font-medium text-xs">{lp?.name || "—"}</span></div>
+          <div><span className="text-muted-foreground text-xs">Slug / Instância:</span> <span className="font-mono font-medium text-xs">{instance ? `/${instance.slug}` : "—"}</span></div>
           <div><span className="text-muted-foreground text-xs">Click ID Param:</span> <span className="font-mono font-medium text-xs">{link.click_id_param_name || "sub1"}</span></div>
           <div><span className="text-muted-foreground text-xs">Status:</span> <Badge variant={link.status === "active" ? "default" : "secondary"} className="text-[10px] ml-1">{link.status || "active"}</Badge></div>
-          <div><span className="text-muted-foreground text-xs">Modelo comissão:</span> <span className="font-medium text-xs">{account?.modelo_comissao || "—"}</span></div>
         </div>
 
         {/* Copy blocks */}
@@ -109,15 +150,23 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
             value={link.tracking_code}
             help="Identificador único gerado pelo painel. Usado nos SUBIDs para rastrear conversões."
           />
+          {instanceAffiliateLink && (
+            <CopyBlock
+              label="Link atualmente distribuído na LP"
+              value={instanceAffiliateLink}
+              help={`Este é o link que está na instância /${instance?.slug}. Se o tracking deve usar o mesmo link, mantenha o "Link bruto" igual.`}
+            />
+          )}
           <CopyBlock
             label="Link bruto da plataforma"
             value={link.base_url || ""}
-            help="URL original de afiliado fornecida pela casa."
+            help="URL original de afiliado configurada neste tracking."
+            warn={hasDivergence ? "Diferente do link na LP — verifique qual deve ser usado." : undefined}
           />
           <CopyBlock
             label="Link final para operação"
             value={buildFinalUrl()}
-            help="URL montada com parâmetro de click ID. Este é o link que o influencer deve usar."
+            help="URL montada com parâmetro de click ID. Este é o link rastreado."
           />
           <CopyBlock
             label="Link curto para uso"
