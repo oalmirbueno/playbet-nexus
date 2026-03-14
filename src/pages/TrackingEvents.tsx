@@ -14,6 +14,7 @@ import { usePlatforms } from "@/hooks/useSupabaseQuery";
 import { Zap, Filter, RefreshCcw, Eye, Search, Copy, Check } from "lucide-react";
 import type { TrackingEventRow } from "@/services/trackingService";
 import { useToast } from "@/hooks/use-toast";
+import { PLATFORM_METADATA_FIELDS } from "@/config/platformPresets";
 
 const CANONICAL_EVENTS = [
   "click", "registration", "ftd", "deposit", "redeposit",
