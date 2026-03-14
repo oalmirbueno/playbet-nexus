@@ -325,6 +325,44 @@ export default function Financeiro() {
           {/* ── Tab: Visão Geral ── */}
           {tab === "visao" && (
             <>
+              {/* Tracking Revenue Integration */}
+              {hasTrackingData && consolidated.revenueBrl > 0 && (
+                <div className="glass-card p-6 border-l-4 border-l-primary">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Activity size={14} className="text-primary" />
+                    <h3 className="text-sm font-semibold">Revenue do Tracking (automático)</h3>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {Object.entries(consolidated.byCurrency).map(([currency, data]) => (
+                      <div key={currency} className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+                        <p className="text-[10px] text-muted-foreground uppercase">Revenue ({currency})</p>
+                        <p className="text-lg font-bold">{data.total.toLocaleString("pt-BR", { style: "currency", currency: currency === "BRL" ? "BRL" : "USD" })}</p>
+                        {currency !== "BRL" && data.rate && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5">≈ {formatBRL(data.convertedBrl)} · 1 {currency} = R$ {data.rate.toFixed(4)}</p>
+                        )}
+                      </div>
+                    ))}
+                    <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+                      <p className="text-[10px] text-muted-foreground uppercase">Total em BRL</p>
+                      <p className="text-lg font-bold text-primary">{formatBRL(consolidated.revenueBrl)}</p>
+                      {consolidated.lastExchangeRateTimestamp && (
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          Cotação: {new Date(consolidated.lastExchangeRateTimestamp).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      )}
+                    </div>
+                    <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+                      <p className="text-[10px] text-muted-foreground uppercase">FTD / Registros</p>
+                      <p className="text-lg font-bold">{consolidated.totalFtd} / {consolidated.totalRegistrations}</p>
+                    </div>
+                    <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+                      <p className="text-[10px] text-muted-foreground uppercase">Eventos processados</p>
+                      <p className="text-lg font-bold">{consolidated.eventCount}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Revenue Breakdown */}
               <div className="glass-card p-6">
                 <h3 className="text-sm font-semibold mb-4">Decomposição da Receita</h3>
