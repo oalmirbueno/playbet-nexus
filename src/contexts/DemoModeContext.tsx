@@ -15,7 +15,7 @@ const DemoModeContext = createContext<DemoModeContextType | undefined>(undefined
 
 export function DemoModeProvider({ children }: { children: React.ReactNode }) {
   const [demoMode, setDemoModeState] = useState<DemoMode>(() => {
-    return (localStorage.getItem("playbet_demo_mode") as DemoMode) || "all";
+    return (localStorage.getItem("playbet_demo_mode") as DemoMode) || "real";
   });
 
   const setDemoMode = (mode: DemoMode) => {

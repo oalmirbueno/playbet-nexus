@@ -10,6 +10,7 @@ import { useTrackingSnapshots } from "@/hooks/useTrackingData";
 import { usePlatforms } from "@/hooks/useSupabaseQuery";
 import { Camera, Eye } from "lucide-react";
 import type { TrackingSnapshotRow } from "@/services/trackingService";
+import TrackingDemoFilter from "@/components/TrackingDemoFilter";
 
 function fmt(v: number) { return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
 
@@ -27,9 +28,12 @@ export default function TrackingSnapshots() {
     <div className="space-y-6 animate-fade-in">
       <Breadcrumbs items={[{ label: "Tracking Hub", path: "/tracking" }, { label: "Snapshots" }]} />
 
-      <div>
-        <h1 className="text-2xl font-bold text-foreground tracking-tight">Snapshots</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Histórico de snapshots importados de dashboards externos</p>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">Snapshots</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Histórico de snapshots importados de dashboards externos</p>
+        </div>
+        <TrackingDemoFilter />
       </div>
 
       {isLoading && <Card><CardContent className="py-12 text-center text-muted-foreground text-sm">Carregando...</CardContent></Card>}

@@ -16,6 +16,7 @@ import {
   Wallet, Target, ArrowRightLeft, Activity, Download, Filter, RefreshCcw,
   AlertTriangle, Zap, Link2, Map,
 } from "lucide-react";
+import TrackingDemoFilter from "@/components/TrackingDemoFilter";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
   ResponsiveContainer, Legend, FunnelChart, Funnel, LabelList,
@@ -217,7 +218,8 @@ export default function TrackingDashboard() {
           <h1 className="text-2xl font-bold text-foreground tracking-tight">Tracking Hub</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Central de performance multi-plataforma</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap items-center">
+          <TrackingDemoFilter />
           <Button variant="outline" size="sm" onClick={() => navigate("/tracking/metrics")}>
             <Download size={14} className="mr-1.5" /> Registrar Métrica
           </Button>
