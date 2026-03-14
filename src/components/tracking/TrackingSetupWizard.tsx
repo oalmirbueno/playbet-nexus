@@ -91,7 +91,7 @@ export default function TrackingSetupWizard({
       landing_page_instance_id: instanceId || null,
       landing_page_id: selectedInstance?.landing_page_id || null,
       influencer_id: selectedInstance?.influencer_id || null,
-      campanha_id: campanhaId || null,
+      campanha_id: campanhaId && campanhaId !== "none" ? campanhaId : null,
       base_url: affiliateLink || null,
       click_id_param_name: preset?.click_id_param || "sub1",
       tracking_role: trackingRole,
