@@ -17,6 +17,7 @@ import {
   AlertTriangle, Zap, Link2, Map,
 } from "lucide-react";
 import TrackingDemoFilter from "@/components/TrackingDemoFilter";
+import PlatformActivationChecklist from "@/components/PlatformActivationChecklist";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
   ResponsiveContainer, Legend, FunnelChart, Funnel, LabelList,
