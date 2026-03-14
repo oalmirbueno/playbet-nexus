@@ -91,7 +91,7 @@ export default function TrackingSetupWizard({
       landing_page_instance_id: instanceId || null,
       landing_page_id: selectedInstance?.landing_page_id || null,
       influencer_id: selectedInstance?.influencer_id || null,
-      campanha_id: campanhaId || null,
+      campanha_id: campanhaId && campanhaId !== "none" ? campanhaId : null,
       base_url: affiliateLink || null,
       click_id_param_name: preset?.click_id_param || "sub1",
       tracking_role: trackingRole,
@@ -260,7 +260,7 @@ export default function TrackingSetupWizard({
               <Select value={campanhaId} onValueChange={setCampanhaId}>
                 <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Nenhuma" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhuma</SelectItem>
+                  <SelectItem value="none">Nenhuma</SelectItem>
                   {(campanhas as any[]).map((c: any) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
                 </SelectContent>
               </Select>
