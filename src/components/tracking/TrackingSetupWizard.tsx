@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CheckCircle2, AlertTriangle, ArrowRight, ArrowLeft, Sparkles, Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { findPresetByName, EVENT_LABELS, type PlatformPreset } from "@/config/platformPresets";
+import { findPresetByName, generateTrackingCode, EVENT_LABELS, type PlatformPreset } from "@/config/platformPresets";
 import PostbackEventBlocks from "./PostbackEventBlocks";
 
 const TRACKING_ROLES = [
