@@ -66,7 +66,7 @@ export default function TrackingSetupWizard({
   const buildFinalUrl = () => {
     if (!affiliateLink) return "";
     const param = preset?.click_id_param || "sub1";
-    const macro = preset?.link_generation.click_id_macro || "{click_id}";
+    const macro = preset?.click_id_macro || `{${param}}`;
     const sep = affiliateLink.includes("?") ? "&" : "?";
     return `${affiliateLink}${sep}${param}=${macro}`;
   };
