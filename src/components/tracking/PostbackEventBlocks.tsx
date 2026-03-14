@@ -7,7 +7,7 @@ import { findPresetByName, buildPostbackUrlForEvent, EVENT_LABELS, type Platform
 
 interface Props {
   platformName: string;
-  trackingCode: string;
+  trackingCode?: string;
   influencerId?: string;
   campanhaId?: string;
 }
@@ -25,6 +25,13 @@ export default function PostbackEventBlocks({ platformName, trackingCode, influe
     );
   }
 
+  // Clean values — never pass dirty/placeholder data
+  const cleanTrackingCode = trackingCode && !trackingCode.includes("(") && trackingCode !== "none" ? trackingCode : undefined;
+  const cleanInfluencer = influencerId && influencerId !== "none" ? influencerId : undefined;
+  const cleanCampanha = campanhaId && campanhaId !== "none" ? campanhaId : undefined;
+
+  const allReady = !!cleanTrackingCode;
+
   const copy = (url: string, idx: number, label: string) => {
     navigator.clipboard.writeText(url);
     setCopiedIdx(idx);
@@ -37,12 +44,21 @@ export default function PostbackEventBlocks({ platformName, trackingCode, influe
       <div className="flex items-center gap-2 mb-1">
         <p className="text-xs font-semibold text-foreground">Postbacks por Evento</p>
         <Badge variant="secondary" className="text-[9px]">{preset.label}</Badge>
+        {allReady ? (
+          <Badge variant="outline" className="text-[9px] border-green-500/40 text-green-600">
+            <CheckCircle2 size={9} className="mr-0.5" /> Pronto
+          </Badge>
+        ) : (
+          <Badge variant="outline" className="text-[9px] border-yellow-500/40 text-yellow-600">
+            Pendente
+          </Badge>
+        )}
       </div>
       <p className="text-[10px] text-muted-foreground mb-2">
         Cole cada URL no painel da plataforma, no evento correspondente. Os macros entre {"{ }"} serão substituídos automaticamente pela plataforma.
       </p>
       {preset.events.map((evt, idx) => {
-        const url = buildPostbackUrlForEvent(preset, evt, trackingCode, influencerId, campanhaId);
+        const url = buildPostbackUrlForEvent(preset, evt, cleanTrackingCode, cleanInfluencer, cleanCampanha);
         const label = EVENT_LABELS[evt.canonical_event_name] || evt.canonical_event_name;
         const isCopied = copiedIdx === idx;
 
@@ -59,7 +75,7 @@ export default function PostbackEventBlocks({ platformName, trackingCode, influe
                 Copiar
               </Button>
             </div>
-            <code className="block bg-secondary/50 rounded px-2 py-1.5 text-[10px] font-mono break-all leading-relaxed">
+            <code className="block bg-secondary/50 rounded px-2 py-1.5 text-[10px] font-mono break-all leading-relaxed select-all">
               {url}
             </code>
           </div>
