@@ -253,6 +253,9 @@ export default function TrackingDashboard() {
         </div>
       )}
 
+      {/* Platform Activation Checklist */}
+      <PlatformActivationChecklist />
+
       {/* Filters */}
       <Card>
         <CardContent className="pt-5 pb-4">
