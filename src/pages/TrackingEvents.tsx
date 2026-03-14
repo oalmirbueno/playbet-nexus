@@ -276,6 +276,33 @@ export default function TrackingEvents() {
                 <div><span className="text-muted-foreground">Duplicado:</span> {selectedEvent.is_duplicate ? "Sim" : "Não"}</div>
                 <div><span className="text-muted-foreground">Demo:</span> {selectedEvent.is_demo ? "Sim" : "Não"}</div>
               </div>
+              {/* Platform metadata (debug/reconciliation) */}
+              {(() => {
+                const payload = selectedEvent.raw_payload as Record<string, any> | null;
+                const meta = payload?._platform_meta || {};
+                // Also check top-level payload for these fields (backward compat)
+                const metaEntries = PLATFORM_METADATA_FIELDS
+                  .map(f => ({ ...f, value: meta[f.key] || payload?.[f.key] }))
+                  .filter(f => f.value);
+
+                if (metaEntries.length === 0) return null;
+                return (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Metadados da Plataforma (debug)</p>
+                    <div className="grid grid-cols-2 gap-2 text-sm border rounded-md p-3 bg-muted/30">
+                      {metaEntries.map(f => (
+                        <div key={f.key} className="flex items-center gap-1">
+                          <span className="text-muted-foreground text-xs">{f.label}:</span>
+                          <span className="font-mono text-xs">{f.value}</span>
+                          <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => copyField(String(f.value), f.label)}>
+                            {copiedField === f.label ? <Check size={10} className="text-green-500" /> : <Copy size={10} />}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
               <div>
                 <p className="text-xs font-medium text-muted-foreground mb-2">Raw Payload (debug)</p>
                 <pre className="bg-secondary/50 rounded-md p-3 text-xs overflow-auto max-h-[300px] font-mono">
