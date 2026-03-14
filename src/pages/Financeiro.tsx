@@ -3,13 +3,13 @@ import { useNavigate } from "react-router-dom";
 import {
   DollarSign, ArrowRight, TrendingUp, TrendingDown, Wallet, Users,
   AlertTriangle, CheckCircle, Clock, PieChart, Shield, ArrowUpRight, ArrowDownRight,
+  Activity,
 } from "lucide-react";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import EmptyState from "@/components/EmptyState";
 import ExportDropdown from "@/components/ExportDropdown";
 import { useCampanhas, useSaques, useSocios, useInfluencers } from "@/hooks/useSupabaseQuery";
-import { clickService } from "@/services/supabaseService";
-import type { ClickRow } from "@/services/supabaseService";
+import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart as RPieChart, Pie, Cell,
@@ -48,12 +48,8 @@ export default function Financeiro() {
   const { data: socios, isLoading: loadingSocios } = useSocios();
   const { data: saques, isLoading: loadingSaques } = useSaques();
   const { data: influencers, isLoading: loadingInfluencers } = useInfluencers();
-  const [clicks, setClicks] = useState<ClickRow[]>([]);
+  const { consolidated, hasData: hasTrackingData } = useAutoConsolidation();
   const [tab, setTab] = useState<TabKey>("visao");
-
-  useEffect(() => {
-    clickService.getAll().then(setClicks).catch(() => {});
-  }, []);
 
   const loading = loadingCampanhas || loadingSocios || loadingSaques || loadingInfluencers;
 
@@ -196,7 +192,7 @@ export default function Financeiro() {
     };
   }, [simReceita, simComissao, socios]);
 
-  const hasData = saques.length + socios.length + campanhas.length > 0;
+  const hasData = saques.length + socios.length + campanhas.length > 0 || hasTrackingData;
 
   const exportData = saques.map((s: any) => ({
     codigo: s.codigo,
@@ -329,6 +325,44 @@ export default function Financeiro() {
           {/* ── Tab: Visão Geral ── */}
           {tab === "visao" && (
             <>
+              {/* Tracking Revenue Integration */}
+              {hasTrackingData && consolidated.revenueBrl > 0 && (
+                <div className="glass-card p-6 border-l-4 border-l-primary">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Activity size={14} className="text-primary" />
+                    <h3 className="text-sm font-semibold">Revenue do Tracking (automático)</h3>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    {Object.entries(consolidated.byCurrency).map(([currency, data]) => (
+                      <div key={currency} className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+                        <p className="text-[10px] text-muted-foreground uppercase">Revenue ({currency})</p>
+                        <p className="text-lg font-bold">{data.total.toLocaleString("pt-BR", { style: "currency", currency: currency === "BRL" ? "BRL" : "USD" })}</p>
+                        {currency !== "BRL" && data.rate && (
+                          <p className="text-[10px] text-muted-foreground mt-0.5">≈ {formatBRL(data.convertedBrl)} · 1 {currency} = R$ {data.rate.toFixed(4)}</p>
+                        )}
+                      </div>
+                    ))}
+                    <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+                      <p className="text-[10px] text-muted-foreground uppercase">Total em BRL</p>
+                      <p className="text-lg font-bold text-primary">{formatBRL(consolidated.revenueBrl)}</p>
+                      {consolidated.lastExchangeRateTimestamp && (
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          Cotação: {new Date(consolidated.lastExchangeRateTimestamp).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      )}
+                    </div>
+                    <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+                      <p className="text-[10px] text-muted-foreground uppercase">FTD / Registros</p>
+                      <p className="text-lg font-bold">{consolidated.totalFtd} / {consolidated.totalRegistrations}</p>
+                    </div>
+                    <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+                      <p className="text-[10px] text-muted-foreground uppercase">Eventos processados</p>
+                      <p className="text-lg font-bold">{consolidated.eventCount}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Revenue Breakdown */}
               <div className="glass-card p-6">
                 <h3 className="text-sm font-semibold mb-4">Decomposição da Receita</h3>

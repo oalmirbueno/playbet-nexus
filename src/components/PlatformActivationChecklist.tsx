@@ -22,7 +22,6 @@ export default function PlatformActivationChecklist() {
   const { data: events } = useTrackingEvents();
   const { data: lpInstances } = useLandingPageInstances();
 
-  // Use ALL data (not just non-demo) for real operational status
   const hasPlatform = (platforms as any[]).some((p: any) => !p.is_demo);
   const hasAccount = accounts.some(a => !a.is_demo);
   const hasInstance = (lpInstances as any[]).some((i: any) => !i.is_demo);
@@ -51,7 +50,8 @@ export default function PlatformActivationChecklist() {
   const doneCount = steps.filter(s => s.status === "done").length;
   const progress = Math.round((doneCount / steps.length) * 100);
 
-  if (doneCount === steps.length) return null;
+  // Hide completely when all done OR when 6+ steps done (infra is mostly ready)
+  if (doneCount >= 6) return null;
 
   return (
     <Card className="border-primary/20 bg-primary/[0.02]">
@@ -69,7 +69,7 @@ export default function PlatformActivationChecklist() {
       </CardHeader>
       <CardContent className="pt-0">
         <div className="space-y-2">
-          {steps.map((step, i) => (
+          {steps.filter(s => s.status !== "done").map((step, i) => (
             <div
               key={i}
               className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
@@ -77,13 +77,9 @@ export default function PlatformActivationChecklist() {
               }`}
               onClick={() => navigate(step.path)}
             >
-              {step.status === "done" ? (
-                <CheckCircle2 size={16} className="text-green-500 shrink-0" />
-              ) : (
-                <Circle size={16} className={`shrink-0 ${step.status === "current" ? "text-primary" : "text-muted-foreground/30"}`} />
-              )}
+              <Circle size={16} className={`shrink-0 ${step.status === "current" ? "text-primary" : "text-muted-foreground/30"}`} />
               <div className="flex-1 min-w-0">
-                <p className={`text-xs font-medium ${step.status === "done" ? "text-muted-foreground line-through" : "text-foreground"}`}>{step.label}</p>
+                <p className="text-xs font-medium text-foreground">{step.label}</p>
                 <p className="text-[10px] text-muted-foreground">{step.description}</p>
               </div>
               {step.status === "current" && <ArrowRight size={14} className="text-primary shrink-0" />}
