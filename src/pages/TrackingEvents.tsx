@@ -12,6 +12,7 @@ import { useTrackingEvents } from "@/hooks/useTrackingData";
 import { usePlatforms } from "@/hooks/useSupabaseQuery";
 import { Zap, Filter, RefreshCcw, Eye } from "lucide-react";
 import type { TrackingEventRow } from "@/services/trackingService";
+import TrackingDemoFilter from "@/components/TrackingDemoFilter";
 
 const CANONICAL_EVENTS = [
   "click", "registration", "ftd", "deposit", "redeposit",
