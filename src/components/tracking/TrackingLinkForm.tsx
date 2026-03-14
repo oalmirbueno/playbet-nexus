@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Info } from "lucide-react";
+import { AlertTriangle, Info, CheckCircle2 } from "lucide-react";
 import type { TrackingLinkRow } from "@/services/trackingService";
 
 interface Props {
@@ -91,35 +91,36 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
 
   const set = (field: keyof FormState, value: string) => setForm(p => ({ ...p, [field]: value }));
 
-  // Auto-fill from LP instance (influencer, LP, and affiliate_link as base_url)
+  // Auto-fill from LP instance
   const handleInstanceChange = (instanceId: string) => {
     const inst = lpInstances.find((i: any) => i.id === instanceId);
     const updates: Partial<FormState> = { landing_page_instance_id: instanceId };
     if (inst) {
       if (inst.influencer_id) updates.influencer_id = inst.influencer_id;
       if (inst.landing_page_id) updates.landing_page_id = inst.landing_page_id;
-      // Use the affiliate_link already distributed as the base_url
-      if (inst.affiliate_link && !form.base_url) {
+      // Always set base_url from instance affiliate_link (it's the primary operational link)
+      if (inst.affiliate_link) {
         updates.base_url = inst.affiliate_link;
       }
     }
     setForm(p => ({ ...p, ...updates }));
   };
 
-  // Get platform name from account
+  // Platform info
   const selectedAccount = accounts.find(a => a.id === form.platform_account_id);
   const accountPlatformId = selectedAccount?.platform_id;
   const platformName = platforms.find((p: any) => p.id === accountPlatformId)?.name;
 
-  // Get instance info for divergence check
+  // Instance info
   const selectedInstance = lpInstances.find((i: any) => i.id === form.landing_page_instance_id);
   const instanceAffiliateLink = selectedInstance?.affiliate_link || "";
-  const hasDivergence = instanceAffiliateLink && form.base_url && instanceAffiliateLink !== form.base_url;
+  const hasInstanceLink = !!instanceAffiliateLink;
+  const hasDivergence = hasInstanceLink && form.base_url && instanceAffiliateLink !== form.base_url;
 
   const missingFields: string[] = [];
   if (!form.platform_account_id) missingFields.push("Conta da plataforma");
   if (!form.influencer_id) missingFields.push("Influencer / Parceiro");
-  if (!form.base_url) missingFields.push("Link bruto da plataforma");
+  if (!form.base_url) missingFields.push("Link operacional");
 
   // Filter instances by selected LP
   const filteredInstances = form.landing_page_id
@@ -136,10 +137,10 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
-          {/* Instance first — drives auto-fill */}
+          {/* Step 1: Instance selection — drives everything */}
           <div className="border rounded-lg p-3 bg-muted/20 space-y-3">
             <p className="text-xs font-semibold text-foreground">1. Selecionar instância da LP (recomendado)</p>
-            <HelperText>Ao selecionar a instância, o influencer, LP e link de afiliado serão preenchidos automaticamente.</HelperText>
+            <HelperText>Ao selecionar a instância, o link já em uso na LP, o influencer e a LP serão preenchidos automaticamente.</HelperText>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs font-medium">Landing Page</Label>
@@ -167,9 +168,22 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                 </Select>
               </div>
             </div>
-            {selectedInstance && (
-              <div className="text-[10px] bg-secondary/60 rounded px-2 py-1.5 font-mono break-all">
-                <span className="text-muted-foreground">Link de afiliado na LP:</span> {instanceAffiliateLink || "Não definido"}
+
+            {/* Primary operational link from instance */}
+            {selectedInstance && hasInstanceLink && (
+              <div className="flex items-start gap-2 bg-primary/10 border border-primary/20 rounded-md px-3 py-2">
+                <CheckCircle2 size={14} className="text-primary mt-0.5 shrink-0" />
+                <div className="space-y-1 flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-primary">Link em uso na LP</p>
+                  <code className="block text-[11px] font-mono text-foreground break-all">{instanceAffiliateLink}</code>
+                  <p className="text-[10px] text-muted-foreground">Este é o link principal da operação. O tracking será feito sobre ele.</p>
+                </div>
+              </div>
+            )}
+            {selectedInstance && !hasInstanceLink && (
+              <div className="flex items-start gap-1.5 text-[10px] text-amber-600 bg-amber-500/10 rounded px-2 py-1.5">
+                <AlertTriangle size={10} className="mt-0.5 shrink-0" />
+                <span>Esta instância não possui link de afiliado cadastrado. Preencha o link bruto abaixo manualmente.</span>
               </div>
             )}
           </div>
@@ -199,7 +213,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
             </div>
           </div>
 
-          {/* Tracking Role */}
+          {/* Tracking Role + Campaign */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label className="text-xs font-medium">Papel do vínculo</Label>
@@ -224,27 +238,45 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
             </div>
           </div>
 
-          {/* URLs */}
+          {/* URLs — primary is from instance, base_url is secondary/technical */}
           <div className="space-y-1">
-            <Label className="text-xs font-medium">Link bruto da plataforma *</Label>
-            <Input className="h-9 text-xs font-mono" value={form.base_url} onChange={e => set("base_url", e.target.value)} placeholder="https://1wxxxx.com/casino/list?open=register&p=xxxx" />
-            <HelperText>URL original de afiliado. Se veio da instância, já está preenchido. Pode editar se necessário.</HelperText>
+            <div className="flex items-center gap-2">
+              <Label className="text-xs font-medium">
+                {hasInstanceLink ? "Link bruto da plataforma (técnico)" : "Link operacional *"}
+              </Label>
+              {hasInstanceLink && (
+                <Badge variant="secondary" className="text-[9px] h-4">referência</Badge>
+              )}
+            </div>
+            <Input
+              className="h-9 text-xs font-mono"
+              value={form.base_url}
+              onChange={e => set("base_url", e.target.value)}
+              placeholder="https://1wxxxx.com/casino/list?open=register&p=xxxx"
+            />
+            <HelperText>
+              {hasInstanceLink
+                ? "Link bruto/original da plataforma. Quando a LP já tem link em uso, este campo é apenas referência técnica."
+                : "URL original de afiliado. Será usada como link principal se não houver instância com link."}
+            </HelperText>
           </div>
 
           {hasDivergence && (
-            <Alert className="py-2 border-amber-500/50 bg-amber-500/10">
-              <Info className="h-3.5 w-3.5 text-amber-600" />
-              <AlertDescription className="text-xs text-amber-700">
-                O link bruto está diferente do link de afiliado na LP (<span className="font-mono">{instanceAffiliateLink}</span>). Verifique qual deve ser usado na operação.
+            <Alert className="py-2 border-primary/30 bg-primary/5">
+              <Info className="h-3.5 w-3.5 text-primary" />
+              <AlertDescription className="text-xs text-foreground">
+                A LP já possui um link em uso (<span className="font-mono text-[10px]">/{selectedInstance?.slug}</span>).
+                O link bruto abaixo está diferente, mas <strong>o link da LP é o principal</strong>.
+                O campo bruto serve apenas como referência técnica da plataforma.
               </AlertDescription>
             </Alert>
           )}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label className="text-xs font-medium">Link final (gerado)</Label>
+              <Label className="text-xs font-medium">Link final rastreado</Label>
               <Input className="h-9 text-xs font-mono bg-muted/50" value={form.final_url} onChange={e => set("final_url", e.target.value)} placeholder="Automático ou manual" />
-              <HelperText>URL final com tracking. Se vazio, será gerado a partir do link bruto.</HelperText>
+              <HelperText>URL final com tracking. Se vazio, será gerado a partir do link principal.</HelperText>
             </div>
             <div className="space-y-1">
               <Label className="text-xs font-medium">Link curto operacional</Label>
