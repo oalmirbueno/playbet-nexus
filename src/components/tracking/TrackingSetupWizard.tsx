@@ -46,6 +46,7 @@ export default function TrackingSetupWizard({
   const [trackingRole, setTrackingRole] = useState("influencer");
   const [campanhaId, setCampanhaId] = useState("");
   const [mappingsApplied, setMappingsApplied] = useState(false);
+  const [previewTrackingCode] = useState(() => generateTrackingCode());
 
   // Derived
   const selectedAccount = accounts.find(a => a.id === platformAccountId);
