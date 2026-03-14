@@ -43,6 +43,9 @@ import RegrasFinanceiras from "./pages/RegrasFinanceiras";
 import Permissoes from "./pages/Permissoes";
 import Integracoes from "./pages/Integracoes";
 import DeveloperSettings from "./pages/DeveloperSettings";
+import TrackingDashboard from "./pages/TrackingDashboard";
+import TrackingAccounts from "./pages/TrackingAccounts";
+import TrackingMetricsForm from "./pages/TrackingMetricsForm";
 import NotFound from "./pages/NotFound";
 import InfluencerLanding from "./pages/InfluencerLanding";
 
