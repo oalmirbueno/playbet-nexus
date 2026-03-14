@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { DollarSign, Users, Wallet, BarChart3, Target, MousePointerClick, Megaphone, ArrowRight, Landmark } from "lucide-react";
+import { DollarSign, Users, Wallet, BarChart3, Target, MousePointerClick, Megaphone, ArrowRight, Landmark, Clock, CreditCard } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useInfluencers, useGames, usePlatforms, useCampanhas, useSaques, useSocios } from "@/hooks/useSupabaseQuery";
 import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
@@ -40,7 +40,6 @@ export default function DashboardExecutivo() {
   const hasData = influencers.length > 0 || games.length > 0 || platforms.length > 0 || campanhas.length > 0 || hasTrackingData;
 
   const saquesByMonth = useMemo(() => groupByMonth(saques, "data"), [saques]);
-  const campanhasByMonth = useMemo(() => groupByMonth(campanhas, "created_at"), [campanhas]);
 
   const statusDist = useMemo(() => {
     const map: Record<string, number> = {};
@@ -48,29 +47,88 @@ export default function DashboardExecutivo() {
     return Object.entries(map).map(([name, value]) => ({ name, value }));
   }, [campanhas]);
 
-  // Caixa realizado = only paid via Asaas
   const totalPagosAsaas = useMemo(() =>
     saques.filter((s: any) => s.status === "Pago via Asaas").reduce((a: number, s: any) => a + Number(s.valor || 0), 0),
     [saques]
   );
-  const totalSaquesValor = useMemo(() => saques.reduce((a: number, s: any) => a + Number(s.valor || 0), 0), [saques]);
+
+  const totalDisponivelSocios = useMemo(() =>
+    socios.reduce((a: number, s: any) => a + Number(s.disponivel || 0), 0),
+    [socios]
+  );
 
   const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const fmtCurrency = (v: number, c: string) => v.toLocaleString("pt-BR", { style: "currency", currency: c === "BRL" ? "BRL" : "USD" });
 
   const hasVerifiedRevenue = hasTrackingData && consolidated.revenueBrl > 0;
+  const hasCaixaRealizado = totalPagosAsaas > 0;
 
+  // ALL KPIs always visible — pending state when no data
   const kpis = [
-    ...(hasVerifiedRevenue
-      ? [{ label: "Revenue Plataforma", value: formatBRL(consolidated.revenueBrl), icon: DollarSign, path: "/tracking", sub: "Não é caixa" }]
-      : []),
-    { label: "Cliques Reais (LP)", value: String(consolidated.realClicksCount), icon: MousePointerClick, path: "/conversoes", sub: "clicks reais" },
-    ...(totalPagosAsaas > 0
-      ? [{ label: "Caixa Realizado", value: formatBRL(totalPagosAsaas), icon: Landmark, path: "/financeiro", sub: "Pago via Asaas" }]
-      : []),
-    { label: "Influencers Ativos", value: String(influencers.filter((i: any) => i.is_active).length), icon: Users, path: "/influencers", sub: "" },
-    { label: "Campanhas", value: String(campanhas.length), icon: Megaphone, path: "/campanhas", sub: "" },
-    { label: "Eventos Tracking", value: String(consolidated.eventCount), icon: Target, path: "/tracking", sub: "validados" },
+    {
+      label: "Revenue Plataforma",
+      value: hasVerifiedRevenue ? formatBRL(consolidated.revenueBrl) : "—",
+      icon: DollarSign,
+      path: "/tracking",
+      sub: hasVerifiedRevenue ? "Não é caixa" : "Aguardando postbacks",
+      pending: !hasVerifiedRevenue,
+    },
+    {
+      label: "Cliques Reais (LP)",
+      value: String(consolidated.realClicksCount),
+      icon: MousePointerClick,
+      path: "/conversoes",
+      sub: consolidated.realClicksCount > 0 ? "clicks reais" : "Sem cliques ainda",
+      pending: consolidated.realClicksCount === 0,
+    },
+    {
+      label: "Registros",
+      value: String(consolidated.totalRegistrations),
+      icon: Users,
+      path: "/tracking",
+      sub: consolidated.totalRegistrations > 0 ? "registrations reais" : "Sem registros ainda",
+      pending: consolidated.totalRegistrations === 0,
+    },
+    {
+      label: "FTD",
+      value: String(consolidated.totalFtd),
+      icon: Target,
+      path: "/tracking",
+      sub: consolidated.totalFtd > 0 ? "first-time deposits" : "Sem FTD ainda",
+      pending: consolidated.totalFtd === 0,
+    },
+    {
+      label: "Caixa Realizado",
+      value: hasCaixaRealizado ? formatBRL(totalPagosAsaas) : "—",
+      icon: Landmark,
+      path: "/financeiro",
+      sub: hasCaixaRealizado ? "Pago via Asaas" : "Aguardando saques pagos",
+      pending: !hasCaixaRealizado,
+    },
+    {
+      label: "Saldo Disponível",
+      value: hasCaixaRealizado ? formatBRL(totalPagosAsaas) : "—",
+      icon: Wallet,
+      path: "/financeiro",
+      sub: hasCaixaRealizado ? "Fonte: Asaas" : "Aguardando integração Asaas",
+      pending: !hasCaixaRealizado,
+    },
+    {
+      label: "Campanhas",
+      value: String(campanhas.length),
+      icon: Megaphone,
+      path: "/campanhas",
+      sub: campanhas.length > 0 ? "" : "Sem campanhas",
+      pending: campanhas.length === 0,
+    },
+    {
+      label: "Eventos Tracking",
+      value: String(consolidated.eventCount),
+      icon: Target,
+      path: "/tracking",
+      sub: consolidated.eventCount > 0 ? "validados" : "Sem eventos ainda",
+      pending: consolidated.eventCount === 0,
+    },
   ];
 
   const chartConfig = {
@@ -98,16 +156,28 @@ export default function DashboardExecutivo() {
         </div>
       ) : (
         <>
-          {/* KPIs */}
-          <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-${kpis.length > 5 ? 6 : kpis.length} gap-4`}>
+          {/* KPIs - always all visible */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-4">
             {kpis.map((k) => (
-              <div key={k.label} onClick={() => navigate(k.path)} className="glass-card p-5 cursor-pointer hover:bg-secondary/30 transition-all duration-200">
+              <div
+                key={k.label}
+                onClick={() => navigate(k.path)}
+                className={`glass-card p-5 cursor-pointer hover:bg-secondary/30 transition-all duration-200 ${k.pending ? "opacity-70" : ""}`}
+              >
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{k.label}</span>
-                  <k.icon size={13} className="text-muted-foreground" />
+                  {k.pending ? (
+                    <Clock size={13} className="text-muted-foreground/50" />
+                  ) : (
+                    <k.icon size={13} className="text-muted-foreground" />
+                  )}
                 </div>
-                <div className="text-2xl font-bold tracking-tight">{k.value}</div>
-                {k.sub && <p className="text-[10px] text-muted-foreground mt-0.5">{k.sub}</p>}
+                <div className={`text-2xl font-bold tracking-tight ${k.pending ? "text-muted-foreground" : ""}`}>{k.value}</div>
+                {k.sub && (
+                  <p className={`text-[10px] mt-0.5 ${k.pending ? "text-warning" : "text-muted-foreground"}`}>
+                    {k.sub}
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -136,11 +206,41 @@ export default function DashboardExecutivo() {
                 </div>
                 <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
                   <p className="text-[10px] text-muted-foreground uppercase">Funil</p>
-                  <p className="text-sm font-bold">{consolidated.totalRegistrations} reg · {consolidated.totalFtd} FTD</p>
+                  <p className="text-sm font-bold">{consolidated.realClicksCount} cliques → {consolidated.totalRegistrations} reg → {consolidated.totalFtd} FTD</p>
                 </div>
               </div>
             </div>
           )}
+
+          {/* Societário Status */}
+          <div className="glass-card p-6 border-l-4 border-l-accent">
+            <div className="flex items-center gap-2 mb-1">
+              <Users size={14} className="text-accent" />
+              <h3 className="text-sm font-semibold">Status Societário</h3>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-3">
+              <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+                <p className="text-[10px] text-muted-foreground uppercase">Sócios</p>
+                <p className="text-lg font-bold">{socios.length}</p>
+              </div>
+              <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+                <p className="text-[10px] text-muted-foreground uppercase">Saldo Sócios (declarado)</p>
+                <p className="text-lg font-bold">{totalDisponivelSocios > 0 ? formatBRL(totalDisponivelSocios) : "—"}</p>
+                <p className="text-[10px] text-muted-foreground">Origem: cadastro manual</p>
+              </div>
+              <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+                <p className="text-[10px] text-muted-foreground uppercase">Caixa Realizado</p>
+                <p className={`text-lg font-bold ${hasCaixaRealizado ? "text-success" : "text-muted-foreground"}`}>
+                  {hasCaixaRealizado ? formatBRL(totalPagosAsaas) : "—"}
+                </p>
+                <p className="text-[10px] text-muted-foreground">{hasCaixaRealizado ? "Pago via Asaas" : "Aguardando integração"}</p>
+              </div>
+              <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+                <p className="text-[10px] text-muted-foreground uppercase">Influencers Ativos</p>
+                <p className="text-lg font-bold">{influencers.filter((i: any) => i.is_active).length}</p>
+              </div>
+            </div>
+          </div>
 
           {/* Tracking Overview Card */}
           <TrackingOverviewCard />
