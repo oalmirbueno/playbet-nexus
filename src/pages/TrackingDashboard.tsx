@@ -9,26 +9,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import EmptyState from "@/components/EmptyState";
-import { useTrackingMetrics, usePlatformAccounts } from "@/hooks/useTrackingData";
-import { useInfluencers, useCampanhas } from "@/hooks/useSupabaseQuery";
+import { useTrackingMetrics, usePlatformAccounts, useTrackingEvents } from "@/hooks/useTrackingData";
+import { useInfluencers, useCampanhas, usePlatforms, useLandingPages } from "@/hooks/useSupabaseQuery";
 import {
   BarChart3, TrendingUp, Users, MousePointerClick, UserPlus, DollarSign,
   Wallet, Target, ArrowRightLeft, Activity, Download, Filter, RefreshCcw,
+  AlertTriangle, Zap, Link2, Map,
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, Legend,
+  ResponsiveContainer, Legend, FunnelChart, Funnel, LabelList,
 } from "recharts";
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
-function fmt(v: number) {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-}
-function pct(a: number, b: number) {
-  if (!b) return "0%";
-  return ((a / b) * 100).toFixed(1) + "%";
-}
+function fmt(v: number) { return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
+function pct(a: number, b: number) { if (!b) return "0%"; return ((a / b) * 100).toFixed(1) + "%"; }
 function fmtNum(v: number) {
   if (v >= 1_000_000) return (v / 1_000_000).toFixed(1) + "M";
   if (v >= 1_000) return (v / 1_000).toFixed(1) + "K";
@@ -40,6 +36,7 @@ export default function TrackingDashboard() {
   const [platformFilter, setPlatformFilter] = useState<string>("all");
   const [influencerFilter, setInfluencerFilter] = useState<string>("all");
   const [campanhaFilter, setCampanhaFilter] = useState<string>("all");
+  const [lpFilter, setLpFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
@@ -47,14 +44,18 @@ export default function TrackingDashboard() {
     platform_id: platformFilter !== "all" ? platformFilter : undefined,
     influencer_id: influencerFilter !== "all" ? influencerFilter : undefined,
     campanha_id: campanhaFilter !== "all" ? campanhaFilter : undefined,
+    landing_page_id: lpFilter !== "all" ? lpFilter : undefined,
     date_from: dateFrom || undefined,
     date_to: dateTo || undefined,
-  }), [platformFilter, influencerFilter, campanhaFilter, dateFrom, dateTo]);
+  }), [platformFilter, influencerFilter, campanhaFilter, lpFilter, dateFrom, dateTo]);
 
   const { data: metrics, isLoading } = useTrackingMetrics(filters);
   const { data: accounts } = usePlatformAccounts();
   const { data: influencers } = useInfluencers();
   const { data: campanhas } = useCampanhas();
+  const { data: platforms } = usePlatforms();
+  const { data: landingPages } = useLandingPages();
+  const { data: recentEvents } = useTrackingEvents();
 
   // Aggregated KPIs
   const kpis = useMemo(() => {
@@ -82,6 +83,7 @@ export default function TrackingDashboard() {
       ticketMedio: t.ftd + t.redepositos ? t.depositos / (t.ftd + t.redepositos) : 0,
       revenuePerRegistro: t.registros ? t.revenue / t.registros : 0,
       revenuePerFtd: t.ftd ? t.revenue / t.ftd : 0,
+      lucro: t.revLiq - custoTotal,
     };
   }, [metrics]);
 
@@ -91,8 +93,8 @@ export default function TrackingDashboard() {
     metrics.forEach(m => {
       const pid = m.platform_id || "sem-plat";
       if (!map[pid]) {
-        const acc = accounts.find(a => a.platform_id === m.platform_id);
-        map[pid] = { name: acc?.nome_conta || pid.slice(0, 8), cliques: 0, registros: 0, ftd: 0, revenue: 0, revLiq: 0 };
+        const plat = (platforms as any[]).find((p: any) => p.id === m.platform_id);
+        map[pid] = { name: plat?.name || pid.slice(0, 8), cliques: 0, registros: 0, ftd: 0, revenue: 0, revLiq: 0 };
       }
       map[pid].cliques += m.cliques || 0;
       map[pid].registros += m.registros || 0;
@@ -101,7 +103,7 @@ export default function TrackingDashboard() {
       map[pid].revLiq += m.revenue_liquido || 0;
     });
     return Object.values(map).sort((a, b) => b.revenue - a.revenue);
-  }, [metrics, accounts]);
+  }, [metrics, platforms]);
 
   // Group by influencer
   const byInfluencer = useMemo(() => {
@@ -109,7 +111,7 @@ export default function TrackingDashboard() {
     metrics.forEach(m => {
       const iid = m.influencer_id || "sem-inf";
       if (!map[iid]) {
-        const inf = influencers.find((i: any) => i.id === m.influencer_id);
+        const inf = (influencers as any[]).find((i: any) => i.id === m.influencer_id);
         map[iid] = { name: inf?.name || iid.slice(0, 8), cliques: 0, registros: 0, ftd: 0, revenue: 0 };
       }
       map[iid].cliques += m.cliques || 0;
@@ -119,6 +121,23 @@ export default function TrackingDashboard() {
     });
     return Object.values(map).sort((a, b) => b.revenue - a.revenue);
   }, [metrics, influencers]);
+
+  // Group by campanha
+  const byCampanha = useMemo(() => {
+    const map: Record<string, { name: string; cliques: number; registros: number; ftd: number; revenue: number }> = {};
+    metrics.forEach(m => {
+      const cid = m.campanha_id || "sem-camp";
+      if (!map[cid]) {
+        const camp = (campanhas as any[]).find((c: any) => c.id === m.campanha_id);
+        map[cid] = { name: camp?.nome || cid.slice(0, 8), cliques: 0, registros: 0, ftd: 0, revenue: 0 };
+      }
+      map[cid].cliques += m.cliques || 0;
+      map[cid].registros += m.registros || 0;
+      map[cid].ftd += m.ftd || 0;
+      map[cid].revenue += m.revenue || 0;
+    });
+    return Object.values(map).sort((a, b) => b.revenue - a.revenue);
+  }, [metrics, campanhas]);
 
   // Daily evolution
   const dailyData = useMemo(() => {
@@ -134,12 +153,30 @@ export default function TrackingDashboard() {
     return Object.values(map).sort((a, b) => a.date.localeCompare(b.date));
   }, [metrics]);
 
-  // Platforms list for filter (from accounts)
+  // Funnel data
+  const funnelData = useMemo(() => [
+    { name: "Cliques", value: kpis.cliques, fill: COLORS[0] },
+    { name: "Registros", value: kpis.registros, fill: COLORS[1] },
+    { name: "FTD", value: kpis.ftd, fill: COLORS[2] },
+    { name: "Redepósitos", value: kpis.redepositos, fill: COLORS[3] },
+  ], [kpis]);
+
+  // Alerts
+  const alerts = useMemo(() => {
+    const items: { type: string; message: string; severity: "warning" | "error" | "info" }[] = [];
+    const dupes = recentEvents.filter(e => e.is_duplicate).length;
+    if (dupes > 0) items.push({ type: "duplicate", message: `${dupes} eventos duplicados detectados`, severity: "warning" });
+    const noClick = recentEvents.filter(e => !e.click_id && e.canonical_event_name !== "click").length;
+    if (noClick > 5) items.push({ type: "no_click", message: `${noClick} eventos sem click_id`, severity: "warning" });
+    byPlatform.forEach(p => {
+      if (p.cliques > 100 && p.ftd < 2) items.push({ type: "low_ftd", message: `${p.name}: ${p.cliques} cliques, apenas ${p.ftd} FTD`, severity: "error" });
+    });
+    return items;
+  }, [recentEvents, byPlatform]);
+
   const platformOptions = useMemo(() => {
-    const unique = new Map<string, string>();
-    accounts.forEach(a => unique.set(a.platform_id, a.nome_conta));
-    return Array.from(unique, ([id, name]) => ({ id, name }));
-  }, [accounts]);
+    return (platforms as any[]).map((p: any) => ({ id: p.id, name: p.name }));
+  }, [platforms]);
 
   const hasData = metrics.length > 0;
 
@@ -151,6 +188,7 @@ export default function TrackingDashboard() {
     { label: "Depósitos Total", value: fmt(kpis.depositos), icon: DollarSign, color: "text-chart-5" },
     { label: "Revenue", value: fmt(kpis.revenue), icon: TrendingUp, color: "text-primary" },
     { label: "Saque Disponível", value: fmt(kpis.saque), icon: Wallet, color: "text-chart-2" },
+    { label: "Lucro", value: fmt(kpis.lucro), icon: Activity, color: kpis.lucro >= 0 ? "text-green-500" : "text-destructive" },
     { label: "ROI", value: kpis.roi.toFixed(1) + "%", icon: Activity, color: kpis.roi >= 0 ? "text-green-500" : "text-destructive" },
   ];
 
@@ -161,35 +199,56 @@ export default function TrackingDashboard() {
     { label: "Ticket Médio", value: fmt(kpis.ticketMedio) },
     { label: "Rev/Registro", value: fmt(kpis.revenuePerRegistro) },
     { label: "Rev/FTD", value: fmt(kpis.revenuePerFtd) },
+    { label: "Custo Total", value: fmt(kpis.custoTotal) },
   ];
 
   const clearFilters = () => {
-    setPlatformFilter("all");
-    setInfluencerFilter("all");
-    setCampanhaFilter("all");
-    setDateFrom("");
-    setDateTo("");
+    setPlatformFilter("all"); setInfluencerFilter("all");
+    setCampanhaFilter("all"); setLpFilter("all");
+    setDateFrom(""); setDateTo("");
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
       <Breadcrumbs items={[{ label: "Tracking Hub" }]} />
 
-      {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">Tracking Hub</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Central de performance multi-plataforma</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={() => navigate("/tracking/metrics")}>
             <Download size={14} className="mr-1.5" /> Registrar Métrica
           </Button>
           <Button variant="outline" size="sm" onClick={() => navigate("/tracking/accounts")}>
             <Users size={14} className="mr-1.5" /> Contas
           </Button>
+          <Button variant="outline" size="sm" onClick={() => navigate("/tracking/mappings")}>
+            <Map size={14} className="mr-1.5" /> Mapeamentos
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => navigate("/tracking/events")}>
+            <Zap size={14} className="mr-1.5" /> Eventos
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => navigate("/tracking/links")}>
+            <Link2 size={14} className="mr-1.5" /> Links
+          </Button>
         </div>
       </div>
+
+      {/* Alerts */}
+      {alerts.length > 0 && (
+        <div className="space-y-2">
+          {alerts.map((a, i) => (
+            <Card key={i} className={a.severity === "error" ? "border-destructive/50 bg-destructive/5" : "border-yellow-500/50 bg-yellow-500/5"}>
+              <CardContent className="py-3 px-4 flex items-center gap-3">
+                <AlertTriangle size={14} className={a.severity === "error" ? "text-destructive" : "text-yellow-500"} />
+                <span className="text-sm">{a.message}</span>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Filters */}
       <Card>
@@ -201,7 +260,7 @@ export default function TrackingDashboard() {
               <RefreshCcw size={12} className="mr-1" /> Limpar
             </Button>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
             <Select value={platformFilter} onValueChange={setPlatformFilter}>
               <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Plataforma" /></SelectTrigger>
               <SelectContent>
@@ -223,6 +282,13 @@ export default function TrackingDashboard() {
                 {(campanhas as any[]).map((c: any) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
               </SelectContent>
             </Select>
+            <Select value={lpFilter} onValueChange={setLpFilter}>
+              <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Landing Page" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas LPs</SelectItem>
+                {(landingPages as any[]).map((lp: any) => <SelectItem key={lp.id} value={lp.id}>{lp.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
             <Input type="date" className="h-9 text-xs" value={dateFrom} onChange={e => setDateFrom(e.target.value)} placeholder="De" />
             <Input type="date" className="h-9 text-xs" value={dateTo} onChange={e => setDateTo(e.target.value)} placeholder="Até" />
           </div>
@@ -237,50 +303,53 @@ export default function TrackingDashboard() {
         <EmptyState
           icon={BarChart3}
           title="Nenhuma métrica registrada"
-          description="Comece registrando métricas de performance das suas plataformas para ver os dados aqui."
+          description="Comece registrando métricas de performance ou configure postbacks para receber dados automaticamente."
           actionLabel="Registrar Métrica"
           onAction={() => navigate("/tracking/metrics")}
-          secondaryLabel="Gerenciar Contas"
-          onSecondary={() => navigate("/tracking/accounts")}
+          secondaryLabel="Configurar Mapeamentos"
+          onSecondary={() => navigate("/tracking/mappings")}
         />
       )}
 
       {!isLoading && hasData && (
         <>
           {/* KPI Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-3 md:grid-cols-9 gap-3">
             {kpiCards.map(k => (
               <Card key={k.label}>
-                <CardContent className="py-4 px-5">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{k.label}</span>
-                    <k.icon size={14} className={k.color} />
+                <CardContent className="py-3 px-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">{k.label}</span>
+                    <k.icon size={12} className={k.color} />
                   </div>
-                  <p className="text-xl font-bold text-foreground">{k.value}</p>
+                  <p className="text-lg font-bold text-foreground">{k.value}</p>
                 </CardContent>
               </Card>
             ))}
           </div>
 
-          {/* Calculated Metrics */}
-          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+          {/* Calculated */}
+          <div className="grid grid-cols-4 md:grid-cols-7 gap-3">
             {calculatedCards.map(c => (
               <Card key={c.label}>
-                <CardContent className="py-3 px-4 text-center">
-                  <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1">{c.label}</p>
-                  <p className="text-base font-semibold text-foreground">{c.value}</p>
+                <CardContent className="py-2.5 px-3 text-center">
+                  <p className="text-[9px] font-medium text-muted-foreground uppercase tracking-wider mb-0.5">{c.label}</p>
+                  <p className="text-sm font-semibold text-foreground">{c.value}</p>
                 </CardContent>
               </Card>
             ))}
           </div>
 
-          {/* Charts & Tables */}
+          {/* Charts */}
           <Tabs defaultValue="evolucao" className="space-y-4">
-            <TabsList>
+            <TabsList className="flex-wrap">
               <TabsTrigger value="evolucao">Evolução Diária</TabsTrigger>
+              <TabsTrigger value="funil">Funil</TabsTrigger>
               <TabsTrigger value="plataformas">Por Plataforma</TabsTrigger>
               <TabsTrigger value="influencers">Por Influencer</TabsTrigger>
-              <TabsTrigger value="detalhes">Detalhes</TabsTrigger>
+              <TabsTrigger value="campanhas">Por Campanha</TabsTrigger>
+              <TabsTrigger value="eventos">Eventos Recentes</TabsTrigger>
+              <TabsTrigger value="detalhes">Métricas</TabsTrigger>
             </TabsList>
 
             <TabsContent value="evolucao">
@@ -305,6 +374,54 @@ export default function TrackingDashboard() {
               </Card>
             </TabsContent>
 
+            <TabsContent value="funil">
+              <div className="grid md:grid-cols-2 gap-4">
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">Funil de Conversão</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {funnelData.map((item, i) => {
+                        const maxVal = funnelData[0].value || 1;
+                        const width = Math.max((item.value / maxVal) * 100, 5);
+                        return (
+                          <div key={item.name}>
+                            <div className="flex justify-between text-xs mb-1">
+                              <span className="text-muted-foreground">{item.name}</span>
+                              <span className="font-semibold">{fmtNum(item.value)}</span>
+                            </div>
+                            <div className="h-7 bg-secondary/50 rounded overflow-hidden">
+                              <div className="h-full rounded transition-all" style={{ width: `${width}%`, backgroundColor: item.fill }} />
+                            </div>
+                            {i > 0 && funnelData[i - 1].value > 0 && (
+                              <p className="text-[10px] text-muted-foreground mt-0.5">
+                                CR: {pct(item.value, funnelData[i - 1].value)}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2"><CardTitle className="text-sm">Revenue Diário</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="h-[280px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={dailyData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                          <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                          <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                          <ReTooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
+                          <Bar dataKey="revenue" name="Revenue" fill={COLORS[0]} radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
             <TabsContent value="plataformas">
               <div className="grid md:grid-cols-2 gap-4">
                 <Card>
@@ -315,7 +432,7 @@ export default function TrackingDashboard() {
                         <BarChart data={byPlatform} layout="vertical">
                           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                           <XAxis type="number" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
-                          <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={80} stroke="hsl(var(--muted-foreground))" />
+                          <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={100} stroke="hsl(var(--muted-foreground))" />
                           <ReTooltip contentStyle={{ background: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} />
                           <Bar dataKey="revenue" name="Revenue" fill={COLORS[0]} radius={[0, 4, 4, 0]} />
                         </BarChart>
@@ -331,9 +448,10 @@ export default function TrackingDashboard() {
                         <TableRow>
                           <TableHead>Plataforma</TableHead>
                           <TableHead className="text-right">Cliques</TableHead>
-                          <TableHead className="text-right">Registros</TableHead>
+                          <TableHead className="text-right">Reg</TableHead>
                           <TableHead className="text-right">FTD</TableHead>
                           <TableHead className="text-right">Revenue</TableHead>
+                          <TableHead className="text-right">EPC</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -344,6 +462,7 @@ export default function TrackingDashboard() {
                             <TableCell className="text-right">{fmtNum(p.registros)}</TableCell>
                             <TableCell className="text-right">{fmtNum(p.ftd)}</TableCell>
                             <TableCell className="text-right font-medium">{fmt(p.revenue)}</TableCell>
+                            <TableCell className="text-right">{p.cliques ? fmt(p.revenue / p.cliques) : "—"}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -389,6 +508,92 @@ export default function TrackingDashboard() {
               </Card>
             </TabsContent>
 
+            <TabsContent value="campanhas">
+              <Card>
+                <CardHeader className="pb-2"><CardTitle className="text-sm">Performance por Campanha</CardTitle></CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Campanha</TableHead>
+                        <TableHead className="text-right">Cliques</TableHead>
+                        <TableHead className="text-right">Registros</TableHead>
+                        <TableHead className="text-right">CR Reg</TableHead>
+                        <TableHead className="text-right">FTD</TableHead>
+                        <TableHead className="text-right">Revenue</TableHead>
+                        <TableHead className="text-right">EPC</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {byCampanha.map((c, i) => (
+                        <TableRow key={i}>
+                          <TableCell className="font-medium">{c.name}</TableCell>
+                          <TableCell className="text-right">{fmtNum(c.cliques)}</TableCell>
+                          <TableCell className="text-right">{fmtNum(c.registros)}</TableCell>
+                          <TableCell className="text-right">{pct(c.registros, c.cliques)}</TableCell>
+                          <TableCell className="text-right">{fmtNum(c.ftd)}</TableCell>
+                          <TableCell className="text-right font-medium">{fmt(c.revenue)}</TableCell>
+                          <TableCell className="text-right">{c.cliques ? fmt(c.revenue / c.cliques) : "—"}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="eventos">
+              <Card>
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-sm">Eventos Recentes</CardTitle>
+                    <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => navigate("/tracking/events")}>
+                      Ver todos
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Evento</TableHead>
+                          <TableHead>Canônico</TableHead>
+                          <TableHead>Origem</TableHead>
+                          <TableHead className="text-right">Valor</TableHead>
+                          <TableHead>País</TableHead>
+                          <TableHead>Timestamp</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {recentEvents.slice(0, 20).map(ev => (
+                          <TableRow key={ev.id} className={ev.is_duplicate ? "opacity-50" : ""}>
+                            <TableCell className="font-mono text-xs">{ev.raw_event_name}</TableCell>
+                            <TableCell>
+                              <Badge variant="secondary" className="text-[10px]">{ev.canonical_event_name}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="text-[10px]">{ev.source_type}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right">{ev.amount ? fmt(ev.amount) : "—"}</TableCell>
+                            <TableCell>{ev.country || "—"}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {new Date(ev.event_timestamp).toLocaleString("pt-BR")}
+                            </TableCell>
+                            <TableCell>
+                              {ev.is_duplicate && <Badge variant="destructive" className="text-[10px]">Duplicado</Badge>}
+                              {!ev.click_id && !ev.is_duplicate && <Badge variant="outline" className="text-[10px] border-yellow-500 text-yellow-600">Sem click_id</Badge>}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="detalhes">
               <Card>
                 <CardHeader className="pb-2"><CardTitle className="text-sm">Métricas Detalhadas</CardTitle></CardHeader>
@@ -405,6 +610,7 @@ export default function TrackingDashboard() {
                           <TableHead className="text-right">Depósitos</TableHead>
                           <TableHead className="text-right">Revenue</TableHead>
                           <TableHead className="text-right">Rev Líq</TableHead>
+                          <TableHead className="text-right">Custo</TableHead>
                           <TableHead>Origem</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -419,6 +625,7 @@ export default function TrackingDashboard() {
                             <TableCell className="text-right">{fmt(m.depositos_total)}</TableCell>
                             <TableCell className="text-right font-medium">{fmt(m.revenue)}</TableCell>
                             <TableCell className="text-right">{fmt(m.revenue_liquido)}</TableCell>
+                            <TableCell className="text-right">{fmt((m.custo_trafego || 0) + (m.custo_influencer || 0))}</TableCell>
                             <TableCell>
                               {m.origem_importacao && <Badge variant="secondary" className="text-[10px]">{m.origem_importacao}</Badge>}
                             </TableCell>
