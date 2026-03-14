@@ -66,6 +66,7 @@ export default function TrackingEvents() {
           <h1 className="text-2xl font-bold text-foreground tracking-tight">Eventos de Tracking</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Eventos brutos recebidos via postback, API ou importação manual</p>
         </div>
+        <TrackingDemoFilter />
       </div>
 
       {/* Stats */}
