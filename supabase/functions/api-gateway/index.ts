@@ -34,6 +34,9 @@ const TABLE_ORDER_DEFAULTS: Record<string, string> = {
   game_platforms: "game_id",
   tracking_snapshots: "data_snapshot",
   tracking_metrics: "data_ref",
+  tracking_events: "event_timestamp",
+  tracking_links: "created_at",
+  platform_event_mappings: "created_at",
 };
 
 Deno.serve(async (req) => {

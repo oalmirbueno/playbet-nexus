@@ -21,6 +21,10 @@ const sections: MenuSection[] = [
     items: [
       { label: "Tracking Dashboard", icon: BarChart3, path: "/tracking" },
       { label: "Contas Plataforma", icon: Monitor, path: "/tracking/accounts" },
+      { label: "Tracking Links", icon: Link2, path: "/tracking/links" },
+      { label: "Mapeamentos", icon: GitBranch, path: "/tracking/mappings" },
+      { label: "Eventos", icon: Activity, path: "/tracking/events" },
+      { label: "Snapshots", icon: ClipboardList, path: "/tracking/snapshots" },
       { label: "Registrar Métrica", icon: Activity, path: "/tracking/metrics" },
     ],
   },

@@ -2,3 +2,6 @@ project_id = "rcrrbznhatdqcmfyzgbt"
 
 [functions.api-gateway]
 verify_jwt = false
+
+[functions.tracking-postback]
+verify_jwt = false

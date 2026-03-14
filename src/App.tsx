@@ -110,6 +110,10 @@ function ProtectedRoutes() {
         <Route path="/tracking" element={<TrackingDashboard />} />
         <Route path="/tracking/accounts" element={<TrackingAccounts />} />
         <Route path="/tracking/metrics" element={<TrackingMetricsForm />} />
+        <Route path="/tracking/mappings" element={<TrackingMappings />} />
+        <Route path="/tracking/events" element={<TrackingEvents />} />
+        <Route path="/tracking/snapshots" element={<TrackingSnapshots />} />
+        <Route path="/tracking/links" element={<TrackingLinks />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </DashboardLayout>
