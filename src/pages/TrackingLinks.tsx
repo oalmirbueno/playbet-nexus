@@ -9,10 +9,14 @@ import EmptyState from "@/components/EmptyState";
 import TrackingDemoFilter from "@/components/TrackingDemoFilter";
 import TrackingLinkForm, { emptyForm, formFromRow, type FormState } from "@/components/tracking/TrackingLinkForm";
 import TrackingLinkDetail from "@/components/tracking/TrackingLinkDetail";
-import { useTrackingLinks, usePlatformAccounts } from "@/hooks/useTrackingData";
+import TrackingSetupWizard from "@/components/tracking/TrackingSetupWizard";
+import HistoricalImport from "@/components/tracking/HistoricalImport";
+import { useTrackingLinks, usePlatformAccounts, usePlatformEventMappings, useTrackingMetrics, useTrackingSnapshots } from "@/hooks/useTrackingData";
 import { useInfluencers, useCampanhas, useLandingPages, useLandingPageInstances, usePlatforms } from "@/hooks/useSupabaseQuery";
-import { Plus, Pencil, Trash2, Link2, Copy, Check, ExternalLink, AlertTriangle } from "lucide-react";
+import { Plus, Pencil, Trash2, Link2, Copy, Check, ExternalLink, AlertTriangle, Sparkles, Upload } from "lucide-react";
+import { findPresetByName, type PlatformPreset } from "@/config/platformPresets";
 import type { TrackingLinkRow } from "@/services/trackingService";
+import { useToast } from "@/hooks/use-toast";
 
 const ROLE_LABELS: Record<string, string> = {
   influencer: "Influencer",
@@ -20,7 +24,6 @@ const ROLE_LABELS: Record<string, string> = {
   parceiro: "Parceiro",
   interno: "Interno",
 };
-import { useToast } from "@/hooks/use-toast";
 
 export default function TrackingLinks() {
   const { data, isLoading, create, update, remove } = useTrackingLinks();
@@ -30,6 +33,8 @@ export default function TrackingLinks() {
   const { data: landingPages } = useLandingPages();
   const { data: lpInstances } = useLandingPageInstances();
   const { data: platforms } = usePlatforms();
+  const { data: mappings, create: createMapping } = usePlatformEventMappings();
+  const { create: createMetric } = useTrackingMetrics();
   const { toast } = useToast();
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -38,6 +43,8 @@ export default function TrackingLinks() {
   const [copiedType, setCopiedType] = useState("");
   const [search, setSearch] = useState("");
   const [detailLink, setDetailLink] = useState<TrackingLinkRow | null>(null);
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const filtered = data.filter(l =>
     (l.tracking_code || "").toLowerCase().includes(search.toLowerCase()) ||
@@ -62,6 +69,35 @@ export default function TrackingLinks() {
     setModalOpen(false);
   };
 
+  const handleWizardComplete = async (payload: any) => {
+    await create(payload);
+    setWizardOpen(false);
+    toast({ title: "Tracking link criado via setup guiado!" });
+  };
+
+  const handleApplyMappings = async (platformId: string, preset: PlatformPreset, accountId?: string) => {
+    for (const evt of preset.events) {
+      await createMapping({
+        platform_id: platformId,
+        platform_account_id: accountId || null,
+        raw_event_name: evt.raw_event_name,
+        canonical_event_name: evt.canonical_event_name,
+        amount_field: evt.amount_field,
+        currency_field: evt.currency_field,
+        transaction_id_field: evt.transaction_id_field,
+        user_id_field: evt.user_id_field,
+        country_field: evt.country_field,
+        status_field: evt.status_field,
+        ...preset.sub_fields,
+      } as any);
+    }
+  };
+
+  const handleSaveSnapshot = async (payload: any) => {
+    const { supabase } = await import("@/integrations/supabase/client");
+    await (supabase as any).from("tracking_snapshots").insert(payload);
+  };
+
   const buildFinalUrl = (l: TrackingLinkRow) => {
     if (l.final_url) return l.final_url;
     if (!l.base_url) return l.tracking_code;
@@ -79,6 +115,9 @@ export default function TrackingLinks() {
 
   const isIncomplete = (l: TrackingLinkRow) => !l.platform_account_id || !l.influencer_id || !l.base_url;
 
+  // Count existing mappings for wizard
+  const existingMappingsCount = mappings.length;
+
   return (
     <div className="space-y-6 animate-fade-in">
       <Breadcrumbs items={[{ label: "Tracking Hub", path: "/tracking" }, { label: "Links" }]} />
@@ -88,22 +127,50 @@ export default function TrackingLinks() {
           <h1 className="text-2xl font-bold text-foreground tracking-tight">Tracking Links</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Links rastreáveis vinculados a influencers, contas e campanhas</p>
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center flex-wrap">
           <TrackingDemoFilter />
-          <Button size="sm" onClick={openCreate}><Plus size={14} className="mr-1.5" /> Novo Link</Button>
+          <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
+            <Upload size={14} className="mr-1.5" /> Importar Histórico
+          </Button>
+          <Button size="sm" variant="outline" onClick={openCreate}>
+            <Plus size={14} className="mr-1.5" /> Manual
+          </Button>
+          <Button size="sm" onClick={() => setWizardOpen(true)}>
+            <Sparkles size={14} className="mr-1.5" /> Setup Guiado
+          </Button>
         </div>
       </div>
 
       {isLoading && <Card><CardContent className="py-12 text-center text-muted-foreground text-sm">Carregando...</CardContent></Card>}
 
       {!isLoading && data.length === 0 && (
-        <EmptyState
-          icon={Link2}
-          title="Nenhum tracking link criado"
-          description="Crie links rastreáveis para conectar plataformas, influencers e campanhas. Cada link gera um tracking_code único para rastrear cliques e conversões."
-          actionLabel="Criar Link"
-          onAction={openCreate}
-        />
+        <div className="space-y-4">
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="py-6 text-center space-y-3">
+              <Sparkles className="mx-auto text-primary" size={28} />
+              <h3 className="text-sm font-semibold">Comece pelo Setup Guiado</h3>
+              <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                Escolha a plataforma, selecione a instância/slug e o painel configura tudo automaticamente:
+                link operacional, mapeamentos, postbacks e tracking code.
+              </p>
+              <div className="flex gap-2 justify-center">
+                <Button size="sm" onClick={() => setWizardOpen(true)}>
+                  <Sparkles size={14} className="mr-1.5" /> Iniciar Setup Guiado
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
+                  <Upload size={14} className="mr-1.5" /> Importar Histórico
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          <EmptyState
+            icon={Link2}
+            title="Nenhum tracking link criado"
+            description="Use o Setup Guiado acima ou crie manualmente."
+            actionLabel="Criar Manual"
+            onAction={openCreate}
+          />
+        </div>
       )}
 
       {!isLoading && data.length > 0 && (
@@ -211,6 +278,29 @@ export default function TrackingLinks() {
         landingPages={landingPages as any[]}
         lpInstances={lpInstances as any[]}
         platforms={platforms as any[]}
+      />
+
+      <TrackingSetupWizard
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        accounts={accounts}
+        influencers={influencers as any[]}
+        campanhas={campanhas as any[]}
+        landingPages={landingPages as any[]}
+        lpInstances={lpInstances as any[]}
+        platforms={platforms as any[]}
+        onComplete={handleWizardComplete}
+        onApplyMappings={handleApplyMappings}
+        existingMappingsCount={existingMappingsCount}
+      />
+
+      <HistoricalImport
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        accounts={accounts}
+        platforms={platforms as any[]}
+        onSaveMetric={createMetric}
+        onSaveSnapshot={handleSaveSnapshot}
       />
     </div>
   );

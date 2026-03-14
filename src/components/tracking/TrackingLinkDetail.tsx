@@ -4,9 +4,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Copy, Check, AlertTriangle, Info, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import PostbackEventBlocks from "./PostbackEventBlocks";
 import type { TrackingLinkRow } from "@/services/trackingService";
-
-const POSTBACK_BASE = "https://rcrrbznhatdqcmfyzgbt.supabase.co/functions/v1/tracking-postback";
 
 const ROLE_LABELS: Record<string, { label: string; color: string }> = {
   influencer: { label: "Influencer", color: "bg-primary/15 text-primary" },
@@ -80,7 +79,6 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
 
   const hasDivergence = hasInstanceLink && link.base_url && instanceAffiliateLink !== link.base_url;
 
-  // The "primary" link is the instance link if it exists, otherwise base_url
   const primaryLink = hasInstanceLink ? instanceAffiliateLink : (link.base_url || "");
 
   const buildFinalUrl = () => {
@@ -88,11 +86,6 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
     if (!primaryLink) return "";
     const sep = primaryLink.includes("?") ? "&" : "?";
     return `${primaryLink}${sep}${link.click_id_param_name || "sub1"}={click_id}`;
-  };
-
-  const buildPostbackUrl = () => {
-    const platName = platform?.name?.toLowerCase() || "generic";
-    return `${POSTBACK_BASE}/${platName}?event={event}&sub1=${link.tracking_code}&sub2=${link.influencer_id || "{influencer_id}"}&sub3=${link.campanha_id || "{campanha_id}"}&amount={amount}&transaction_id={transaction_id}&user_id={user_id}&country={country}`;
   };
 
   const missingFields: string[] = [];
@@ -136,7 +129,7 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
           <div><span className="text-muted-foreground text-xs">Status:</span> <Badge variant={link.status === "active" ? "default" : "secondary"} className="text-[10px] ml-1">{link.status || "active"}</Badge></div>
         </div>
 
-        {/* Copy blocks — ordered by operational priority */}
+        {/* Copy blocks */}
         <div className="space-y-3">
           <CopyBlock
             label="Código interno de tracking"
@@ -144,7 +137,6 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
             help="Identificador único gerado pelo painel. Usado nos SUBIDs para rastrear conversões."
           />
 
-          {/* Primary: instance link if exists */}
           {hasInstanceLink && (
             <CopyBlock
               label={`Link em uso na LP (/${instance?.slug})`}
@@ -154,7 +146,6 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
             />
           )}
 
-          {/* Base URL — secondary if instance link exists */}
           {link.base_url && (
             <CopyBlock
               label={hasInstanceLink ? "Link bruto da plataforma (técnico)" : "Link operacional"}
@@ -179,12 +170,17 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
             value={link.short_url || ""}
             help="Link encurtado para facilitar compartilhamento (bio, stories, etc)."
           />
-          <CopyBlock
-            label="URL de Postback (configurar na plataforma)"
-            value={buildPostbackUrl()}
-            help="Cole esta URL no painel da casa para receber eventos de conversão automaticamente."
-          />
         </div>
+
+        {/* Per-event postback blocks */}
+        {platform && (
+          <PostbackEventBlocks
+            platformName={platform.name}
+            trackingCode={link.tracking_code}
+            influencerId={link.influencer_id || undefined}
+            campanhaId={link.campanha_id || undefined}
+          />
+        )}
 
         {hasDivergence && (
           <div className="flex items-start gap-2 bg-muted/50 border rounded-md px-3 py-2 text-xs text-muted-foreground">
