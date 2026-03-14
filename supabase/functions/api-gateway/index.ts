@@ -24,6 +24,9 @@ const ALLOWED_TABLES = [
   "platform_accounts",
   "tracking_metrics",
   "tracking_snapshots",
+  "tracking_links",
+  "tracking_events",
+  "platform_event_mappings",
 ];
 
 const TABLE_ORDER_DEFAULTS: Record<string, string> = {
