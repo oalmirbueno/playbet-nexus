@@ -15,8 +15,8 @@ interface Props {
   onOpenChange: (v: boolean) => void;
   accounts: any[];
   platforms: any[];
-  onSaveMetric: (data: any) => Promise<void>;
-  onSaveSnapshot: (data: any) => Promise<void>;
+  onSaveMetric: (data: any) => Promise<any>;
+  onSaveSnapshot: (data: any) => Promise<any>;
 }
 
 export default function HistoricalImport({ open, onOpenChange, accounts, platforms, onSaveMetric, onSaveSnapshot }: Props) {
