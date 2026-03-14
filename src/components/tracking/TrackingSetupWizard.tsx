@@ -352,9 +352,9 @@ export default function TrackingSetupWizard({
             {preset && selectedPlatform && (
               <PostbackEventBlocks
                 platformName={selectedPlatform.name}
-                trackingCode="(gerado ao salvar)"
+                trackingCode={previewTrackingCode}
                 influencerId={selectedInstance?.influencer_id}
-                campanhaId={campanhaId}
+                campanhaId={campanhaId && campanhaId !== "none" ? campanhaId : undefined}
               />
             )}
           </div>
