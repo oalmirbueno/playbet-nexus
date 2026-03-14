@@ -11,8 +11,15 @@ import TrackingLinkForm, { emptyForm, formFromRow, type FormState } from "@/comp
 import TrackingLinkDetail from "@/components/tracking/TrackingLinkDetail";
 import { useTrackingLinks, usePlatformAccounts } from "@/hooks/useTrackingData";
 import { useInfluencers, useCampanhas, useLandingPages, useLandingPageInstances, usePlatforms } from "@/hooks/useSupabaseQuery";
-import { Plus, Pencil, Trash2, Link2, Copy, Check, ExternalLink, Zap, AlertTriangle } from "lucide-react";
+import { Plus, Pencil, Trash2, Link2, Copy, Check, ExternalLink, AlertTriangle } from "lucide-react";
 import type { TrackingLinkRow } from "@/services/trackingService";
+
+const ROLE_LABELS: Record<string, string> = {
+  influencer: "Influencer",
+  socio: "Sócio(a)",
+  parceiro: "Parceiro",
+  interno: "Interno",
+};
 import { useToast } from "@/hooks/use-toast";
 
 export default function TrackingLinks() {
