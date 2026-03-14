@@ -118,8 +118,9 @@ export default function TrackingLinks() {
                       <TableHead>Código</TableHead>
                       <TableHead>Conta / Plataforma</TableHead>
                       <TableHead>Influencer</TableHead>
+                      <TableHead>Papel</TableHead>
                       <TableHead>LP / Slug</TableHead>
-                      <TableHead>Link Final</TableHead>
+                      <TableHead>Link em Uso</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
