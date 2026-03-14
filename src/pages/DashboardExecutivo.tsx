@@ -49,23 +49,21 @@ export default function DashboardExecutivo() {
   }, [campanhas]);
 
   const totalSaquesValor = useMemo(() => saques.reduce((a: number, s: any) => a + Number(s.valor || 0), 0), [saques]);
-  const totalGanhosSocios = useMemo(() => socios.reduce((a: number, s: any) => a + Number(s.ganhos || 0), 0), [socios]);
-  const totalDisponivelSocios = useMemo(() => socios.reduce((a: number, s: any) => a + Number(s.disponivel || 0), 0), [socios]);
 
   const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
-  // Use tracking consolidated revenue when available, otherwise use socios data
-  const revenueLabel = hasTrackingData && consolidated.revenueBrl > 0 ? "Revenue Tracking" : "Receita Sócios";
-  const revenueValue = hasTrackingData && consolidated.revenueBrl > 0 ? consolidated.revenueBrl : totalGanhosSocios;
-  const revenuePath = hasTrackingData && consolidated.revenueBrl > 0 ? "/tracking" : "/socios";
+  // Revenue: only from tracking with verified conversion
+  const hasVerifiedRevenue = hasTrackingData && consolidated.revenueBrl > 0;
 
   const kpis = [
-    { label: revenueLabel, value: formatBRL(revenueValue), icon: DollarSign, path: revenuePath },
+    ...(hasVerifiedRevenue
+      ? [{ label: "Revenue Tracking", value: formatBRL(consolidated.revenueBrl), icon: DollarSign, path: "/tracking" }]
+      : []),
+    { label: "Cliques Reais (LP)", value: String(consolidated.realClicksCount), icon: MousePointerClick, path: "/conversoes" },
     { label: "Saques Solicitados", value: formatBRL(totalSaquesValor), icon: Wallet, path: "/saques" },
-    { label: "Saldo Disponível", value: formatBRL(totalDisponivelSocios), icon: BarChart3, path: "/financeiro" },
     { label: "Influencers Ativos", value: String(influencers.filter((i: any) => i.is_active).length), icon: Users, path: "/influencers" },
     { label: "Campanhas", value: String(campanhas.length), icon: Megaphone, path: "/campanhas" },
-    { label: "Eventos Tracking", value: String(consolidated.eventCount), icon: MousePointerClick, path: "/tracking" },
+    { label: "Eventos Tracking", value: String(consolidated.eventCount), icon: Target, path: "/tracking" },
   ];
 
   const chartConfig = {
@@ -95,7 +93,7 @@ export default function DashboardExecutivo() {
       ) : (
         <>
           {/* KPIs */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-${kpis.length > 5 ? 6 : kpis.length} gap-4`}>
             {kpis.map((k) => (
               <div
                 key={k.label}
@@ -111,11 +109,11 @@ export default function DashboardExecutivo() {
             ))}
           </div>
 
-          {/* Tracking Revenue Detail */}
-          {hasTrackingData && consolidated.revenueBrl > 0 && (
+          {/* Tracking Revenue Detail - only with verified data */}
+          {hasVerifiedRevenue && (
             <div className="glass-card p-6">
               <h3 className="text-sm font-semibold mb-1">Revenue do Tracking</h3>
-              <p className="text-xs text-muted-foreground mb-3">Consolidado automático de eventos reais</p>
+              <p className="text-xs text-muted-foreground mb-3">Consolidado automático — apenas eventos com conversão rastreável</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {Object.entries(consolidated.byCurrency).map(([currency, data]) => (
                   <div key={currency} className="bg-secondary/30 rounded-lg p-3 border border-border/50">

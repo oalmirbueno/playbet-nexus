@@ -217,7 +217,7 @@ export default function TrackingDashboard() {
   }, [platforms]);
 
   const hasInfra = accounts.length > 0 || recentEvents.length > 0;
-  const realEvents = recentEvents.filter(e => !e.is_demo && !e.click_id?.startsWith("{"));
+  const realEvents = recentEvents.filter(e => !e.is_demo && !e.click_id?.startsWith("{") && e.status !== "invalid_legacy" && !e.canonical_event_name?.startsWith("{"));
 
   const kpiCards = [
     { label: "Cliques", value: fmtNum(effectiveKpis.cliques), icon: MousePointerClick, color: "text-primary" },

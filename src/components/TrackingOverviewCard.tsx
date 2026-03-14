@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { usePlatformAccounts, useTrackingLinks, useTrackingEvents } from "@/hooks/useTrackingData";
+import { usePlatformAccounts, useTrackingLinks } from "@/hooks/useTrackingData";
 import { usePlatforms } from "@/hooks/useSupabaseQuery";
 import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
 import { Activity, ArrowRight, CheckCircle2, AlertTriangle, Radio } from "lucide-react";
@@ -59,7 +59,7 @@ export default function TrackingOverviewCard() {
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-3">
           <div>
             <p className="text-[10px] text-muted-foreground uppercase">Plataformas</p>
             <p className="text-lg font-bold">{realPlatforms.length}</p>
@@ -69,7 +69,11 @@ export default function TrackingOverviewCard() {
             <p className="text-lg font-bold">{realLinks.length}</p>
           </div>
           <div>
-            <p className="text-[10px] text-muted-foreground uppercase">Eventos reais</p>
+            <p className="text-[10px] text-muted-foreground uppercase">Cliques reais</p>
+            <p className="text-lg font-bold">{consolidated.realClicksCount}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase">Eventos válidos</p>
             <p className="text-lg font-bold">{consolidated.eventCount}</p>
           </div>
           <div>
@@ -78,12 +82,12 @@ export default function TrackingOverviewCard() {
           </div>
         </div>
 
-        {/* Revenue with currency details */}
+        {/* Revenue with currency details - only if verified */}
         {consolidated.revenueBrl > 0 && (
           <div className="bg-background/50 rounded-lg p-2.5 mb-3 border border-border/50">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[10px] text-muted-foreground uppercase">Revenue consolidado</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Revenue consolidado (verificado)</p>
                 {consolidated.revenueOriginalCurrency !== "BRL" ? (
                   <>
                     <p className="text-sm font-bold">{fmtCurrency(consolidated.revenueOriginal, consolidated.revenueOriginalCurrency)}</p>
