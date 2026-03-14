@@ -46,6 +46,10 @@ import DeveloperSettings from "./pages/DeveloperSettings";
 import TrackingDashboard from "./pages/TrackingDashboard";
 import TrackingAccounts from "./pages/TrackingAccounts";
 import TrackingMetricsForm from "./pages/TrackingMetricsForm";
+import TrackingMappings from "./pages/TrackingMappings";
+import TrackingEvents from "./pages/TrackingEvents";
+import TrackingSnapshots from "./pages/TrackingSnapshots";
+import TrackingLinks from "./pages/TrackingLinks";
 import NotFound from "./pages/NotFound";
 import InfluencerLanding from "./pages/InfluencerLanding";
 
@@ -106,6 +110,10 @@ function ProtectedRoutes() {
         <Route path="/tracking" element={<TrackingDashboard />} />
         <Route path="/tracking/accounts" element={<TrackingAccounts />} />
         <Route path="/tracking/metrics" element={<TrackingMetricsForm />} />
+        <Route path="/tracking/mappings" element={<TrackingMappings />} />
+        <Route path="/tracking/events" element={<TrackingEvents />} />
+        <Route path="/tracking/snapshots" element={<TrackingSnapshots />} />
+        <Route path="/tracking/links" element={<TrackingLinks />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </DashboardLayout>

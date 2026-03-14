@@ -571,58 +571,175 @@ export type Database = {
       platform_accounts: {
         Row: {
           account_external_id: string | null
+          cpa_value: number | null
           created_at: string | null
+          dashboard_url: string | null
+          hybrid_details: string | null
           id: string
           is_active: boolean | null
           is_demo: boolean
           login_url: string | null
           manager_email: string | null
           manager_name: string | null
+          manager_telegram: string | null
           manager_whatsapp: string | null
           modelo_comissao: string | null
           moeda: string | null
           nome_conta: string
           notes: string | null
           platform_id: string
+          revshare_percent: number | null
           updated_at: string | null
         }
         Insert: {
           account_external_id?: string | null
+          cpa_value?: number | null
           created_at?: string | null
+          dashboard_url?: string | null
+          hybrid_details?: string | null
           id?: string
           is_active?: boolean | null
           is_demo?: boolean
           login_url?: string | null
           manager_email?: string | null
           manager_name?: string | null
+          manager_telegram?: string | null
           manager_whatsapp?: string | null
           modelo_comissao?: string | null
           moeda?: string | null
           nome_conta: string
           notes?: string | null
           platform_id: string
+          revshare_percent?: number | null
           updated_at?: string | null
         }
         Update: {
           account_external_id?: string | null
+          cpa_value?: number | null
           created_at?: string | null
+          dashboard_url?: string | null
+          hybrid_details?: string | null
           id?: string
           is_active?: boolean | null
           is_demo?: boolean
           login_url?: string | null
           manager_email?: string | null
           manager_name?: string | null
+          manager_telegram?: string | null
           manager_whatsapp?: string | null
           modelo_comissao?: string | null
           moeda?: string | null
           nome_conta?: string
           notes?: string | null
           platform_id?: string
+          revshare_percent?: number | null
           updated_at?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "platform_accounts_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "platforms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_event_mappings: {
+        Row: {
+          amount_field: string | null
+          canonical_event_name: string
+          country_field: string | null
+          created_at: string | null
+          currency_field: string | null
+          id: string
+          is_active: boolean | null
+          is_demo: boolean
+          notes: string | null
+          platform_account_id: string | null
+          platform_id: string
+          raw_event_name: string
+          status_field: string | null
+          sub1_field: string | null
+          sub10_field: string | null
+          sub2_field: string | null
+          sub3_field: string | null
+          sub4_field: string | null
+          sub5_field: string | null
+          sub6_field: string | null
+          sub7_field: string | null
+          sub8_field: string | null
+          sub9_field: string | null
+          transaction_id_field: string | null
+          updated_at: string | null
+          user_id_field: string | null
+        }
+        Insert: {
+          amount_field?: string | null
+          canonical_event_name: string
+          country_field?: string | null
+          created_at?: string | null
+          currency_field?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_demo?: boolean
+          notes?: string | null
+          platform_account_id?: string | null
+          platform_id: string
+          raw_event_name: string
+          status_field?: string | null
+          sub1_field?: string | null
+          sub10_field?: string | null
+          sub2_field?: string | null
+          sub3_field?: string | null
+          sub4_field?: string | null
+          sub5_field?: string | null
+          sub6_field?: string | null
+          sub7_field?: string | null
+          sub8_field?: string | null
+          sub9_field?: string | null
+          transaction_id_field?: string | null
+          updated_at?: string | null
+          user_id_field?: string | null
+        }
+        Update: {
+          amount_field?: string | null
+          canonical_event_name?: string
+          country_field?: string | null
+          created_at?: string | null
+          currency_field?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_demo?: boolean
+          notes?: string | null
+          platform_account_id?: string | null
+          platform_id?: string
+          raw_event_name?: string
+          status_field?: string | null
+          sub1_field?: string | null
+          sub10_field?: string | null
+          sub2_field?: string | null
+          sub3_field?: string | null
+          sub4_field?: string | null
+          sub5_field?: string | null
+          sub6_field?: string | null
+          sub7_field?: string | null
+          sub8_field?: string | null
+          sub9_field?: string | null
+          transaction_id_field?: string | null
+          updated_at?: string | null
+          user_id_field?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_event_mappings_platform_account_id_fkey"
+            columns: ["platform_account_id"]
+            isOneToOne: false
+            referencedRelation: "platform_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "platform_event_mappings_platform_id_fkey"
             columns: ["platform_id"]
             isOneToOne: false
             referencedRelation: "platforms"
@@ -831,78 +948,390 @@ export type Database = {
         }
         Relationships: []
       }
+      tracking_events: {
+        Row: {
+          amount: number | null
+          campanha_id: string | null
+          canonical_event_name: string
+          click_id: string | null
+          commission_amount: number | null
+          conteudo_id: string | null
+          country: string | null
+          created_at: string | null
+          currency: string | null
+          event_timestamp: string
+          id: string
+          influencer_id: string | null
+          is_demo: boolean
+          is_duplicate: boolean | null
+          landing_page_id: string | null
+          landing_page_instance_id: string | null
+          platform_account_id: string | null
+          platform_id: string | null
+          platform_user_id: string | null
+          processed_at: string | null
+          raw_event_name: string
+          raw_payload: Json | null
+          source_type: string
+          status: string | null
+          tracking_link_id: string | null
+          transaction_id: string | null
+          updated_at: string | null
+          utm_id: string | null
+        }
+        Insert: {
+          amount?: number | null
+          campanha_id?: string | null
+          canonical_event_name: string
+          click_id?: string | null
+          commission_amount?: number | null
+          conteudo_id?: string | null
+          country?: string | null
+          created_at?: string | null
+          currency?: string | null
+          event_timestamp?: string
+          id?: string
+          influencer_id?: string | null
+          is_demo?: boolean
+          is_duplicate?: boolean | null
+          landing_page_id?: string | null
+          landing_page_instance_id?: string | null
+          platform_account_id?: string | null
+          platform_id?: string | null
+          platform_user_id?: string | null
+          processed_at?: string | null
+          raw_event_name: string
+          raw_payload?: Json | null
+          source_type?: string
+          status?: string | null
+          tracking_link_id?: string | null
+          transaction_id?: string | null
+          updated_at?: string | null
+          utm_id?: string | null
+        }
+        Update: {
+          amount?: number | null
+          campanha_id?: string | null
+          canonical_event_name?: string
+          click_id?: string | null
+          commission_amount?: number | null
+          conteudo_id?: string | null
+          country?: string | null
+          created_at?: string | null
+          currency?: string | null
+          event_timestamp?: string
+          id?: string
+          influencer_id?: string | null
+          is_demo?: boolean
+          is_duplicate?: boolean | null
+          landing_page_id?: string | null
+          landing_page_instance_id?: string | null
+          platform_account_id?: string | null
+          platform_id?: string | null
+          platform_user_id?: string | null
+          processed_at?: string | null
+          raw_event_name?: string
+          raw_payload?: Json | null
+          source_type?: string
+          status?: string | null
+          tracking_link_id?: string | null
+          transaction_id?: string | null
+          updated_at?: string | null
+          utm_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_events_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_events_conteudo_id_fkey"
+            columns: ["conteudo_id"]
+            isOneToOne: false
+            referencedRelation: "conteudo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_events_influencer_id_fkey"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_events_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "landing_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_events_landing_page_instance_id_fkey"
+            columns: ["landing_page_instance_id"]
+            isOneToOne: false
+            referencedRelation: "landing_page_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_events_platform_account_id_fkey"
+            columns: ["platform_account_id"]
+            isOneToOne: false
+            referencedRelation: "platform_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_events_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "platforms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_events_tracking_link_id_fkey"
+            columns: ["tracking_link_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_links"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_events_utm_id_fkey"
+            columns: ["utm_id"]
+            isOneToOne: false
+            referencedRelation: "utms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tracking_links: {
+        Row: {
+          base_url: string | null
+          campanha_id: string | null
+          click_id_param_name: string | null
+          conteudo_id: string | null
+          created_at: string | null
+          final_url: string | null
+          id: string
+          influencer_id: string | null
+          is_demo: boolean
+          landing_page_id: string | null
+          landing_page_instance_id: string | null
+          notes: string | null
+          platform_account_id: string | null
+          short_url: string | null
+          status: string | null
+          tracking_code: string
+          updated_at: string | null
+          utm_id: string | null
+        }
+        Insert: {
+          base_url?: string | null
+          campanha_id?: string | null
+          click_id_param_name?: string | null
+          conteudo_id?: string | null
+          created_at?: string | null
+          final_url?: string | null
+          id?: string
+          influencer_id?: string | null
+          is_demo?: boolean
+          landing_page_id?: string | null
+          landing_page_instance_id?: string | null
+          notes?: string | null
+          platform_account_id?: string | null
+          short_url?: string | null
+          status?: string | null
+          tracking_code?: string
+          updated_at?: string | null
+          utm_id?: string | null
+        }
+        Update: {
+          base_url?: string | null
+          campanha_id?: string | null
+          click_id_param_name?: string | null
+          conteudo_id?: string | null
+          created_at?: string | null
+          final_url?: string | null
+          id?: string
+          influencer_id?: string | null
+          is_demo?: boolean
+          landing_page_id?: string | null
+          landing_page_instance_id?: string | null
+          notes?: string | null
+          platform_account_id?: string | null
+          short_url?: string | null
+          status?: string | null
+          tracking_code?: string
+          updated_at?: string | null
+          utm_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_links_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_links_conteudo_id_fkey"
+            columns: ["conteudo_id"]
+            isOneToOne: false
+            referencedRelation: "conteudo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_links_influencer_id_fkey"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_links_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "landing_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_links_landing_page_instance_id_fkey"
+            columns: ["landing_page_instance_id"]
+            isOneToOne: false
+            referencedRelation: "landing_page_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_links_platform_account_id_fkey"
+            columns: ["platform_account_id"]
+            isOneToOne: false
+            referencedRelation: "platform_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_links_utm_id_fkey"
+            columns: ["utm_id"]
+            isOneToOne: false
+            referencedRelation: "utms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tracking_metrics: {
         Row: {
+          avg_ticket: number | null
           campanha_id: string | null
           cliques: number | null
           conteudo_id: string | null
+          cost_amount: number | null
           created_at: string | null
           custo_influencer: number | null
           custo_trafego: number | null
           data_ref: string
           depositos_total: number | null
+          deposits_count: number | null
+          epc: number | null
           ftd: number | null
+          ftd_cr: number | null
           id: string
           influencer_id: string | null
           is_demo: boolean
+          landing_page_id: string | null
+          landing_page_instance_id: string | null
           observacoes: string | null
           origem_importacao: string | null
           platform_account_id: string | null
           platform_id: string | null
+          profit_amount: number | null
+          redeposit_amount: number | null
           redepositos: number | null
+          redeposits_count: number | null
+          registration_cr: number | null
           registros: number | null
+          rev_per_ftd: number | null
+          rev_per_registration: number | null
           revenue: number | null
           revenue_liquido: number | null
+          roi: number | null
           saque_disponivel: number | null
           updated_at: string | null
           utm_id: string | null
         }
         Insert: {
+          avg_ticket?: number | null
           campanha_id?: string | null
           cliques?: number | null
           conteudo_id?: string | null
+          cost_amount?: number | null
           created_at?: string | null
           custo_influencer?: number | null
           custo_trafego?: number | null
           data_ref: string
           depositos_total?: number | null
+          deposits_count?: number | null
+          epc?: number | null
           ftd?: number | null
+          ftd_cr?: number | null
           id?: string
           influencer_id?: string | null
           is_demo?: boolean
+          landing_page_id?: string | null
+          landing_page_instance_id?: string | null
           observacoes?: string | null
           origem_importacao?: string | null
           platform_account_id?: string | null
           platform_id?: string | null
+          profit_amount?: number | null
+          redeposit_amount?: number | null
           redepositos?: number | null
+          redeposits_count?: number | null
+          registration_cr?: number | null
           registros?: number | null
+          rev_per_ftd?: number | null
+          rev_per_registration?: number | null
           revenue?: number | null
           revenue_liquido?: number | null
+          roi?: number | null
           saque_disponivel?: number | null
           updated_at?: string | null
           utm_id?: string | null
         }
         Update: {
+          avg_ticket?: number | null
           campanha_id?: string | null
           cliques?: number | null
           conteudo_id?: string | null
+          cost_amount?: number | null
           created_at?: string | null
           custo_influencer?: number | null
           custo_trafego?: number | null
           data_ref?: string
           depositos_total?: number | null
+          deposits_count?: number | null
+          epc?: number | null
           ftd?: number | null
+          ftd_cr?: number | null
           id?: string
           influencer_id?: string | null
           is_demo?: boolean
+          landing_page_id?: string | null
+          landing_page_instance_id?: string | null
           observacoes?: string | null
           origem_importacao?: string | null
           platform_account_id?: string | null
           platform_id?: string | null
+          profit_amount?: number | null
+          redeposit_amount?: number | null
           redepositos?: number | null
+          redeposits_count?: number | null
+          registration_cr?: number | null
           registros?: number | null
+          rev_per_ftd?: number | null
+          rev_per_registration?: number | null
           revenue?: number | null
           revenue_liquido?: number | null
+          roi?: number | null
           saque_disponivel?: number | null
           updated_at?: string | null
           utm_id?: string | null
@@ -927,6 +1356,20 @@ export type Database = {
             columns: ["influencer_id"]
             isOneToOne: false
             referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_metrics_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "landing_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_metrics_landing_page_instance_id_fkey"
+            columns: ["landing_page_instance_id"]
+            isOneToOne: false
+            referencedRelation: "landing_page_instances"
             referencedColumns: ["id"]
           },
           {
@@ -962,12 +1405,17 @@ export type Database = {
           hora_snapshot: string | null
           id: string
           is_demo: boolean
+          notes: string | null
+          period_end: string | null
+          period_start: string | null
           platform_account_id: string | null
+          platform_id: string | null
           raw_payload: Json | null
           redepositos: number | null
           registros: number | null
           revenue: number | null
           saque_disponivel: number | null
+          snapshot_type: string | null
         }
         Insert: {
           cliques?: number | null
@@ -978,12 +1426,17 @@ export type Database = {
           hora_snapshot?: string | null
           id?: string
           is_demo?: boolean
+          notes?: string | null
+          period_end?: string | null
+          period_start?: string | null
           platform_account_id?: string | null
+          platform_id?: string | null
           raw_payload?: Json | null
           redepositos?: number | null
           registros?: number | null
           revenue?: number | null
           saque_disponivel?: number | null
+          snapshot_type?: string | null
         }
         Update: {
           cliques?: number | null
@@ -994,12 +1447,17 @@ export type Database = {
           hora_snapshot?: string | null
           id?: string
           is_demo?: boolean
+          notes?: string | null
+          period_end?: string | null
+          period_start?: string | null
           platform_account_id?: string | null
+          platform_id?: string | null
           raw_payload?: Json | null
           redepositos?: number | null
           registros?: number | null
           revenue?: number | null
           saque_disponivel?: number | null
+          snapshot_type?: string | null
         }
         Relationships: [
           {
@@ -1007,6 +1465,13 @@ export type Database = {
             columns: ["platform_account_id"]
             isOneToOne: false
             referencedRelation: "platform_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_snapshots_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "platforms"
             referencedColumns: ["id"]
           },
         ]
