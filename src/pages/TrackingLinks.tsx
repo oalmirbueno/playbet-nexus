@@ -76,19 +76,28 @@ export default function TrackingLinks() {
   };
 
   const handleApplyMappings = async (platformId: string, preset: PlatformPreset, accountId?: string) => {
+    // Build sub_fields from macro_to_internal mapping
+    const subFields: Record<string, string> = {};
+    for (const macro of preset.supported_macros) {
+      const subMatch = macro.native.match(/^sub(\d+)$/);
+      if (subMatch) {
+        subFields[`sub${subMatch[1]}_field`] = macro.internal_meaning;
+      }
+    }
+
     for (const evt of preset.events) {
       await createMapping({
         platform_id: platformId,
         platform_account_id: accountId || null,
         raw_event_name: evt.raw_event_name,
         canonical_event_name: evt.canonical_event_name,
-        amount_field: evt.amount_field,
-        currency_field: evt.currency_field,
-        transaction_id_field: evt.transaction_id_field,
-        user_id_field: evt.user_id_field,
-        country_field: evt.country_field,
-        status_field: evt.status_field,
-        ...preset.sub_fields,
+        amount_field: evt.has_amount ? "amount" : null,
+        currency_field: evt.has_amount ? "currency" : null,
+        transaction_id_field: evt.has_transaction_id ? "transaction_id" : null,
+        user_id_field: evt.extra_macros.includes("user_id") ? "user_id" : null,
+        country_field: evt.extra_macros.includes("country") ? "country" : null,
+        status_field: null,
+        ...subFields,
       } as any);
     }
   };
