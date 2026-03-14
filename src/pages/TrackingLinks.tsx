@@ -149,6 +149,11 @@ export default function TrackingLinks() {
                           </TableCell>
                           <TableCell className="text-xs">{getName(influencers as any[], l.influencer_id)}</TableCell>
                           <TableCell className="text-xs">
+                            <Badge variant="outline" className="text-[9px]">
+                              {ROLE_LABELS[(l as any).tracking_role || "influencer"] || "Influencer"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs">
                             <div className="leading-tight">
                               <div>{getName(landingPages as any[], l.landing_page_id)}</div>
                               {instance && <div className="text-[10px] font-mono text-muted-foreground">/{instance.slug}</div>}
