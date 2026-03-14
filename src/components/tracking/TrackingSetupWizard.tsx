@@ -96,6 +96,7 @@ export default function TrackingSetupWizard({
       base_url: affiliateLink || null,
       click_id_param_name: preset?.click_id_param || "sub1",
       tracking_role: trackingRole,
+      tracking_code: previewTrackingCode,
     };
     Object.keys(payload).forEach(k => { if (payload[k] === "") payload[k] = null; });
     onComplete(payload);
