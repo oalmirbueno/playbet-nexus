@@ -90,6 +90,7 @@ export default function TrackingAccounts() {
 
       {!isLoading && data.length === 0 && (
         <EmptyState
+          icon={Plus}
           title="Nenhuma conta cadastrada"
           description="Cadastre suas contas nas plataformas para começar o tracking."
           actionLabel="Cadastrar Conta"

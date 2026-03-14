@@ -235,6 +235,7 @@ export default function TrackingDashboard() {
 
       {!isLoading && !hasData && (
         <EmptyState
+          icon={BarChart3}
           title="Nenhuma métrica registrada"
           description="Comece registrando métricas de performance das suas plataformas para ver os dados aqui."
           actionLabel="Registrar Métrica"
