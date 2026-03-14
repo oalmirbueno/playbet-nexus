@@ -46,6 +46,10 @@ import DeveloperSettings from "./pages/DeveloperSettings";
 import TrackingDashboard from "./pages/TrackingDashboard";
 import TrackingAccounts from "./pages/TrackingAccounts";
 import TrackingMetricsForm from "./pages/TrackingMetricsForm";
+import TrackingMappings from "./pages/TrackingMappings";
+import TrackingEvents from "./pages/TrackingEvents";
+import TrackingSnapshots from "./pages/TrackingSnapshots";
+import TrackingLinks from "./pages/TrackingLinks";
 import NotFound from "./pages/NotFound";
 import InfluencerLanding from "./pages/InfluencerLanding";
 
