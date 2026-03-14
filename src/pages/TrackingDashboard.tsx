@@ -220,15 +220,13 @@ export default function TrackingDashboard() {
   const realEvents = recentEvents.filter(e => !e.is_demo && !e.click_id?.startsWith("{") && e.status !== "invalid_legacy" && !e.canonical_event_name?.startsWith("{"));
 
   const kpiCards = [
-    { label: "Cliques", value: fmtNum(effectiveKpis.cliques), icon: MousePointerClick, color: "text-primary" },
+    { label: "Cliques (LP)", value: fmtNum(consolidated.realClicksCount), icon: MousePointerClick, color: "text-primary" },
     { label: "Registros", value: fmtNum(effectiveKpis.registros), icon: UserPlus, color: "text-chart-2" },
     { label: "FTD", value: fmtNum(effectiveKpis.ftd), icon: Target, color: "text-chart-3" },
     { label: "Redepósitos", value: fmtNum(effectiveKpis.redepositos), icon: ArrowRightLeft, color: "text-chart-4" },
     { label: "Depósitos Total", value: fmt(effectiveKpis.depositos), icon: DollarSign, color: "text-chart-5" },
     { label: "Revenue", value: fmt(effectiveKpis.revenue), icon: TrendingUp, color: "text-primary" },
-    { label: "Saque Disponível", value: effectiveKpis.saque > 0 ? fmt(effectiveKpis.saque) : "—", icon: Wallet, color: "text-chart-2" },
-    { label: "Lucro", value: fmt(effectiveKpis.lucro), icon: Activity, color: effectiveKpis.lucro >= 0 ? "text-green-500" : "text-destructive" },
-    { label: "ROI", value: effectiveKpis.roi.toFixed(1) + "%", icon: Activity, color: effectiveKpis.roi >= 0 ? "text-green-500" : "text-destructive" },
+    { label: "Revenue (plataforma)", value: fmt(effectiveKpis.revenue), icon: Activity, color: "text-primary" },
   ];
 
   const calculatedCards = [

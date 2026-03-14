@@ -1,12 +1,12 @@
 import { useMemo } from "react";
-import { DollarSign, Users, Wallet, BarChart3, Target, MousePointerClick, Megaphone, ArrowRight } from "lucide-react";
+import { DollarSign, Users, Wallet, BarChart3, Target, MousePointerClick, Megaphone, ArrowRight, Landmark } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useInfluencers, useGames, usePlatforms, useCampanhas, useSaques, useSocios } from "@/hooks/useSupabaseQuery";
 import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
 import EmptyState from "@/components/EmptyState";
 import TrackingOverviewCard from "@/components/TrackingOverviewCard";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, PieChart, Pie, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell } from "recharts";
 
 function groupByMonth(items: any[], dateField: string) {
   const months: Record<string, number> = {};
@@ -37,7 +37,7 @@ export default function DashboardExecutivo() {
   const { data: socios } = useSocios();
   const { consolidated, hasData: hasTrackingData } = useAutoConsolidation();
 
-  const hasData = influencers.length > 0 || games.length > 0 || platforms.length > 0 || campanhas.length > 0;
+  const hasData = influencers.length > 0 || games.length > 0 || platforms.length > 0 || campanhas.length > 0 || hasTrackingData;
 
   const saquesByMonth = useMemo(() => groupByMonth(saques, "data"), [saques]);
   const campanhasByMonth = useMemo(() => groupByMonth(campanhas, "created_at"), [campanhas]);
@@ -48,27 +48,33 @@ export default function DashboardExecutivo() {
     return Object.entries(map).map(([name, value]) => ({ name, value }));
   }, [campanhas]);
 
+  // Caixa realizado = only paid via Asaas
+  const totalPagosAsaas = useMemo(() =>
+    saques.filter((s: any) => s.status === "Pago via Asaas").reduce((a: number, s: any) => a + Number(s.valor || 0), 0),
+    [saques]
+  );
   const totalSaquesValor = useMemo(() => saques.reduce((a: number, s: any) => a + Number(s.valor || 0), 0), [saques]);
 
   const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const fmtCurrency = (v: number, c: string) => v.toLocaleString("pt-BR", { style: "currency", currency: c === "BRL" ? "BRL" : "USD" });
 
-  // Revenue: only from tracking with verified conversion
   const hasVerifiedRevenue = hasTrackingData && consolidated.revenueBrl > 0;
 
   const kpis = [
     ...(hasVerifiedRevenue
-      ? [{ label: "Revenue Tracking", value: formatBRL(consolidated.revenueBrl), icon: DollarSign, path: "/tracking" }]
+      ? [{ label: "Revenue Plataforma", value: formatBRL(consolidated.revenueBrl), icon: DollarSign, path: "/tracking", sub: "Não é caixa" }]
       : []),
-    { label: "Cliques Reais (LP)", value: String(consolidated.realClicksCount), icon: MousePointerClick, path: "/conversoes" },
-    { label: "Saques Solicitados", value: formatBRL(totalSaquesValor), icon: Wallet, path: "/saques" },
-    { label: "Influencers Ativos", value: String(influencers.filter((i: any) => i.is_active).length), icon: Users, path: "/influencers" },
-    { label: "Campanhas", value: String(campanhas.length), icon: Megaphone, path: "/campanhas" },
-    { label: "Eventos Tracking", value: String(consolidated.eventCount), icon: Target, path: "/tracking" },
+    { label: "Cliques Reais (LP)", value: String(consolidated.realClicksCount), icon: MousePointerClick, path: "/conversoes", sub: "clicks reais" },
+    ...(totalPagosAsaas > 0
+      ? [{ label: "Caixa Realizado", value: formatBRL(totalPagosAsaas), icon: Landmark, path: "/financeiro", sub: "Pago via Asaas" }]
+      : []),
+    { label: "Influencers Ativos", value: String(influencers.filter((i: any) => i.is_active).length), icon: Users, path: "/influencers", sub: "" },
+    { label: "Campanhas", value: String(campanhas.length), icon: Megaphone, path: "/campanhas", sub: "" },
+    { label: "Eventos Tracking", value: String(consolidated.eventCount), icon: Target, path: "/tracking", sub: "validados" },
   ];
 
   const chartConfig = {
     count: { label: "Quantidade", color: "hsl(var(--primary))" },
-    valor: { label: "Valor", color: "hsl(var(--accent))" },
   };
 
   return (
@@ -83,7 +89,7 @@ export default function DashboardExecutivo() {
           <EmptyState
             icon={BarChart3}
             title="Sem dados para exibir ainda"
-            description="Cadastre plataformas, jogos e influencers para visualizar métricas e indicadores consolidados da operação."
+            description="Cadastre plataformas, jogos e influencers para visualizar métricas."
             actionLabel="Cadastrar Plataforma"
             onAction={() => navigate("/plataformas")}
             secondaryLabel="Cadastrar Influencer"
@@ -95,30 +101,30 @@ export default function DashboardExecutivo() {
           {/* KPIs */}
           <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-${kpis.length > 5 ? 6 : kpis.length} gap-4`}>
             {kpis.map((k) => (
-              <div
-                key={k.label}
-                onClick={() => navigate(k.path)}
-                className="glass-card p-5 cursor-pointer hover:bg-secondary/30 transition-all duration-200"
-              >
+              <div key={k.label} onClick={() => navigate(k.path)} className="glass-card p-5 cursor-pointer hover:bg-secondary/30 transition-all duration-200">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">{k.label}</span>
                   <k.icon size={13} className="text-muted-foreground" />
                 </div>
                 <div className="text-2xl font-bold tracking-tight">{k.value}</div>
+                {k.sub && <p className="text-[10px] text-muted-foreground mt-0.5">{k.sub}</p>}
               </div>
             ))}
           </div>
 
-          {/* Tracking Revenue Detail - only with verified data */}
+          {/* Revenue Detail - platform level, NOT cash */}
           {hasVerifiedRevenue && (
-            <div className="glass-card p-6">
-              <h3 className="text-sm font-semibold mb-1">Revenue do Tracking</h3>
-              <p className="text-xs text-muted-foreground mb-3">Consolidado automático — apenas eventos com conversão rastreável</p>
+            <div className="glass-card p-6 border-l-4 border-l-primary">
+              <div className="flex items-center gap-2 mb-1">
+                <DollarSign size={14} className="text-primary" />
+                <h3 className="text-sm font-semibold">Revenue da Plataforma (não é caixa)</h3>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">Valor reportado pela plataforma. Caixa realizado só após saque efetivado.</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {Object.entries(consolidated.byCurrency).map(([currency, data]) => (
                   <div key={currency} className="bg-secondary/30 rounded-lg p-3 border border-border/50">
                     <p className="text-[10px] text-muted-foreground uppercase">Revenue ({currency})</p>
-                    <p className="text-lg font-bold">{data.total.toLocaleString("pt-BR", { style: "currency", currency: currency === "BRL" ? "BRL" : "USD" })}</p>
+                    <p className="text-lg font-bold">{fmtCurrency(data.total, currency)}</p>
                     {currency !== "BRL" && data.rate && (
                       <p className="text-[10px] text-muted-foreground mt-0.5">≈ {formatBRL(data.convertedBrl)} · 1 {currency} = R$ {data.rate.toFixed(4)}</p>
                     )}
@@ -129,8 +135,8 @@ export default function DashboardExecutivo() {
                   <p className="text-lg font-bold text-primary">{formatBRL(consolidated.revenueBrl)}</p>
                 </div>
                 <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
-                  <p className="text-[10px] text-muted-foreground uppercase">FTD / Registros</p>
-                  <p className="text-lg font-bold">{consolidated.totalFtd} / {consolidated.totalRegistrations}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase">Funil</p>
+                  <p className="text-sm font-bold">{consolidated.totalRegistrations} reg · {consolidated.totalFtd} FTD</p>
                 </div>
               </div>
             </div>
@@ -139,9 +145,8 @@ export default function DashboardExecutivo() {
           {/* Tracking Overview Card */}
           <TrackingOverviewCard />
 
-          {/* Charts Row 1 */}
+          {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Saques over time */}
             <div className="glass-card p-6">
               <h3 className="text-sm font-semibold mb-1">Saques por Mês</h3>
               <p className="text-xs text-muted-foreground mb-4">Distribuição mensal</p>
@@ -160,7 +165,6 @@ export default function DashboardExecutivo() {
               )}
             </div>
 
-            {/* Campanhas by status */}
             <div className="glass-card p-6">
               <h3 className="text-sm font-semibold mb-1">Status das Campanhas</h3>
               <p className="text-xs text-muted-foreground mb-4">Distribuição atual</p>
@@ -201,11 +205,7 @@ export default function DashboardExecutivo() {
                 { label: "Gestão Financeira", path: "/financeiro" },
                 { label: "Monitorar conversões", path: "/conversoes" },
               ].map((item) => (
-                <div
-                  key={item.label}
-                  onClick={() => navigate(item.path)}
-                  className="flex items-center gap-3 p-3.5 rounded-lg bg-secondary/30 border border-border cursor-pointer hover:bg-secondary/50 transition-colors"
-                >
+                <div key={item.label} onClick={() => navigate(item.path)} className="flex items-center gap-3 p-3.5 rounded-lg bg-secondary/30 border border-border cursor-pointer hover:bg-secondary/50 transition-colors">
                   <span className="text-sm flex-1">{item.label}</span>
                   <ArrowRight size={14} className="text-muted-foreground" />
                 </div>
