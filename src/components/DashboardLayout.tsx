@@ -17,6 +17,13 @@ interface MenuSection { title: string; items: MenuItem[]; }
 
 const sections: MenuSection[] = [
   {
+    title: "VISÃO GERAL",
+    items: [
+      { label: "Dashboard Executivo", icon: LayoutDashboard, path: "/" },
+      { label: "Dashboard Operacional", icon: Activity, path: "/operacional" },
+    ],
+  },
+  {
     title: "TRACKING HUB",
     items: [
       { label: "Tracking Dashboard", icon: BarChart3, path: "/tracking" },
@@ -26,13 +33,6 @@ const sections: MenuSection[] = [
       { label: "Eventos", icon: Activity, path: "/tracking/events" },
       { label: "Snapshots", icon: ClipboardList, path: "/tracking/snapshots" },
       { label: "Registrar Métrica", icon: Activity, path: "/tracking/metrics" },
-    ],
-  },
-  {
-    title: "VISÃO GERAL",
-    items: [
-      { label: "Dashboard Executivo", icon: LayoutDashboard, path: "/" },
-      { label: "Dashboard Operacional", icon: Activity, path: "/operacional" },
     ],
   },
   {

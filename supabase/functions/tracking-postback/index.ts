@@ -122,7 +122,25 @@ Deno.serve(async (req) => {
       is_duplicate: false,
     };
 
-    // Attempt insert (dedup index will reject duplicates)
+    // Pre-check dedup for events with transaction_id (timestamp-independent)
+    if (eventRecord.transaction_id && platformAccountId) {
+      const { data: existing } = await supabase
+        .from("tracking_events")
+        .select("id")
+        .eq("platform_account_id", platformAccountId)
+        .eq("transaction_id", eventRecord.transaction_id)
+        .eq("raw_event_name", rawEvent)
+        .limit(1)
+        .maybeSingle();
+      if (existing) {
+        return new Response(
+          JSON.stringify({ status: "duplicate", message: "Event already recorded" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Attempt insert
     const { data: inserted, error: insertError } = await supabase
       .from("tracking_events")
       .insert(eventRecord)
