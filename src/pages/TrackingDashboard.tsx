@@ -220,7 +220,7 @@ export default function TrackingDashboard() {
   const realEvents = recentEvents.filter(e => !e.is_demo && !e.click_id?.startsWith("{") && e.status !== "invalid_legacy" && !e.canonical_event_name?.startsWith("{"));
 
   const kpiCards = [
-    { label: "Cliques", value: fmtNum(effectiveKpis.cliques), icon: MousePointerClick, color: "text-primary" },
+    { label: "Cliques (LP)", value: fmtNum(consolidated.realClicksCount), icon: MousePointerClick, color: "text-primary" },
     { label: "Registros", value: fmtNum(effectiveKpis.registros), icon: UserPlus, color: "text-chart-2" },
     { label: "FTD", value: fmtNum(effectiveKpis.ftd), icon: Target, color: "text-chart-3" },
     { label: "Redepósitos", value: fmtNum(effectiveKpis.redepositos), icon: ArrowRightLeft, color: "text-chart-4" },
