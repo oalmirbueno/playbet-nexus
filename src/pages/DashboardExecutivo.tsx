@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { DollarSign, Users, Wallet, BarChart3, Target, MousePointerClick, Megaphone, ArrowRight, Landmark, Clock, CreditCard } from "lucide-react";
+import { DollarSign, Users, Wallet, BarChart3, Target, MousePointerClick, Megaphone, ArrowRight, Landmark, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useInfluencers, useGames, usePlatforms, useCampanhas, useSaques, useSocios } from "@/hooks/useSupabaseQuery";
 import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
@@ -26,6 +26,9 @@ function groupByMonth(items: any[], dateField: string) {
 }
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--accent))", "hsl(var(--info, 200 80% 60%))", "hsl(var(--success, 140 60% 50%))", "hsl(var(--warning, 40 90% 60%))"];
+
+const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+const fmtCurrency = (v: number, c: string) => v.toLocaleString("pt-BR", { style: "currency", currency: c === "BRL" ? "BRL" : "USD" });
 
 export default function DashboardExecutivo() {
   const navigate = useNavigate();
@@ -57,20 +60,17 @@ export default function DashboardExecutivo() {
     [socios]
   );
 
-  const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-  const fmtCurrency = (v: number, c: string) => v.toLocaleString("pt-BR", { style: "currency", currency: c === "BRL" ? "BRL" : "USD" });
-
   const hasVerifiedRevenue = hasTrackingData && consolidated.revenueBrl > 0;
   const hasCaixaRealizado = totalPagosAsaas > 0;
 
-  // ALL KPIs always visible — pending state when no data
+  // 8 KPIs — always visible, pending state when no data
   const kpis = [
     {
       label: "Revenue Plataforma",
       value: hasVerifiedRevenue ? formatBRL(consolidated.revenueBrl) : "—",
       icon: DollarSign,
       path: "/tracking",
-      sub: hasVerifiedRevenue ? "Não é caixa" : "Aguardando postbacks",
+      sub: hasVerifiedRevenue ? "Não é caixa — apenas revenue reportado" : "Aguardando postbacks",
       pending: !hasVerifiedRevenue,
     },
     {
@@ -78,7 +78,7 @@ export default function DashboardExecutivo() {
       value: String(consolidated.realClicksCount),
       icon: MousePointerClick,
       path: "/conversoes",
-      sub: consolidated.realClicksCount > 0 ? "clicks reais" : "Sem cliques ainda",
+      sub: consolidated.realClicksCount > 0 ? `${consolidated.realClicksCount} cliques reais da LP` : "Sem cliques ainda",
       pending: consolidated.realClicksCount === 0,
     },
     {
@@ -118,7 +118,7 @@ export default function DashboardExecutivo() {
       value: String(campanhas.length),
       icon: Megaphone,
       path: "/campanhas",
-      sub: campanhas.length > 0 ? "" : "Sem campanhas",
+      sub: campanhas.length > 0 ? `${campanhas.filter((c: any) => c.status === "Ativa").length} ativa(s)` : "Sem campanhas",
       pending: campanhas.length === 0,
     },
     {
@@ -156,8 +156,8 @@ export default function DashboardExecutivo() {
         </div>
       ) : (
         <>
-          {/* KPIs - always all visible */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 gap-4">
+          {/* KPIs - always all 8 visible */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {kpis.map((k) => (
               <div
                 key={k.label}
@@ -182,14 +182,14 @@ export default function DashboardExecutivo() {
             ))}
           </div>
 
-          {/* Revenue Detail - platform level, NOT cash */}
+          {/* Revenue Detail */}
           {hasVerifiedRevenue && (
             <div className="glass-card p-6 border-l-4 border-l-primary">
               <div className="flex items-center gap-2 mb-1">
                 <DollarSign size={14} className="text-primary" />
                 <h3 className="text-sm font-semibold">Revenue da Plataforma (não é caixa)</h3>
               </div>
-              <p className="text-xs text-muted-foreground mb-3">Valor reportado pela plataforma. Caixa realizado só após saque efetivado.</p>
+              <p className="text-xs text-muted-foreground mb-3">Valor reportado pela plataforma. Caixa realizado só após saque efetivado via Asaas.</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {Object.entries(consolidated.byCurrency).map(([currency, data]) => (
                   <div key={currency} className="bg-secondary/30 rounded-lg p-3 border border-border/50">
@@ -212,13 +212,18 @@ export default function DashboardExecutivo() {
             </div>
           )}
 
-          {/* Societário Status */}
+          {/* Bloco Societário — always visible */}
           <div className="glass-card p-6 border-l-4 border-l-accent">
             <div className="flex items-center gap-2 mb-1">
               <Users size={14} className="text-accent" />
               <h3 className="text-sm font-semibold">Status Societário</h3>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-3">
+            <p className="text-xs text-muted-foreground mb-3">
+              {hasCaixaRealizado
+                ? "Distribuição calculada sobre caixa realizado."
+                : "Aguardando caixa realizado (saque + Asaas) para cálculo de distribuição."}
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
                 <p className="text-[10px] text-muted-foreground uppercase">Sócios</p>
                 <p className="text-lg font-bold">{socios.length}</p>
@@ -242,10 +247,10 @@ export default function DashboardExecutivo() {
             </div>
           </div>
 
-          {/* Tracking Overview Card */}
+          {/* Tracking Overview */}
           <TrackingOverviewCard />
 
-          {/* Charts Row */}
+          {/* Charts */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="glass-card p-6">
               <h3 className="text-sm font-semibold mb-1">Saques por Mês</h3>
