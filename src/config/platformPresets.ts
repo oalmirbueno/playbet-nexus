@@ -15,7 +15,6 @@ export interface PlatformEventPreset {
 }
 
 export interface PlatformPreset {
-  /** Platform name (lowercase match) */
   slug: string;
   label: string;
   click_id_param: string;
@@ -33,10 +32,8 @@ export interface PlatformPreset {
     sub9_field: string;
     sub10_field: string;
   };
-  /** Postback query params template per event (placeholders use {macro} syntax) */
   postback_template: string;
   link_generation: {
-    /** How to build the tracking URL from affiliate_link */
     append_click_id: boolean;
     click_id_macro: string;
   };
@@ -95,25 +92,71 @@ export function findPresetByName(name: string): PlatformPreset | null {
   return PLATFORM_PRESETS[key] || Object.values(PLATFORM_PRESETS).find(p => key.includes(p.slug)) || null;
 }
 
+/** Generate a short tracking code */
+export function generateTrackingCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+  let code = "TRK-";
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
 const POSTBACK_BASE = `https://rcrrbznhatdqcmfyzgbt.supabase.co/functions/v1/tracking-postback`;
 
+/**
+ * Build a clean, production-ready postback URL for a specific event.
+ * 
+ * Rules:
+ * - Platform macros (e.g. {click_id}, {amount}) are kept as-is without URL-encoding
+ * - Optional fields (campanha, trackingCode, influencer) are OMITTED if empty
+ * - Event-specific fields: amount/transaction_id only included if the event uses them
+ * - No placeholders like "(gerado ao salvar)" or "none" ever appear in output
+ */
 export function buildPostbackUrlForEvent(
   preset: PlatformPreset,
   event: PlatformEventPreset,
-  trackingCode: string,
+  trackingCode?: string,
   influencerId?: string,
   campanhaId?: string,
 ): string {
-  const params = new URLSearchParams();
-  params.set("event", event.raw_event_name);
-  params.set("sub1", `{${preset.click_id_param}}`);
-  if (trackingCode) params.set("sub6", trackingCode);
-  if (influencerId) params.set("sub2", influencerId);
-  if (campanhaId) params.set("sub3", campanhaId);
-  params.set("amount", "{amount}");
-  params.set("transaction_id", "{transaction_id}");
-  params.set("user_id", "{user_id}");
-  params.set("country", "{country}");
+  // Build params manually to avoid URLSearchParams encoding {macros}
+  const parts: string[] = [];
 
-  return `${POSTBACK_BASE}/${preset.postback_base_path}?${params.toString()}`;
+  // Always: event name
+  parts.push(`event=${event.raw_event_name}`);
+
+  // sub1 = click_id (always, platform macro)
+  parts.push(`sub1={${preset.click_id_param}}`);
+
+  // sub2 = influencer (only if real value exists)
+  if (influencerId && influencerId !== "none") {
+    parts.push(`sub2=${influencerId}`);
+  }
+
+  // sub3 = campanha (only if real value exists)
+  if (campanhaId && campanhaId !== "none") {
+    parts.push(`sub3=${campanhaId}`);
+  }
+
+  // sub6 = tracking_code (only if real value exists)
+  if (trackingCode && !trackingCode.includes("(") && trackingCode !== "none") {
+    parts.push(`sub6=${trackingCode}`);
+  }
+
+  // Event-specific fields — only include if this event actually uses them
+  if (event.amount_field) {
+    parts.push(`amount={amount}`);
+  }
+  if (event.transaction_id_field) {
+    parts.push(`transaction_id={transaction_id}`);
+  }
+  if (event.user_id_field) {
+    parts.push(`user_id={user_id}`);
+  }
+  if (event.country_field) {
+    parts.push(`country={country}`);
+  }
+
+  return `${POSTBACK_BASE}/${preset.postback_base_path}?${parts.join("&")}`;
 }

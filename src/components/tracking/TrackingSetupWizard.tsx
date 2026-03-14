@@ -8,7 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { CheckCircle2, AlertTriangle, ArrowRight, ArrowLeft, Sparkles, Copy, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { findPresetByName, EVENT_LABELS, type PlatformPreset } from "@/config/platformPresets";
+import { findPresetByName, generateTrackingCode, EVENT_LABELS, type PlatformPreset } from "@/config/platformPresets";
 import PostbackEventBlocks from "./PostbackEventBlocks";
 
 const TRACKING_ROLES = [
@@ -46,6 +46,7 @@ export default function TrackingSetupWizard({
   const [trackingRole, setTrackingRole] = useState("influencer");
   const [campanhaId, setCampanhaId] = useState("");
   const [mappingsApplied, setMappingsApplied] = useState(false);
+  const [previewTrackingCode] = useState(() => generateTrackingCode());
 
   // Derived
   const selectedAccount = accounts.find(a => a.id === platformAccountId);
@@ -95,6 +96,7 @@ export default function TrackingSetupWizard({
       base_url: affiliateLink || null,
       click_id_param_name: preset?.click_id_param || "sub1",
       tracking_role: trackingRole,
+      tracking_code: previewTrackingCode,
     };
     Object.keys(payload).forEach(k => { if (payload[k] === "") payload[k] = null; });
     onComplete(payload);
@@ -350,9 +352,9 @@ export default function TrackingSetupWizard({
             {preset && selectedPlatform && (
               <PostbackEventBlocks
                 platformName={selectedPlatform.name}
-                trackingCode="(gerado ao salvar)"
+                trackingCode={previewTrackingCode}
                 influencerId={selectedInstance?.influencer_id}
-                campanhaId={campanhaId}
+                campanhaId={campanhaId && campanhaId !== "none" ? campanhaId : undefined}
               />
             )}
           </div>
