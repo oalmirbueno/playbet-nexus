@@ -16,6 +16,7 @@ import {
   Wallet, Target, ArrowRightLeft, Activity, Download, Filter, RefreshCcw,
   AlertTriangle, Zap, Link2, Map,
 } from "lucide-react";
+import TrackingDemoFilter from "@/components/TrackingDemoFilter";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
   ResponsiveContainer, Legend, FunnelChart, Funnel, LabelList,
