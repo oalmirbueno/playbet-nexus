@@ -2,9 +2,8 @@ import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { usePlatformAccounts, usePlatformEventMappings, useTrackingLinks, useTrackingEvents } from "@/hooks/useTrackingData";
-import { usePlatforms } from "@/hooks/useSupabaseQuery";
+import { usePlatforms, useLandingPageInstances } from "@/hooks/useSupabaseQuery";
 import { CheckCircle2, Circle, ArrowRight, Rocket } from "lucide-react";
 
 interface Step {
@@ -21,39 +20,38 @@ export default function PlatformActivationChecklist() {
   const { data: mappings } = usePlatformEventMappings();
   const { data: links } = useTrackingLinks();
   const { data: events } = useTrackingEvents();
+  const { data: lpInstances } = useLandingPageInstances();
 
-  const realPlatforms = (platforms as any[]).filter((p: any) => !p.is_demo);
-  const realAccounts = accounts.filter(a => !a.is_demo);
-  const realMappings = mappings.filter(m => !m.is_demo);
-  const realLinks = links.filter(l => !l.is_demo);
-  const realEvents = events.filter(e => !e.is_demo);
+  // Use ALL data (not just non-demo) for real operational status
+  const hasPlatform = (platforms as any[]).some((p: any) => !p.is_demo);
+  const hasAccount = accounts.some(a => !a.is_demo);
+  const hasInstance = (lpInstances as any[]).some((i: any) => !i.is_demo);
+  const hasMapping = mappings.some(m => !m.is_demo);
+  const hasLink = links.some(l => !l.is_demo);
+  const hasRealEvent = events.some(e => !e.is_demo && !e.click_id?.startsWith("{"));
+  const hasValidEvent = events.some(e => !e.is_demo && !e.click_id?.startsWith("{") && e.canonical_event_name !== "{event}");
+  const hasFtd = events.some(e => !e.is_demo && e.canonical_event_name === "ftd");
 
   const steps = useMemo((): Step[] => {
-    const hasPlatform = realPlatforms.length > 0;
-    const hasAccount = realAccounts.length > 0;
-    const hasMapping = realMappings.length > 0;
-    const hasLink = realLinks.length > 0;
-    const hasEvent = realEvents.length > 0;
-    const hasFtd = realEvents.some(e => e.canonical_event_name === "ftd");
+    const getStatus = (done: boolean, prevDone: boolean): "done" | "pending" | "current" =>
+      done ? "done" : prevDone ? "current" : "pending";
 
-    const items: Step[] = [
-      { label: "Cadastrar plataforma", description: "Registre a casa/plataforma de afiliado", status: hasPlatform ? "done" : "current", path: "/plataformas" },
-      { label: "Cadastrar conta", description: "Crie a conta com modelo de comissão e dados do gerente", status: hasAccount ? "done" : hasPlatform ? "current" : "pending", path: "/tracking/accounts" },
-      { label: "Configurar mapeamento", description: "Traduza eventos raw para o schema canônico", status: hasMapping ? "done" : hasAccount ? "current" : "pending", path: "/tracking/mappings" },
-      { label: "Gerar tracking link", description: "Crie links rastreáveis com tracking_code", status: hasLink ? "done" : hasMapping ? "current" : "pending", path: "/tracking/links" },
-      { label: "Configurar postback na plataforma", description: "Cole a URL de postback no painel da casa", status: hasEvent ? "done" : hasLink ? "current" : "pending", path: "/tracking/links" },
-      { label: "Testar postback", description: "Envie um evento de teste e confira a chegada", status: hasEvent ? "done" : hasLink ? "current" : "pending", path: "/tracking/events" },
-      { label: "Validar evento em /tracking/events", description: "Confira se o evento foi mapeado e processado", status: hasEvent ? "done" : "pending", path: "/tracking/events" },
-      { label: "Conferir impacto no dashboard", description: "Verifique KPIs e funil no dashboard principal", status: hasFtd ? "done" : hasEvent ? "current" : "pending", path: "/tracking" },
+    return [
+      { label: "Cadastrar plataforma", description: "Registre a casa/plataforma de afiliado", status: getStatus(hasPlatform, true), path: "/plataformas" },
+      { label: "Cadastrar conta", description: "Crie a conta com modelo de comissão", status: getStatus(hasAccount, hasPlatform), path: "/tracking/accounts" },
+      { label: "Vincular instância/slug", description: "Conecte influencer à LP com affiliate link", status: getStatus(hasInstance, hasAccount), path: "/landing-pages" },
+      { label: "Configurar mapeamento", description: "Traduza eventos raw para o schema canônico", status: getStatus(hasMapping, hasAccount), path: "/tracking/mappings" },
+      { label: "Gerar tracking link", description: "Crie links rastreáveis com tracking_code", status: getStatus(hasLink, hasMapping), path: "/tracking/links" },
+      { label: "Receber evento real", description: "Evento de postback recebido e processado", status: getStatus(hasRealEvent, hasLink), path: "/tracking/events" },
+      { label: "Validar evento processado", description: "Evento mapeado corretamente no sistema", status: getStatus(hasValidEvent, hasRealEvent), path: "/tracking/events" },
+      { label: "Primeiro FTD registrado", description: "Confirme conversão real no dashboard", status: getStatus(hasFtd, hasValidEvent), path: "/tracking" },
     ];
-
-    return items;
-  }, [realPlatforms, realAccounts, realMappings, realLinks, realEvents]);
+  }, [hasPlatform, hasAccount, hasInstance, hasMapping, hasLink, hasRealEvent, hasValidEvent, hasFtd]);
 
   const doneCount = steps.filter(s => s.status === "done").length;
   const progress = Math.round((doneCount / steps.length) * 100);
 
-  if (doneCount === steps.length) return null; // All done, hide checklist
+  if (doneCount === steps.length) return null;
 
   return (
     <Card className="border-primary/20 bg-primary/[0.02]">
