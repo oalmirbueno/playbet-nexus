@@ -956,16 +956,21 @@ export type Database = {
           click_id: string | null
           commission_amount: number | null
           conteudo_id: string | null
+          converted_amount_brl: number | null
           country: string | null
           created_at: string | null
           currency: string | null
           event_timestamp: string
+          exchange_rate: number | null
+          exchange_rate_timestamp: string | null
           id: string
           influencer_id: string | null
           is_demo: boolean
           is_duplicate: boolean | null
           landing_page_id: string | null
           landing_page_instance_id: string | null
+          original_amount: number | null
+          original_currency: string | null
           platform_account_id: string | null
           platform_id: string | null
           platform_user_id: string | null
@@ -986,16 +991,21 @@ export type Database = {
           click_id?: string | null
           commission_amount?: number | null
           conteudo_id?: string | null
+          converted_amount_brl?: number | null
           country?: string | null
           created_at?: string | null
           currency?: string | null
           event_timestamp?: string
+          exchange_rate?: number | null
+          exchange_rate_timestamp?: string | null
           id?: string
           influencer_id?: string | null
           is_demo?: boolean
           is_duplicate?: boolean | null
           landing_page_id?: string | null
           landing_page_instance_id?: string | null
+          original_amount?: number | null
+          original_currency?: string | null
           platform_account_id?: string | null
           platform_id?: string | null
           platform_user_id?: string | null
@@ -1016,16 +1026,21 @@ export type Database = {
           click_id?: string | null
           commission_amount?: number | null
           conteudo_id?: string | null
+          converted_amount_brl?: number | null
           country?: string | null
           created_at?: string | null
           currency?: string | null
           event_timestamp?: string
+          exchange_rate?: number | null
+          exchange_rate_timestamp?: string | null
           id?: string
           influencer_id?: string | null
           is_demo?: boolean
           is_duplicate?: boolean | null
           landing_page_id?: string | null
           landing_page_instance_id?: string | null
+          original_amount?: number | null
+          original_currency?: string | null
           platform_account_id?: string | null
           platform_id?: string | null
           platform_user_id?: string | null
@@ -1227,6 +1242,8 @@ export type Database = {
           campanha_id: string | null
           cliques: number | null
           conteudo_id: string | null
+          converted_amount: number | null
+          converted_currency: string | null
           cost_amount: number | null
           created_at: string | null
           custo_influencer: number | null
@@ -1235,6 +1252,9 @@ export type Database = {
           depositos_total: number | null
           deposits_count: number | null
           epc: number | null
+          exchange_rate: number | null
+          exchange_rate_source: string | null
+          exchange_rate_timestamp: string | null
           ftd: number | null
           ftd_cr: number | null
           id: string
@@ -1244,6 +1264,8 @@ export type Database = {
           landing_page_instance_id: string | null
           observacoes: string | null
           origem_importacao: string | null
+          original_amount: number | null
+          original_currency: string | null
           platform_account_id: string | null
           platform_id: string | null
           profit_amount: number | null
@@ -1266,6 +1288,8 @@ export type Database = {
           campanha_id?: string | null
           cliques?: number | null
           conteudo_id?: string | null
+          converted_amount?: number | null
+          converted_currency?: string | null
           cost_amount?: number | null
           created_at?: string | null
           custo_influencer?: number | null
@@ -1274,6 +1298,9 @@ export type Database = {
           depositos_total?: number | null
           deposits_count?: number | null
           epc?: number | null
+          exchange_rate?: number | null
+          exchange_rate_source?: string | null
+          exchange_rate_timestamp?: string | null
           ftd?: number | null
           ftd_cr?: number | null
           id?: string
@@ -1283,6 +1310,8 @@ export type Database = {
           landing_page_instance_id?: string | null
           observacoes?: string | null
           origem_importacao?: string | null
+          original_amount?: number | null
+          original_currency?: string | null
           platform_account_id?: string | null
           platform_id?: string | null
           profit_amount?: number | null
@@ -1305,6 +1334,8 @@ export type Database = {
           campanha_id?: string | null
           cliques?: number | null
           conteudo_id?: string | null
+          converted_amount?: number | null
+          converted_currency?: string | null
           cost_amount?: number | null
           created_at?: string | null
           custo_influencer?: number | null
@@ -1313,6 +1344,9 @@ export type Database = {
           depositos_total?: number | null
           deposits_count?: number | null
           epc?: number | null
+          exchange_rate?: number | null
+          exchange_rate_source?: string | null
+          exchange_rate_timestamp?: string | null
           ftd?: number | null
           ftd_cr?: number | null
           id?: string
@@ -1322,6 +1356,8 @@ export type Database = {
           landing_page_instance_id?: string | null
           observacoes?: string | null
           origem_importacao?: string | null
+          original_amount?: number | null
+          original_currency?: string | null
           platform_account_id?: string | null
           platform_id?: string | null
           profit_amount?: number | null
