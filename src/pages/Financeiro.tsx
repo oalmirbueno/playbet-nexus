@@ -192,7 +192,7 @@ export default function Financeiro() {
     };
   }, [simReceita, simComissao, socios]);
 
-  const hasData = saques.length + socios.length + campanhas.length > 0;
+  const hasData = saques.length + socios.length + campanhas.length > 0 || hasTrackingData;
 
   const exportData = saques.map((s: any) => ({
     codigo: s.codigo,
