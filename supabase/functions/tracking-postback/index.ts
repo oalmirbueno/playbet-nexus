@@ -114,6 +114,22 @@ Deno.serve(async (req) => {
     const parsedAmount = params.amount ? parseFloat(params.amount) : null;
     const parsedCommission = params.commission ? parseFloat(params.commission) : null;
 
+    // Capture platform-native metadata fields into raw_payload
+    // These are stored in raw_payload for debug/reconciliation
+    const platformMeta: Record<string, string> = {};
+    const metaFields = ["event_id", "date", "hash_id", "hash_name", "source_id", "source_name"];
+    for (const field of metaFields) {
+      if (params[field]) {
+        platformMeta[field] = params[field];
+      }
+    }
+
+    // Build enriched raw_payload with platform metadata prominently stored
+    const rawPayload = {
+      ...params,
+      _platform_meta: Object.keys(platformMeta).length > 0 ? platformMeta : undefined,
+    };
+
     // Build event record — all FK fields are validated as UUID
     const eventRecord: Record<string, any> = {
       platform_id: platformId,
@@ -122,7 +138,9 @@ Deno.serve(async (req) => {
       platform_user_id: params.user_id || params.player_id || null,
       raw_event_name: rawEvent,
       canonical_event_name: canonicalEvent,
-      event_timestamp: params.timestamp ? new Date(params.timestamp).toISOString() : new Date().toISOString(),
+      event_timestamp: params.timestamp || params.date
+        ? new Date(parseInt(params.date) * 1000 || params.timestamp || Date.now()).toISOString()
+        : new Date().toISOString(),
       transaction_id: params.transaction_id || params.tid || null,
       amount: !isNaN(parsedAmount!) ? parsedAmount : null,
       currency: params.currency || "BRL",
@@ -130,7 +148,7 @@ Deno.serve(async (req) => {
       status: params.status || null,
       country: params.country || null,
       source_type: "postback",
-      raw_payload: params,
+      raw_payload: rawPayload,
       influencer_id: influencerId,
       campanha_id: campanhaId,
       is_duplicate: false,

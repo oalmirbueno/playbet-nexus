@@ -1,13 +1,17 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Copy, Check, CheckCircle2, AlertTriangle, Info } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Copy, Check, CheckCircle2, AlertTriangle, Info, Settings2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
   findPresetByName,
   buildPostbackUrlForEvent,
   validatePostbackUrl,
+  MACRO_CATEGORY_LABELS,
   type PlatformPreset,
+  type MacroCategory,
 } from "@/config/platformPresets";
 
 interface Props {
@@ -22,6 +26,7 @@ export default function PostbackEventBlocks({ platformName, trackingCode, influe
   const { toast } = useToast();
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [showMacroLegend, setShowMacroLegend] = useState(false);
+  const [advancedMode, setAdvancedMode] = useState(false);
 
   if (!preset) {
     return (
@@ -31,14 +36,12 @@ export default function PostbackEventBlocks({ platformName, trackingCode, influe
     );
   }
 
-  // Clean values
   const cleanTrackingCode = trackingCode && !trackingCode.includes("(") && trackingCode !== "none" ? trackingCode : undefined;
   const cleanInfluencer = influencerId && influencerId !== "none" ? influencerId : undefined;
   const cleanCampanha = campanhaId && campanhaId !== "none" ? campanhaId : undefined;
 
-  // Validate all URLs
   const allUrls = preset.events.map(evt =>
-    buildPostbackUrlForEvent(preset, evt, cleanTrackingCode, cleanInfluencer, cleanCampanha)
+    buildPostbackUrlForEvent(preset, evt, cleanTrackingCode, cleanInfluencer, cleanCampanha, advancedMode)
   );
   const allValidations = allUrls.map(url =>
     validatePostbackUrl(preset, url, cleanTrackingCode)
@@ -53,29 +56,46 @@ export default function PostbackEventBlocks({ platformName, trackingCode, influe
     setTimeout(() => setCopiedIdx(null), 2000);
   };
 
+  // Group macros by category
+  const macrosByCategory = preset.supported_macros.reduce((acc, m) => {
+    if (!acc[m.category]) acc[m.category] = [];
+    acc[m.category].push(m);
+    return acc;
+  }, {} as Record<MacroCategory, typeof preset.supported_macros>);
+
   return (
     <div className="space-y-2">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-1">
-        <p className="text-xs font-semibold text-foreground">Postbacks por Evento</p>
-        <Badge variant="secondary" className="text-[9px]">{preset.label}</Badge>
-        {allValid && !hasWarnings ? (
-          <Badge variant="outline" className="text-[9px] border-green-500/40 text-green-600">
-            <CheckCircle2 size={9} className="mr-0.5" /> Pronto
-          </Badge>
-        ) : allValid && hasWarnings ? (
-          <Badge variant="outline" className="text-[9px] border-yellow-500/40 text-yellow-600">
-            <AlertTriangle size={9} className="mr-0.5" /> Parcial
-          </Badge>
-        ) : (
-          <Badge variant="outline" className="text-[9px] border-destructive/40 text-destructive">
-            <AlertTriangle size={9} className="mr-0.5" /> Inválido
-          </Badge>
-        )}
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <div className="flex items-center gap-2">
+          <p className="text-xs font-semibold text-foreground">Postbacks por Evento</p>
+          <Badge variant="secondary" className="text-[9px]">{preset.label}</Badge>
+          {allValid && !hasWarnings ? (
+            <Badge variant="outline" className="text-[9px] border-green-500/40 text-green-600">
+              <CheckCircle2 size={9} className="mr-0.5" /> Pronto
+            </Badge>
+          ) : allValid && hasWarnings ? (
+            <Badge variant="outline" className="text-[9px] border-yellow-500/40 text-yellow-600">
+              <AlertTriangle size={9} className="mr-0.5" /> Parcial
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-[9px] border-destructive/40 text-destructive">
+              <AlertTriangle size={9} className="mr-0.5" /> Inválido
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Settings2 size={10} className="text-muted-foreground" />
+          <Label htmlFor="adv-mode" className="text-[10px] text-muted-foreground cursor-pointer">Avançado</Label>
+          <Switch id="adv-mode" checked={advancedMode} onCheckedChange={setAdvancedMode} className="scale-75" />
+        </div>
       </div>
 
       <p className="text-[10px] text-muted-foreground mb-1">
-        Cole cada URL no painel da {preset.label}, no evento correspondente. Os macros entre {"{ }"} são nativos da plataforma e serão substituídos automaticamente.
+        Cole cada URL no painel da {preset.label}, no evento correspondente.
+        {advancedMode
+          ? " Modo avançado: inclui macros de debug e reconciliação."
+          : " Os macros entre { } são nativos da plataforma."}
       </p>
 
       {/* Macro legend toggle */}
@@ -88,22 +108,29 @@ export default function PostbackEventBlocks({ platformName, trackingCode, influe
       </button>
 
       {showMacroLegend && (
-        <div className="border rounded-md p-2.5 bg-muted/30 space-y-1">
-          <p className="text-[10px] font-semibold text-foreground mb-1">
-            Macros nativos da {preset.label}
-          </p>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
-            {preset.supported_macros.map(m => (
-              <div key={m.native} className="flex items-center gap-1.5 text-[10px]">
-                <code className="font-mono text-primary bg-primary/10 rounded px-1">{`{${m.native}}`}</code>
-                <span className="text-muted-foreground">→</span>
-                <span>{m.description}</span>
-                {m.required && (
-                  <Badge variant="outline" className="text-[7px] h-3 px-1 border-primary/30 text-primary">obr.</Badge>
+        <div className="border rounded-md p-2.5 bg-muted/30 space-y-3">
+          {(Object.keys(macrosByCategory) as MacroCategory[]).map(cat => (
+            <div key={cat}>
+              <p className="text-[10px] font-semibold text-foreground mb-1">
+                {MACRO_CATEGORY_LABELS[cat]}
+                {cat === "origin" && (
+                  <Badge variant="outline" className="text-[7px] ml-1.5 h-3 px-1 border-muted-foreground/30">avançado</Badge>
                 )}
+              </p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5">
+                {macrosByCategory[cat].map(m => (
+                  <div key={m.native} className="flex items-center gap-1.5 text-[10px]">
+                    <code className="font-mono text-primary bg-primary/10 rounded px-1">{`{${m.native}}`}</code>
+                    <span className="text-muted-foreground">→</span>
+                    <span>{m.description}</span>
+                    {m.required && (
+                      <Badge variant="outline" className="text-[7px] h-3 px-1 border-primary/30 text-primary">obr.</Badge>
+                    )}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -124,6 +151,9 @@ export default function PostbackEventBlocks({ platformName, trackingCode, influe
                 <span className="text-[10px] font-medium">{evt.label}</span>
                 {validation.valid && (
                   <CheckCircle2 size={10} className="text-green-500" />
+                )}
+                {advancedMode && evt.advanced_macros.length > 0 && (
+                  <Badge variant="outline" className="text-[7px] h-3 px-1 border-muted-foreground/30">+debug</Badge>
                 )}
               </div>
               <Button
