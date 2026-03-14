@@ -11,6 +11,16 @@ const CANONICAL_EVENTS = [
   "revenue", "withdrawable_revenue", "app_install", "qualified_player",
 ];
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isValidUuid(val: string | null | undefined): boolean {
+  return !!val && UUID_REGEX.test(val);
+}
+
+function toUuidOrNull(val: string | null | undefined): string | null {
+  return isValidUuid(val) ? val! : null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -23,17 +33,20 @@ Deno.serve(async (req) => {
 
     const url = new URL(req.url);
     const pathParts = url.pathname.split("/").filter(Boolean);
-    // /tracking-postback/{platform_slug}
     const platformSlug = pathParts[1] || null;
 
-    // Collect params from query string (GET postback) or body (POST)
+    // Collect params from query string (GET) or body (POST)
     let params: Record<string, string> = {};
     url.searchParams.forEach((v, k) => { params[k] = v; });
 
     if (req.method === "POST") {
       try {
         const body = await req.json();
-        params = { ...params, ...body };
+        if (body && typeof body === "object") {
+          for (const [k, v] of Object.entries(body)) {
+            if (v !== null && v !== undefined) params[k] = String(v);
+          }
+        }
       } catch { /* ignore non-JSON bodies */ }
     }
 
@@ -52,7 +65,7 @@ Deno.serve(async (req) => {
     }
 
     // Look for platform_account_id in params or resolve from platform
-    if (params.platform_account_id) {
+    if (isValidUuid(params.platform_account_id)) {
       platformAccountId = params.platform_account_id;
     } else if (platformId) {
       const { data: acc } = await supabase
@@ -68,7 +81,6 @@ Deno.serve(async (req) => {
     // Get event mapping
     const rawEvent = params.event || params.action || params.type || "unknown";
     let canonicalEvent = rawEvent;
-    let mapping: any = null;
 
     if (platformId) {
       const { data: m } = await supabase
@@ -80,27 +92,29 @@ Deno.serve(async (req) => {
         .limit(1)
         .single();
       if (m) {
-        mapping = m;
         canonicalEvent = m.canonical_event_name;
       }
     }
 
     // If no mapping found, try to match canonical directly
-    if (!mapping && CANONICAL_EVENTS.includes(rawEvent)) {
+    if (CANONICAL_EVENTS.includes(rawEvent)) {
       canonicalEvent = rawEvent;
     }
 
-    // Extract SUBIDs
+    // Extract SUBIDs — accept any value for click_id (text), validate UUIDs for FK fields
     const sub1 = params.sub1 || params.click_id || null;
     const sub2 = params.sub2 || null;
     const sub3 = params.sub3 || null;
 
-    // Resolve relationships from SUBIDs
-    const clickId = sub1;
-    const influencerId = sub2 || params.influencer_id || null;
-    const campanhaId = sub3 || params.campanha_id || null;
+    const clickId = sub1; // text field, no UUID validation needed
+    const influencerId = toUuidOrNull(sub2) || toUuidOrNull(params.influencer_id);
+    const campanhaId = toUuidOrNull(sub3) || toUuidOrNull(params.campanha_id);
 
-    // Build event record
+    // Parse amount safely
+    const parsedAmount = params.amount ? parseFloat(params.amount) : null;
+    const parsedCommission = params.commission ? parseFloat(params.commission) : null;
+
+    // Build event record — all FK fields are validated as UUID
     const eventRecord: Record<string, any> = {
       platform_id: platformId,
       platform_account_id: platformAccountId,
@@ -110,9 +124,9 @@ Deno.serve(async (req) => {
       canonical_event_name: canonicalEvent,
       event_timestamp: params.timestamp ? new Date(params.timestamp).toISOString() : new Date().toISOString(),
       transaction_id: params.transaction_id || params.tid || null,
-      amount: params.amount ? parseFloat(params.amount) : null,
+      amount: !isNaN(parsedAmount!) ? parsedAmount : null,
       currency: params.currency || "BRL",
-      commission_amount: params.commission ? parseFloat(params.commission) : null,
+      commission_amount: !isNaN(parsedCommission!) ? parsedCommission : null,
       status: params.status || null,
       country: params.country || null,
       source_type: "postback",
@@ -122,25 +136,47 @@ Deno.serve(async (req) => {
       is_duplicate: false,
     };
 
-    // Pre-check dedup for events with transaction_id (timestamp-independent)
-    if (eventRecord.transaction_id && platformAccountId) {
+    // === DEDUPLICATION ===
+    // Strategy 1: Check by transaction_id (most reliable for financial events)
+    const txId = eventRecord.transaction_id;
+    if (txId && platformAccountId) {
       const { data: existing } = await supabase
         .from("tracking_events")
         .select("id")
         .eq("platform_account_id", platformAccountId)
-        .eq("transaction_id", eventRecord.transaction_id)
+        .eq("transaction_id", txId)
         .eq("raw_event_name", rawEvent)
         .limit(1)
         .maybeSingle();
       if (existing) {
         return new Response(
-          JSON.stringify({ status: "duplicate", message: "Event already recorded" }),
+          JSON.stringify({ status: "duplicate", message: "Event already recorded", existing_id: existing.id }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
     }
 
-    // Attempt insert
+    // Strategy 2: Check by click_id + event within short window (for events without transaction_id)
+    if (!txId && clickId && platformId) {
+      const windowStart = new Date(Date.now() - 60_000).toISOString(); // 60s window
+      const { data: existing } = await supabase
+        .from("tracking_events")
+        .select("id")
+        .eq("platform_id", platformId)
+        .eq("click_id", clickId)
+        .eq("raw_event_name", rawEvent)
+        .gte("event_timestamp", windowStart)
+        .limit(1)
+        .maybeSingle();
+      if (existing) {
+        return new Response(
+          JSON.stringify({ status: "duplicate", message: "Recent duplicate event detected", existing_id: existing.id }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Insert event
     const { data: inserted, error: insertError } = await supabase
       .from("tracking_events")
       .insert(eventRecord)
@@ -148,11 +184,27 @@ Deno.serve(async (req) => {
       .single();
 
     if (insertError) {
-      // Check if dedup violation
+      // Handle unique constraint violation as duplicate
       if (insertError.code === "23505") {
         return new Response(
-          JSON.stringify({ status: "duplicate", message: "Event already recorded" }),
+          JSON.stringify({ status: "duplicate", message: "Event already recorded (constraint)" }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      // Handle FK violation gracefully — retry without FK fields
+      if (insertError.code === "23503") {
+        console.warn("FK violation, retrying without FK fields:", insertError.message);
+        eventRecord.influencer_id = null;
+        eventRecord.campanha_id = null;
+        const { data: retry, error: retryErr } = await supabase
+          .from("tracking_events")
+          .insert(eventRecord)
+          .select()
+          .single();
+        if (retryErr) throw retryErr;
+        return new Response(
+          JSON.stringify({ status: "ok", event_id: retry.id, canonical_event: canonicalEvent, warning: "FK fields cleared" }),
+          { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       throw insertError;
