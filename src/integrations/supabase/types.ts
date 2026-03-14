@@ -568,6 +568,68 @@ export type Database = {
           },
         ]
       }
+      platform_accounts: {
+        Row: {
+          account_external_id: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          is_demo: boolean
+          login_url: string | null
+          manager_email: string | null
+          manager_name: string | null
+          manager_whatsapp: string | null
+          modelo_comissao: string | null
+          moeda: string | null
+          nome_conta: string
+          notes: string | null
+          platform_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          account_external_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_demo?: boolean
+          login_url?: string | null
+          manager_email?: string | null
+          manager_name?: string | null
+          manager_whatsapp?: string | null
+          modelo_comissao?: string | null
+          moeda?: string | null
+          nome_conta: string
+          notes?: string | null
+          platform_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          account_external_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_demo?: boolean
+          login_url?: string | null
+          manager_email?: string | null
+          manager_name?: string | null
+          manager_whatsapp?: string | null
+          modelo_comissao?: string | null
+          moeda?: string | null
+          nome_conta?: string
+          notes?: string | null
+          platform_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_accounts_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "platforms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platforms: {
         Row: {
           affiliate_manager: string | null
@@ -769,6 +831,186 @@ export type Database = {
         }
         Relationships: []
       }
+      tracking_metrics: {
+        Row: {
+          campanha_id: string | null
+          cliques: number | null
+          conteudo_id: string | null
+          created_at: string | null
+          custo_influencer: number | null
+          custo_trafego: number | null
+          data_ref: string
+          depositos_total: number | null
+          ftd: number | null
+          id: string
+          influencer_id: string | null
+          is_demo: boolean
+          observacoes: string | null
+          origem_importacao: string | null
+          platform_account_id: string | null
+          platform_id: string | null
+          redepositos: number | null
+          registros: number | null
+          revenue: number | null
+          revenue_liquido: number | null
+          saque_disponivel: number | null
+          updated_at: string | null
+          utm_id: string | null
+        }
+        Insert: {
+          campanha_id?: string | null
+          cliques?: number | null
+          conteudo_id?: string | null
+          created_at?: string | null
+          custo_influencer?: number | null
+          custo_trafego?: number | null
+          data_ref: string
+          depositos_total?: number | null
+          ftd?: number | null
+          id?: string
+          influencer_id?: string | null
+          is_demo?: boolean
+          observacoes?: string | null
+          origem_importacao?: string | null
+          platform_account_id?: string | null
+          platform_id?: string | null
+          redepositos?: number | null
+          registros?: number | null
+          revenue?: number | null
+          revenue_liquido?: number | null
+          saque_disponivel?: number | null
+          updated_at?: string | null
+          utm_id?: string | null
+        }
+        Update: {
+          campanha_id?: string | null
+          cliques?: number | null
+          conteudo_id?: string | null
+          created_at?: string | null
+          custo_influencer?: number | null
+          custo_trafego?: number | null
+          data_ref?: string
+          depositos_total?: number | null
+          ftd?: number | null
+          id?: string
+          influencer_id?: string | null
+          is_demo?: boolean
+          observacoes?: string | null
+          origem_importacao?: string | null
+          platform_account_id?: string | null
+          platform_id?: string | null
+          redepositos?: number | null
+          registros?: number | null
+          revenue?: number | null
+          revenue_liquido?: number | null
+          saque_disponivel?: number | null
+          updated_at?: string | null
+          utm_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_metrics_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_metrics_conteudo_id_fkey"
+            columns: ["conteudo_id"]
+            isOneToOne: false
+            referencedRelation: "conteudo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_metrics_influencer_id_fkey"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_metrics_platform_account_id_fkey"
+            columns: ["platform_account_id"]
+            isOneToOne: false
+            referencedRelation: "platform_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_metrics_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "platforms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_metrics_utm_id_fkey"
+            columns: ["utm_id"]
+            isOneToOne: false
+            referencedRelation: "utms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tracking_snapshots: {
+        Row: {
+          cliques: number | null
+          created_at: string | null
+          data_snapshot: string
+          depositos_total: number | null
+          ftd: number | null
+          hora_snapshot: string | null
+          id: string
+          is_demo: boolean
+          platform_account_id: string | null
+          raw_payload: Json | null
+          redepositos: number | null
+          registros: number | null
+          revenue: number | null
+          saque_disponivel: number | null
+        }
+        Insert: {
+          cliques?: number | null
+          created_at?: string | null
+          data_snapshot: string
+          depositos_total?: number | null
+          ftd?: number | null
+          hora_snapshot?: string | null
+          id?: string
+          is_demo?: boolean
+          platform_account_id?: string | null
+          raw_payload?: Json | null
+          redepositos?: number | null
+          registros?: number | null
+          revenue?: number | null
+          saque_disponivel?: number | null
+        }
+        Update: {
+          cliques?: number | null
+          created_at?: string | null
+          data_snapshot?: string
+          depositos_total?: number | null
+          ftd?: number | null
+          hora_snapshot?: string | null
+          id?: string
+          is_demo?: boolean
+          platform_account_id?: string | null
+          raw_payload?: Json | null
+          redepositos?: number | null
+          registros?: number | null
+          revenue?: number | null
+          saque_disponivel?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_snapshots_platform_account_id_fkey"
+            columns: ["platform_account_id"]
+            isOneToOne: false
+            referencedRelation: "platform_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -789,6 +1031,9 @@ export type Database = {
       }
       utms: {
         Row: {
+          campanha_id: string | null
+          codigo_referencia: string | null
+          conteudo_id: string | null
           created_at: string | null
           game_id: string | null
           id: string
@@ -796,6 +1041,10 @@ export type Database = {
           is_active: boolean | null
           is_demo: boolean
           landing_page_id: string | null
+          link_base: string | null
+          link_curto: string | null
+          link_final: string | null
+          nome: string | null
           notes: string | null
           platform_id: string | null
           subid: string | null
@@ -805,8 +1054,12 @@ export type Database = {
           utm_content: string | null
           utm_medium: string | null
           utm_source: string | null
+          utm_term: string | null
         }
         Insert: {
+          campanha_id?: string | null
+          codigo_referencia?: string | null
+          conteudo_id?: string | null
           created_at?: string | null
           game_id?: string | null
           id?: string
@@ -814,6 +1067,10 @@ export type Database = {
           is_active?: boolean | null
           is_demo?: boolean
           landing_page_id?: string | null
+          link_base?: string | null
+          link_curto?: string | null
+          link_final?: string | null
+          nome?: string | null
           notes?: string | null
           platform_id?: string | null
           subid?: string | null
@@ -823,8 +1080,12 @@ export type Database = {
           utm_content?: string | null
           utm_medium?: string | null
           utm_source?: string | null
+          utm_term?: string | null
         }
         Update: {
+          campanha_id?: string | null
+          codigo_referencia?: string | null
+          conteudo_id?: string | null
           created_at?: string | null
           game_id?: string | null
           id?: string
@@ -832,6 +1093,10 @@ export type Database = {
           is_active?: boolean | null
           is_demo?: boolean
           landing_page_id?: string | null
+          link_base?: string | null
+          link_curto?: string | null
+          link_final?: string | null
+          nome?: string | null
           notes?: string | null
           platform_id?: string | null
           subid?: string | null
@@ -841,8 +1106,23 @@ export type Database = {
           utm_content?: string | null
           utm_medium?: string | null
           utm_source?: string | null
+          utm_term?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "utms_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "utms_conteudo_id_fkey"
+            columns: ["conteudo_id"]
+            isOneToOne: false
+            referencedRelation: "conteudo"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "utms_game_id_fkey"
             columns: ["game_id"]
