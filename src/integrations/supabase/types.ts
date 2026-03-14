@@ -1123,6 +1123,7 @@ export type Database = {
           short_url: string | null
           status: string | null
           tracking_code: string
+          tracking_role: string | null
           updated_at: string | null
           utm_id: string | null
         }
@@ -1143,6 +1144,7 @@ export type Database = {
           short_url?: string | null
           status?: string | null
           tracking_code?: string
+          tracking_role?: string | null
           updated_at?: string | null
           utm_id?: string | null
         }
@@ -1163,6 +1165,7 @@ export type Database = {
           short_url?: string | null
           status?: string | null
           tracking_code?: string
+          tracking_role?: string | null
           updated_at?: string | null
           utm_id?: string | null
         }
