@@ -84,8 +84,9 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
   const buildFinalUrl = () => {
     if (link.final_url) return link.final_url;
     if (!primaryLink) return "";
+    const param = link.click_id_param_name || "sub1";
     const sep = primaryLink.includes("?") ? "&" : "?";
-    return `${primaryLink}${sep}${link.click_id_param_name || "sub1"}={click_id}`;
+    return `${primaryLink}${sep}${param}={${param}}`;
   };
 
   const missingFields: string[] = [];
