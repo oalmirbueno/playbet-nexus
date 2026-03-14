@@ -125,7 +125,10 @@ export default function Dashboard() {
       {hasTrackingData && consolidated.revenueBrl > 0 && (
         <div className="glass-card p-6 border-l-4 border-l-primary cursor-pointer hover:bg-secondary/20 transition-colors" onClick={() => navigate("/tracking")}>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold">Revenue Consolidado (Tracking)</h3>
+            <div>
+              <h3 className="text-sm font-semibold">Revenue da Plataforma (Tracking)</h3>
+              <p className="text-[10px] text-muted-foreground">Não é caixa — valor reportado pela plataforma</p>
+            </div>
             <ArrowRight size={14} className="text-muted-foreground" />
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -143,7 +146,11 @@ export default function Dashboard() {
               <p className="text-lg font-bold text-primary">{formatBRL(consolidated.revenueBrl)}</p>
             </div>
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase">Eventos reais</p>
+              <p className="text-[10px] text-muted-foreground uppercase">Cliques reais</p>
+              <p className="text-lg font-bold">{consolidated.realClicksCount}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase">Eventos válidos</p>
               <p className="text-lg font-bold">{consolidated.eventCount}</p>
             </div>
           </div>
