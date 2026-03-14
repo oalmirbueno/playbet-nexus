@@ -21,6 +21,22 @@ function toUuidOrNull(val: string | null | undefined): string | null {
   return isValidUuid(val) ? val! : null;
 }
 
+// Fetch USD→BRL exchange rate from free API
+async function fetchExchangeRate(from: string, to: string): Promise<{ rate: number; timestamp: string } | null> {
+  if (from.toUpperCase() === to.toUpperCase()) return { rate: 1, timestamp: new Date().toISOString() };
+  try {
+    const res = await fetch(`https://open.er-api.com/v6/latest/${from.toUpperCase()}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    const rate = data?.rates?.[to.toUpperCase()];
+    if (!rate) return null;
+    return { rate, timestamp: new Date(data.time_last_update_utc || Date.now()).toISOString() };
+  } catch (e) {
+    console.error("Exchange rate fetch failed:", e);
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -53,15 +69,18 @@ Deno.serve(async (req) => {
     // Resolve platform
     let platformId: string | null = null;
     let platformAccountId: string | null = null;
+    let accountCurrency: string = "BRL";
 
     if (platformSlug) {
       const { data: plat } = await supabase
         .from("platforms")
-        .select("id")
+        .select("id, currency")
         .ilike("name", `%${platformSlug}%`)
         .limit(1)
         .single();
-      if (plat) platformId = plat.id;
+      if (plat) {
+        platformId = plat.id;
+      }
     }
 
     // Look for platform_account_id in params or resolve from platform
@@ -70,12 +89,25 @@ Deno.serve(async (req) => {
     } else if (platformId) {
       const { data: acc } = await supabase
         .from("platform_accounts")
-        .select("id")
+        .select("id, moeda")
         .eq("platform_id", platformId)
         .eq("is_active", true)
         .limit(1)
         .single();
-      if (acc) platformAccountId = acc.id;
+      if (acc) {
+        platformAccountId = acc.id;
+        accountCurrency = acc.moeda || "BRL";
+      }
+    }
+
+    // If we have platform_account_id, fetch its currency
+    if (platformAccountId && accountCurrency === "BRL") {
+      const { data: accData } = await supabase
+        .from("platform_accounts")
+        .select("moeda")
+        .eq("id", platformAccountId)
+        .single();
+      if (accData?.moeda) accountCurrency = accData.moeda;
     }
 
     // Get event mapping
@@ -101,12 +133,12 @@ Deno.serve(async (req) => {
       canonicalEvent = rawEvent;
     }
 
-    // Extract SUBIDs — accept any value for click_id (text), validate UUIDs for FK fields
+    // Extract SUBIDs
     const sub1 = params.sub1 || params.click_id || null;
     const sub2 = params.sub2 || null;
     const sub3 = params.sub3 || null;
 
-    const clickId = sub1; // text field, no UUID validation needed
+    const clickId = sub1;
     const influencerId = toUuidOrNull(sub2) || toUuidOrNull(params.influencer_id);
     const campanhaId = toUuidOrNull(sub3) || toUuidOrNull(params.campanha_id);
 
@@ -114,8 +146,25 @@ Deno.serve(async (req) => {
     const parsedAmount = params.amount ? parseFloat(params.amount) : null;
     const parsedCommission = params.commission ? parseFloat(params.commission) : null;
 
-    // Capture platform-native metadata fields into raw_payload
-    // These are stored in raw_payload for debug/reconciliation
+    // Determine original currency from params or account
+    const originalCurrency = (params.currency || accountCurrency || "BRL").toUpperCase();
+    const originalAmount = !isNaN(parsedAmount!) ? parsedAmount : null;
+
+    // Convert to BRL if needed
+    let convertedAmountBrl = originalAmount;
+    let exchangeRate: number | null = null;
+    let exchangeRateTimestamp: string | null = null;
+
+    if (originalAmount !== null && originalCurrency !== "BRL") {
+      const rateData = await fetchExchangeRate(originalCurrency, "BRL");
+      if (rateData) {
+        exchangeRate = rateData.rate;
+        exchangeRateTimestamp = rateData.timestamp;
+        convertedAmountBrl = Math.round(originalAmount * rateData.rate * 100) / 100;
+      }
+    }
+
+    // Capture platform-native metadata fields
     const platformMeta: Record<string, string> = {};
     const metaFields = ["event_id", "date", "hash_id", "hash_name", "source_id", "source_name"];
     for (const field of metaFields) {
@@ -124,13 +173,12 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Build enriched raw_payload with platform metadata prominently stored
     const rawPayload = {
       ...params,
       _platform_meta: Object.keys(platformMeta).length > 0 ? platformMeta : undefined,
     };
 
-    // Build event record — all FK fields are validated as UUID
+    // Build event record
     const eventRecord: Record<string, any> = {
       platform_id: platformId,
       platform_account_id: platformAccountId,
@@ -142,8 +190,13 @@ Deno.serve(async (req) => {
         ? new Date(parseInt(params.date) * 1000 || params.timestamp || Date.now()).toISOString()
         : new Date().toISOString(),
       transaction_id: params.transaction_id || params.tid || null,
-      amount: !isNaN(parsedAmount!) ? parsedAmount : null,
-      currency: params.currency || "BRL",
+      amount: convertedAmountBrl,
+      currency: "BRL",
+      original_amount: originalAmount,
+      original_currency: originalCurrency,
+      converted_amount_brl: convertedAmountBrl,
+      exchange_rate: exchangeRate,
+      exchange_rate_timestamp: exchangeRateTimestamp,
       commission_amount: !isNaN(parsedCommission!) ? parsedCommission : null,
       status: params.status || null,
       country: params.country || null,
@@ -155,7 +208,6 @@ Deno.serve(async (req) => {
     };
 
     // === DEDUPLICATION ===
-    // Strategy 1: Check by transaction_id (most reliable for financial events)
     const txId = eventRecord.transaction_id;
     if (txId && platformAccountId) {
       const { data: existing } = await supabase
@@ -174,9 +226,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Strategy 2: Check by click_id + event within short window (for events without transaction_id)
     if (!txId && clickId && platformId) {
-      const windowStart = new Date(Date.now() - 60_000).toISOString(); // 60s window
+      const windowStart = new Date(Date.now() - 60_000).toISOString();
       const { data: existing } = await supabase
         .from("tracking_events")
         .select("id")
@@ -202,14 +253,12 @@ Deno.serve(async (req) => {
       .single();
 
     if (insertError) {
-      // Handle unique constraint violation as duplicate
       if (insertError.code === "23505") {
         return new Response(
           JSON.stringify({ status: "duplicate", message: "Event already recorded (constraint)" }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      // Handle FK violation gracefully — retry without FK fields
       if (insertError.code === "23503") {
         console.warn("FK violation, retrying without FK fields:", insertError.message);
         eventRecord.influencer_id = null;
@@ -221,7 +270,16 @@ Deno.serve(async (req) => {
           .single();
         if (retryErr) throw retryErr;
         return new Response(
-          JSON.stringify({ status: "ok", event_id: retry.id, canonical_event: canonicalEvent, warning: "FK fields cleared" }),
+          JSON.stringify({
+            status: "ok",
+            event_id: retry.id,
+            canonical_event: canonicalEvent,
+            original_amount: originalAmount,
+            original_currency: originalCurrency,
+            converted_brl: convertedAmountBrl,
+            exchange_rate: exchangeRate,
+            warning: "FK fields cleared",
+          }),
           { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -229,7 +287,15 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ status: "ok", event_id: inserted.id, canonical_event: canonicalEvent }),
+      JSON.stringify({
+        status: "ok",
+        event_id: inserted.id,
+        canonical_event: canonicalEvent,
+        original_amount: originalAmount,
+        original_currency: originalCurrency,
+        converted_brl: convertedAmountBrl,
+        exchange_rate: exchangeRate,
+      }),
       { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err: any) {

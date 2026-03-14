@@ -8,24 +8,29 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import Breadcrumbs from "@/components/Breadcrumbs";
-import EmptyState from "@/components/EmptyState";
 import { useTrackingMetrics, usePlatformAccounts, useTrackingEvents } from "@/hooks/useTrackingData";
+import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
 import { useInfluencers, useCampanhas, usePlatforms, useLandingPages } from "@/hooks/useSupabaseQuery";
 import {
   BarChart3, TrendingUp, Users, MousePointerClick, UserPlus, DollarSign,
   Wallet, Target, ArrowRightLeft, Activity, Download, Filter, RefreshCcw,
-  AlertTriangle, Zap, Link2, Map,
+  AlertTriangle, Zap, Link2, Map, MoreHorizontal, ArrowUpDown,
 } from "lucide-react";
 import TrackingDemoFilter from "@/components/TrackingDemoFilter";
 import PlatformActivationChecklist from "@/components/PlatformActivationChecklist";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
-  ResponsiveContainer, Legend, FunnelChart, Funnel, LabelList,
+  ResponsiveContainer, Legend,
 } from "recharts";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const COLORS = ["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))", "hsl(var(--chart-5))"];
 
-function fmt(v: number) { return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
+function fmt(v: number, currency = "BRL") {
+  return v.toLocaleString("pt-BR", { style: "currency", currency });
+}
 function pct(a: number, b: number) { if (!b) return "0%"; return ((a / b) * 100).toFixed(1) + "%"; }
 function fmtNum(v: number) {
   if (v >= 1_000_000) return (v / 1_000_000).toFixed(1) + "M";
@@ -58,8 +63,9 @@ export default function TrackingDashboard() {
   const { data: platforms } = usePlatforms();
   const { data: landingPages } = useLandingPages();
   const { data: recentEvents } = useTrackingEvents();
+  const { consolidated, hasData: hasAutoData } = useAutoConsolidation();
 
-  // Aggregated KPIs
+  // Aggregated KPIs from manual metrics
   const kpis = useMemo(() => {
     const t = metrics.reduce((acc, m) => ({
       cliques: acc.cliques + (m.cliques || 0),
@@ -88,6 +94,36 @@ export default function TrackingDashboard() {
       lucro: t.revLiq - custoTotal,
     };
   }, [metrics]);
+
+  // Merge: use auto-consolidated data if no manual metrics exist
+  const effectiveKpis = useMemo(() => {
+    if (metrics.length > 0) return kpis;
+    // Use auto-consolidated from events
+    return {
+      cliques: consolidated.totalClicks,
+      registros: consolidated.totalRegistrations,
+      ftd: consolidated.totalFtd,
+      redepositos: consolidated.totalRedeposits,
+      depositos: consolidated.totalDeposits,
+      revenue: consolidated.revenueBrl,
+      revLiq: consolidated.revenueBrl,
+      saque: 0,
+      custoTrafego: 0,
+      custoInfluencer: 0,
+      custoTotal: 0,
+      crRegistro: consolidated.totalClicks ? (consolidated.totalRegistrations / consolidated.totalClicks) * 100 : 0,
+      crFtd: consolidated.totalClicks ? (consolidated.totalFtd / consolidated.totalClicks) * 100 : 0,
+      epc: consolidated.totalClicks ? consolidated.revenueBrl / consolidated.totalClicks : 0,
+      roi: 0,
+      ticketMedio: 0,
+      revenuePerRegistro: consolidated.totalRegistrations ? consolidated.revenueBrl / consolidated.totalRegistrations : 0,
+      revenuePerFtd: consolidated.totalFtd ? consolidated.revenueBrl / consolidated.totalFtd : 0,
+      lucro: consolidated.revenueBrl,
+    };
+  }, [metrics, kpis, consolidated]);
+
+  const hasManualData = metrics.length > 0;
+  const hasAnyData = hasManualData || hasAutoData;
 
   // Group by platform
   const byPlatform = useMemo(() => {
@@ -157,11 +193,11 @@ export default function TrackingDashboard() {
 
   // Funnel data
   const funnelData = useMemo(() => [
-    { name: "Cliques", value: kpis.cliques, fill: COLORS[0] },
-    { name: "Registros", value: kpis.registros, fill: COLORS[1] },
-    { name: "FTD", value: kpis.ftd, fill: COLORS[2] },
-    { name: "Redepósitos", value: kpis.redepositos, fill: COLORS[3] },
-  ], [kpis]);
+    { name: "Cliques", value: effectiveKpis.cliques, fill: COLORS[0] },
+    { name: "Registros", value: effectiveKpis.registros, fill: COLORS[1] },
+    { name: "FTD", value: effectiveKpis.ftd, fill: COLORS[2] },
+    { name: "Redepósitos", value: effectiveKpis.redepositos, fill: COLORS[3] },
+  ], [effectiveKpis]);
 
   // Alerts
   const alerts = useMemo(() => {
@@ -180,30 +216,29 @@ export default function TrackingDashboard() {
     return (platforms as any[]).map((p: any) => ({ id: p.id, name: p.name }));
   }, [platforms]);
 
-  const hasData = metrics.length > 0;
   const hasInfra = accounts.length > 0 || recentEvents.length > 0;
   const realEvents = recentEvents.filter(e => !e.is_demo && !e.click_id?.startsWith("{"));
 
   const kpiCards = [
-    { label: "Cliques", value: fmtNum(kpis.cliques), icon: MousePointerClick, color: "text-primary" },
-    { label: "Registros", value: fmtNum(kpis.registros), icon: UserPlus, color: "text-chart-2" },
-    { label: "FTD", value: fmtNum(kpis.ftd), icon: Target, color: "text-chart-3" },
-    { label: "Redepósitos", value: fmtNum(kpis.redepositos), icon: ArrowRightLeft, color: "text-chart-4" },
-    { label: "Depósitos Total", value: fmt(kpis.depositos), icon: DollarSign, color: "text-chart-5" },
-    { label: "Revenue", value: fmt(kpis.revenue), icon: TrendingUp, color: "text-primary" },
-    { label: "Saque Disponível", value: fmt(kpis.saque), icon: Wallet, color: "text-chart-2" },
-    { label: "Lucro", value: fmt(kpis.lucro), icon: Activity, color: kpis.lucro >= 0 ? "text-green-500" : "text-destructive" },
-    { label: "ROI", value: kpis.roi.toFixed(1) + "%", icon: Activity, color: kpis.roi >= 0 ? "text-green-500" : "text-destructive" },
+    { label: "Cliques", value: fmtNum(effectiveKpis.cliques), icon: MousePointerClick, color: "text-primary" },
+    { label: "Registros", value: fmtNum(effectiveKpis.registros), icon: UserPlus, color: "text-chart-2" },
+    { label: "FTD", value: fmtNum(effectiveKpis.ftd), icon: Target, color: "text-chart-3" },
+    { label: "Redepósitos", value: fmtNum(effectiveKpis.redepositos), icon: ArrowRightLeft, color: "text-chart-4" },
+    { label: "Depósitos Total", value: fmt(effectiveKpis.depositos), icon: DollarSign, color: "text-chart-5" },
+    { label: "Revenue", value: fmt(effectiveKpis.revenue), icon: TrendingUp, color: "text-primary" },
+    { label: "Saque Disponível", value: fmt(effectiveKpis.saque), icon: Wallet, color: "text-chart-2" },
+    { label: "Lucro", value: fmt(effectiveKpis.lucro), icon: Activity, color: effectiveKpis.lucro >= 0 ? "text-green-500" : "text-destructive" },
+    { label: "ROI", value: effectiveKpis.roi.toFixed(1) + "%", icon: Activity, color: effectiveKpis.roi >= 0 ? "text-green-500" : "text-destructive" },
   ];
 
   const calculatedCards = [
-    { label: "CR Registro", value: kpis.crRegistro.toFixed(2) + "%" },
-    { label: "CR FTD", value: kpis.crFtd.toFixed(2) + "%" },
-    { label: "EPC", value: fmt(kpis.epc) },
-    { label: "Ticket Médio", value: fmt(kpis.ticketMedio) },
-    { label: "Rev/Registro", value: fmt(kpis.revenuePerRegistro) },
-    { label: "Rev/FTD", value: fmt(kpis.revenuePerFtd) },
-    { label: "Custo Total", value: fmt(kpis.custoTotal) },
+    { label: "CR Registro", value: effectiveKpis.crRegistro.toFixed(2) + "%" },
+    { label: "CR FTD", value: effectiveKpis.crFtd.toFixed(2) + "%" },
+    { label: "EPC", value: fmt(effectiveKpis.epc) },
+    { label: "Ticket Médio", value: fmt(effectiveKpis.ticketMedio) },
+    { label: "Rev/Registro", value: fmt(effectiveKpis.revenuePerRegistro) },
+    { label: "Rev/FTD", value: fmt(effectiveKpis.revenuePerFtd) },
+    { label: "Custo Total", value: fmt(effectiveKpis.custoTotal) },
   ];
 
   const clearFilters = () => {
@@ -223,9 +258,6 @@ export default function TrackingDashboard() {
         </div>
         <div className="flex gap-2 flex-wrap items-center">
           <TrackingDemoFilter />
-          <Button variant="outline" size="sm" onClick={() => navigate("/tracking/metrics")}>
-            <Download size={14} className="mr-1.5" /> Registrar Métrica
-          </Button>
           <Button variant="outline" size="sm" onClick={() => navigate("/tracking/accounts")}>
             <Users size={14} className="mr-1.5" /> Contas
           </Button>
@@ -238,6 +270,22 @@ export default function TrackingDashboard() {
           <Button variant="outline" size="sm" onClick={() => navigate("/tracking/links")}>
             <Link2 size={14} className="mr-1.5" /> Links
           </Button>
+          {/* Manual entry demoted to dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <MoreHorizontal size={14} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => navigate("/tracking/metrics")}>
+                <Download size={14} className="mr-2" /> Registrar Métrica (manual)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/tracking/snapshots")}>
+                <ArrowUpDown size={14} className="mr-2" /> Snapshots
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -257,6 +305,61 @@ export default function TrackingDashboard() {
 
       {/* Platform Activation Checklist */}
       <PlatformActivationChecklist />
+
+      {/* Auto-consolidated revenue card with currency details */}
+      {hasAutoData && consolidated.revenueBrl > 0 && (
+        <Card className="border-primary/20 bg-primary/[0.02]">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-2 mb-3">
+              <DollarSign size={14} className="text-primary" />
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Revenue Consolidado (automático)</span>
+              {!hasManualData && (
+                <Badge variant="secondary" className="text-[10px] ml-auto">Dados de eventos em tempo real</Badge>
+              )}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {Object.entries(consolidated.byCurrency).map(([currency, data]) => (
+                <div key={currency} className="bg-background/60 rounded-lg p-3 border border-border/50">
+                  <p className="text-[10px] text-muted-foreground uppercase">Revenue ({currency})</p>
+                  <p className="text-lg font-bold">{fmt(data.total, currency === "BRL" ? "BRL" : "USD")}</p>
+                  {currency !== "BRL" && data.rate && (
+                    <div className="mt-1 space-y-0.5">
+                      <p className="text-xs text-muted-foreground">≈ {fmt(data.convertedBrl, "BRL")}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        1 {currency} = R$ {data.rate.toFixed(4)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div className="bg-background/60 rounded-lg p-3 border border-border/50">
+                <p className="text-[10px] text-muted-foreground uppercase">Total em BRL</p>
+                <p className="text-lg font-bold text-primary">{fmt(consolidated.revenueBrl, "BRL")}</p>
+                {consolidated.lastExchangeRateTimestamp && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Cotação: {new Date(consolidated.lastExchangeRateTimestamp).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                )}
+              </div>
+              <div className="bg-background/60 rounded-lg p-3 border border-border/50">
+                <p className="text-[10px] text-muted-foreground uppercase">Eventos processados</p>
+                <p className="text-lg font-bold">{consolidated.eventCount}</p>
+                {consolidated.lastEventTimestamp && (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    Último: {new Date(consolidated.lastEventTimestamp).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                )}
+              </div>
+              {consolidated.platformName && (
+                <div className="bg-background/60 rounded-lg p-3 border border-border/50">
+                  <p className="text-[10px] text-muted-foreground uppercase">Plataforma</p>
+                  <p className="text-lg font-bold">{consolidated.platformName}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters */}
       <Card>
@@ -307,7 +410,7 @@ export default function TrackingDashboard() {
         <Card><CardContent className="py-12 text-center text-muted-foreground text-sm">Carregando métricas...</CardContent></Card>
       )}
 
-      {!isLoading && !hasData && (
+      {!isLoading && !hasAnyData && (
         <Card className={hasInfra ? "border-primary/20" : "border-dashed"}>
           <CardContent className="py-10 space-y-5">
             {hasInfra ? (
@@ -315,8 +418,8 @@ export default function TrackingDashboard() {
                 <div className="text-center">
                   <h3 className="text-sm font-semibold text-foreground mb-1">Infraestrutura configurada</h3>
                   <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                    {accounts.length} conta(s) ativa(s) · {realEvents.length} evento(s) real(is) recebido(s).
-                    Registre métricas consolidadas ou importe histórico para visualizar os dashboards completos.
+                    {accounts.length} conta(s) ativa(s) · {realEvents.length} evento(s) recebido(s).
+                    Os dados serão consolidados automaticamente conforme eventos reais chegarem.
                   </p>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -325,7 +428,7 @@ export default function TrackingDashboard() {
                     <p className="text-xl font-bold">{accounts.length}</p>
                   </div>
                   <div className="text-center p-3 bg-secondary/30 rounded-lg">
-                    <p className="text-[10px] text-muted-foreground uppercase">Eventos reais</p>
+                    <p className="text-[10px] text-muted-foreground uppercase">Eventos</p>
                     <p className="text-xl font-bold">{realEvents.length}</p>
                   </div>
                   <div className="text-center p-3 bg-secondary/30 rounded-lg">
@@ -342,11 +445,11 @@ export default function TrackingDashboard() {
                   </div>
                 </div>
                 <div className="flex items-center justify-center gap-3">
-                  <Button variant="default" size="sm" onClick={() => navigate("/tracking/metrics")}>
-                    Registrar Métrica
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => navigate("/tracking/events")}>
+                  <Button variant="default" size="sm" onClick={() => navigate("/tracking/events")}>
                     Ver Eventos
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => navigate("/tracking/accounts")}>
+                    Gerenciar Contas
                   </Button>
                 </div>
               </>
@@ -375,7 +478,7 @@ export default function TrackingDashboard() {
         </Card>
       )}
 
-      {!isLoading && hasData && (
+      {!isLoading && hasAnyData && (
         <>
           {/* KPI Cards */}
           <div className="grid grid-cols-3 md:grid-cols-9 gap-3">
@@ -624,33 +727,45 @@ export default function TrackingDashboard() {
                           <TableHead>Evento</TableHead>
                           <TableHead>Canônico</TableHead>
                           <TableHead>Origem</TableHead>
-                          <TableHead className="text-right">Valor</TableHead>
+                          <TableHead className="text-right">Valor Original</TableHead>
+                          <TableHead className="text-right">Valor BRL</TableHead>
                           <TableHead>País</TableHead>
                           <TableHead>Timestamp</TableHead>
                           <TableHead>Status</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {recentEvents.slice(0, 20).map(ev => (
-                          <TableRow key={ev.id} className={ev.is_duplicate ? "opacity-50" : ""}>
-                            <TableCell className="font-mono text-xs">{ev.raw_event_name}</TableCell>
-                            <TableCell>
-                              <Badge variant="secondary" className="text-[10px]">{ev.canonical_event_name}</Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className="text-[10px]">{ev.source_type}</Badge>
-                            </TableCell>
-                            <TableCell className="text-right">{ev.amount ? fmt(ev.amount) : "—"}</TableCell>
-                            <TableCell>{ev.country || "—"}</TableCell>
-                            <TableCell className="text-xs text-muted-foreground">
-                              {new Date(ev.event_timestamp).toLocaleString("pt-BR")}
-                            </TableCell>
-                            <TableCell>
-                              {ev.is_duplicate && <Badge variant="destructive" className="text-[10px]">Duplicado</Badge>}
-                              {!ev.click_id && !ev.is_duplicate && <Badge variant="outline" className="text-[10px] border-yellow-500 text-yellow-600">Sem click_id</Badge>}
-                            </TableCell>
-                          </TableRow>
-                        ))}
+                        {recentEvents.slice(0, 20).map(ev => {
+                          const origAmount = (ev as any).original_amount;
+                          const origCurrency = (ev as any).original_currency;
+                          const convertedBrl = (ev as any).converted_amount_brl;
+                          const showOriginal = origCurrency && origCurrency !== "BRL" && origAmount;
+                          return (
+                            <TableRow key={ev.id} className={ev.is_duplicate ? "opacity-50" : ""}>
+                              <TableCell className="font-mono text-xs">{ev.raw_event_name}</TableCell>
+                              <TableCell>
+                                <Badge variant="secondary" className="text-[10px]">{ev.canonical_event_name}</Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="text-[10px]">{ev.source_type}</Badge>
+                              </TableCell>
+                              <TableCell className="text-right text-xs">
+                                {showOriginal ? `${origCurrency} ${Number(origAmount).toFixed(2)}` : ev.amount ? fmt(ev.amount) : "—"}
+                              </TableCell>
+                              <TableCell className="text-right text-xs font-medium">
+                                {convertedBrl ? fmt(convertedBrl) : ev.amount ? fmt(ev.amount) : "—"}
+                              </TableCell>
+                              <TableCell>{ev.country || "—"}</TableCell>
+                              <TableCell className="text-xs text-muted-foreground">
+                                {new Date(ev.event_timestamp).toLocaleString("pt-BR")}
+                              </TableCell>
+                              <TableCell>
+                                {ev.is_duplicate && <Badge variant="destructive" className="text-[10px]">Duplicado</Badge>}
+                                {!ev.click_id && !ev.is_duplicate && <Badge variant="outline" className="text-[10px] border-yellow-500 text-yellow-600">Sem click_id</Badge>}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
                       </TableBody>
                     </Table>
                   </div>

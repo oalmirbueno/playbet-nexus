@@ -5,29 +5,33 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { usePlatformAccounts, useTrackingLinks, useTrackingEvents } from "@/hooks/useTrackingData";
 import { usePlatforms } from "@/hooks/useSupabaseQuery";
+import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
 import { Activity, ArrowRight, CheckCircle2, AlertTriangle, Radio } from "lucide-react";
+
+function fmtCurrency(value: number, currency: string) {
+  return value.toLocaleString("pt-BR", { style: "currency", currency: currency === "BRL" ? "BRL" : "USD" });
+}
 
 export default function TrackingOverviewCard() {
   const navigate = useNavigate();
   const { data: platforms } = usePlatforms();
   const { data: accounts } = usePlatformAccounts();
   const { data: links } = useTrackingLinks();
-  const { data: events } = useTrackingEvents();
+  const { consolidated, hasData: hasEvents } = useAutoConsolidation();
 
   const realPlatforms = (platforms as any[]).filter((p: any) => !p.is_demo);
   const realAccounts = accounts.filter(a => !a.is_demo);
   const realLinks = links.filter(l => !l.is_demo);
-  const realEvents = events.filter(e => !e.is_demo && !e.click_id?.startsWith("{"));
 
-  const lastEvent = realEvents.length > 0
-    ? new Date(realEvents[0].event_timestamp).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+  const lastEvent = consolidated.lastEventTimestamp
+    ? new Date(consolidated.lastEventTimestamp).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
     : null;
 
   const status = useMemo(() => {
-    if (realEvents.length > 0) return "ok";
+    if (hasEvents) return "ok";
     if (realAccounts.length > 0 || realLinks.length > 0) return "parcial";
     return "pendente";
-  }, [realEvents, realAccounts, realLinks]);
+  }, [hasEvents, realAccounts, realLinks]);
 
   const statusConfig = {
     ok: { label: "Operacional", color: "text-green-500", bg: "bg-green-500/10 border-green-500/20", icon: CheckCircle2 },
@@ -38,7 +42,6 @@ export default function TrackingOverviewCard() {
   const cfg = statusConfig[status];
   const StatusIcon = cfg.icon;
 
-  // Don't show if nothing tracking-related exists
   if (realPlatforms.length === 0 && realAccounts.length === 0) return null;
 
   return (
@@ -67,13 +70,39 @@ export default function TrackingOverviewCard() {
           </div>
           <div>
             <p className="text-[10px] text-muted-foreground uppercase">Eventos reais</p>
-            <p className="text-lg font-bold">{realEvents.length}</p>
+            <p className="text-lg font-bold">{consolidated.eventCount}</p>
           </div>
           <div>
             <p className="text-[10px] text-muted-foreground uppercase">Última atividade</p>
             <p className="text-xs font-medium mt-1">{lastEvent || "—"}</p>
           </div>
         </div>
+
+        {/* Revenue with currency details */}
+        {consolidated.revenueBrl > 0 && (
+          <div className="bg-background/50 rounded-lg p-2.5 mb-3 border border-border/50">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] text-muted-foreground uppercase">Revenue consolidado</p>
+                {consolidated.revenueOriginalCurrency !== "BRL" ? (
+                  <>
+                    <p className="text-sm font-bold">{fmtCurrency(consolidated.revenueOriginal, consolidated.revenueOriginalCurrency)}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      ≈ {fmtCurrency(consolidated.revenueBrl, "BRL")}
+                      {consolidated.lastExchangeRate && ` · Taxa: ${consolidated.lastExchangeRate.toFixed(4)}`}
+                    </p>
+                  </>
+                ) : (
+                  <p className="text-sm font-bold">{fmtCurrency(consolidated.revenueBrl, "BRL")}</p>
+                )}
+              </div>
+              {consolidated.platformName && (
+                <Badge variant="secondary" className="text-[10px]">{consolidated.platformName}</Badge>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="flex items-center justify-end">
           <Button variant="ghost" size="sm" className="text-xs h-7 text-primary">
             Ver Tracking Hub <ArrowRight size={12} className="ml-1" />
