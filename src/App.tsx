@@ -43,6 +43,9 @@ import RegrasFinanceiras from "./pages/RegrasFinanceiras";
 import Permissoes from "./pages/Permissoes";
 import Integracoes from "./pages/Integracoes";
 import DeveloperSettings from "./pages/DeveloperSettings";
+import TrackingDashboard from "./pages/TrackingDashboard";
+import TrackingAccounts from "./pages/TrackingAccounts";
+import TrackingMetricsForm from "./pages/TrackingMetricsForm";
 import NotFound from "./pages/NotFound";
 import InfluencerLanding from "./pages/InfluencerLanding";
 
@@ -100,6 +103,9 @@ function ProtectedRoutes() {
         <Route path="/permissoes" element={<Permissoes />} />
         <Route path="/integracoes" element={<Integracoes />} />
         <Route path="/developer" element={<DeveloperSettings />} />
+        <Route path="/tracking" element={<TrackingDashboard />} />
+        <Route path="/tracking/accounts" element={<TrackingAccounts />} />
+        <Route path="/tracking/metrics" element={<TrackingMetricsForm />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </DashboardLayout>

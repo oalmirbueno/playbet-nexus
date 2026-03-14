@@ -17,6 +17,14 @@ interface MenuSection { title: string; items: MenuItem[]; }
 
 const sections: MenuSection[] = [
   {
+    title: "TRACKING HUB",
+    items: [
+      { label: "Tracking Dashboard", icon: BarChart3, path: "/tracking" },
+      { label: "Contas Plataforma", icon: Monitor, path: "/tracking/accounts" },
+      { label: "Registrar Métrica", icon: Activity, path: "/tracking/metrics" },
+    ],
+  },
+  {
     title: "VISÃO GERAL",
     items: [
       { label: "Dashboard Executivo", icon: LayoutDashboard, path: "/" },

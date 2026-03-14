@@ -21,11 +21,16 @@ const ALLOWED_TABLES = [
   "saques",
   "conteudo",
   "game_platforms",
+  "platform_accounts",
+  "tracking_metrics",
+  "tracking_snapshots",
 ];
 
 const TABLE_ORDER_DEFAULTS: Record<string, string> = {
   clicks: "clicked_at",
   game_platforms: "game_id",
+  tracking_snapshots: "data_snapshot",
+  tracking_metrics: "data_ref",
 };
 
 Deno.serve(async (req) => {
