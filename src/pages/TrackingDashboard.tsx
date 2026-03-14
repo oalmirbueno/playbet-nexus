@@ -181,6 +181,8 @@ export default function TrackingDashboard() {
   }, [platforms]);
 
   const hasData = metrics.length > 0;
+  const hasInfra = accounts.length > 0 || recentEvents.length > 0;
+  const realEvents = recentEvents.filter(e => !e.is_demo && !e.click_id?.startsWith("{"));
 
   const kpiCards = [
     { label: "Cliques", value: fmtNum(kpis.cliques), icon: MousePointerClick, color: "text-primary" },
