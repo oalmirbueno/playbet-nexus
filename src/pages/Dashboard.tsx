@@ -134,6 +134,9 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* Tracking Hub Overview */}
+      <TrackingOverviewCard />
+
       {/* Setup checklist */}
       <div className="glass-card p-6">
         <div className="flex items-center justify-between mb-5">
