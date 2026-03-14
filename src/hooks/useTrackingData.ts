@@ -1,0 +1,95 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { platformAccountService, trackingMetricService, trackingSnapshotService } from "@/services/trackingService";
+import type { PlatformAccountRow, TrackingMetricRow } from "@/services/trackingService";
+import { useToast } from "@/hooks/use-toast";
+
+export function usePlatformAccounts() {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+
+  const { data = [], isLoading } = useQuery({
+    queryKey: ["platform_accounts"],
+    queryFn: platformAccountService.getAll,
+  });
+
+  const createMut = useMutation({
+    mutationFn: (item: Partial<PlatformAccountRow>) => platformAccountService.create(item),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["platform_accounts"] }); toast({ title: "Conta criada" }); },
+    onError: () => toast({ title: "Erro ao criar conta", variant: "destructive" }),
+  });
+
+  const updateMut = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<PlatformAccountRow> }) => platformAccountService.update(id, updates),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["platform_accounts"] }); toast({ title: "Conta atualizada" }); },
+    onError: () => toast({ title: "Erro ao atualizar", variant: "destructive" }),
+  });
+
+  const toggleMut = useMutation({
+    mutationFn: ({ id, current }: { id: string; current: boolean }) => platformAccountService.toggleActive(id, current),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["platform_accounts"] }); toast({ title: "Status alterado" }); },
+  });
+
+  const removeMut = useMutation({
+    mutationFn: (id: string) => platformAccountService.remove(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["platform_accounts"] }); toast({ title: "Conta removida" }); },
+  });
+
+  return {
+    data,
+    isLoading,
+    create: createMut.mutateAsync,
+    update: (id: string, updates: Partial<PlatformAccountRow>) => updateMut.mutateAsync({ id, updates }),
+    toggle: (id: string, current: boolean) => toggleMut.mutateAsync({ id, current }),
+    remove: removeMut.mutateAsync,
+    isCreating: createMut.isPending,
+  };
+}
+
+export function useTrackingMetrics(filters?: {
+  platform_id?: string;
+  influencer_id?: string;
+  campanha_id?: string;
+  date_from?: string;
+  date_to?: string;
+}) {
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const hasFilters = filters && Object.values(filters).some(Boolean);
+
+  const { data = [], isLoading } = useQuery({
+    queryKey: ["tracking_metrics", filters],
+    queryFn: () => hasFilters ? trackingMetricService.getFiltered(filters!) : trackingMetricService.getAll(),
+  });
+
+  const createMut = useMutation({
+    mutationFn: (item: Partial<TrackingMetricRow>) => trackingMetricService.create(item),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["tracking_metrics"] }); toast({ title: "Métrica registrada" }); },
+    onError: () => toast({ title: "Erro ao registrar métrica", variant: "destructive" }),
+  });
+
+  const updateMut = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<TrackingMetricRow> }) => trackingMetricService.update(id, updates),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["tracking_metrics"] }); },
+  });
+
+  const removeMut = useMutation({
+    mutationFn: (id: string) => trackingMetricService.remove(id),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["tracking_metrics"] }); toast({ title: "Métrica removida" }); },
+  });
+
+  return {
+    data,
+    isLoading,
+    create: createMut.mutateAsync,
+    update: (id: string, updates: Partial<TrackingMetricRow>) => updateMut.mutateAsync({ id, updates }),
+    remove: removeMut.mutateAsync,
+  };
+}
+
+export function useTrackingSnapshots() {
+  const { data = [], isLoading } = useQuery({
+    queryKey: ["tracking_snapshots"],
+    queryFn: trackingSnapshotService.getAll,
+  });
+  return { data, isLoading };
+}
