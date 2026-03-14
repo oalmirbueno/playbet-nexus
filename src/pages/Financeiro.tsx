@@ -48,12 +48,8 @@ export default function Financeiro() {
   const { data: socios, isLoading: loadingSocios } = useSocios();
   const { data: saques, isLoading: loadingSaques } = useSaques();
   const { data: influencers, isLoading: loadingInfluencers } = useInfluencers();
-  const [clicks, setClicks] = useState<ClickRow[]>([]);
+  const { consolidated, hasData: hasTrackingData } = useAutoConsolidation();
   const [tab, setTab] = useState<TabKey>("visao");
-
-  useEffect(() => {
-    clickService.getAll().then(setClicks).catch(() => {});
-  }, []);
 
   const loading = loadingCampanhas || loadingSocios || loadingSaques || loadingInfluencers;
 
