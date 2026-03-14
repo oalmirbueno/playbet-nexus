@@ -308,29 +308,69 @@ export default function TrackingDashboard() {
       )}
 
       {!isLoading && !hasData && (
-        <Card className="border-dashed">
-          <CardContent className="py-16 text-center space-y-4">
-            <div className="w-14 h-14 rounded-2xl bg-secondary/60 border border-border flex items-center justify-center mx-auto">
-              <BarChart3 size={24} className="text-muted-foreground/50" />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-foreground mb-1.5">Nenhum dado real recebido ainda</h3>
-              <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
-                Siga o checklist de ativação acima para configurar sua primeira plataforma.
-                Após configurar o postback, os dados aparecerão aqui automaticamente.
-              </p>
-              <p className="text-xs text-muted-foreground mt-2">
-                Os dados demo podem ser visualizados usando o filtro <strong>"Demo"</strong> acima.
-              </p>
-            </div>
-            <div className="flex items-center justify-center gap-3">
-              <Button variant="default" size="sm" onClick={() => navigate("/tracking/accounts")}>
-                Cadastrar Conta
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => navigate("/tracking/mappings")}>
-                Configurar Mapeamentos
-              </Button>
-            </div>
+        <Card className={hasInfra ? "border-primary/20" : "border-dashed"}>
+          <CardContent className="py-10 space-y-5">
+            {hasInfra ? (
+              <>
+                <div className="text-center">
+                  <h3 className="text-sm font-semibold text-foreground mb-1">Infraestrutura configurada</h3>
+                  <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                    {accounts.length} conta(s) ativa(s) · {realEvents.length} evento(s) real(is) recebido(s).
+                    Registre métricas consolidadas ou importe histórico para visualizar os dashboards completos.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="text-center p-3 bg-secondary/30 rounded-lg">
+                    <p className="text-[10px] text-muted-foreground uppercase">Contas</p>
+                    <p className="text-xl font-bold">{accounts.length}</p>
+                  </div>
+                  <div className="text-center p-3 bg-secondary/30 rounded-lg">
+                    <p className="text-[10px] text-muted-foreground uppercase">Eventos reais</p>
+                    <p className="text-xl font-bold">{realEvents.length}</p>
+                  </div>
+                  <div className="text-center p-3 bg-secondary/30 rounded-lg">
+                    <p className="text-[10px] text-muted-foreground uppercase">Plataformas</p>
+                    <p className="text-xl font-bold">{platformOptions.length}</p>
+                  </div>
+                  <div className="text-center p-3 bg-secondary/30 rounded-lg">
+                    <p className="text-[10px] text-muted-foreground uppercase">Última atividade</p>
+                    <p className="text-xs font-medium mt-1">
+                      {realEvents.length > 0
+                        ? new Date(realEvents[0].event_timestamp).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
+                        : "—"}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-center gap-3">
+                  <Button variant="default" size="sm" onClick={() => navigate("/tracking/metrics")}>
+                    Registrar Métrica
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => navigate("/tracking/events")}>
+                    Ver Eventos
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center space-y-4">
+                <div className="w-14 h-14 rounded-2xl bg-secondary/60 border border-border flex items-center justify-center mx-auto">
+                  <BarChart3 size={24} className="text-muted-foreground/50" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground mb-1.5">Nenhuma infraestrutura configurada</h3>
+                  <p className="text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
+                    Siga o checklist de ativação acima para configurar sua primeira plataforma.
+                  </p>
+                </div>
+                <div className="flex items-center justify-center gap-3">
+                  <Button variant="default" size="sm" onClick={() => navigate("/tracking/accounts")}>
+                    Cadastrar Conta
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => navigate("/tracking/mappings")}>
+                    Configurar Mapeamentos
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
