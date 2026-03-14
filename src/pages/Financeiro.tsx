@@ -3,13 +3,13 @@ import { useNavigate } from "react-router-dom";
 import {
   DollarSign, ArrowRight, TrendingUp, TrendingDown, Wallet, Users,
   AlertTriangle, CheckCircle, Clock, PieChart, Shield, ArrowUpRight, ArrowDownRight,
+  Activity,
 } from "lucide-react";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import EmptyState from "@/components/EmptyState";
 import ExportDropdown from "@/components/ExportDropdown";
 import { useCampanhas, useSaques, useSocios, useInfluencers } from "@/hooks/useSupabaseQuery";
-import { clickService } from "@/services/supabaseService";
-import type { ClickRow } from "@/services/supabaseService";
+import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart as RPieChart, Pie, Cell,
