@@ -1,12 +1,12 @@
-import { useEffect, useState, useMemo } from "react";
-import { DollarSign, Users, Wallet, BarChart3, Target, Zap, ArrowRight, MousePointerClick, Megaphone } from "lucide-react";
+import { useMemo } from "react";
+import { DollarSign, Users, Wallet, BarChart3, Target, MousePointerClick, Megaphone, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useInfluencers, useGames, usePlatforms, useCampanhas, useSaques, useSocios, useConteudo } from "@/hooks/useSupabaseQuery";
-import { clickService } from "@/services/supabaseService";
-import type { ClickRow } from "@/services/supabaseService";
+import { useInfluencers, useGames, usePlatforms, useCampanhas, useSaques, useSocios } from "@/hooks/useSupabaseQuery";
+import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
 import EmptyState from "@/components/EmptyState";
+import TrackingOverviewCard from "@/components/TrackingOverviewCard";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from "recharts";
+import { AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, PieChart, Pie, Cell } from "recharts";
 
 function groupByMonth(items: any[], dateField: string) {
   const months: Record<string, number> = {};
@@ -25,26 +25,6 @@ function groupByMonth(items: any[], dateField: string) {
     });
 }
 
-function groupByWeek(items: any[], dateField: string) {
-  const weeks: Record<string, number> = {};
-  items.forEach(item => {
-    const val = item[dateField];
-    if (!val) return;
-    const d = new Date(val);
-    const weekStart = new Date(d);
-    weekStart.setDate(d.getDate() - d.getDay());
-    const key = weekStart.toISOString().split("T")[0];
-    weeks[key] = (weeks[key] || 0) + 1;
-  });
-  return Object.entries(weeks)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .slice(-12)
-    .map(([date, count]) => {
-      const d = new Date(date);
-      return { week: `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}`, count };
-    });
-}
-
 const COLORS = ["hsl(var(--primary))", "hsl(var(--accent))", "hsl(var(--info, 200 80% 60%))", "hsl(var(--success, 140 60% 50%))", "hsl(var(--warning, 40 90% 60%))"];
 
 export default function DashboardExecutivo() {
@@ -55,16 +35,10 @@ export default function DashboardExecutivo() {
   const { data: campanhas } = useCampanhas();
   const { data: saques } = useSaques();
   const { data: socios } = useSocios();
-  const { data: conteudos } = useConteudo();
-  const [clicks, setClicks] = useState<ClickRow[]>([]);
-
-  useEffect(() => {
-    clickService.getAll().then(setClicks).catch(() => {});
-  }, []);
+  const { consolidated, hasData: hasTrackingData } = useAutoConsolidation();
 
   const hasData = influencers.length > 0 || games.length > 0 || platforms.length > 0 || campanhas.length > 0;
 
-  const clicksByWeek = useMemo(() => groupByWeek(clicks, "clicked_at"), [clicks]);
   const saquesByMonth = useMemo(() => groupByMonth(saques, "data"), [saques]);
   const campanhasByMonth = useMemo(() => groupByMonth(campanhas, "created_at"), [campanhas]);
 
@@ -80,13 +54,18 @@ export default function DashboardExecutivo() {
 
   const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+  // Use tracking consolidated revenue when available, otherwise use socios data
+  const revenueLabel = hasTrackingData && consolidated.revenueBrl > 0 ? "Revenue Tracking" : "Receita Sócios";
+  const revenueValue = hasTrackingData && consolidated.revenueBrl > 0 ? consolidated.revenueBrl : totalGanhosSocios;
+  const revenuePath = hasTrackingData && consolidated.revenueBrl > 0 ? "/tracking" : "/socios";
+
   const kpis = [
-    { label: "Receita Sócios", value: formatBRL(totalGanhosSocios), icon: DollarSign, path: "/socios" },
+    { label: revenueLabel, value: formatBRL(revenueValue), icon: DollarSign, path: revenuePath },
     { label: "Saques Solicitados", value: formatBRL(totalSaquesValor), icon: Wallet, path: "/saques" },
     { label: "Saldo Disponível", value: formatBRL(totalDisponivelSocios), icon: BarChart3, path: "/financeiro" },
     { label: "Influencers Ativos", value: String(influencers.filter((i: any) => i.is_active).length), icon: Users, path: "/influencers" },
     { label: "Campanhas", value: String(campanhas.length), icon: Megaphone, path: "/campanhas" },
-    { label: "Cliques Totais", value: String(clicks.length), icon: MousePointerClick, path: "/analytics" },
+    { label: "Eventos Tracking", value: String(consolidated.eventCount), icon: MousePointerClick, path: "/tracking" },
   ];
 
   const chartConfig = {
@@ -132,33 +111,38 @@ export default function DashboardExecutivo() {
             ))}
           </div>
 
+          {/* Tracking Revenue Detail */}
+          {hasTrackingData && consolidated.revenueBrl > 0 && (
+            <div className="glass-card p-6">
+              <h3 className="text-sm font-semibold mb-1">Revenue do Tracking</h3>
+              <p className="text-xs text-muted-foreground mb-3">Consolidado automático de eventos reais</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {Object.entries(consolidated.byCurrency).map(([currency, data]) => (
+                  <div key={currency} className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+                    <p className="text-[10px] text-muted-foreground uppercase">Revenue ({currency})</p>
+                    <p className="text-lg font-bold">{data.total.toLocaleString("pt-BR", { style: "currency", currency: currency === "BRL" ? "BRL" : "USD" })}</p>
+                    {currency !== "BRL" && data.rate && (
+                      <p className="text-[10px] text-muted-foreground mt-0.5">≈ {formatBRL(data.convertedBrl)} · 1 {currency} = R$ {data.rate.toFixed(4)}</p>
+                    )}
+                  </div>
+                ))}
+                <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+                  <p className="text-[10px] text-muted-foreground uppercase">Total em BRL</p>
+                  <p className="text-lg font-bold text-primary">{formatBRL(consolidated.revenueBrl)}</p>
+                </div>
+                <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+                  <p className="text-[10px] text-muted-foreground uppercase">FTD / Registros</p>
+                  <p className="text-lg font-bold">{consolidated.totalFtd} / {consolidated.totalRegistrations}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Tracking Overview Card */}
+          <TrackingOverviewCard />
+
           {/* Charts Row 1 */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Clicks over time */}
-            <div className="glass-card p-6">
-              <h3 className="text-sm font-semibold mb-1">Evolução de Cliques</h3>
-              <p className="text-xs text-muted-foreground mb-4">Últimas 12 semanas</p>
-              {clicksByWeek.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-12">Sem dados de cliques</p>
-              ) : (
-                <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                  <AreaChart data={clicksByWeek}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis dataKey="week" tick={{ fontSize: 11 }} className="text-muted-foreground" />
-                    <YAxis tick={{ fontSize: 11 }} className="text-muted-foreground" />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <defs>
-                      <linearGradient id="fillClicks" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <Area type="monotone" dataKey="count" stroke="hsl(var(--primary))" fill="url(#fillClicks)" strokeWidth={2} />
-                  </AreaChart>
-                </ChartContainer>
-              )}
-            </div>
-
             {/* Saques over time */}
             <div className="glass-card p-6">
               <h3 className="text-sm font-semibold mb-1">Saques por Mês</h3>
@@ -174,28 +158,6 @@ export default function DashboardExecutivo() {
                     <ChartTooltip content={<ChartTooltipContent />} />
                     <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                   </BarChart>
-                </ChartContainer>
-              )}
-            </div>
-          </div>
-
-          {/* Charts Row 2 */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Campanhas over time */}
-            <div className="glass-card p-6">
-              <h3 className="text-sm font-semibold mb-1">Campanhas Criadas</h3>
-              <p className="text-xs text-muted-foreground mb-4">Evolução mensal</p>
-              {campanhasByMonth.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-12">Sem dados de campanhas</p>
-              ) : (
-                <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                  <LineChart data={campanhasByMonth}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                    <YAxis tick={{ fontSize: 11 }} />
-                    <ChartTooltip content={<ChartTooltipContent />} />
-                    <Line type="monotone" dataKey="count" stroke="hsl(var(--accent))" strokeWidth={2} dot={{ fill: "hsl(var(--accent))", r: 4 }} />
-                  </LineChart>
                 </ChartContainer>
               )}
             </div>
@@ -237,8 +199,8 @@ export default function DashboardExecutivo() {
             <h3 className="text-sm font-semibold text-foreground mb-4">Próximos passos</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               {[
-                { label: "Configurar links e UTMs", path: "/utms" },
-                { label: "Criar landing pages", path: "/landing-pages" },
+                { label: "Ver Tracking Hub", path: "/tracking" },
+                { label: "Gestão Financeira", path: "/financeiro" },
                 { label: "Monitorar conversões", path: "/conversoes" },
               ].map((item) => (
                 <div

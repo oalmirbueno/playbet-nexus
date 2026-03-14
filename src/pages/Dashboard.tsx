@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MousePointerClick, UserPlus, DollarSign, Gamepad2, Monitor, Users, Link2, FileText, ArrowRight, CheckCircle, Database, Trash2, Loader2 } from "lucide-react";
 import TrackingOverviewCard from "@/components/TrackingOverviewCard";
+import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
 import { useInfluencers, useGames, usePlatforms, useLandingPages, useTemplates, useUtms, useCampanhas, useSocios, useSaques, useConteudo } from "@/hooks/useSupabaseQuery";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDemoMode } from "@/contexts/DemoModeContext";
@@ -37,6 +38,7 @@ export default function Dashboard() {
   const { data: socios } = useSocios();
   const { data: saques } = useSaques();
   const { data: conteudos } = useConteudo();
+  const { consolidated, hasData: hasTrackingData } = useAutoConsolidation();
 
   const counts: Record<string, number> = {
     platforms: platforms.length,
@@ -82,19 +84,18 @@ export default function Dashboard() {
   };
 
   const completedSteps = steps.filter(s => counts[s.key] > 0).length;
-  const hasData = completedSteps > 0;
+  const allDone = completedSteps === steps.length;
 
+  const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  // Summary stats - only show meaningful ones
   const stats = [
     { label: "Plataformas", value: String(platforms.length), icon: Monitor },
     { label: "Jogos", value: String(games.length), icon: Gamepad2 },
     { label: "Influencers", value: String(influencers.length), icon: Users },
     { label: "Landing Pages", value: String(landingPages.length), icon: FileText },
-    { label: "Templates", value: String(templates.length), icon: Link2 },
     { label: "UTMs / SubIDs", value: String(utms.length), icon: MousePointerClick },
     { label: "Campanhas", value: String(campanhas.length), icon: UserPlus },
-    { label: "Sócios", value: String(socios.length), icon: Users },
-    { label: "Saques", value: String(saques.length), icon: DollarSign },
-    { label: "Conteúdos", value: String(conteudos.length), icon: FileText },
   ];
 
   return (
@@ -120,8 +121,37 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Tracking Revenue Summary - when real tracking data exists */}
+      {hasTrackingData && consolidated.revenueBrl > 0 && (
+        <div className="glass-card p-6 border-l-4 border-l-primary cursor-pointer hover:bg-secondary/20 transition-colors" onClick={() => navigate("/tracking")}>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold">Revenue Consolidado (Tracking)</h3>
+            <ArrowRight size={14} className="text-muted-foreground" />
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {Object.entries(consolidated.byCurrency).map(([currency, data]) => (
+              <div key={currency}>
+                <p className="text-[10px] text-muted-foreground uppercase">Revenue ({currency})</p>
+                <p className="text-lg font-bold">{data.total.toLocaleString("pt-BR", { style: "currency", currency: currency === "BRL" ? "BRL" : "USD" })}</p>
+                {currency !== "BRL" && data.rate && (
+                  <p className="text-[10px] text-muted-foreground">≈ {formatBRL(data.convertedBrl)} · Taxa: {data.rate.toFixed(4)}</p>
+                )}
+              </div>
+            ))}
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase">Total BRL</p>
+              <p className="text-lg font-bold text-primary">{formatBRL(consolidated.revenueBrl)}</p>
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase">Eventos reais</p>
+              <p className="text-lg font-bold">{consolidated.eventCount}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         {stats.map((s) => (
           <div key={s.label} className="glass-card p-6 flex flex-col gap-3">
             <div className="flex items-center justify-between">
@@ -137,54 +167,54 @@ export default function Dashboard() {
       {/* Tracking Hub Overview */}
       <TrackingOverviewCard />
 
-      {/* Setup checklist */}
-      <div className="glass-card p-6">
-        <div className="flex items-center justify-between mb-5">
-          <div>
-            <h3 className="text-sm font-semibold text-foreground">
-              {hasData ? "Progresso da configuração" : "Comece configurando sua operação"}
-            </h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {completedSteps}/{steps.length} etapas concluídas
-            </p>
+      {/* Setup checklist - only show if not complete */}
+      {!allDone && (
+        <div className="glass-card p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Progresso da configuração</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {completedSteps}/{steps.length} etapas concluídas
+              </p>
+            </div>
+            <div className="text-xs text-muted-foreground bg-secondary px-3 py-1.5 rounded-lg font-medium">
+              {Math.round((completedSteps / steps.length) * 100)}%
+            </div>
           </div>
-          <div className="text-xs text-muted-foreground bg-secondary px-3 py-1.5 rounded-lg font-medium">
-            {Math.round((completedSteps / steps.length) * 100)}%
+          <div className="w-full h-1.5 bg-secondary rounded-full mb-6 overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all duration-500"
+              style={{ width: `${(completedSteps / steps.length) * 100}%` }}
+            />
+          </div>
+          <div className="space-y-2">
+            {steps.map((step) => {
+              const done = counts[step.key] > 0;
+              return (
+                <div
+                  key={step.key}
+                  onClick={() => !done && navigate(step.path)}
+                  className={`flex items-center gap-3 p-3.5 rounded-lg transition-colors ${done ? "bg-success/5 border border-success/10" : "bg-secondary/30 border border-border cursor-pointer hover:bg-secondary/50"}`}
+                >
+                  {done ? (
+                    <CheckCircle size={16} className="text-success shrink-0" />
+                  ) : (
+                    <step.icon size={16} className="text-muted-foreground shrink-0" />
+                  )}
+                  <span className={`text-sm flex-1 ${done ? "text-muted-foreground line-through" : "font-medium"}`}>
+                    {step.label}
+                  </span>
+                  {done ? (
+                    <span className="text-xs text-success font-medium">{counts[step.key]} cadastrado(s)</span>
+                  ) : (
+                    <ArrowRight size={14} className="text-muted-foreground" />
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
-        <div className="w-full h-1.5 bg-secondary rounded-full mb-6 overflow-hidden">
-          <div
-            className="h-full bg-primary rounded-full transition-all duration-500"
-            style={{ width: `${(completedSteps / steps.length) * 100}%` }}
-          />
-        </div>
-        <div className="space-y-2">
-          {steps.map((step) => {
-            const done = counts[step.key] > 0;
-            return (
-              <div
-                key={step.key}
-                onClick={() => !done && navigate(step.path)}
-                className={`flex items-center gap-3 p-3.5 rounded-lg transition-colors ${done ? "bg-success/5 border border-success/10" : "bg-secondary/30 border border-border cursor-pointer hover:bg-secondary/50"}`}
-              >
-                {done ? (
-                  <CheckCircle size={16} className="text-success shrink-0" />
-                ) : (
-                  <step.icon size={16} className="text-muted-foreground shrink-0" />
-                )}
-                <span className={`text-sm flex-1 ${done ? "text-muted-foreground line-through" : "font-medium"}`}>
-                  {step.label}
-                </span>
-                {done ? (
-                  <span className="text-xs text-success font-medium">{counts[step.key]} cadastrado(s)</span>
-                ) : (
-                  <ArrowRight size={14} className="text-muted-foreground" />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      )}
 
       {/* Confirm clear dialog */}
       <Dialog open={confirmClear} onOpenChange={setConfirmClear}>
