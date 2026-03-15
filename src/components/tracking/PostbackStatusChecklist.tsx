@@ -34,6 +34,7 @@ function setConfigState(platformSlug: string, state: Record<string, boolean>) {
   localStorage.setItem(`postback_config_${platformSlug}`, JSON.stringify(state));
 }
 
+/** Fetch event counts grouped by canonical + raw names */
 async function fetchEventStatusFromDB(): Promise<
   { canonical_event_name: string; raw_event_name: string; count: number; last_ts: string }[]
 > {
@@ -44,26 +45,37 @@ async function fetchEventStatusFromDB(): Promise<
     .not("status", "eq", "invalid_legacy")
     .order("event_timestamp", { ascending: false });
 
-  if (error || !data) return [];
+  if (error || !data) {
+    console.error("[PostbackChecklist] query error:", error);
+    return [];
+  }
 
-  const grouped = new Map<string, { raw_event_name: string; count: number; last_ts: string }>();
+  // Group by BOTH canonical and raw to keep all name variants
+  const byCanonical = new Map<string, { raw_names: Set<string>; count: number; last_ts: string }>();
   for (const row of data) {
     const key = row.canonical_event_name;
-    if (key.startsWith("{")) continue;
-    const existing = grouped.get(key);
+    if (!key || key.startsWith("{")) continue;
+    const existing = byCanonical.get(key);
     if (existing) {
       existing.count++;
+      existing.raw_names.add(row.raw_event_name);
     } else {
-      grouped.set(key, { raw_event_name: row.raw_event_name, count: 1, last_ts: row.event_timestamp });
+      byCanonical.set(key, {
+        raw_names: new Set([row.raw_event_name]),
+        count: 1,
+        last_ts: row.event_timestamp,
+      });
     }
   }
 
-  return Array.from(grouped.entries()).map(([canonical, info]) => ({
-    canonical_event_name: canonical,
-    raw_event_name: info.raw_event_name,
-    count: info.count,
-    last_ts: info.last_ts,
-  }));
+  // Flatten: one entry per canonical, but also emit entries keyed by raw_name for matching
+  const results: { canonical_event_name: string; raw_event_name: string; count: number; last_ts: string }[] = [];
+  for (const [canonical, info] of byCanonical) {
+    for (const raw of info.raw_names) {
+      results.push({ canonical_event_name: canonical, raw_event_name: raw, count: info.count, last_ts: info.last_ts });
+    }
+  }
+  return results;
 }
 
 export default function PostbackStatusChecklist() {
@@ -81,9 +93,16 @@ export default function PostbackStatusChecklist() {
   const { data: dbEventStatus = [], refetch } = useQuery({
     queryKey: ["postback_status_events"],
     queryFn: fetchEventStatusFromDB,
-    staleTime: 10_000,
-    refetchInterval: 30_000,
+    staleTime: 5_000,
+    refetchInterval: 15_000,
   });
+
+  // Debug: log what the query returned
+  useEffect(() => {
+    if (dbEventStatus.length > 0) {
+      console.log("[PostbackChecklist] Events from DB:", dbEventStatus);
+    }
+  }, [dbEventStatus]);
 
   const realPlatforms = useMemo(
     () => (platforms as any[]).filter((p: any) => !p.is_demo),
