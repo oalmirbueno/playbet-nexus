@@ -478,7 +478,7 @@ export default function TrackingDashboard() {
       {!isLoading && hasAnyData && (
         <>
           {/* KPI Cards */}
-          <div className="grid grid-cols-3 md:grid-cols-9 gap-3">
+          <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
             {kpiCards.map(k => (
               <Card key={k.label}>
                 <CardContent className="py-3 px-4">
