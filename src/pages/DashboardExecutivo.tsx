@@ -126,8 +126,8 @@ export default function DashboardExecutivo() {
       value: String(consolidated.eventCount),
       icon: TrendingUp,
       path: "/tracking",
-      sub: consolidated.eventCount > 0 ? "validados" : "Sem eventos ainda",
-      pending: consolidated.eventCount === 0,
+      sub: hasTrackingData ? `${consolidated.eventCount} validados` : "Aguardando eventos",
+      pending: !hasTrackingData,
     },
   ];
 
