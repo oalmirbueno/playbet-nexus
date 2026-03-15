@@ -1,12 +1,12 @@
 import { useMemo } from "react";
-import { DollarSign, Users, Wallet, BarChart3, Target, MousePointerClick, Megaphone, ArrowRight, Landmark, Clock } from "lucide-react";
+import { DollarSign, Users, Wallet, BarChart3, Target, MousePointerClick, Megaphone, ArrowRight, Landmark, Clock, TrendingUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useInfluencers, useGames, usePlatforms, useCampanhas, useSaques, useSocios } from "@/hooks/useSupabaseQuery";
 import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
 import EmptyState from "@/components/EmptyState";
 import TrackingOverviewCard from "@/components/TrackingOverviewCard";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, PieChart, Pie, Cell, AreaChart, Area } from "recharts";
 
 function groupByMonth(items: any[], dateField: string) {
   const months: Record<string, number> = {};
@@ -40,7 +40,7 @@ export default function DashboardExecutivo() {
   const { data: socios } = useSocios();
   const { consolidated, hasData: hasTrackingData } = useAutoConsolidation();
 
-  const hasData = influencers.length > 0 || games.length > 0 || platforms.length > 0 || campanhas.length > 0 || hasTrackingData;
+  const hasData = influencers.length > 0 || games.length > 0 || platforms.length > 0 || campanhas.length > 0 || hasTrackingData || socios.length > 0;
 
   const saquesByMonth = useMemo(() => groupByMonth(saques, "data"), [saques]);
 
@@ -63,7 +63,7 @@ export default function DashboardExecutivo() {
   const hasVerifiedRevenue = hasTrackingData && consolidated.revenueBrl > 0;
   const hasCaixaRealizado = totalPagosAsaas > 0;
 
-  // 8 KPIs — always visible, pending state when no data
+  // 8 KPIs — always visible
   const kpis = [
     {
       label: "Revenue Plataforma",
@@ -124,7 +124,7 @@ export default function DashboardExecutivo() {
     {
       label: "Eventos Tracking",
       value: String(consolidated.eventCount),
-      icon: Target,
+      icon: TrendingUp,
       path: "/tracking",
       sub: consolidated.eventCount > 0 ? "validados" : "Sem eventos ainda",
       pending: consolidated.eventCount === 0,
@@ -212,7 +212,7 @@ export default function DashboardExecutivo() {
             </div>
           )}
 
-          {/* Bloco Societário — always visible */}
+          {/* Bloco Societário — ALWAYS visible */}
           <div className="glass-card p-6 border-l-4 border-l-accent">
             <div className="flex items-center gap-2 mb-1">
               <Users size={14} className="text-accent" />
@@ -226,7 +226,15 @@ export default function DashboardExecutivo() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
                 <p className="text-[10px] text-muted-foreground uppercase">Sócios</p>
-                <p className="text-lg font-bold">{socios.length}</p>
+                <p className="text-lg font-bold">{socios.length > 0 ? socios.length : "—"}</p>
+                {socios.length === 0 && <p className="text-[10px] text-warning">Nenhum sócio cadastrado</p>}
+                {socios.length > 0 && (
+                  <div className="mt-1 space-y-0.5">
+                    {socios.slice(0, 3).map((s: any) => (
+                      <p key={s.id} className="text-[10px] text-muted-foreground">{s.nome} · {s.participacao}%</p>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
                 <p className="text-[10px] text-muted-foreground uppercase">Saldo Sócios (declarado)</p>
@@ -238,7 +246,7 @@ export default function DashboardExecutivo() {
                 <p className={`text-lg font-bold ${hasCaixaRealizado ? "text-success" : "text-muted-foreground"}`}>
                   {hasCaixaRealizado ? formatBRL(totalPagosAsaas) : "—"}
                 </p>
-                <p className="text-[10px] text-muted-foreground">{hasCaixaRealizado ? "Pago via Asaas" : "Aguardando integração"}</p>
+                <p className="text-[10px] text-muted-foreground">{hasCaixaRealizado ? "Pago via Asaas" : "Aguardando integração Asaas"}</p>
               </div>
               <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
                 <p className="text-[10px] text-muted-foreground uppercase">Influencers Ativos</p>

@@ -220,13 +220,12 @@ export default function TrackingDashboard() {
   const realEvents = recentEvents.filter(e => !e.is_demo && !e.click_id?.startsWith("{") && e.status !== "invalid_legacy" && !e.canonical_event_name?.startsWith("{"));
 
   const kpiCards = [
-    { label: "Cliques (LP)", value: fmtNum(consolidated.realClicksCount), icon: MousePointerClick, color: "text-primary" },
+    { label: "Cliques Reais (LP)", value: fmtNum(consolidated.realClicksCount || effectiveKpis.cliques), icon: MousePointerClick, color: "text-primary" },
     { label: "Registros", value: fmtNum(effectiveKpis.registros), icon: UserPlus, color: "text-chart-2" },
     { label: "FTD", value: fmtNum(effectiveKpis.ftd), icon: Target, color: "text-chart-3" },
+    { label: "Revenue (plataforma)", value: fmt(effectiveKpis.revenue), icon: DollarSign, color: "text-chart-5" },
     { label: "Redepósitos", value: fmtNum(effectiveKpis.redepositos), icon: ArrowRightLeft, color: "text-chart-4" },
-    { label: "Depósitos Total", value: fmt(effectiveKpis.depositos), icon: DollarSign, color: "text-chart-5" },
-    { label: "Revenue", value: fmt(effectiveKpis.revenue), icon: TrendingUp, color: "text-primary" },
-    { label: "Revenue (plataforma)", value: fmt(effectiveKpis.revenue), icon: Activity, color: "text-primary" },
+    { label: "Eventos Válidos", value: fmtNum(consolidated.eventCount), icon: Activity, color: "text-primary" },
   ];
 
   const calculatedCards = [
