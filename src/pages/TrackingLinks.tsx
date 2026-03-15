@@ -137,7 +137,7 @@ export default function TrackingLinks() {
           <p className="text-sm text-muted-foreground mt-0.5">Links rastreáveis vinculados a influencers, contas e campanhas</p>
         </div>
         <div className="flex gap-2 items-center flex-wrap">
-          <TrackingDemoFilter />
+          
           <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
             <Upload size={14} className="mr-1.5" /> Importar Histórico
           </Button>

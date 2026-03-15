@@ -33,7 +33,7 @@ export default function TrackingSnapshots() {
           <h1 className="text-2xl font-bold text-foreground tracking-tight">Snapshots</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Histórico de snapshots importados de dashboards externos</p>
         </div>
-        <TrackingDemoFilter />
+        
       </div>
 
       {isLoading && <Card><CardContent className="py-12 text-center text-muted-foreground text-sm">Carregando...</CardContent></Card>}
