@@ -93,9 +93,16 @@ export default function PostbackStatusChecklist() {
   const { data: dbEventStatus = [], refetch } = useQuery({
     queryKey: ["postback_status_events"],
     queryFn: fetchEventStatusFromDB,
-    staleTime: 10_000,
-    refetchInterval: 30_000,
+    staleTime: 5_000,
+    refetchInterval: 15_000,
   });
+
+  // Debug: log what the query returned
+  useEffect(() => {
+    if (dbEventStatus.length > 0) {
+      console.log("[PostbackChecklist] Events from DB:", dbEventStatus);
+    }
+  }, [dbEventStatus]);
 
   const realPlatforms = useMemo(
     () => (platforms as any[]).filter((p: any) => !p.is_demo),
