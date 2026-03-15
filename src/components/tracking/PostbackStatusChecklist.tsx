@@ -1,12 +1,14 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Copy, Check, CheckCircle2, Clock, AlertCircle, Clipboard, ChevronDown, ChevronUp } from "lucide-react";
+import { Copy, Check, CheckCircle2, Clock, AlertCircle, Clipboard, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { usePlatformAccounts, useTrackingEvents, useTrackingLinks } from "@/hooks/useTrackingData";
+import { usePlatformAccounts, useTrackingLinks } from "@/hooks/useTrackingData";
 import { usePlatforms } from "@/hooks/useSupabaseQuery";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   findPresetByName,
   buildPostbackUrlForEvent,
@@ -22,57 +24,113 @@ interface EventStatusInfo {
   lastReceived?: string;
 }
 
+/** Direct DB query for event counts per canonical_event_name — no caching issues */
+async function fetchEventStatusFromDB(): Promise<
+  { canonical_event_name: string; raw_event_name: string; count: number; last_ts: string }[]
+> {
+  // Query real, non-demo, non-invalid events grouped by canonical name
+  const { data, error } = await supabase
+    .from("tracking_events")
+    .select("canonical_event_name, raw_event_name, event_timestamp")
+    .eq("is_demo", false)
+    .not("status", "eq", "invalid_legacy")
+    .order("event_timestamp", { ascending: false });
+
+  if (error || !data) return [];
+
+  // Group by canonical_event_name
+  const grouped = new Map<string, { raw_event_name: string; count: number; last_ts: string }>();
+  for (const row of data) {
+    const key = row.canonical_event_name;
+    if (key.startsWith("{")) continue; // skip placeholder names
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.count++;
+    } else {
+      grouped.set(key, {
+        raw_event_name: row.raw_event_name,
+        count: 1,
+        last_ts: row.event_timestamp,
+      });
+    }
+  }
+
+  return Array.from(grouped.entries()).map(([canonical, info]) => ({
+    canonical_event_name: canonical,
+    raw_event_name: info.raw_event_name,
+    count: info.count,
+    last_ts: info.last_ts,
+  }));
+}
+
 export default function PostbackStatusChecklist() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: platforms } = usePlatforms();
   const { data: accounts } = usePlatformAccounts();
-  const { data: events } = useTrackingEvents();
   const { data: links } = useTrackingLinks();
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [expanded, setExpanded] = useState(true);
   const [selectedPlatformId, setSelectedPlatformId] = useState<string>("auto");
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Find the first real platform with a preset
+  // Direct DB query with short stale time for fresh data
+  const { data: dbEventStatus = [], refetch } = useQuery({
+    queryKey: ["postback_status_events"],
+    queryFn: fetchEventStatusFromDB,
+    staleTime: 10_000, // 10s
+    refetchInterval: 30_000, // auto-refresh every 30s
+  });
+
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await queryClient.invalidateQueries({ queryKey: ["postback_status_events"] });
+    await queryClient.invalidateQueries({ queryKey: ["tracking_events"] });
+    await refetch();
+    toast({ title: "Status atualizado" });
+    setIsRefreshing(false);
+  }, [queryClient, refetch, toast]);
+
+  const realPlatforms = useMemo(
+    () => (platforms as any[]).filter((p: any) => !p.is_demo),
+    [platforms]
+  );
+
   const platformWithPreset = useMemo(() => {
-    const realPlatforms = (platforms as any[]).filter((p: any) => !p.is_demo);
     if (selectedPlatformId !== "auto") {
       const p = realPlatforms.find((p: any) => p.id === selectedPlatformId);
       if (p) return p;
     }
     return realPlatforms.find((p: any) => findPresetByName(p.name));
-  }, [platforms, selectedPlatformId]);
+  }, [realPlatforms, selectedPlatformId]);
 
   const preset = platformWithPreset ? findPresetByName(platformWithPreset.name) : null;
 
-  // Get tracking code from first real link for this platform
   const trackingCode = useMemo(() => {
     if (!platformWithPreset) return undefined;
-    const accs = accounts.filter(a => a.platform_id === platformWithPreset.id && !a.is_demo);
-    const link = links.find(l => !l.is_demo && accs.some(a => a.id === l.platform_account_id));
+    const accs = accounts.filter(a => a.platform_id === platformWithPreset.id);
+    const link = links.find(l => accs.some(a => a.id === l.platform_account_id));
     return link?.tracking_code;
   }, [platformWithPreset, accounts, links]);
 
-  // Compute status per canonical event
+  // Compute status per canonical event using direct DB data
   const eventStatuses = useMemo(() => {
     if (!preset) return new Map<string, EventStatusInfo>();
-    const realEvents = events.filter(e => !e.is_demo && !e.click_id?.startsWith("{") && e.status !== "invalid_legacy");
     const map = new Map<string, EventStatusInfo>();
+    const hasLink = links.some(l => !l.is_demo);
 
     for (const evt of preset.events) {
-      const matching = realEvents.filter(e =>
-        e.canonical_event_name === evt.canonical_event_name ||
-        e.raw_event_name === evt.raw_event_name
+      // Match by canonical OR raw event name
+      const match = dbEventStatus.find(
+        s => s.canonical_event_name === evt.canonical_event_name ||
+             s.raw_event_name === evt.raw_event_name
       );
-      const hasLink = links.some(l => !l.is_demo);
 
-      if (matching.length > 0) {
-        const sorted = [...matching].sort((a, b) =>
-          new Date(b.event_timestamp).getTime() - new Date(a.event_timestamp).getTime()
-        );
+      if (match && match.count > 0) {
         map.set(evt.canonical_event_name, {
           status: "received",
-          count: matching.length,
-          lastReceived: sorted[0].event_timestamp,
+          count: match.count,
+          lastReceived: match.last_ts,
         });
       } else if (hasLink) {
         map.set(evt.canonical_event_name, { status: "waiting", count: 0 });
@@ -81,7 +139,7 @@ export default function PostbackStatusChecklist() {
       }
     }
     return map;
-  }, [preset, events, links]);
+  }, [preset, dbEventStatus, links]);
 
   const copy = (url: string, idx: number, label: string) => {
     navigator.clipboard.writeText(url);
@@ -119,8 +177,6 @@ export default function PostbackStatusChecklist() {
     }
   };
 
-  const realPlatforms = (platforms as any[]).filter((p: any) => !p.is_demo);
-
   return (
     <Card className="border-primary/20">
       <CardHeader className="pb-2">
@@ -146,6 +202,16 @@ export default function PostbackStatusChecklist() {
                 </SelectContent>
               </Select>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-[10px] px-2 gap-1"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+            >
+              <RefreshCw size={12} className={isRefreshing ? "animate-spin" : ""} />
+              Atualizar
+            </Button>
             <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setExpanded(!expanded)}>
               {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             </Button>
