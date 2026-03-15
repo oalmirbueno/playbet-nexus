@@ -1,9 +1,9 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Copy, Check, CheckCircle2, Clock, AlertCircle, Clipboard, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
+import { Copy, Check, CheckCircle2, Clock, Clipboard, ChevronDown, ChevronUp, RefreshCw, Settings, Radio } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { usePlatformAccounts, useTrackingLinks } from "@/hooks/useTrackingData";
 import { usePlatforms } from "@/hooks/useSupabaseQuery";
@@ -12,23 +12,31 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   findPresetByName,
   buildPostbackUrlForEvent,
-  type PlatformPreset,
-  type PlatformEventPreset,
 } from "@/config/platformPresets";
 
-type EventStatus = "received" | "waiting" | "not_configured";
+type ValidationStatus = "received" | "waiting";
 
-interface EventStatusInfo {
-  status: EventStatus;
+interface ValidationInfo {
+  status: ValidationStatus;
   count: number;
   lastReceived?: string;
 }
 
-/** Direct DB query for event counts per canonical_event_name — no caching issues */
+/** Persisted config state per event — stored in localStorage */
+function getConfigState(platformSlug: string): Record<string, boolean> {
+  try {
+    const raw = localStorage.getItem(`postback_config_${platformSlug}`);
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
+
+function setConfigState(platformSlug: string, state: Record<string, boolean>) {
+  localStorage.setItem(`postback_config_${platformSlug}`, JSON.stringify(state));
+}
+
 async function fetchEventStatusFromDB(): Promise<
   { canonical_event_name: string; raw_event_name: string; count: number; last_ts: string }[]
 > {
-  // Query real, non-demo, non-invalid events grouped by canonical name
   const { data, error } = await supabase
     .from("tracking_events")
     .select("canonical_event_name, raw_event_name, event_timestamp")
@@ -38,20 +46,15 @@ async function fetchEventStatusFromDB(): Promise<
 
   if (error || !data) return [];
 
-  // Group by canonical_event_name
   const grouped = new Map<string, { raw_event_name: string; count: number; last_ts: string }>();
   for (const row of data) {
     const key = row.canonical_event_name;
-    if (key.startsWith("{")) continue; // skip placeholder names
+    if (key.startsWith("{")) continue;
     const existing = grouped.get(key);
     if (existing) {
       existing.count++;
     } else {
-      grouped.set(key, {
-        raw_event_name: row.raw_event_name,
-        count: 1,
-        last_ts: row.event_timestamp,
-      });
+      grouped.set(key, { raw_event_name: row.raw_event_name, count: 1, last_ts: row.event_timestamp });
     }
   }
 
@@ -73,23 +76,14 @@ export default function PostbackStatusChecklist() {
   const [expanded, setExpanded] = useState(true);
   const [selectedPlatformId, setSelectedPlatformId] = useState<string>("auto");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [configMarks, setConfigMarks] = useState<Record<string, boolean>>({});
 
-  // Direct DB query with short stale time for fresh data
   const { data: dbEventStatus = [], refetch } = useQuery({
     queryKey: ["postback_status_events"],
     queryFn: fetchEventStatusFromDB,
-    staleTime: 10_000, // 10s
-    refetchInterval: 30_000, // auto-refresh every 30s
+    staleTime: 10_000,
+    refetchInterval: 30_000,
   });
-
-  const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
-    await queryClient.invalidateQueries({ queryKey: ["postback_status_events"] });
-    await queryClient.invalidateQueries({ queryKey: ["tracking_events"] });
-    await refetch();
-    toast({ title: "Status atualizado" });
-    setIsRefreshing(false);
-  }, [queryClient, refetch, toast]);
 
   const realPlatforms = useMemo(
     () => (platforms as any[]).filter((p: any) => !p.is_demo),
@@ -106,6 +100,11 @@ export default function PostbackStatusChecklist() {
 
   const preset = platformWithPreset ? findPresetByName(platformWithPreset.name) : null;
 
+  // Load config marks from localStorage when preset changes
+  useEffect(() => {
+    if (preset) setConfigMarks(getConfigState(preset.slug));
+  }, [preset?.slug]);
+
   const trackingCode = useMemo(() => {
     if (!platformWithPreset) return undefined;
     const accs = accounts.filter(a => a.platform_id === platformWithPreset.id);
@@ -113,33 +112,39 @@ export default function PostbackStatusChecklist() {
     return link?.tracking_code;
   }, [platformWithPreset, accounts, links]);
 
-  // Compute status per canonical event using direct DB data
-  const eventStatuses = useMemo(() => {
-    if (!preset) return new Map<string, EventStatusInfo>();
-    const map = new Map<string, EventStatusInfo>();
-    const hasLink = links.some(l => !l.is_demo);
+  const handleRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await queryClient.invalidateQueries({ queryKey: ["postback_status_events"] });
+    await refetch();
+    toast({ title: "Status atualizado" });
+    setIsRefreshing(false);
+  }, [queryClient, refetch, toast]);
 
+  const toggleConfigMark = useCallback((canonicalName: string) => {
+    if (!preset) return;
+    setConfigMarks(prev => {
+      const next = { ...prev, [canonicalName]: !prev[canonicalName] };
+      setConfigState(preset.slug, next);
+      return next;
+    });
+  }, [preset]);
+
+  const validationStatuses = useMemo(() => {
+    if (!preset) return new Map<string, ValidationInfo>();
+    const map = new Map<string, ValidationInfo>();
     for (const evt of preset.events) {
-      // Match by canonical OR raw event name
       const match = dbEventStatus.find(
         s => s.canonical_event_name === evt.canonical_event_name ||
              s.raw_event_name === evt.raw_event_name
       );
-
       if (match && match.count > 0) {
-        map.set(evt.canonical_event_name, {
-          status: "received",
-          count: match.count,
-          lastReceived: match.last_ts,
-        });
-      } else if (hasLink) {
-        map.set(evt.canonical_event_name, { status: "waiting", count: 0 });
+        map.set(evt.canonical_event_name, { status: "received", count: match.count, lastReceived: match.last_ts });
       } else {
-        map.set(evt.canonical_event_name, { status: "not_configured", count: 0 });
+        map.set(evt.canonical_event_name, { status: "waiting", count: 0 });
       }
     }
     return map;
-  }, [preset, dbEventStatus, links]);
+  }, [preset, dbEventStatus]);
 
   const copy = (url: string, idx: number, label: string) => {
     navigator.clipboard.writeText(url);
@@ -150,32 +155,8 @@ export default function PostbackStatusChecklist() {
 
   if (!preset || !platformWithPreset) return null;
 
-  const receivedCount = Array.from(eventStatuses.values()).filter(s => s.status === "received").length;
-  const totalEvents = preset.events.length;
-
-  const statusIcon = (s: EventStatus) => {
-    switch (s) {
-      case "received": return <CheckCircle2 size={14} className="text-green-500" />;
-      case "waiting": return <Clock size={14} className="text-yellow-500" />;
-      case "not_configured": return <AlertCircle size={14} className="text-muted-foreground/50" />;
-    }
-  };
-
-  const statusLabel = (s: EventStatus) => {
-    switch (s) {
-      case "received": return "Evento recebido";
-      case "waiting": return "Aguardando evento";
-      case "not_configured": return "Não configurado";
-    }
-  };
-
-  const statusBadgeVariant = (s: EventStatus): "default" | "secondary" | "outline" | "destructive" => {
-    switch (s) {
-      case "received": return "default";
-      case "waiting": return "secondary";
-      case "not_configured": return "outline";
-    }
-  };
+  const receivedCount = Array.from(validationStatuses.values()).filter(s => s.status === "received").length;
+  const configuredCount = preset.events.filter(e => configMarks[e.canonical_event_name]).length;
 
   return (
     <Card className="border-primary/20">
@@ -183,9 +164,12 @@ export default function PostbackStatusChecklist() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Clipboard size={14} className="text-primary" />
-            <CardTitle className="text-sm">Status dos Postbacks por Evento</CardTitle>
+            <CardTitle className="text-sm">Postbacks — {preset.label}</CardTitle>
             <Badge variant="outline" className="text-[10px]">
-              {receivedCount}/{totalEvents} recebidos
+              {configuredCount}/{preset.events.length} configurados
+            </Badge>
+            <Badge variant={receivedCount > 0 ? "default" : "secondary"} className="text-[10px]">
+              {receivedCount}/{preset.events.length} validados
             </Badge>
           </div>
           <div className="flex items-center gap-2">
@@ -203,8 +187,7 @@ export default function PostbackStatusChecklist() {
               </Select>
             )}
             <Button
-              variant="outline"
-              size="sm"
+              variant="outline" size="sm"
               className="h-7 text-[10px] px-2 gap-1"
               onClick={handleRefresh}
               disabled={isRefreshing}
@@ -218,58 +201,38 @@ export default function PostbackStatusChecklist() {
           </div>
         </div>
         <p className="text-[10px] text-muted-foreground mt-1">
-          Verifique se cada evento da {preset.label} está configurado e chegando ao sistema.
+          Configure cada URL na {preset.label} e marque como configurado. O sistema valida automaticamente quando os eventos chegam.
         </p>
       </CardHeader>
 
       {expanded && (
-        <CardContent className="pt-0 space-y-2">
+        <CardContent className="pt-0 space-y-3">
           {preset.events.map((evt, idx) => {
-            const info = eventStatuses.get(evt.canonical_event_name) || { status: "not_configured" as EventStatus, count: 0 };
+            const validation = validationStatuses.get(evt.canonical_event_name) || { status: "waiting" as ValidationStatus, count: 0 };
+            const isConfigured = !!configMarks[evt.canonical_event_name];
+            const isReceived = validation.status === "received";
             const url = buildPostbackUrlForEvent(preset, evt, trackingCode);
             const isCopied = copiedIdx === idx;
 
             return (
               <div
                 key={idx}
-                className={`border rounded-lg p-3 space-y-2 transition-colors ${
-                  info.status === "received"
+                className={`border rounded-lg p-3 space-y-2.5 transition-colors ${
+                  isReceived
                     ? "bg-green-500/5 border-green-500/20"
-                    : info.status === "waiting"
-                    ? "bg-yellow-500/5 border-yellow-500/20"
+                    : isConfigured
+                    ? "bg-blue-500/5 border-blue-500/20"
                     : "bg-muted/20 border-border"
                 }`}
               >
+                {/* Event header */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    {statusIcon(info.status)}
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-semibold">{evt.label}</span>
-                        <Badge variant="outline" className="text-[8px] font-mono h-4 px-1">{evt.raw_event_name}</Badge>
-                      </div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <Badge variant={statusBadgeVariant(info.status)} className="text-[9px] h-4">
-                          {statusLabel(info.status)}
-                        </Badge>
-                        {info.count > 0 && (
-                          <span className="text-[10px] text-muted-foreground">
-                            {info.count} evento(s)
-                          </span>
-                        )}
-                        {info.lastReceived && (
-                          <span className="text-[10px] text-muted-foreground">
-                            · último: {new Date(info.lastReceived).toLocaleString("pt-BR", {
-                              day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"
-                            })}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                    <span className="text-xs font-semibold">{evt.label}</span>
+                    <Badge variant="outline" className="text-[8px] font-mono h-4 px-1">{evt.raw_event_name}</Badge>
                   </div>
                   <Button
-                    variant="outline"
-                    size="sm"
+                    variant="outline" size="sm"
                     className="h-7 text-[10px] px-2 shrink-0"
                     onClick={() => copy(url, idx, evt.label)}
                   >
@@ -277,15 +240,73 @@ export default function PostbackStatusChecklist() {
                     Copiar URL
                   </Button>
                 </div>
+
+                {/* URL */}
                 <code className="block bg-secondary/50 rounded px-2 py-1.5 text-[9px] font-mono break-all leading-relaxed select-all">
                   {url}
                 </code>
+
+                {/* Two-layer status */}
+                <div className="flex items-center gap-4 flex-wrap">
+                  {/* Layer A: Configuration */}
+                  <div className="flex items-center gap-1.5">
+                    <Settings size={12} className="text-muted-foreground" />
+                    <span className="text-[10px] text-muted-foreground">Configuração:</span>
+                    {isConfigured ? (
+                      <Badge
+                        variant="default"
+                        className="text-[9px] h-5 cursor-pointer bg-blue-600 hover:bg-blue-700"
+                        onClick={() => toggleConfigMark(evt.canonical_event_name)}
+                      >
+                        <CheckCircle2 size={10} className="mr-1" />
+                        Configurado na plataforma
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant="outline"
+                        className="text-[9px] h-5 cursor-pointer hover:bg-accent"
+                        onClick={() => toggleConfigMark(evt.canonical_event_name)}
+                      >
+                        Marcar como configurado
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Layer B: Validation */}
+                  <div className="flex items-center gap-1.5">
+                    <Radio size={12} className="text-muted-foreground" />
+                    <span className="text-[10px] text-muted-foreground">Validação:</span>
+                    {isReceived ? (
+                      <Badge variant="default" className="text-[9px] h-5 bg-green-600">
+                        <CheckCircle2 size={10} className="mr-1" />
+                        Evento recebido
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-[9px] h-5">
+                        <Clock size={10} className="mr-1" />
+                        Aguardando primeiro evento
+                      </Badge>
+                    )}
+                    {validation.count > 0 && (
+                      <span className="text-[10px] text-muted-foreground">
+                        {validation.count} evento(s)
+                      </span>
+                    )}
+                    {validation.lastReceived && (
+                      <span className="text-[10px] text-muted-foreground">
+                        · último: {new Date(validation.lastReceived).toLocaleString("pt-BR", {
+                          day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"
+                        })}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
             );
           })}
 
           <p className="text-[10px] text-muted-foreground pt-1">
-            Cole cada URL no painel de afiliados da {preset.label}, no campo de postback do evento correspondente.
+            1. Copie a URL de cada evento · 2. Cole no painel da {preset.label} · 3. Marque como configurado · 4. O sistema valida automaticamente quando os eventos chegam.
           </p>
         </CardContent>
       )}
