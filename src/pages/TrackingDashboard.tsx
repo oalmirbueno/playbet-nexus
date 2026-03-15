@@ -98,10 +98,9 @@ export default function TrackingDashboard() {
     };
   }, [metrics]);
 
-  // Merge: use auto-consolidated data if no manual metrics exist
+  // Always merge: auto-consolidated for event counts, manual for costs
   const effectiveKpis = useMemo(() => {
-    if (metrics.length > 0) return kpis;
-    // Use auto-consolidated from events
+    // Always use auto-consolidated event counts (source of truth from tracking_events)
     return {
       cliques: consolidated.totalClicks,
       registros: consolidated.totalRegistrations,
