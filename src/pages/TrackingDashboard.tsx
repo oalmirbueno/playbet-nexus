@@ -257,7 +257,7 @@ export default function TrackingDashboard() {
           <p className="text-sm text-muted-foreground mt-0.5">Central de performance multi-plataforma</p>
         </div>
         <div className="flex gap-2 flex-wrap items-center">
-          <TrackingDemoFilter />
+          
           <Button variant="outline" size="sm" onClick={() => navigate("/tracking/accounts")}>
             <Users size={14} className="mr-1.5" /> Contas
           </Button>
