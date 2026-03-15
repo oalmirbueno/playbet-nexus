@@ -309,6 +309,21 @@ export default function TrackingDashboard() {
       {/* Platform Activation Checklist */}
       <PlatformActivationChecklist />
 
+      {/* Postback Status Checklist */}
+      <PostbackStatusChecklist />
+
+      {/* Historical Import Dialog */}
+      <HistoricalImportDialog
+        open={showHistoricalImport}
+        onOpenChange={setShowHistoricalImport}
+        accounts={accounts}
+        platforms={platforms as any[]}
+        onSaveMetric={async (data) => {
+          const { trackingMetricService } = await import("@/services/trackingService");
+          return trackingMetricService.create(data);
+        }}
+      />
+
       {/* Auto-consolidated revenue card with currency details */}
       {hasAutoData && consolidated.revenueBrl > 0 && (
         <Card className="border-primary/20 bg-primary/[0.02]">
