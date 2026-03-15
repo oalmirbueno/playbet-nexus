@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import EmptyState from "@/components/EmptyState";
-import TrackingDemoFilter from "@/components/TrackingDemoFilter";
+
 import { useTrackingEvents, usePlatformAccounts } from "@/hooks/useTrackingData";
 import { usePlatforms } from "@/hooks/useSupabaseQuery";
 import { Zap, Filter, RefreshCcw, Eye, Search, Copy, Check } from "lucide-react";

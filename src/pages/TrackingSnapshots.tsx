@@ -10,7 +10,7 @@ import { useTrackingSnapshots } from "@/hooks/useTrackingData";
 import { usePlatforms } from "@/hooks/useSupabaseQuery";
 import { Camera, Eye } from "lucide-react";
 import type { TrackingSnapshotRow } from "@/services/trackingService";
-import TrackingDemoFilter from "@/components/TrackingDemoFilter";
+
 
 function fmt(v: number) { return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }); }
 

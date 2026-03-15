@@ -58,9 +58,8 @@ export default function Dashboard() {
     setSeeding(true);
     try {
       await seedDemoData();
-      setDemoMode("all");
       await queryClient.invalidateQueries();
-      toast({ title: "Dados demo criados com sucesso!", description: "Modo alterado para: Todos os dados." });
+      toast({ title: "Dados demo criados com sucesso!" });
     } catch (e: any) {
       toast({ title: "Erro ao criar dados demo", description: e.message, variant: "destructive" });
     } finally {
