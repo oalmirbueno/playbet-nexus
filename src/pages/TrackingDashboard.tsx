@@ -277,7 +277,10 @@ export default function TrackingDashboard() {
                 <MoreHorizontal size={14} />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setShowHistoricalImport(true)}>
+                <Download size={14} className="mr-2" /> Importar Histórico
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate("/tracking/metrics")}>
                 <Download size={14} className="mr-2" /> Registrar Métrica (manual)
               </DropdownMenuItem>
