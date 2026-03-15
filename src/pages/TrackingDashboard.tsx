@@ -219,7 +219,7 @@ export default function TrackingDashboard() {
   }, [platforms]);
 
   const hasInfra = accounts.length > 0 || recentEvents.length > 0;
-  const realEvents = recentEvents.filter(e => !e.is_demo && !e.click_id?.startsWith("{") && e.status !== "invalid_legacy" && !e.canonical_event_name?.startsWith("{"));
+  const realEvents = recentEvents.filter(e => !e.click_id?.startsWith("{") && e.status !== "invalid_legacy" && !e.canonical_event_name?.startsWith("{"));
 
   const kpiCards = [
     { label: "Cliques Reais (LP)", value: fmtNum(consolidated.realClicksCount || effectiveKpis.cliques), icon: MousePointerClick, color: "text-primary" },

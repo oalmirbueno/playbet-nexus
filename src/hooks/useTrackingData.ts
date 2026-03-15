@@ -8,26 +8,22 @@ import type {
   PlatformEventMappingRow, TrackingEventRow,
 } from "@/services/trackingService";
 import { useToast } from "@/hooks/use-toast";
-import { useDemoMode } from "@/contexts/DemoModeContext";
 
-/** Filter rows by demo mode */
-function filterDemo<T extends { is_demo: boolean }>(rows: T[], demoMode: "all" | "real" | "demo"): T[] {
-  if (demoMode === "all") return rows;
-  if (demoMode === "real") return rows.filter(r => !r.is_demo);
-  return rows.filter(r => r.is_demo);
+/** Filter out demo rows — always show only real data */
+function filterReal<T extends { is_demo: boolean }>(rows: T[]): T[] {
+  return rows.filter(r => !r.is_demo);
 }
 
 export function usePlatformAccounts() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  const { demoMode } = useDemoMode();
 
   const { data: rawData = [], isLoading } = useQuery({
     queryKey: ["platform_accounts"],
     queryFn: platformAccountService.getAll,
   });
 
-  const data = filterDemo(rawData, demoMode);
+  const data = filterReal(rawData);
 
   const createMut = useMutation({
     mutationFn: (item: Partial<PlatformAccountRow>) => platformAccountService.create(item),
@@ -71,7 +67,6 @@ export function useTrackingMetrics(filters?: {
 }) {
   const qc = useQueryClient();
   const { toast } = useToast();
-  const { demoMode } = useDemoMode();
   const hasFilters = filters && Object.values(filters).some(Boolean);
 
   const { data: rawData = [], isLoading } = useQuery({
@@ -79,7 +74,7 @@ export function useTrackingMetrics(filters?: {
     queryFn: () => hasFilters ? trackingMetricService.getFiltered(filters!) : trackingMetricService.getAll(),
   });
 
-  const data = filterDemo(rawData, demoMode);
+  const data = filterReal(rawData);
 
   const createMut = useMutation({
     mutationFn: (item: Partial<TrackingMetricRow>) => trackingMetricService.create(item),
@@ -106,25 +101,23 @@ export function useTrackingMetrics(filters?: {
 }
 
 export function useTrackingSnapshots() {
-  const { demoMode } = useDemoMode();
   const { data: rawData = [], isLoading } = useQuery({
     queryKey: ["tracking_snapshots"],
     queryFn: trackingSnapshotService.getAll,
   });
-  return { data: filterDemo(rawData, demoMode), isLoading };
+  return { data: filterReal(rawData), isLoading };
 }
 
 export function useTrackingLinks() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  const { demoMode } = useDemoMode();
 
   const { data: rawData = [], isLoading } = useQuery({
     queryKey: ["tracking_links"],
     queryFn: trackingLinkService.getAll,
   });
 
-  const data = filterDemo(rawData, demoMode);
+  const data = filterReal(rawData);
 
   const createMut = useMutation({
     mutationFn: (item: Partial<TrackingLinkRow>) => trackingLinkService.create(item),
@@ -153,14 +146,13 @@ export function useTrackingLinks() {
 export function usePlatformEventMappings(platformId?: string) {
   const qc = useQueryClient();
   const { toast } = useToast();
-  const { demoMode } = useDemoMode();
 
   const { data: rawData = [], isLoading } = useQuery({
     queryKey: ["platform_event_mappings", platformId],
     queryFn: () => platformId ? platformEventMappingService.getByPlatform(platformId) : platformEventMappingService.getAll(),
   });
 
-  const data = filterDemo(rawData, demoMode);
+  const data = filterReal(rawData);
 
   const createMut = useMutation({
     mutationFn: (item: Partial<PlatformEventMappingRow>) => platformEventMappingService.create(item),
@@ -194,7 +186,6 @@ export function useTrackingEvents(filters?: {
   date_from?: string;
   date_to?: string;
 }) {
-  const { demoMode } = useDemoMode();
   const hasFilters = filters && Object.values(filters).some(Boolean);
 
   const { data: rawData = [], isLoading } = useQuery({
@@ -202,5 +193,5 @@ export function useTrackingEvents(filters?: {
     queryFn: () => hasFilters ? trackingEventService.getFiltered(filters!) : trackingEventService.getAll(),
   });
 
-  return { data: filterDemo(rawData, demoMode), isLoading };
+  return { data: filterReal(rawData), isLoading };
 }
