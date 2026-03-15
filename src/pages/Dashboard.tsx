@@ -5,7 +5,6 @@ import TrackingOverviewCard from "@/components/TrackingOverviewCard";
 import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
 import { useInfluencers, useGames, usePlatforms, useLandingPages, useTemplates, useUtms, useCampanhas, useSocios, useSaques, useConteudo } from "@/hooks/useSupabaseQuery";
 import { useQueryClient } from "@tanstack/react-query";
-import { useDemoMode } from "@/contexts/DemoModeContext";
 import { seedDemoData, clearDemoData } from "@/services/seedDemoData";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
