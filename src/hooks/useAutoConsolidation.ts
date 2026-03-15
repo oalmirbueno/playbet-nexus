@@ -28,8 +28,9 @@ function isValidEvent(e: any): boolean {
   if (e.is_demo) return false;
   if (e.status === "invalid_legacy") return false;
   if (e.canonical_event_name?.startsWith("{")) return false;
-  if (e.click_id?.startsWith("{")) return false;
-  if (e.click_id === "null" || e.transaction_id === "null") return false;
+  // Only exclude placeholder click_ids for click events
+  if (e.canonical_event_name === "click" && e.click_id?.startsWith("{")) return false;
+  if (e.transaction_id === "null") return false;
   return true;
 }
 
