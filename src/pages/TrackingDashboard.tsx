@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import TrackingDemoFilter from "@/components/TrackingDemoFilter";
 import PlatformActivationChecklist from "@/components/PlatformActivationChecklist";
+import PostbackStatusChecklist from "@/components/tracking/PostbackStatusChecklist";
+import HistoricalImportDialog from "@/components/tracking/HistoricalImportDialog";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
   ResponsiveContainer, Legend,
@@ -46,6 +48,7 @@ export default function TrackingDashboard() {
   const [lpFilter, setLpFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [showHistoricalImport, setShowHistoricalImport] = useState(false);
 
   const filters = useMemo(() => ({
     platform_id: platformFilter !== "all" ? platformFilter : undefined,
@@ -274,7 +277,10 @@ export default function TrackingDashboard() {
                 <MoreHorizontal size={14} />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setShowHistoricalImport(true)}>
+                <Download size={14} className="mr-2" /> Importar Histórico
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate("/tracking/metrics")}>
                 <Download size={14} className="mr-2" /> Registrar Métrica (manual)
               </DropdownMenuItem>
@@ -302,6 +308,21 @@ export default function TrackingDashboard() {
 
       {/* Platform Activation Checklist */}
       <PlatformActivationChecklist />
+
+      {/* Postback Status Checklist */}
+      <PostbackStatusChecklist />
+
+      {/* Historical Import Dialog */}
+      <HistoricalImportDialog
+        open={showHistoricalImport}
+        onOpenChange={setShowHistoricalImport}
+        accounts={accounts}
+        platforms={platforms as any[]}
+        onSaveMetric={async (data) => {
+          const { trackingMetricService } = await import("@/services/trackingService");
+          return trackingMetricService.create(data);
+        }}
+      />
 
       {/* Auto-consolidated revenue card with currency details */}
       {hasAutoData && consolidated.revenueBrl > 0 && (
