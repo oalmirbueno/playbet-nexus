@@ -19,19 +19,15 @@ export default function TrackingOverviewCard() {
   const { data: links } = useTrackingLinks();
   const { consolidated, hasData: hasEvents } = useAutoConsolidation();
 
-  const realPlatforms = (platforms as any[]).filter((p: any) => !p.is_demo);
-  const realAccounts = accounts.filter(a => !a.is_demo);
-  const realLinks = links.filter(l => !l.is_demo);
-
   const lastEvent = consolidated.lastEventTimestamp
     ? new Date(consolidated.lastEventTimestamp).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
     : null;
 
   const status = useMemo(() => {
     if (hasEvents) return "ok";
-    if (realAccounts.length > 0 || realLinks.length > 0) return "parcial";
+    if (accounts.length > 0 || links.length > 0) return "parcial";
     return "pendente";
-  }, [hasEvents, realAccounts, realLinks]);
+  }, [hasEvents, accounts, links]);
 
   const statusConfig = {
     ok: { label: "Operacional", color: "text-green-500", bg: "bg-green-500/10 border-green-500/20", icon: CheckCircle2 },
@@ -42,7 +38,7 @@ export default function TrackingOverviewCard() {
   const cfg = statusConfig[status];
   const StatusIcon = cfg.icon;
 
-  if (realPlatforms.length === 0 && realAccounts.length === 0) return null;
+  if ((platforms as any[]).length === 0 && accounts.length === 0) return null;
 
   return (
     <Card className={`${cfg.bg} border cursor-pointer hover:shadow-md transition-shadow`} onClick={() => navigate("/tracking")}>
@@ -62,11 +58,11 @@ export default function TrackingOverviewCard() {
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-3">
           <div>
             <p className="text-[10px] text-muted-foreground uppercase">Plataformas</p>
-            <p className="text-lg font-bold">{realPlatforms.length}</p>
+            <p className="text-lg font-bold">{(platforms as any[]).length}</p>
           </div>
           <div>
             <p className="text-[10px] text-muted-foreground uppercase">Links ativos</p>
-            <p className="text-lg font-bold">{realLinks.length}</p>
+            <p className="text-lg font-bold">{links.length}</p>
           </div>
           <div>
             <p className="text-[10px] text-muted-foreground uppercase">Cliques reais</p>
@@ -82,7 +78,6 @@ export default function TrackingOverviewCard() {
           </div>
         </div>
 
-        {/* Revenue with currency details - only if verified */}
         {consolidated.revenueBrl > 0 && (
           <div className="bg-background/50 rounded-lg p-2.5 mb-3 border border-border/50">
             <div className="flex items-center justify-between">

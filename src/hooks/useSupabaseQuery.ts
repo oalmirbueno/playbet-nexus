@@ -13,7 +13,6 @@ import {
   saqueService,
   conteudoService,
 } from "@/services/supabaseService";
-import { useDemoMode } from "@/contexts/DemoModeContext";
 
 // ── Generic hook factory ──
 function useEntityCrud<Row extends Record<string, any>>(
@@ -26,7 +25,6 @@ function useEntityCrud<Row extends Record<string, any>>(
     remove?: (id: string) => Promise<void>;
   },
   entityName: string,
-  demoMode: "all" | "real" | "demo",
 ) {
   const queryClient = useQueryClient();
 
@@ -35,13 +33,7 @@ function useEntityCrud<Row extends Record<string, any>>(
     queryFn: service.getAll,
   });
 
-  // Filter data based on demo mode
-  const filteredData = (query.data ?? []).filter((row) => {
-    if (demoMode === "all") return true;
-    if (demoMode === "real") return !(row as any).is_demo;
-    if (demoMode === "demo") return (row as any).is_demo;
-    return true;
-  });
+  const filteredData = (query.data ?? []).filter((row) => !(row as any).is_demo);
 
   const createMutation = useMutation({
     mutationFn: (item: any) => service.create(item),
@@ -105,47 +97,14 @@ function useEntityCrud<Row extends Record<string, any>>(
 }
 
 // ── Entity hooks ──
-export const useInfluencers = () => {
-  const { demoMode } = useDemoMode();
-  return useEntityCrud("influencers", influencerService, "Influencer", demoMode);
-};
-export const usePlatforms = () => {
-  const { demoMode } = useDemoMode();
-  return useEntityCrud("platforms", platformService, "Plataforma", demoMode);
-};
-export const useGames = () => {
-  const { demoMode } = useDemoMode();
-  return useEntityCrud("games", gameService, "Jogo", demoMode);
-};
-export const useTemplates = () => {
-  const { demoMode } = useDemoMode();
-  return useEntityCrud("templates", templateService, "Template", demoMode);
-};
-export const useLandingPages = () => {
-  const { demoMode } = useDemoMode();
-  return useEntityCrud("landing_pages", landingPageService, "Landing Page", demoMode);
-};
-export const useUtms = () => {
-  const { demoMode } = useDemoMode();
-  return useEntityCrud("utms", utmService, "UTM", demoMode);
-};
-export const useCampanhas = () => {
-  const { demoMode } = useDemoMode();
-  return useEntityCrud("campanhas", campanhaService, "Campanha", demoMode);
-};
-export const useSocios = () => {
-  const { demoMode } = useDemoMode();
-  return useEntityCrud("socios", socioService, "Sócio", demoMode);
-};
-export const useSaques = () => {
-  const { demoMode } = useDemoMode();
-  return useEntityCrud("saques", saqueService, "Saque", demoMode);
-};
-export const useConteudo = () => {
-  const { demoMode } = useDemoMode();
-  return useEntityCrud("conteudo", conteudoService, "Conteúdo", demoMode);
-};
-export const useLandingPageInstances = () => {
-  const { demoMode } = useDemoMode();
-  return useEntityCrud("landing_page_instances", landingPageInstanceService, "Instância de LP", demoMode);
-};
+export const useInfluencers = () => useEntityCrud("influencers", influencerService, "Influencer");
+export const usePlatforms = () => useEntityCrud("platforms", platformService, "Plataforma");
+export const useGames = () => useEntityCrud("games", gameService, "Jogo");
+export const useTemplates = () => useEntityCrud("templates", templateService, "Template");
+export const useLandingPages = () => useEntityCrud("landing_pages", landingPageService, "Landing Page");
+export const useUtms = () => useEntityCrud("utms", utmService, "UTM");
+export const useCampanhas = () => useEntityCrud("campanhas", campanhaService, "Campanha");
+export const useSocios = () => useEntityCrud("socios", socioService, "Sócio");
+export const useSaques = () => useEntityCrud("saques", saqueService, "Saque");
+export const useConteudo = () => useEntityCrud("conteudo", conteudoService, "Conteúdo");
+export const useLandingPageInstances = () => useEntityCrud("landing_page_instances", landingPageInstanceService, "Instância de LP");

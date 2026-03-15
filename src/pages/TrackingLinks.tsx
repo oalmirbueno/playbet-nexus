@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import EmptyState from "@/components/EmptyState";
-import TrackingDemoFilter from "@/components/TrackingDemoFilter";
+
 import TrackingLinkForm, { emptyForm, formFromRow, type FormState } from "@/components/tracking/TrackingLinkForm";
 import TrackingLinkDetail from "@/components/tracking/TrackingLinkDetail";
 import TrackingSetupWizard from "@/components/tracking/TrackingSetupWizard";
@@ -137,7 +137,7 @@ export default function TrackingLinks() {
           <p className="text-sm text-muted-foreground mt-0.5">Links rastreáveis vinculados a influencers, contas e campanhas</p>
         </div>
         <div className="flex gap-2 items-center flex-wrap">
-          <TrackingDemoFilter />
+          
           <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
             <Upload size={14} className="mr-1.5" /> Importar Histórico
           </Button>

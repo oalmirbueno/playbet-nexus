@@ -4,7 +4,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { DemoModeProvider } from "@/contexts/DemoModeContext";
 import DashboardLayout from "@/components/DashboardLayout";
 import Login from "./pages/Login";
 import DashboardExecutivo from "./pages/DashboardExecutivo";
@@ -127,13 +126,11 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
-          <DemoModeProvider>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/i/:slug" element={<InfluencerLanding />} />
-              <Route path="*" element={<ProtectedRoutes />} />
-            </Routes>
-          </DemoModeProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/i/:slug" element={<InfluencerLanding />} />
+            <Route path="*" element={<ProtectedRoutes />} />
+          </Routes>
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

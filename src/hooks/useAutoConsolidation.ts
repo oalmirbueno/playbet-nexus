@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useTrackingEvents, usePlatformAccounts } from "@/hooks/useTrackingData";
 import { usePlatforms } from "@/hooks/useSupabaseQuery";
 import { supabase } from "@/integrations/supabase/client";
-import { useDemoMode } from "@/contexts/DemoModeContext";
 
 export interface ConsolidatedMetrics {
   totalClicks: number;
@@ -26,16 +25,12 @@ export interface ConsolidatedMetrics {
 
 /** Check if an event is valid for consolidation */
 function isValidEvent(e: any): boolean {
-  // Exclude demo
   if (e.is_demo) return false;
-  // Exclude invalid_legacy status
   if (e.status === "invalid_legacy") return false;
-  // Exclude placeholder canonical names
   if (e.canonical_event_name?.startsWith("{")) return false;
-  // Exclude placeholder click_ids
-  if (e.click_id?.startsWith("{")) return false;
-  // Exclude string "null" artifacts
-  if (e.click_id === "null" || e.transaction_id === "null") return false;
+  // Only exclude placeholder click_ids for click events
+  if (e.canonical_event_name === "click" && e.click_id?.startsWith("{")) return false;
+  if (e.transaction_id === "null") return false;
   return true;
 }
 
@@ -44,15 +39,10 @@ function isValidRevenue(e: any): boolean {
   if (!isValidEvent(e)) return false;
   const evName = e.canonical_event_name;
   if (evName !== "revenue" && evName !== "ftd" && evName !== "deposit" && evName !== "redeposit") return false;
-  
-  // Must have original_amount AND original_currency for financial trustworthiness
   const origAmount = e.original_amount;
   const origCurrency = e.original_currency;
   if (origAmount == null || !origCurrency) return false;
-  
-  // If not BRL, must have exchange_rate for conversion
   if (origCurrency !== "BRL" && !e.exchange_rate) return false;
-  
   return true;
 }
 
@@ -60,9 +50,7 @@ export function useAutoConsolidation() {
   const { data: events, isLoading: eventsLoading } = useTrackingEvents();
   const { data: accounts } = usePlatformAccounts();
   const { data: platforms } = usePlatforms();
-  const { demoMode } = useDemoMode();
 
-  // Fetch real clicks count
   const { data: realClicksCount = 0 } = useQuery({
     queryKey: ["real_clicks_count"],
     queryFn: async () => {
@@ -102,7 +90,6 @@ export function useAutoConsolidation() {
 
     if (validEvents.length === 0) return result;
 
-    // Get platform name from first event
     const firstPlatformId = validEvents[0]?.platform_id;
     if (firstPlatformId) {
       const plat = (platforms as any[]).find((p: any) => p.id === firstPlatformId);
@@ -119,7 +106,6 @@ export function useAutoConsolidation() {
       else if (evName === "deposit") result.totalDeposits++;
       else if (evName === "redeposit") result.totalRedeposits++;
 
-      // Only count revenue from financially valid events
       if (isValidRevenue(ev)) {
         const origCurrency = (ev as any).original_currency;
         const origAmount = (ev as any).original_amount;

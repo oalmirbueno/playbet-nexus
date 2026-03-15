@@ -16,7 +16,7 @@ import {
   Wallet, Target, ArrowRightLeft, Activity, Download, Filter, RefreshCcw,
   AlertTriangle, Zap, Link2, Map, MoreHorizontal, ArrowUpDown,
 } from "lucide-react";
-import TrackingDemoFilter from "@/components/TrackingDemoFilter";
+
 import PlatformActivationChecklist from "@/components/PlatformActivationChecklist";
 import PostbackStatusChecklist from "@/components/tracking/PostbackStatusChecklist";
 import HistoricalImportDialog from "@/components/tracking/HistoricalImportDialog";
@@ -98,10 +98,9 @@ export default function TrackingDashboard() {
     };
   }, [metrics]);
 
-  // Merge: use auto-consolidated data if no manual metrics exist
+  // Always merge: auto-consolidated for event counts, manual for costs
   const effectiveKpis = useMemo(() => {
-    if (metrics.length > 0) return kpis;
-    // Use auto-consolidated from events
+    // Always use auto-consolidated event counts (source of truth from tracking_events)
     return {
       cliques: consolidated.totalClicks,
       registros: consolidated.totalRegistrations,
@@ -220,7 +219,7 @@ export default function TrackingDashboard() {
   }, [platforms]);
 
   const hasInfra = accounts.length > 0 || recentEvents.length > 0;
-  const realEvents = recentEvents.filter(e => !e.is_demo && !e.click_id?.startsWith("{") && e.status !== "invalid_legacy" && !e.canonical_event_name?.startsWith("{"));
+  const realEvents = recentEvents.filter(e => !e.click_id?.startsWith("{") && e.status !== "invalid_legacy" && !e.canonical_event_name?.startsWith("{"));
 
   const kpiCards = [
     { label: "Cliques Reais (LP)", value: fmtNum(consolidated.realClicksCount || effectiveKpis.cliques), icon: MousePointerClick, color: "text-primary" },
@@ -257,7 +256,7 @@ export default function TrackingDashboard() {
           <p className="text-sm text-muted-foreground mt-0.5">Central de performance multi-plataforma</p>
         </div>
         <div className="flex gap-2 flex-wrap items-center">
-          <TrackingDemoFilter />
+          
           <Button variant="outline" size="sm" onClick={() => navigate("/tracking/accounts")}>
             <Users size={14} className="mr-1.5" /> Contas
           </Button>

@@ -5,7 +5,6 @@ import TrackingOverviewCard from "@/components/TrackingOverviewCard";
 import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
 import { useInfluencers, useGames, usePlatforms, useLandingPages, useTemplates, useUtms, useCampanhas, useSocios, useSaques, useConteudo } from "@/hooks/useSupabaseQuery";
 import { useQueryClient } from "@tanstack/react-query";
-import { useDemoMode } from "@/contexts/DemoModeContext";
 import { seedDemoData, clearDemoData } from "@/services/seedDemoData";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
@@ -23,7 +22,7 @@ const steps = [
 export default function Dashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { setDemoMode } = useDemoMode();
+  
   const [seeding, setSeeding] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -59,9 +58,8 @@ export default function Dashboard() {
     setSeeding(true);
     try {
       await seedDemoData();
-      setDemoMode("all");
       await queryClient.invalidateQueries();
-      toast({ title: "Dados demo criados com sucesso!", description: "Modo alterado para: Todos os dados." });
+      toast({ title: "Dados demo criados com sucesso!" });
     } catch (e: any) {
       toast({ title: "Erro ao criar dados demo", description: e.message, variant: "destructive" });
     } finally {

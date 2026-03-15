@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import EmptyState from "@/components/EmptyState";
-import TrackingDemoFilter from "@/components/TrackingDemoFilter";
+
 import { usePlatformAccounts } from "@/hooks/useTrackingData";
 import { usePlatforms } from "@/hooks/useSupabaseQuery";
 import { Plus, Pencil, Power, Trash2, ExternalLink, Search, Building2, Copy, Check } from "lucide-react";
@@ -118,7 +118,7 @@ export default function TrackingAccounts() {
           <p className="text-sm text-muted-foreground mt-0.5">Gerencie suas contas de afiliado em cada plataforma</p>
         </div>
         <div className="flex gap-2 items-center">
-          <TrackingDemoFilter />
+          
           <Button size="sm" onClick={openCreate}><Plus size={14} className="mr-1.5" /> Nova Conta</Button>
         </div>
       </div>

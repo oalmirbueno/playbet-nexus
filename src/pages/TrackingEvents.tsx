@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import EmptyState from "@/components/EmptyState";
-import TrackingDemoFilter from "@/components/TrackingDemoFilter";
+
 import { useTrackingEvents, usePlatformAccounts } from "@/hooks/useTrackingData";
 import { usePlatforms } from "@/hooks/useSupabaseQuery";
 import { Zap, Filter, RefreshCcw, Eye, Search, Copy, Check } from "lucide-react";
@@ -96,7 +96,7 @@ export default function TrackingEvents() {
           <h1 className="text-2xl font-bold text-foreground tracking-tight">Eventos de Tracking</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Eventos brutos recebidos via postback, API ou importação manual</p>
         </div>
-        <TrackingDemoFilter />
+        
       </div>
 
       {/* Stats */}
