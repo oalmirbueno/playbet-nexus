@@ -22,7 +22,7 @@ const steps = [
 export default function Dashboard() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { setDemoMode } = useDemoMode();
+  
   const [seeding, setSeeding] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
