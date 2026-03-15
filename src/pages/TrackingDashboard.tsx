@@ -48,6 +48,7 @@ export default function TrackingDashboard() {
   const [lpFilter, setLpFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [showHistoricalImport, setShowHistoricalImport] = useState(false);
 
   const filters = useMemo(() => ({
     platform_id: platformFilter !== "all" ? platformFilter : undefined,
