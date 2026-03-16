@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Copy, Check, CheckCircle2, Clock, Clipboard, ChevronDown, ChevronUp, RefreshCw, Settings, Radio } from "lucide-react";
+import { Copy, Check, CheckCircle2, Clock, Clipboard, ChevronDown, ChevronUp, RefreshCw, Settings, Radio, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { usePlatformAccounts, useTrackingLinks } from "@/hooks/useTrackingData";
 import { usePlatforms } from "@/hooks/useSupabaseQuery";
@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   findPresetByName,
   buildPostbackUrlForEvent,
+  buildGlobalPostbackUrls,
 } from "@/config/platformPresets";
 
 type ValidationStatus = "received" | "waiting";
