@@ -35,10 +35,14 @@ function isValidEvent(e: any): boolean {
 }
 
 /** Check if a revenue event has trustworthy financial data */
+/** Check if a revenue event has trustworthy financial data.
+ *  IMPORTANT: Only "revenue" events count as affiliate revenue.
+ *  Deposits/redeposits are player money, NOT affiliate commission. */
 function isValidRevenue(e: any): boolean {
   if (!isValidEvent(e)) return false;
   const evName = e.canonical_event_name;
-  if (evName !== "revenue" && evName !== "ftd" && evName !== "deposit" && evName !== "redeposit") return false;
+  // Only revenue events = affiliate commission. Deposits are player activity, not revenue.
+  if (evName !== "revenue") return false;
   const origAmount = e.original_amount;
   const origCurrency = e.original_currency;
   if (origAmount == null || !origCurrency) return false;
