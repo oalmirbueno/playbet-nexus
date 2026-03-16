@@ -245,6 +245,43 @@ export function buildPostbackUrlForEvent(
   return `${POSTBACK_BASE}/${preset.postback_base_path}?${parts.join("&")}`;
 }
 
+/**
+ * Build GLOBAL postback URLs — one per event, no link-specific values.
+ * These are meant for the platform's account-level "Global Postback" settings.
+ * Uses only native platform macros so the platform fills them automatically.
+ */
+export function buildGlobalPostbackUrls(preset: PlatformPreset): { event: PlatformEventPreset; url: string }[] {
+  return preset.events.map(evt => {
+    const parts: string[] = [];
+
+    // Event name as literal
+    parts.push(`event=${evt.raw_event_name}`);
+
+    // All SubIDs as macros — platform fills them
+    parts.push(`sub1={sub1}`);
+    parts.push(`sub2={sub2}`);
+    parts.push(`sub3={sub3}`);
+    parts.push(`sub6={sub6}`);
+
+    // Event-specific macros
+    if (evt.has_amount) {
+      parts.push(`amount={amount}`);
+      parts.push(`currency={currency}`);
+    }
+    if (evt.has_transaction_id) {
+      parts.push(`transaction_id={transaction_id}`);
+    }
+    if (evt.extra_macros.includes("user_id")) {
+      parts.push(`user_id={user_id}`);
+    }
+    if (evt.extra_macros.includes("country")) {
+      parts.push(`country={country}`);
+    }
+
+    return { event: evt, url: `${POSTBACK_BASE}/${preset.postback_base_path}?${parts.join("&")}` };
+  });
+}
+
 // ─── Validation ─────────────────────────────────────────────────────────
 
 export interface PresetValidationResult {
