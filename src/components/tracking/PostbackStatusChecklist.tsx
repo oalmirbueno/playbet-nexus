@@ -175,6 +175,13 @@ export default function PostbackStatusChecklist() {
     setTimeout(() => setCopiedIdx(null), 2000);
   };
 
+  const copyGlobal = (url: string, key: string, label: string) => {
+    navigator.clipboard.writeText(url);
+    setCopiedGlobalKey(key);
+    toast({ title: `Postback Global de ${label} copiado!` });
+    setTimeout(() => setCopiedGlobalKey(null), 2000);
+  };
+
   if (!preset || !platformWithPreset) return null;
 
   const receivedCount = Array.from(validationStatuses.values()).filter(s => s.status === "received").length;
