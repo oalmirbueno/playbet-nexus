@@ -295,6 +295,7 @@ export default function PostbackStatusChecklist() {
             <Clipboard size={13} className="text-primary" />
             <span className="text-xs font-semibold">Postbacks por Link</span>
           </div>
+          {preset.events.map((evt, idx) => {
             const validation = validationStatuses.get(evt.canonical_event_name) || { status: "waiting" as ValidationStatus, count: 0 };
             const isConfigured = !!configMarks[evt.canonical_event_name];
             const isReceived = validation.status === "received";
