@@ -30,8 +30,8 @@ export default function TrackingOverviewCard() {
   }, [hasEvents, accounts, links]);
 
   const statusConfig = {
-    ok: { label: "Operacional", color: "text-green-500", bg: "bg-green-500/10 border-green-500/20", icon: CheckCircle2 },
-    parcial: { label: "Parcial", color: "text-yellow-500", bg: "bg-yellow-500/10 border-yellow-500/20", icon: AlertTriangle },
+    ok: { label: "Operacional", color: "text-emerald-500", bg: "bg-emerald-500/10 border-emerald-500/20", icon: CheckCircle2 },
+    parcial: { label: "Configurado", color: "text-emerald-500", bg: "bg-emerald-500/10 border-emerald-500/20", icon: CheckCircle2 },
     pendente: { label: "Pendente", color: "text-muted-foreground", bg: "bg-secondary/50 border-border", icon: Radio },
   };
 
