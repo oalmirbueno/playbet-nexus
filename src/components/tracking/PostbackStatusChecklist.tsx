@@ -86,7 +86,9 @@ export default function PostbackStatusChecklist() {
   const { data: accounts } = usePlatformAccounts();
   const { data: links } = useTrackingLinks();
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [copiedGlobalKey, setCopiedGlobalKey] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(true);
+  const [showGlobal, setShowGlobal] = useState(true);
   const [selectedPlatformId, setSelectedPlatformId] = useState<string>("auto");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [configMarks, setConfigMarks] = useState<Record<string, boolean>>({});
