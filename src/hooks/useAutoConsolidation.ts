@@ -30,7 +30,8 @@ function isValidEvent(e: any): boolean {
   if (e.canonical_event_name?.startsWith("{")) return false;
   // Only exclude placeholder click_ids for click events
   if (e.canonical_event_name === "click" && e.click_id?.startsWith("{")) return false;
-  if (e.transaction_id === "null") return false;
+  // Exclude fully-placeholder events (all key fields are macros)
+  if (e.transaction_id?.startsWith("{") && e.click_id?.startsWith("{")) return false;
   return true;
 }
 
