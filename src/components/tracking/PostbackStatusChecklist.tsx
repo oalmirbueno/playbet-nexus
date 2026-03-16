@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Copy, Check, CheckCircle2, Clock, Clipboard, ChevronDown, ChevronUp, RefreshCw, Settings, Radio } from "lucide-react";
+import { Copy, Check, CheckCircle2, Clock, Clipboard, ChevronDown, ChevronUp, RefreshCw, Settings, Radio, Globe } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { usePlatformAccounts, useTrackingLinks } from "@/hooks/useTrackingData";
 import { usePlatforms } from "@/hooks/useSupabaseQuery";
@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   findPresetByName,
   buildPostbackUrlForEvent,
+  buildGlobalPostbackUrls,
 } from "@/config/platformPresets";
 
 type ValidationStatus = "received" | "waiting";
@@ -85,7 +86,9 @@ export default function PostbackStatusChecklist() {
   const { data: accounts } = usePlatformAccounts();
   const { data: links } = useTrackingLinks();
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [copiedGlobalKey, setCopiedGlobalKey] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(true);
+  const [showGlobal, setShowGlobal] = useState(true);
   const [selectedPlatformId, setSelectedPlatformId] = useState<string>("auto");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [configMarks, setConfigMarks] = useState<Record<string, boolean>>({});
@@ -172,6 +175,13 @@ export default function PostbackStatusChecklist() {
     setTimeout(() => setCopiedIdx(null), 2000);
   };
 
+  const copyGlobal = (url: string, key: string, label: string) => {
+    navigator.clipboard.writeText(url);
+    setCopiedGlobalKey(key);
+    toast({ title: `Postback Global de ${label} copiado!` });
+    setTimeout(() => setCopiedGlobalKey(null), 2000);
+  };
+
   if (!preset || !platformWithPreset) return null;
 
   const receivedCount = Array.from(validationStatuses.values()).filter(s => s.status === "received").length;
@@ -225,7 +235,66 @@ export default function PostbackStatusChecklist() {
       </CardHeader>
 
       {expanded && (
-        <CardContent className="pt-0 space-y-3">
+        <CardContent className="pt-0 space-y-4">
+          {/* ═══ GLOBAL POSTBACK SECTION ═══ */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Globe size={13} className="text-emerald-500" />
+                <span className="text-xs font-semibold">Postback Global</span>
+                <Badge variant="outline" className="text-[9px] border-emerald-500/40 text-emerald-600">
+                  Configurações da conta
+                </Badge>
+              </div>
+              <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2" onClick={() => setShowGlobal(!showGlobal)}>
+                {showGlobal ? "Ocultar" : "Mostrar"}
+              </Button>
+            </div>
+
+            {showGlobal && (
+              <>
+                <p className="text-[10px] text-muted-foreground">
+                  Cole cada URL em <strong>Configurações da conta → Postback Global</strong> na {preset.label}.
+                  Captura eventos de <strong>todos os links</strong> automaticamente.
+                </p>
+                {buildGlobalPostbackUrls(preset).map(({ event: evt, url }) => {
+                  const gKey = `g-${evt.raw_event_name}`;
+                  const isCopied = copiedGlobalKey === gKey;
+                  return (
+                    <div key={gKey} className="border rounded-lg p-2.5 space-y-1.5 bg-emerald-500/5 border-emerald-500/15">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="outline" className="text-[8px] font-mono h-4 px-1 border-emerald-500/30 text-emerald-600">{evt.raw_event_name}</Badge>
+                          <span className="text-[10px] text-muted-foreground">→</span>
+                          <span className="text-[10px] font-medium">{evt.label}</span>
+                        </div>
+                        <Button
+                          variant="outline" size="sm"
+                          className="h-6 text-[10px] px-2 shrink-0 border-emerald-500/30 hover:bg-emerald-500/10"
+                          onClick={() => copyGlobal(url, gKey, `${evt.label} (Global)`)}
+                        >
+                          {isCopied ? <Check size={10} className="mr-1 text-emerald-500" /> : <Copy size={10} className="mr-1" />}
+                          Copiar
+                        </Button>
+                      </div>
+                      <code className="block bg-secondary/50 rounded px-2 py-1.5 text-[9px] font-mono break-all leading-relaxed select-all">
+                        {url}
+                      </code>
+                    </div>
+                  );
+                })}
+              </>
+            )}
+          </div>
+
+          {/* ═══ SEPARATOR ═══ */}
+          <div className="border-t border-border/50" />
+
+          {/* ═══ PER-LINK POSTBACKS ═══ */}
+          <div className="flex items-center gap-2 mb-1">
+            <Clipboard size={13} className="text-primary" />
+            <span className="text-xs font-semibold">Postbacks por Link</span>
+          </div>
           {preset.events.map((evt, idx) => {
             const validation = validationStatuses.get(evt.canonical_event_name) || { status: "waiting" as ValidationStatus, count: 0 };
             const isConfigured = !!configMarks[evt.canonical_event_name];
