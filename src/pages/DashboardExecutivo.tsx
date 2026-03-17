@@ -39,9 +39,9 @@ export default function DashboardExecutivo() {
   const { data: campanhas } = useCampanhas();
   const { data: saques } = useSaques();
   const { data: socios } = useSocios();
-  const { consolidated, hasData: hasTrackingData } = useAutoConsolidation();
+  const { consolidated, hasData: hasTrackingData, isLoading: isTrackingLoading } = useAutoConsolidation();
 
-  const hasData = influencers.length > 0 || games.length > 0 || platforms.length > 0 || campanhas.length > 0 || hasTrackingData || socios.length > 0;
+  const hasData = isTrackingLoading || influencers.length > 0 || games.length > 0 || platforms.length > 0 || campanhas.length > 0 || hasTrackingData || socios.length > 0;
 
   const saquesByMonth = useMemo(() => groupByMonth(saques, "data"), [saques]);
 
