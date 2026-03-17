@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { usePlatformAccounts } from "@/hooks/useTrackingData";
 import { usePlatforms } from "@/hooks/useSupabaseQuery";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -24,7 +23,6 @@ export interface ConsolidatedMetrics {
 }
 
 export function useAutoConsolidation() {
-  const { data: accounts } = usePlatformAccounts();
   const { data: platforms } = usePlatforms();
 
   // Pull from tracking_metrics (server-side consolidated, always up to date via trigger)
