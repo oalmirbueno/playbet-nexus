@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useTrackingEvents, usePlatformAccounts } from "@/hooks/useTrackingData";
+import { usePlatformAccounts } from "@/hooks/useTrackingData";
 import { usePlatforms } from "@/hooks/useSupabaseQuery";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -23,39 +23,26 @@ export interface ConsolidatedMetrics {
   realClicksCount: number;
 }
 
-/** Check if an event is valid for consolidation */
-function isValidEvent(e: any): boolean {
-  if (e.is_demo) return false;
-  if (e.status === "invalid_legacy") return false;
-  if (e.canonical_event_name?.startsWith("{")) return false;
-  // Only exclude placeholder click_ids for click events
-  if (e.canonical_event_name === "click" && e.click_id?.startsWith("{")) return false;
-  // Exclude fully-placeholder events (all key fields are macros)
-  if (e.transaction_id?.startsWith("{") && e.click_id?.startsWith("{")) return false;
-  return true;
-}
-
-/** Check if a revenue event has trustworthy financial data */
-/** Check if a revenue event has trustworthy financial data.
- *  IMPORTANT: Only "revenue" events count as affiliate revenue.
- *  Deposits/redeposits are player money, NOT affiliate commission. */
-function isValidRevenue(e: any): boolean {
-  if (!isValidEvent(e)) return false;
-  const evName = e.canonical_event_name;
-  // Only revenue events = affiliate commission. Deposits are player activity, not revenue.
-  if (evName !== "revenue") return false;
-  const origAmount = e.original_amount;
-  const origCurrency = e.original_currency;
-  if (origAmount == null || !origCurrency) return false;
-  if (origCurrency !== "BRL" && !e.exchange_rate) return false;
-  return true;
-}
-
 export function useAutoConsolidation() {
-  const { data: events, isLoading: eventsLoading } = useTrackingEvents();
   const { data: accounts } = usePlatformAccounts();
   const { data: platforms } = usePlatforms();
 
+  // Pull from tracking_metrics (server-side consolidated, always up to date via trigger)
+  const { data: metrics = [], isLoading: metricsLoading } = useQuery({
+    queryKey: ["tracking_metrics_consolidated"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tracking_metrics")
+        .select("*")
+        .eq("is_demo", false)
+        .order("data_ref", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    refetchInterval: 30_000,
+  });
+
+  // Real clicks count from clicks table
   const { data: realClicksCount = 0 } = useQuery({
     queryKey: ["real_clicks_count"],
     queryFn: async () => {
@@ -68,10 +55,37 @@ export function useAutoConsolidation() {
     },
   });
 
-  const validEvents = useMemo(() =>
-    events.filter(isValidEvent),
-    [events]
-  );
+  // Last event timestamp
+  const { data: lastEventTs = null } = useQuery({
+    queryKey: ["last_event_timestamp"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tracking_events")
+        .select("event_timestamp")
+        .eq("is_demo", false)
+        .order("event_timestamp", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error || !data) return null;
+      return data.event_timestamp;
+    },
+    refetchInterval: 30_000,
+  });
+
+  // Total valid event count
+  const { data: eventCount = 0 } = useQuery({
+    queryKey: ["valid_events_count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("tracking_events")
+        .select("*", { count: "exact", head: true })
+        .eq("is_demo", false)
+        .neq("status", "invalid_legacy");
+      if (error) return 0;
+      return count || 0;
+    },
+    refetchInterval: 30_000,
+  });
 
   const consolidated = useMemo((): ConsolidatedMetrics => {
     const result: ConsolidatedMetrics = {
@@ -85,68 +99,68 @@ export function useAutoConsolidation() {
       revenueBrl: 0,
       lastExchangeRate: null,
       lastExchangeRateTimestamp: null,
-      lastEventTimestamp: null,
-      eventCount: validEvents.length,
+      lastEventTimestamp: lastEventTs,
+      eventCount,
       platformName: null,
       hasMultipleCurrencies: false,
       byCurrency: {},
       realClicksCount,
     };
 
-    if (validEvents.length === 0) return result;
+    if (metrics.length === 0) return result;
 
-    const firstPlatformId = validEvents[0]?.platform_id;
-    if (firstPlatformId) {
-      const plat = (platforms as any[]).find((p: any) => p.id === firstPlatformId);
+    // Get platform name from first metric with a platform_id
+    const firstWithPlatform = metrics.find((m: any) => m.platform_id);
+    if (firstWithPlatform) {
+      const plat = (platforms as any[])?.find((p: any) => p.id === firstWithPlatform.platform_id);
       if (plat) result.platformName = plat.name;
     }
 
     const currencies = new Set<string>();
 
-    for (const ev of validEvents) {
-      const evName = ev.canonical_event_name;
-      if (evName === "click") result.totalClicks++;
-      else if (evName === "registration") result.totalRegistrations++;
-      else if (evName === "ftd") result.totalFtd++;
-      else if (evName === "deposit") result.totalDeposits++;
-      else if (evName === "redeposit") result.totalRedeposits++;
+    for (const m of metrics as any[]) {
+      result.totalClicks += m.cliques || 0;
+      result.totalRegistrations += m.registros || 0;
+      result.totalFtd += m.ftd || 0;
+      result.totalDeposits += m.depositos_total || 0;
+      result.totalRedeposits += m.redepositos || 0;
 
-      if (isValidRevenue(ev)) {
-        const origCurrency = (ev as any).original_currency;
-        const origAmount = (ev as any).original_amount;
-        const convertedBrl = (ev as any).converted_amount_brl ?? origAmount;
-        const rate = (ev as any).exchange_rate ?? null;
+      const rev = m.revenue || 0;
+      const origAmount = m.original_amount || 0;
+      const origCurrency = m.original_currency || "BRL";
+      const convertedAmount = m.converted_amount || rev;
+      const rate = m.exchange_rate || null;
 
+      if (rev > 0) {
         currencies.add(origCurrency);
         if (!result.byCurrency[origCurrency]) {
           result.byCurrency[origCurrency] = { total: 0, convertedBrl: 0, rate };
         }
         result.byCurrency[origCurrency].total += origAmount;
-        result.byCurrency[origCurrency].convertedBrl += convertedBrl || 0;
+        result.byCurrency[origCurrency].convertedBrl += convertedAmount;
         if (rate) result.byCurrency[origCurrency].rate = rate;
 
         result.revenueOriginal += origAmount;
-        result.revenueBrl += convertedBrl || 0;
+        result.revenueBrl += convertedAmount;
         result.revenueOriginalCurrency = origCurrency;
 
         if (rate) {
           result.lastExchangeRate = rate;
-          const rateTs = (ev as any).exchange_rate_timestamp;
+          const rateTs = m.exchange_rate_timestamp;
           if (rateTs) result.lastExchangeRateTimestamp = rateTs;
         }
       }
     }
 
     result.hasMultipleCurrencies = currencies.size > 1;
-    result.lastEventTimestamp = validEvents[0]?.event_timestamp || null;
 
     return result;
-  }, [validEvents, platforms, realClicksCount]);
+  }, [metrics, platforms, realClicksCount, lastEventTs, eventCount]);
 
   return {
     consolidated,
-    realEvents: validEvents,
-    isLoading: eventsLoading,
-    hasData: validEvents.length > 0,
+    realEvents: [], // deprecated - use tracking_events queries directly if needed
+    isLoading: metricsLoading,
+    hasData: metrics.length > 0 || eventCount > 0,
   };
 }
