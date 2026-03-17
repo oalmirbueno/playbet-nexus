@@ -26,6 +26,55 @@ function looksLikeTemplateValue(val: string | null | undefined): boolean {
   return !!val && TEMPLATE_VALUE_REGEX.test(val.trim());
 }
 
+function sanitizeTemplateString(val: string | null | undefined): string | null {
+  if (!val) return null;
+  const trimmed = val.trim();
+  return looksLikeTemplateValue(trimmed) ? null : trimmed;
+}
+
+function resolveEventTimestamp(params: Record<string, string>): string {
+  const rawDate = sanitizeTemplateString(params.date);
+  const rawTimestamp = sanitizeTemplateString(params.timestamp);
+
+  if (rawDate) {
+    const unixSeconds = Number.parseInt(rawDate, 10);
+    if (!Number.isNaN(unixSeconds)) {
+      return new Date(unixSeconds * 1000).toISOString();
+    }
+
+    const parsedDate = new Date(rawDate);
+    if (!Number.isNaN(parsedDate.getTime())) {
+      return parsedDate.toISOString();
+    }
+  }
+
+  if (rawTimestamp) {
+    const parsedTimestamp = new Date(rawTimestamp);
+    if (!Number.isNaN(parsedTimestamp.getTime())) {
+      return parsedTimestamp.toISOString();
+    }
+  }
+
+  return new Date().toISOString();
+}
+
+function shouldMarkAsInvalidLegacy(params: Record<string, string>, rawEventInput: string | null | undefined, originalAmount: number | null, commissionAmount: number | null): boolean {
+  if (looksLikeTemplateValue(rawEventInput)) return true;
+
+  const hasConcreteSignal = [
+    params.transaction_id,
+    params.tid,
+    params.click_id,
+    params.sub1,
+    params.user_id,
+    params.player_id,
+    params.sub2,
+    params.sub3,
+  ].some((value) => sanitizeTemplateString(value) !== null);
+
+  return !hasConcreteSignal && originalAmount === null && commissionAmount === null;
+}
+
 // Fetch USD→BRL exchange rate from free API
 async function fetchExchangeRate(from: string, to: string): Promise<{ rate: number; timestamp: string } | null> {
   if (from.toUpperCase() === to.toUpperCase()) return { rate: 1, timestamp: new Date().toISOString() };
