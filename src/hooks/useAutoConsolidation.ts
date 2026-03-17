@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { usePlatformAccounts } from "@/hooks/useTrackingData";
 import { usePlatforms } from "@/hooks/useSupabaseQuery";
 import { supabase } from "@/integrations/supabase/client";
 
