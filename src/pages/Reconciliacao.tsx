@@ -90,7 +90,7 @@ export default function Reconciliacao() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <Breadcrumbs items={[{ label: "Tracking Hub", href: "/tracking" }, { label: "Reconciliação" }]} />
+      <Breadcrumbs items={[{ label: "Tracking Hub", path: "/tracking" }, { label: "Reconciliação" }]} />
 
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Reconciliação Financeira</h1>
