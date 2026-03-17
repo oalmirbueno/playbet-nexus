@@ -231,8 +231,8 @@ export default function DashboardExecutivo() {
                 <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
                   <p className="text-[10px] text-muted-foreground uppercase">Saldo disponível</p>
                   <p className="text-lg font-bold text-primary">{availableBalanceValue}</p>
-                  {hasAvailableBalance && consolidated.latestWithdrawableCurrency !== "BRL" && consolidated.latestWithdrawableBrl !== null && (
-                    <p className="text-[10px] text-muted-foreground mt-0.5">≈ {formatBRL(consolidated.latestWithdrawableBrl)}</p>
+                  {hasVerifiedRevenue && showOriginalRevenueAsPrimary && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5">≈ {formatBRL(consolidated.revenueBrl)}</p>
                   )}
                 </div>
                 <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
