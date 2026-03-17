@@ -49,6 +49,7 @@ import TrackingMappings from "./pages/TrackingMappings";
 import TrackingEvents from "./pages/TrackingEvents";
 import TrackingSnapshots from "./pages/TrackingSnapshots";
 import TrackingLinks from "./pages/TrackingLinks";
+import Reconciliacao from "./pages/Reconciliacao";
 import NotFound from "./pages/NotFound";
 import InfluencerLanding from "./pages/InfluencerLanding";
 
@@ -113,6 +114,7 @@ function ProtectedRoutes() {
         <Route path="/tracking/events" element={<TrackingEvents />} />
         <Route path="/tracking/snapshots" element={<TrackingSnapshots />} />
         <Route path="/tracking/links" element={<TrackingLinks />} />
+        <Route path="/tracking/reconciliacao" element={<Reconciliacao />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </DashboardLayout>

@@ -98,31 +98,35 @@ export default function TrackingDashboard() {
     };
   }, [metrics]);
 
+  // Use withdrawable_revenue as the single source of truth for revenue display
+  const withdrawableOriginal = consolidated.latestWithdrawableOriginal ?? 0;
+  const withdrawableBrl = consolidated.latestWithdrawableBrl ?? 0;
+  const withdrawableCurrency = consolidated.latestWithdrawableCurrency || "BRL";
+
   // Always merge: auto-consolidated for event counts, manual for costs
   const effectiveKpis = useMemo(() => {
-    // Always use auto-consolidated event counts (source of truth from tracking_events)
     return {
       cliques: consolidated.totalClicks,
       registros: consolidated.totalRegistrations,
       ftd: consolidated.totalFtd,
       redepositos: consolidated.totalRedeposits,
       depositos: consolidated.totalDeposits,
-      revenue: consolidated.revenueBrl,
-      revLiq: consolidated.revenueBrl,
+      revenue: withdrawableBrl,
+      revLiq: withdrawableBrl,
       saque: 0,
       custoTrafego: 0,
       custoInfluencer: 0,
       custoTotal: 0,
       crRegistro: consolidated.totalClicks ? (consolidated.totalRegistrations / consolidated.totalClicks) * 100 : 0,
       crFtd: consolidated.totalClicks ? (consolidated.totalFtd / consolidated.totalClicks) * 100 : 0,
-      epc: consolidated.totalClicks ? consolidated.revenueBrl / consolidated.totalClicks : 0,
+      epc: consolidated.totalClicks ? withdrawableBrl / consolidated.totalClicks : 0,
       roi: 0,
       ticketMedio: 0,
-      revenuePerRegistro: consolidated.totalRegistrations ? consolidated.revenueBrl / consolidated.totalRegistrations : 0,
-      revenuePerFtd: consolidated.totalFtd ? consolidated.revenueBrl / consolidated.totalFtd : 0,
-      lucro: consolidated.revenueBrl,
+      revenuePerRegistro: consolidated.totalRegistrations ? withdrawableBrl / consolidated.totalRegistrations : 0,
+      revenuePerFtd: consolidated.totalFtd ? withdrawableBrl / consolidated.totalFtd : 0,
+      lucro: withdrawableBrl,
     };
-  }, [metrics, kpis, consolidated]);
+  }, [metrics, kpis, consolidated, withdrawableBrl]);
 
   const hasManualData = metrics.length > 0;
   const hasAnyData = hasManualData || hasAutoData;
@@ -222,8 +226,8 @@ export default function TrackingDashboard() {
   const realEvents = recentEvents.filter(e => !e.click_id?.startsWith("{") && e.status !== "invalid_legacy" && !e.canonical_event_name?.startsWith("{"));
 
   const revenueCardValue =
-    !consolidated.hasMultipleCurrencies && consolidated.revenueOriginalCurrency !== "BRL" && consolidated.revenueOriginal > 0
-      ? fmt(consolidated.revenueOriginal, consolidated.revenueOriginalCurrency)
+    withdrawableCurrency !== "BRL" && withdrawableOriginal > 0
+      ? fmt(withdrawableOriginal, withdrawableCurrency === "BRL" ? "BRL" : "USD")
       : fmt(effectiveKpis.revenue);
 
   const kpiCards = [
@@ -329,38 +333,27 @@ export default function TrackingDashboard() {
       />
 
       {/* Auto-consolidated revenue card with currency details */}
-      {hasAutoData && consolidated.revenueBrl > 0 && (
+      {hasAutoData && withdrawableOriginal > 0 && (
         <Card className="border-primary/20 bg-primary/[0.02]">
           <CardContent className="py-4">
             <div className="flex items-center gap-2 mb-3">
               <DollarSign size={14} className="text-primary" />
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Revenue Consolidado (automático)</span>
+              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Saldo Plataforma (tempo real)</span>
               {!hasManualData && (
-                <Badge variant="secondary" className="text-[10px] ml-auto">Dados de eventos em tempo real</Badge>
+                <Badge variant="secondary" className="text-[10px] ml-auto">Dados do último postback</Badge>
               )}
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {Object.entries(consolidated.byCurrency).map(([currency, data]) => (
-                <div key={currency} className="bg-background/60 rounded-lg p-3 border border-border/50">
-                  <p className="text-[10px] text-muted-foreground uppercase">Revenue ({currency})</p>
-                  <p className="text-lg font-bold">{fmt(data.total, currency === "BRL" ? "BRL" : "USD")}</p>
-                  {currency !== "BRL" && data.rate && (
-                    <div className="mt-1 space-y-0.5">
-                      <p className="text-xs text-muted-foreground">≈ {fmt(data.convertedBrl, "BRL")}</p>
-                      <p className="text-[10px] text-muted-foreground">
-                        1 {currency} = R$ {data.rate.toFixed(4)}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              ))}
               <div className="bg-background/60 rounded-lg p-3 border border-border/50">
-                <p className="text-[10px] text-muted-foreground uppercase">Total em BRL</p>
-                <p className="text-lg font-bold text-primary">{fmt(consolidated.revenueBrl, "BRL")}</p>
-                {consolidated.lastExchangeRateTimestamp && (
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    Cotação: {new Date(consolidated.lastExchangeRateTimestamp).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                  </p>
+                <p className="text-[10px] text-muted-foreground uppercase">Saldo ({withdrawableCurrency})</p>
+                <p className="text-lg font-bold">{fmt(withdrawableOriginal, withdrawableCurrency === "BRL" ? "BRL" : "USD")}</p>
+                {withdrawableCurrency !== "BRL" && consolidated.latestWithdrawableExchangeRate && (
+                  <div className="mt-1 space-y-0.5">
+                    <p className="text-xs text-muted-foreground">≈ {fmt(withdrawableBrl, "BRL")}</p>
+                    <p className="text-[10px] text-muted-foreground">
+                      1 {withdrawableCurrency} = R$ {consolidated.latestWithdrawableExchangeRate.toFixed(4)}
+                    </p>
+                  </div>
                 )}
               </div>
               <div className="bg-background/60 rounded-lg p-3 border border-border/50">
@@ -376,6 +369,12 @@ export default function TrackingDashboard() {
                 <div className="bg-background/60 rounded-lg p-3 border border-border/50">
                   <p className="text-[10px] text-muted-foreground uppercase">Plataforma</p>
                   <p className="text-lg font-bold">{consolidated.platformName}</p>
+                </div>
+              )}
+              {consolidated.latestWithdrawableTimestamp && (
+                <div className="bg-background/60 rounded-lg p-3 border border-border/50">
+                  <p className="text-[10px] text-muted-foreground uppercase">Atualizado em</p>
+                  <p className="text-sm font-bold">{new Date(consolidated.latestWithdrawableTimestamp).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</p>
                 </div>
               )}
             </div>

@@ -78,21 +78,23 @@ export default function TrackingOverviewCard() {
           </div>
         </div>
 
-        {consolidated.revenueBrl > 0 && (
+        {(consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0 && (
           <div className="bg-background/50 rounded-lg p-2.5 mb-3 border border-border/50">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[10px] text-muted-foreground uppercase">Revenue consolidado (verificado)</p>
-                {consolidated.revenueOriginalCurrency !== "BRL" ? (
+                <p className="text-[10px] text-muted-foreground uppercase">Saldo Plataforma (real)</p>
+                {consolidated.latestWithdrawableCurrency && consolidated.latestWithdrawableCurrency !== "BRL" && consolidated.latestWithdrawableOriginal != null ? (
                   <>
-                    <p className="text-sm font-bold">{fmtCurrency(consolidated.revenueOriginal, consolidated.revenueOriginalCurrency)}</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      ≈ {fmtCurrency(consolidated.revenueBrl, "BRL")}
-                      {consolidated.lastExchangeRate && ` · Taxa: ${consolidated.lastExchangeRate.toFixed(4)}`}
-                    </p>
+                    <p className="text-sm font-bold">{fmtCurrency(consolidated.latestWithdrawableOriginal, consolidated.latestWithdrawableCurrency)}</p>
+                    {consolidated.latestWithdrawableBrl != null && (
+                      <p className="text-[10px] text-muted-foreground">
+                        ≈ {fmtCurrency(consolidated.latestWithdrawableBrl, "BRL")}
+                        {consolidated.latestWithdrawableExchangeRate && ` · Taxa: ${consolidated.latestWithdrawableExchangeRate.toFixed(4)}`}
+                      </p>
+                    )}
                   </>
                 ) : (
-                  <p className="text-sm font-bold">{fmtCurrency(consolidated.revenueBrl, "BRL")}</p>
+                  <p className="text-sm font-bold">{fmtCurrency(consolidated.latestWithdrawableBrl || 0, "BRL")}</p>
                 )}
               </div>
               {consolidated.platformName && (

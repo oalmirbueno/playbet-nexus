@@ -215,25 +215,12 @@ export default function DashboardExecutivo() {
                 <DollarSign size={14} className="text-primary" />
                 <h3 className="text-sm font-semibold">Plataforma em tempo real</h3>
               </div>
-              <p className="text-xs text-muted-foreground mb-3">Receita recebida por postback e saldo sacável atual da plataforma.</p>
+              <p className="text-xs text-muted-foreground mb-3">Saldo sacável atual reportado pela plataforma.</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                {Object.entries(consolidated.byCurrency).map(([currency, data]) => (
-                  <div key={currency} className="bg-secondary/30 rounded-lg p-3 border border-border/50">
-                    <p className="text-[10px] text-muted-foreground uppercase">Revenue ({currency})</p>
-                    <p className="text-lg font-bold">{fmtCurrency(data.total, currency)}</p>
-                    {currency !== "BRL" && data.rate && (
-                      <p className="text-[10px] text-muted-foreground mt-0.5">≈ {formatBRL(data.convertedBrl)} · 1 {currency} = R$ {data.rate.toFixed(4)}</p>
-                    )}
-                  </div>
-                ))}
                 <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
-                  <p className="text-[10px] text-muted-foreground uppercase">Total em BRL</p>
-                  <p className="text-lg font-bold text-primary">{formatBRL(consolidated.revenueBrl)}</p>
-                </div>
-                <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
-                  <p className="text-[10px] text-muted-foreground uppercase">Saldo disponível</p>
-                  <p className="text-lg font-bold text-primary">{availableBalanceValue}</p>
-                  {hasAvailableBalance && consolidated.latestWithdrawableCurrency !== "BRL" && consolidated.latestWithdrawableBrl !== null && (
+                  <p className="text-[10px] text-muted-foreground uppercase">Saldo Plataforma</p>
+                  <p className="text-lg font-bold text-primary">{revenueValue}</p>
+                  {showOriginalRevenueAsPrimary && consolidated.latestWithdrawableBrl !== null && (
                     <p className="text-[10px] text-muted-foreground mt-0.5">≈ {formatBRL(consolidated.latestWithdrawableBrl)}</p>
                   )}
                 </div>
@@ -241,6 +228,18 @@ export default function DashboardExecutivo() {
                   <p className="text-[10px] text-muted-foreground uppercase">Funil</p>
                   <p className="text-sm font-bold">{consolidated.realClicksCount} cliques → {consolidated.totalRegistrations} reg → {consolidated.totalFtd} FTD</p>
                 </div>
+                {consolidated.platformName && (
+                  <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+                    <p className="text-[10px] text-muted-foreground uppercase">Plataforma</p>
+                    <p className="text-lg font-bold">{consolidated.platformName}</p>
+                  </div>
+                )}
+                {consolidated.latestWithdrawableTimestamp && (
+                  <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+                    <p className="text-[10px] text-muted-foreground uppercase">Atualizado em</p>
+                    <p className="text-sm font-bold">{new Date(consolidated.latestWithdrawableTimestamp).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
