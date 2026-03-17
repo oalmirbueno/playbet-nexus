@@ -221,11 +221,16 @@ export default function TrackingDashboard() {
   const hasInfra = accounts.length > 0 || recentEvents.length > 0;
   const realEvents = recentEvents.filter(e => !e.click_id?.startsWith("{") && e.status !== "invalid_legacy" && !e.canonical_event_name?.startsWith("{"));
 
+  const revenueCardValue =
+    !consolidated.hasMultipleCurrencies && consolidated.revenueOriginalCurrency !== "BRL" && consolidated.revenueOriginal > 0
+      ? fmt(consolidated.revenueOriginal, consolidated.revenueOriginalCurrency)
+      : fmt(effectiveKpis.revenue);
+
   const kpiCards = [
     { label: "Cliques Reais (LP)", value: fmtNum(consolidated.realClicksCount || effectiveKpis.cliques), icon: MousePointerClick, color: "text-primary" },
     { label: "Registros", value: fmtNum(effectiveKpis.registros), icon: UserPlus, color: "text-chart-2" },
     { label: "FTD", value: fmtNum(effectiveKpis.ftd), icon: Target, color: "text-chart-3" },
-    { label: "Revenue (plataforma)", value: fmt(effectiveKpis.revenue), icon: DollarSign, color: "text-chart-5" },
+    { label: "Revenue (plataforma)", value: revenueCardValue, icon: DollarSign, color: "text-chart-5" },
     { label: "Redepósitos", value: fmtNum(effectiveKpis.redepositos), icon: ArrowRightLeft, color: "text-chart-4" },
     { label: "Eventos Válidos", value: fmtNum(consolidated.eventCount), icon: Activity, color: "text-primary" },
   ];
