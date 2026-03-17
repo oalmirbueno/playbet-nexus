@@ -53,6 +53,8 @@ export function useAutoConsolidation() {
       if (error) return 0;
       return count || 0;
     },
+    refetchInterval: 5_000,
+    refetchOnWindowFocus: true,
   });
 
   // Last event timestamp
@@ -69,7 +71,8 @@ export function useAutoConsolidation() {
       if (error || !data) return null;
       return data.event_timestamp;
     },
-    refetchInterval: 30_000,
+    refetchInterval: 5_000,
+    refetchOnWindowFocus: true,
   });
 
   // Total valid event count
@@ -84,7 +87,8 @@ export function useAutoConsolidation() {
       if (error) return 0;
       return count || 0;
     },
-    refetchInterval: 30_000,
+    refetchInterval: 5_000,
+    refetchOnWindowFocus: true,
   });
 
   const consolidated = useMemo((): ConsolidatedMetrics => {

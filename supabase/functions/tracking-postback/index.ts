@@ -221,20 +221,78 @@ Deno.serve(async (req) => {
       is_duplicate: false,
     };
 
-    // === DEDUPLICATION ===
+    // === DEDUPLICATION / TRANSACTION UPDATES ===
     const txId = eventRecord.transaction_id;
-    if (txId && platformAccountId) {
-      const { data: existing } = await supabase
+    if (txId && (platformAccountId || platformId)) {
+      let existingQuery = supabase
         .from("tracking_events")
-        .select("id")
-        .eq("platform_account_id", platformAccountId)
+        .select("id, amount, original_amount, converted_amount_brl, original_currency, exchange_rate, exchange_rate_timestamp, commission_amount, status, country, platform_user_id, event_timestamp, raw_payload")
         .eq("transaction_id", txId)
         .eq("raw_event_name", rawEvent)
-        .limit(1)
-        .maybeSingle();
+        .limit(1);
+
+      existingQuery = platformAccountId
+        ? existingQuery.eq("platform_account_id", platformAccountId)
+        : existingQuery.eq("platform_id", platformId);
+
+      const { data: existing } = await existingQuery.maybeSingle();
+
       if (existing) {
+        const payloadChanged = JSON.stringify(existing.raw_payload || {}) !== JSON.stringify(eventRecord.raw_payload || {});
+        const hasMeaningfulChange =
+          existing.amount !== eventRecord.amount ||
+          existing.original_amount !== eventRecord.original_amount ||
+          existing.converted_amount_brl !== eventRecord.converted_amount_brl ||
+          existing.original_currency !== eventRecord.original_currency ||
+          existing.exchange_rate !== eventRecord.exchange_rate ||
+          existing.exchange_rate_timestamp !== eventRecord.exchange_rate_timestamp ||
+          existing.commission_amount !== eventRecord.commission_amount ||
+          existing.status !== eventRecord.status ||
+          existing.country !== eventRecord.country ||
+          existing.platform_user_id !== eventRecord.platform_user_id ||
+          existing.event_timestamp !== eventRecord.event_timestamp ||
+          payloadChanged;
+
+        if (!hasMeaningfulChange) {
+          return new Response(
+            JSON.stringify({ status: "duplicate", message: "Event already recorded", existing_id: existing.id }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        let { data: updated, error: updateError } = await supabase
+          .from("tracking_events")
+          .update(eventRecord)
+          .eq("id", existing.id)
+          .select()
+          .single();
+
+        if (updateError?.code === "23503") {
+          console.warn("FK violation on update, retrying without FK fields:", updateError.message);
+          eventRecord.influencer_id = null;
+          eventRecord.campanha_id = null;
+          const retryResult = await supabase
+            .from("tracking_events")
+            .update(eventRecord)
+            .eq("id", existing.id)
+            .select()
+            .single();
+          updated = retryResult.data;
+          updateError = retryResult.error;
+        }
+
+        if (updateError) throw updateError;
+
         return new Response(
-          JSON.stringify({ status: "duplicate", message: "Event already recorded", existing_id: existing.id }),
+          JSON.stringify({
+            status: "updated",
+            event_id: updated.id,
+            canonical_event: canonicalEvent,
+            original_amount: originalAmount,
+            original_currency: originalCurrency,
+            converted_brl: convertedAmountBrl,
+            exchange_rate: exchangeRate,
+          }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
