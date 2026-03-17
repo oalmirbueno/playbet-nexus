@@ -23,7 +23,6 @@ export interface ConsolidatedMetrics {
 }
 
 export function useAutoConsolidation() {
-  const { data: accounts } = usePlatformAccounts();
   const { data: platforms } = usePlatforms();
 
   // Pull from tracking_metrics (server-side consolidated, always up to date via trigger)
