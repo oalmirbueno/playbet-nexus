@@ -26,6 +26,55 @@ function looksLikeTemplateValue(val: string | null | undefined): boolean {
   return !!val && TEMPLATE_VALUE_REGEX.test(val.trim());
 }
 
+function sanitizeTemplateString(val: string | null | undefined): string | null {
+  if (!val) return null;
+  const trimmed = val.trim();
+  return looksLikeTemplateValue(trimmed) ? null : trimmed;
+}
+
+function resolveEventTimestamp(params: Record<string, string>): string {
+  const rawDate = sanitizeTemplateString(params.date);
+  const rawTimestamp = sanitizeTemplateString(params.timestamp);
+
+  if (rawDate) {
+    const unixSeconds = Number.parseInt(rawDate, 10);
+    if (!Number.isNaN(unixSeconds)) {
+      return new Date(unixSeconds * 1000).toISOString();
+    }
+
+    const parsedDate = new Date(rawDate);
+    if (!Number.isNaN(parsedDate.getTime())) {
+      return parsedDate.toISOString();
+    }
+  }
+
+  if (rawTimestamp) {
+    const parsedTimestamp = new Date(rawTimestamp);
+    if (!Number.isNaN(parsedTimestamp.getTime())) {
+      return parsedTimestamp.toISOString();
+    }
+  }
+
+  return new Date().toISOString();
+}
+
+function shouldMarkAsInvalidLegacy(params: Record<string, string>, rawEventInput: string | null | undefined, originalAmount: number | null, commissionAmount: number | null): boolean {
+  if (looksLikeTemplateValue(rawEventInput)) return true;
+
+  const hasConcreteSignal = [
+    params.transaction_id,
+    params.tid,
+    params.click_id,
+    params.sub1,
+    params.user_id,
+    params.player_id,
+    params.sub2,
+    params.sub3,
+  ].some((value) => sanitizeTemplateString(value) !== null);
+
+  return !hasConcreteSignal && originalAmount === null && commissionAmount === null;
+}
+
 // Fetch USD→BRL exchange rate from free API
 async function fetchExchangeRate(from: string, to: string): Promise<{ rate: number; timestamp: string } | null> {
   if (from.toUpperCase() === to.toUpperCase()) return { rate: 1, timestamp: new Date().toISOString() };
@@ -116,7 +165,8 @@ Deno.serve(async (req) => {
     }
 
     // Get event mapping
-    const rawEvent = params.event || params.action || params.type || "unknown";
+    const rawEventInput = params.event || params.action || params.type || "unknown";
+    const rawEvent = sanitizeTemplateString(rawEventInput) ?? "unknown";
     let canonicalEvent = rawEvent;
 
     if (platformId) {
@@ -139,30 +189,25 @@ Deno.serve(async (req) => {
     }
 
     // Extract SUBIDs
-    const sub1 = params.sub1 || params.click_id || null;
-    const sub2 = params.sub2 || null;
-    const sub3 = params.sub3 || null;
+    const sub1 = sanitizeTemplateString(params.sub1 || params.click_id);
+    const sub2 = sanitizeTemplateString(params.sub2);
+    const sub3 = sanitizeTemplateString(params.sub3);
 
     const clickId = sub1;
-    const influencerId = toUuidOrNull(sub2) || toUuidOrNull(params.influencer_id);
-    const campanhaId = toUuidOrNull(sub3) || toUuidOrNull(params.campanha_id);
+    const influencerId = toUuidOrNull(sub2) || toUuidOrNull(sanitizeTemplateString(params.influencer_id));
+    const campanhaId = toUuidOrNull(sub3) || toUuidOrNull(sanitizeTemplateString(params.campanha_id));
 
     // Parse amount safely
-    const parsedAmount = params.amount ? parseFloat(params.amount) : null;
-    const parsedCommission = params.commission ? parseFloat(params.commission) : null;
-
-    const hasTemplatePayload = [
-      rawEvent,
-      params.transaction_id || params.tid,
-      params.click_id || params.sub1,
-      params.amount,
-      params.currency,
-      params.user_id || params.player_id,
-    ].some((value) => looksLikeTemplateValue(value));
+    const amountParam = sanitizeTemplateString(params.amount);
+    const commissionParam = sanitizeTemplateString(params.commission);
+    const parsedAmount = amountParam ? parseFloat(amountParam) : null;
+    const parsedCommission = commissionParam ? parseFloat(commissionParam) : null;
 
     // Determine original currency from params or account
-    const originalCurrency = (params.currency || accountCurrency || "BRL").toUpperCase();
-    const originalAmount = !isNaN(parsedAmount!) ? parsedAmount : null;
+    const originalCurrency = (sanitizeTemplateString(params.currency) || accountCurrency || "BRL").toUpperCase();
+    const originalAmount = parsedAmount !== null && !Number.isNaN(parsedAmount) ? parsedAmount : null;
+    const commissionAmount = parsedCommission !== null && !Number.isNaN(parsedCommission) ? parsedCommission : null;
+    const hasTemplatePayload = shouldMarkAsInvalidLegacy(params, rawEventInput, originalAmount, commissionAmount);
 
     // Convert to BRL if needed
     let convertedAmountBrl = originalAmount;
@@ -197,13 +242,11 @@ Deno.serve(async (req) => {
       platform_id: platformId,
       platform_account_id: platformAccountId,
       click_id: clickId,
-      platform_user_id: params.user_id || params.player_id || null,
+      platform_user_id: sanitizeTemplateString(params.user_id || params.player_id),
       raw_event_name: rawEvent,
       canonical_event_name: canonicalEvent,
-      event_timestamp: params.timestamp || params.date
-        ? new Date(parseInt(params.date) * 1000 || params.timestamp || Date.now()).toISOString()
-        : new Date().toISOString(),
-      transaction_id: params.transaction_id || params.tid || null,
+      event_timestamp: resolveEventTimestamp(params),
+      transaction_id: sanitizeTemplateString(params.transaction_id || params.tid),
       amount: convertedAmountBrl,
       currency: "BRL",
       original_amount: originalAmount,
@@ -211,9 +254,9 @@ Deno.serve(async (req) => {
       converted_amount_brl: convertedAmountBrl,
       exchange_rate: exchangeRate,
       exchange_rate_timestamp: exchangeRateTimestamp,
-      commission_amount: !isNaN(parsedCommission!) ? parsedCommission : null,
-      status: hasTemplatePayload ? "invalid_legacy" : params.status || null,
-      country: params.country || null,
+      commission_amount: commissionAmount,
+      status: hasTemplatePayload ? "invalid_legacy" : sanitizeTemplateString(params.status),
+      country: sanitizeTemplateString(params.country),
       source_type: "postback",
       raw_payload: rawPayload,
       influencer_id: influencerId,
