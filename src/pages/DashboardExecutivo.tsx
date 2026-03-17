@@ -1,3 +1,4 @@
+// DashboardExecutivo - consolidated view
 import { useMemo } from "react";
 import { DollarSign, Users, Wallet, BarChart3, Target, MousePointerClick, Megaphone, ArrowRight, Landmark, Clock, TrendingUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
