@@ -226,8 +226,8 @@ export default function TrackingDashboard() {
   const realEvents = recentEvents.filter(e => !e.click_id?.startsWith("{") && e.status !== "invalid_legacy" && !e.canonical_event_name?.startsWith("{"));
 
   const revenueCardValue =
-    !consolidated.hasMultipleCurrencies && consolidated.revenueOriginalCurrency !== "BRL" && consolidated.revenueOriginal > 0
-      ? fmt(consolidated.revenueOriginal, consolidated.revenueOriginalCurrency)
+    withdrawableCurrency !== "BRL" && withdrawableOriginal > 0
+      ? fmt(withdrawableOriginal, withdrawableCurrency === "BRL" ? "BRL" : "USD")
       : fmt(effectiveKpis.revenue);
 
   const kpiCards = [
