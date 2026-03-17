@@ -165,7 +165,8 @@ Deno.serve(async (req) => {
     }
 
     // Get event mapping
-    const rawEvent = params.event || params.action || params.type || "unknown";
+    const rawEventInput = params.event || params.action || params.type || "unknown";
+    const rawEvent = sanitizeTemplateString(rawEventInput) ?? "unknown";
     let canonicalEvent = rawEvent;
 
     if (platformId) {
@@ -188,30 +189,25 @@ Deno.serve(async (req) => {
     }
 
     // Extract SUBIDs
-    const sub1 = params.sub1 || params.click_id || null;
-    const sub2 = params.sub2 || null;
-    const sub3 = params.sub3 || null;
+    const sub1 = sanitizeTemplateString(params.sub1 || params.click_id);
+    const sub2 = sanitizeTemplateString(params.sub2);
+    const sub3 = sanitizeTemplateString(params.sub3);
 
     const clickId = sub1;
-    const influencerId = toUuidOrNull(sub2) || toUuidOrNull(params.influencer_id);
-    const campanhaId = toUuidOrNull(sub3) || toUuidOrNull(params.campanha_id);
+    const influencerId = toUuidOrNull(sub2) || toUuidOrNull(sanitizeTemplateString(params.influencer_id));
+    const campanhaId = toUuidOrNull(sub3) || toUuidOrNull(sanitizeTemplateString(params.campanha_id));
 
     // Parse amount safely
-    const parsedAmount = params.amount ? parseFloat(params.amount) : null;
-    const parsedCommission = params.commission ? parseFloat(params.commission) : null;
-
-    const hasTemplatePayload = [
-      rawEvent,
-      params.transaction_id || params.tid,
-      params.click_id || params.sub1,
-      params.amount,
-      params.currency,
-      params.user_id || params.player_id,
-    ].some((value) => looksLikeTemplateValue(value));
+    const amountParam = sanitizeTemplateString(params.amount);
+    const commissionParam = sanitizeTemplateString(params.commission);
+    const parsedAmount = amountParam ? parseFloat(amountParam) : null;
+    const parsedCommission = commissionParam ? parseFloat(commissionParam) : null;
 
     // Determine original currency from params or account
-    const originalCurrency = (params.currency || accountCurrency || "BRL").toUpperCase();
-    const originalAmount = !isNaN(parsedAmount!) ? parsedAmount : null;
+    const originalCurrency = (sanitizeTemplateString(params.currency) || accountCurrency || "BRL").toUpperCase();
+    const originalAmount = parsedAmount !== null && !Number.isNaN(parsedAmount) ? parsedAmount : null;
+    const commissionAmount = parsedCommission !== null && !Number.isNaN(parsedCommission) ? parsedCommission : null;
+    const hasTemplatePayload = shouldMarkAsInvalidLegacy(params, rawEventInput, originalAmount, commissionAmount);
 
     // Convert to BRL if needed
     let convertedAmountBrl = originalAmount;
