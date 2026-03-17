@@ -30,92 +30,62 @@ export interface ConsolidatedMetrics {
 export function useAutoConsolidation() {
   const { data: platforms } = usePlatforms();
 
-  // Pull from tracking_metrics (server-side consolidated, always up to date via trigger)
-  const { data: metrics = [], isLoading: metricsLoading } = useQuery({
-    queryKey: ["tracking_metrics_consolidated"],
+  // Single consolidated query to avoid "Should have a queue" React error
+  const { data: trackingData, isLoading: metricsLoading } = useQuery({
+    queryKey: ["tracking_consolidated_all"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tracking_metrics")
-        .select("*")
-        .eq("is_demo", false)
-        .eq("origem_importacao", "auto_consolidation")
-        .order("data_ref", { ascending: false });
-      if (error) throw error;
-      return data || [];
+      const [metricsRes, clicksRes, lastEventRes, eventCountRes, withdrawableRes] = await Promise.all([
+        supabase
+          .from("tracking_metrics")
+          .select("*")
+          .eq("is_demo", false)
+          .eq("origem_importacao", "auto_consolidation")
+          .order("data_ref", { ascending: false }),
+        supabase
+          .from("clicks")
+          .select("*", { count: "exact", head: true })
+          .eq("is_demo", false),
+        supabase
+          .from("tracking_events")
+          .select("event_timestamp")
+          .eq("is_demo", false)
+          .neq("status", "invalid_legacy")
+          .order("event_timestamp", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from("tracking_events")
+          .select("*", { count: "exact", head: true })
+          .eq("is_demo", false)
+          .neq("status", "invalid_legacy"),
+        supabase
+          .from("tracking_events")
+          .select("platform_id, event_timestamp, original_amount, original_currency, converted_amount_brl, exchange_rate")
+          .eq("is_demo", false)
+          .neq("status", "invalid_legacy")
+          .eq("canonical_event_name", "withdrawable_revenue")
+          .order("event_timestamp", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ]);
+
+      return {
+        metrics: metricsRes.data || [],
+        realClicksCount: clicksRes.count || 0,
+        lastEventTs: lastEventRes.data?.event_timestamp || null,
+        eventCount: eventCountRes.count || 0,
+        latestWithdrawable: withdrawableRes.data || null,
+      };
     },
     refetchInterval: 5_000,
     refetchOnWindowFocus: true,
   });
 
-  // Real clicks count from clicks table
-  const { data: realClicksCount = 0 } = useQuery({
-    queryKey: ["real_clicks_count"],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from("clicks")
-        .select("*", { count: "exact", head: true })
-        .eq("is_demo", false);
-      if (error) return 0;
-      return count || 0;
-    },
-    refetchInterval: 5_000,
-    refetchOnWindowFocus: true,
-  });
-
-  // Last valid event timestamp
-  const { data: lastEventTs = null } = useQuery({
-    queryKey: ["last_event_timestamp"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tracking_events")
-        .select("event_timestamp")
-        .eq("is_demo", false)
-        .neq("status", "invalid_legacy")
-        .order("event_timestamp", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (error || !data) return null;
-      return data.event_timestamp;
-    },
-    refetchInterval: 5_000,
-    refetchOnWindowFocus: true,
-  });
-
-  // Total valid event count
-  const { data: eventCount = 0 } = useQuery({
-    queryKey: ["valid_events_count"],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from("tracking_events")
-        .select("*", { count: "exact", head: true })
-        .eq("is_demo", false)
-        .neq("status", "invalid_legacy");
-      if (error) return 0;
-      return count || 0;
-    },
-    refetchInterval: 5_000,
-    refetchOnWindowFocus: true,
-  });
-
-  // Latest available/withdrawable revenue snapshot from the platform
-  const { data: latestWithdrawable = null } = useQuery({
-    queryKey: ["latest_withdrawable_revenue"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tracking_events")
-        .select("platform_id, event_timestamp, original_amount, original_currency, converted_amount_brl, exchange_rate")
-        .eq("is_demo", false)
-        .neq("status", "invalid_legacy")
-        .eq("canonical_event_name", "withdrawable_revenue")
-        .order("event_timestamp", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (error) return null;
-      return data;
-    },
-    refetchInterval: 5_000,
-    refetchOnWindowFocus: true,
-  });
+  const metrics = trackingData?.metrics ?? [];
+  const realClicksCount = trackingData?.realClicksCount ?? 0;
+  const lastEventTs = trackingData?.lastEventTs ?? null;
+  const eventCount = trackingData?.eventCount ?? 0;
+  const latestWithdrawable = trackingData?.latestWithdrawable ?? null;
 
   const consolidated = useMemo((): ConsolidatedMetrics => {
     const result: ConsolidatedMetrics = {
@@ -144,7 +114,6 @@ export function useAutoConsolidation() {
 
     if (metrics.length === 0 && !latestWithdrawable) return result;
 
-    // Get platform name from first metric with a platform_id, or from latest withdrawable snapshot
     const firstWithPlatform = metrics.find((m: any) => m.platform_id);
     const platformId = firstWithPlatform?.platform_id || latestWithdrawable?.platform_id || null;
     if (platformId) {
@@ -195,7 +164,7 @@ export function useAutoConsolidation() {
 
   return {
     consolidated,
-    realEvents: [], // deprecated - use tracking_events queries directly if needed
+    realEvents: [],
     isLoading: metricsLoading,
     hasData: metrics.length > 0 || eventCount > 0 || !!latestWithdrawable,
   };
