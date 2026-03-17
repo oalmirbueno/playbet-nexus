@@ -120,28 +120,26 @@ export default function Dashboard() {
       </div>
 
       {/* Tracking Revenue Summary - when real tracking data exists */}
-      {hasTrackingData && consolidated.revenueBrl > 0 && (
+      {hasTrackingData && (consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0 && (
         <div className="glass-card p-6 border-l-4 border-l-primary cursor-pointer hover:bg-secondary/20 transition-colors" onClick={() => navigate("/tracking")}>
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h3 className="text-sm font-semibold">Revenue da Plataforma (Tracking)</h3>
-              <p className="text-[10px] text-muted-foreground">Não é caixa — valor reportado pela plataforma</p>
+              <h3 className="text-sm font-semibold">Saldo Plataforma (Tracking)</h3>
+              <p className="text-[10px] text-muted-foreground">Saldo real reportado pela plataforma</p>
             </div>
             <ArrowRight size={14} className="text-muted-foreground" />
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {Object.entries(consolidated.byCurrency).map(([currency, data]) => (
-              <div key={currency}>
-                <p className="text-[10px] text-muted-foreground uppercase">Revenue ({currency})</p>
-                <p className="text-lg font-bold">{data.total.toLocaleString("pt-BR", { style: "currency", currency: currency === "BRL" ? "BRL" : "USD" })}</p>
-                {currency !== "BRL" && data.rate && (
-                  <p className="text-[10px] text-muted-foreground">≈ {formatBRL(data.convertedBrl)} · Taxa: {data.rate.toFixed(4)}</p>
-                )}
-              </div>
-            ))}
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase">Total BRL</p>
-              <p className="text-lg font-bold text-primary">{formatBRL(consolidated.revenueBrl)}</p>
+              <p className="text-[10px] text-muted-foreground uppercase">Saldo</p>
+              <p className="text-lg font-bold text-primary">
+                {consolidated.latestWithdrawableCurrency && consolidated.latestWithdrawableCurrency !== "BRL" && consolidated.latestWithdrawableOriginal != null
+                  ? consolidated.latestWithdrawableOriginal.toLocaleString("pt-BR", { style: "currency", currency: "USD" })
+                  : formatBRL(consolidated.latestWithdrawableBrl || 0)}
+              </p>
+              {consolidated.latestWithdrawableCurrency !== "BRL" && consolidated.latestWithdrawableBrl != null && (
+                <p className="text-[10px] text-muted-foreground">≈ {formatBRL(consolidated.latestWithdrawableBrl)}</p>
+              )}
             </div>
             <div>
               <p className="text-[10px] text-muted-foreground uppercase">Cliques reais</p>
