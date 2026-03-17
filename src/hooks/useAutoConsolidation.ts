@@ -33,11 +33,13 @@ export function useAutoConsolidation() {
         .from("tracking_metrics")
         .select("*")
         .eq("is_demo", false)
+        .eq("origem_importacao", "auto_consolidation")
         .order("data_ref", { ascending: false });
       if (error) throw error;
       return data || [];
     },
-    refetchInterval: 30_000,
+    refetchInterval: 5_000,
+    refetchOnWindowFocus: true,
   });
 
   // Real clicks count from clicks table

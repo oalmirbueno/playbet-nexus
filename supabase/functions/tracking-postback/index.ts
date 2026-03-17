@@ -12,6 +12,7 @@ const CANONICAL_EVENTS = [
 ];
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const TEMPLATE_VALUE_REGEX = /^\{.+\}$/;
 
 function isValidUuid(val: string | null | undefined): boolean {
   return !!val && UUID_REGEX.test(val);
@@ -19,6 +20,10 @@ function isValidUuid(val: string | null | undefined): boolean {
 
 function toUuidOrNull(val: string | null | undefined): string | null {
   return isValidUuid(val) ? val! : null;
+}
+
+function looksLikeTemplateValue(val: string | null | undefined): boolean {
+  return !!val && TEMPLATE_VALUE_REGEX.test(val.trim());
 }
 
 // Fetch USD→BRL exchange rate from free API
