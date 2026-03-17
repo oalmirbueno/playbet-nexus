@@ -118,11 +118,11 @@ export default function DashboardExecutivo() {
     },
     {
       label: "Saldo Disponível",
-      value: hasCaixaRealizado ? formatBRL(totalPagosAsaas) : "—",
+      value: availableBalanceValue,
       icon: Wallet,
-      path: "/financeiro",
-      sub: hasCaixaRealizado ? "Fonte: Asaas" : "Aguardando integração Asaas",
-      pending: !hasCaixaRealizado,
+      path: "/tracking",
+      sub: availableBalanceSub,
+      pending: !hasAvailableBalance,
     },
     {
       label: "Campanhas",
