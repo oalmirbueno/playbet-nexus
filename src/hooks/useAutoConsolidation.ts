@@ -1,3 +1,4 @@
+// Consolidated tracking data hook
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePlatforms } from "@/hooks/useSupabaseQuery";
