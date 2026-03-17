@@ -212,7 +212,7 @@ Deno.serve(async (req) => {
       exchange_rate: exchangeRate,
       exchange_rate_timestamp: exchangeRateTimestamp,
       commission_amount: !isNaN(parsedCommission!) ? parsedCommission : null,
-      status: params.status || null,
+      status: hasTemplatePayload ? "invalid_legacy" : params.status || null,
       country: params.country || null,
       source_type: "postback",
       raw_payload: rawPayload,
