@@ -98,31 +98,35 @@ export default function TrackingDashboard() {
     };
   }, [metrics]);
 
+  // Use withdrawable_revenue as the single source of truth for revenue display
+  const withdrawableOriginal = consolidated.latestWithdrawableOriginal ?? 0;
+  const withdrawableBrl = consolidated.latestWithdrawableBrl ?? 0;
+  const withdrawableCurrency = consolidated.latestWithdrawableCurrency || "BRL";
+
   // Always merge: auto-consolidated for event counts, manual for costs
   const effectiveKpis = useMemo(() => {
-    // Always use auto-consolidated event counts (source of truth from tracking_events)
     return {
       cliques: consolidated.totalClicks,
       registros: consolidated.totalRegistrations,
       ftd: consolidated.totalFtd,
       redepositos: consolidated.totalRedeposits,
       depositos: consolidated.totalDeposits,
-      revenue: consolidated.revenueBrl,
-      revLiq: consolidated.revenueBrl,
+      revenue: withdrawableBrl,
+      revLiq: withdrawableBrl,
       saque: 0,
       custoTrafego: 0,
       custoInfluencer: 0,
       custoTotal: 0,
       crRegistro: consolidated.totalClicks ? (consolidated.totalRegistrations / consolidated.totalClicks) * 100 : 0,
       crFtd: consolidated.totalClicks ? (consolidated.totalFtd / consolidated.totalClicks) * 100 : 0,
-      epc: consolidated.totalClicks ? consolidated.revenueBrl / consolidated.totalClicks : 0,
+      epc: consolidated.totalClicks ? withdrawableBrl / consolidated.totalClicks : 0,
       roi: 0,
       ticketMedio: 0,
-      revenuePerRegistro: consolidated.totalRegistrations ? consolidated.revenueBrl / consolidated.totalRegistrations : 0,
-      revenuePerFtd: consolidated.totalFtd ? consolidated.revenueBrl / consolidated.totalFtd : 0,
-      lucro: consolidated.revenueBrl,
+      revenuePerRegistro: consolidated.totalRegistrations ? withdrawableBrl / consolidated.totalRegistrations : 0,
+      revenuePerFtd: consolidated.totalFtd ? withdrawableBrl / consolidated.totalFtd : 0,
+      lucro: withdrawableBrl,
     };
-  }, [metrics, kpis, consolidated]);
+  }, [metrics, kpis, consolidated, withdrawableBrl]);
 
   const hasManualData = metrics.length > 0;
   const hasAnyData = hasManualData || hasAutoData;
