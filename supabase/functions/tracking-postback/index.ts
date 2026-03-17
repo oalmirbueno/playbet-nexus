@@ -151,6 +151,15 @@ Deno.serve(async (req) => {
     const parsedAmount = params.amount ? parseFloat(params.amount) : null;
     const parsedCommission = params.commission ? parseFloat(params.commission) : null;
 
+    const hasTemplatePayload = [
+      rawEvent,
+      params.transaction_id || params.tid,
+      params.click_id || params.sub1,
+      params.amount,
+      params.currency,
+      params.user_id || params.player_id,
+    ].some((value) => looksLikeTemplateValue(value));
+
     // Determine original currency from params or account
     const originalCurrency = (params.currency || accountCurrency || "BRL").toUpperCase();
     const originalAmount = !isNaN(parsedAmount!) ? parsedAmount : null;
