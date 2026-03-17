@@ -114,6 +114,7 @@ function ProtectedRoutes() {
         <Route path="/tracking/events" element={<TrackingEvents />} />
         <Route path="/tracking/snapshots" element={<TrackingSnapshots />} />
         <Route path="/tracking/links" element={<TrackingLinks />} />
+        <Route path="/tracking/reconciliacao" element={<Reconciliacao />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </DashboardLayout>
