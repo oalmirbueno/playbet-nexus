@@ -61,20 +61,22 @@ export default function DashboardExecutivo() {
     [socios]
   );
 
-  const hasVerifiedRevenue = hasTrackingData && (consolidated.revenueOriginal > 0 || consolidated.revenueBrl > 0);
-  const hasAvailableBalance = (consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0;
+  const hasVerifiedRevenue = hasTrackingData && (consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0;
+  const hasAvailableBalance = hasVerifiedRevenue;
   const hasCaixaRealizado = totalPagosAsaas > 0;
-  const showOriginalRevenueAsPrimary =
-    hasVerifiedRevenue && !consolidated.hasMultipleCurrencies && consolidated.revenueOriginalCurrency !== "BRL";
+
+  const revCurrency = consolidated.latestWithdrawableCurrency || "BRL";
+  const showOriginalRevenueAsPrimary = hasVerifiedRevenue && revCurrency !== "BRL";
+
   const revenueValue = hasVerifiedRevenue
     ? showOriginalRevenueAsPrimary
-      ? fmtCurrency(consolidated.revenueOriginal, consolidated.revenueOriginalCurrency)
-      : formatBRL(consolidated.revenueBrl)
+      ? fmtCurrency(consolidated.latestWithdrawableOriginal!, revCurrency)
+      : formatBRL(consolidated.latestWithdrawableBrl || consolidated.latestWithdrawableOriginal || 0)
     : "—";
   const revenueSub = hasVerifiedRevenue
     ? showOriginalRevenueAsPrimary
-      ? `≈ ${formatBRL(consolidated.revenueBrl)} · revenue reportado`
-      : "Não é caixa — apenas revenue reportado"
+      ? `≈ ${formatBRL(consolidated.latestWithdrawableBrl!)} · saldo real da plataforma`
+      : "Saldo real da plataforma"
     : "Aguardando postbacks";
   const availableBalanceValue = hasAvailableBalance
     ? consolidated.latestWithdrawableCurrency && consolidated.latestWithdrawableCurrency !== "BRL" && consolidated.latestWithdrawableOriginal !== null
