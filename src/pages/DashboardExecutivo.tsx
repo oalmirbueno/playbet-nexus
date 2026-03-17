@@ -61,7 +61,18 @@ export default function DashboardExecutivo() {
   );
 
   const hasVerifiedRevenue = hasTrackingData && consolidated.revenueBrl > 0;
+  const hasAvailableBalance = (consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0;
   const hasCaixaRealizado = totalPagosAsaas > 0;
+  const availableBalanceValue = hasAvailableBalance
+    ? consolidated.latestWithdrawableCurrency && consolidated.latestWithdrawableCurrency !== "BRL" && consolidated.latestWithdrawableOriginal !== null
+      ? fmtCurrency(consolidated.latestWithdrawableOriginal, consolidated.latestWithdrawableCurrency)
+      : formatBRL(consolidated.latestWithdrawableBrl || consolidated.latestWithdrawableOriginal || 0)
+    : "—";
+  const availableBalanceSub = hasAvailableBalance
+    ? consolidated.latestWithdrawableCurrency && consolidated.latestWithdrawableCurrency !== "BRL" && consolidated.latestWithdrawableBrl !== null
+      ? `≈ ${formatBRL(consolidated.latestWithdrawableBrl)} · saldo sacável`
+      : "Saldo sacável em tempo real"
+    : "Aguardando postback available_revenue";
 
   // 8 KPIs — always visible
   const kpis = [
@@ -107,11 +118,11 @@ export default function DashboardExecutivo() {
     },
     {
       label: "Saldo Disponível",
-      value: hasCaixaRealizado ? formatBRL(totalPagosAsaas) : "—",
+      value: availableBalanceValue,
       icon: Wallet,
-      path: "/financeiro",
-      sub: hasCaixaRealizado ? "Fonte: Asaas" : "Aguardando integração Asaas",
-      pending: !hasCaixaRealizado,
+      path: "/tracking",
+      sub: availableBalanceSub,
+      pending: !hasAvailableBalance,
     },
     {
       label: "Campanhas",
@@ -183,13 +194,13 @@ export default function DashboardExecutivo() {
           </div>
 
           {/* Revenue Detail */}
-          {hasVerifiedRevenue && (
+          {(hasVerifiedRevenue || hasAvailableBalance) && (
             <div className="glass-card p-6 border-l-4 border-l-primary">
               <div className="flex items-center gap-2 mb-1">
                 <DollarSign size={14} className="text-primary" />
-                <h3 className="text-sm font-semibold">Revenue da Plataforma (não é caixa)</h3>
+                <h3 className="text-sm font-semibold">Plataforma em tempo real</h3>
               </div>
-              <p className="text-xs text-muted-foreground mb-3">Valor reportado pela plataforma. Caixa realizado só após saque efetivado via Asaas.</p>
+              <p className="text-xs text-muted-foreground mb-3">Receita recebida por postback e saldo sacável atual da plataforma.</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {Object.entries(consolidated.byCurrency).map(([currency, data]) => (
                   <div key={currency} className="bg-secondary/30 rounded-lg p-3 border border-border/50">
@@ -203,6 +214,13 @@ export default function DashboardExecutivo() {
                 <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
                   <p className="text-[10px] text-muted-foreground uppercase">Total em BRL</p>
                   <p className="text-lg font-bold text-primary">{formatBRL(consolidated.revenueBrl)}</p>
+                </div>
+                <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+                  <p className="text-[10px] text-muted-foreground uppercase">Saldo disponível</p>
+                  <p className="text-lg font-bold text-primary">{availableBalanceValue}</p>
+                  {hasAvailableBalance && consolidated.latestWithdrawableCurrency !== "BRL" && consolidated.latestWithdrawableBrl !== null && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5">≈ {formatBRL(consolidated.latestWithdrawableBrl)}</p>
+                  )}
                 </div>
                 <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
                   <p className="text-[10px] text-muted-foreground uppercase">Funil</p>

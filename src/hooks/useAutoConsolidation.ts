@@ -20,6 +20,11 @@ export interface ConsolidatedMetrics {
   hasMultipleCurrencies: boolean;
   byCurrency: Record<string, { total: number; convertedBrl: number; rate: number | null }>;
   realClicksCount: number;
+  latestWithdrawableOriginal: number | null;
+  latestWithdrawableCurrency: string | null;
+  latestWithdrawableBrl: number | null;
+  latestWithdrawableExchangeRate: number | null;
+  latestWithdrawableTimestamp: string | null;
 }
 
 export function useAutoConsolidation() {
@@ -57,7 +62,7 @@ export function useAutoConsolidation() {
     refetchOnWindowFocus: true,
   });
 
-  // Last event timestamp
+  // Last valid event timestamp
   const { data: lastEventTs = null } = useQuery({
     queryKey: ["last_event_timestamp"],
     queryFn: async () => {
@@ -65,6 +70,7 @@ export function useAutoConsolidation() {
         .from("tracking_events")
         .select("event_timestamp")
         .eq("is_demo", false)
+        .neq("status", "invalid_legacy")
         .order("event_timestamp", { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -91,6 +97,26 @@ export function useAutoConsolidation() {
     refetchOnWindowFocus: true,
   });
 
+  // Latest available/withdrawable revenue snapshot from the platform
+  const { data: latestWithdrawable = null } = useQuery({
+    queryKey: ["latest_withdrawable_revenue"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tracking_events")
+        .select("platform_id, event_timestamp, original_amount, original_currency, converted_amount_brl, exchange_rate")
+        .eq("is_demo", false)
+        .neq("status", "invalid_legacy")
+        .eq("canonical_event_name", "withdrawable_revenue")
+        .order("event_timestamp", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) return null;
+      return data;
+    },
+    refetchInterval: 5_000,
+    refetchOnWindowFocus: true,
+  });
+
   const consolidated = useMemo((): ConsolidatedMetrics => {
     const result: ConsolidatedMetrics = {
       totalClicks: 0,
@@ -109,14 +135,20 @@ export function useAutoConsolidation() {
       hasMultipleCurrencies: false,
       byCurrency: {},
       realClicksCount,
+      latestWithdrawableOriginal: latestWithdrawable?.original_amount ?? latestWithdrawable?.converted_amount_brl ?? null,
+      latestWithdrawableCurrency: latestWithdrawable?.original_currency ?? (latestWithdrawable?.converted_amount_brl != null ? "BRL" : null),
+      latestWithdrawableBrl: latestWithdrawable?.converted_amount_brl ?? latestWithdrawable?.original_amount ?? null,
+      latestWithdrawableExchangeRate: latestWithdrawable?.exchange_rate ?? null,
+      latestWithdrawableTimestamp: latestWithdrawable?.event_timestamp ?? null,
     };
 
-    if (metrics.length === 0) return result;
+    if (metrics.length === 0 && !latestWithdrawable) return result;
 
-    // Get platform name from first metric with a platform_id
+    // Get platform name from first metric with a platform_id, or from latest withdrawable snapshot
     const firstWithPlatform = metrics.find((m: any) => m.platform_id);
-    if (firstWithPlatform) {
-      const plat = (platforms as any[])?.find((p: any) => p.id === firstWithPlatform.platform_id);
+    const platformId = firstWithPlatform?.platform_id || latestWithdrawable?.platform_id || null;
+    if (platformId) {
+      const plat = (platforms as any[])?.find((p: any) => p.id === platformId);
       if (plat) result.platformName = plat.name;
     }
 
@@ -159,12 +191,12 @@ export function useAutoConsolidation() {
     result.hasMultipleCurrencies = currencies.size > 1;
 
     return result;
-  }, [metrics, platforms, realClicksCount, lastEventTs, eventCount]);
+  }, [metrics, platforms, realClicksCount, lastEventTs, eventCount, latestWithdrawable]);
 
   return {
     consolidated,
     realEvents: [], // deprecated - use tracking_events queries directly if needed
     isLoading: metricsLoading,
-    hasData: metrics.length > 0 || eventCount > 0,
+    hasData: metrics.length > 0 || eventCount > 0 || !!latestWithdrawable,
   };
 }
