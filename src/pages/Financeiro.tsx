@@ -45,6 +45,12 @@ export default function Financeiro() {
   const { data: influencers, isLoading: loadingInfluencers } = useInfluencers();
   const { consolidated, hasData: hasTrackingData } = useAutoConsolidation();
   const [tab, setTab] = useState<TabKey>("visao");
+  const hasAvailableBalance = (consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0;
+  const availableBalanceValue = hasAvailableBalance
+    ? consolidated.latestWithdrawableCurrency && consolidated.latestWithdrawableCurrency !== "BRL" && consolidated.latestWithdrawableOriginal !== null
+      ? fmtCurrency(consolidated.latestWithdrawableOriginal, consolidated.latestWithdrawableCurrency)
+      : formatBRL(consolidated.latestWithdrawableBrl || consolidated.latestWithdrawableOriginal || 0)
+    : "—";
 
   const loading = loadingSocios || loadingSaques || loadingInfluencers;
 

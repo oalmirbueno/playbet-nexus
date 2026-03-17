@@ -95,6 +95,15 @@ const WIN_EVENTS: PlatformEventPreset[] = [
     advanced_macros: ["event_id", "date", "hash_id", "hash_name", "source_id", "source_name"],
   },
   {
+    raw_event_name: "available_revenue",
+    canonical_event_name: "withdrawable_revenue",
+    label: "Saldo disponível",
+    extra_macros: ["amount", "user_id", "country"],
+    has_amount: true,
+    has_transaction_id: false,
+    advanced_macros: ["event_id", "date", "hash_id", "hash_name", "source_id", "source_name"],
+  },
+  {
     raw_event_name: "deposit",
     canonical_event_name: "deposit",
     label: "Todos os depósitos",

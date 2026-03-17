@@ -61,7 +61,18 @@ export default function DashboardExecutivo() {
   );
 
   const hasVerifiedRevenue = hasTrackingData && consolidated.revenueBrl > 0;
+  const hasAvailableBalance = (consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0;
   const hasCaixaRealizado = totalPagosAsaas > 0;
+  const availableBalanceValue = hasAvailableBalance
+    ? consolidated.latestWithdrawableCurrency && consolidated.latestWithdrawableCurrency !== "BRL" && consolidated.latestWithdrawableOriginal !== null
+      ? fmtCurrency(consolidated.latestWithdrawableOriginal, consolidated.latestWithdrawableCurrency)
+      : formatBRL(consolidated.latestWithdrawableBrl || consolidated.latestWithdrawableOriginal || 0)
+    : "—";
+  const availableBalanceSub = hasAvailableBalance
+    ? consolidated.latestWithdrawableCurrency && consolidated.latestWithdrawableCurrency !== "BRL" && consolidated.latestWithdrawableBrl !== null
+      ? `≈ ${formatBRL(consolidated.latestWithdrawableBrl)} · saldo sacável`
+      : "Saldo sacável em tempo real"
+    : "Aguardando postback available_revenue";
 
   // 8 KPIs — always visible
   const kpis = [
