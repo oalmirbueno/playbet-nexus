@@ -62,7 +62,7 @@ export default function DashboardExecutivo() {
   );
 
   const hasVerifiedRevenue = hasTrackingData && (consolidated.revenueOriginal > 0 || consolidated.revenueBrl > 0);
-  const hasAvailableBalance = (consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0;
+  const hasAvailableBalance = hasVerifiedRevenue;
   const hasCaixaRealizado = totalPagosAsaas > 0;
   const showOriginalRevenueAsPrimary =
     hasVerifiedRevenue && !consolidated.hasMultipleCurrencies && consolidated.revenueOriginalCurrency !== "BRL";
@@ -76,16 +76,16 @@ export default function DashboardExecutivo() {
       ? `≈ ${formatBRL(consolidated.revenueBrl)} · revenue reportado`
       : "Não é caixa — apenas revenue reportado"
     : "Aguardando postbacks";
-  const availableBalanceValue = hasAvailableBalance
-    ? consolidated.latestWithdrawableCurrency && consolidated.latestWithdrawableCurrency !== "BRL" && consolidated.latestWithdrawableOriginal !== null
-      ? fmtCurrency(consolidated.latestWithdrawableOriginal, consolidated.latestWithdrawableCurrency)
-      : formatBRL(consolidated.latestWithdrawableBrl || consolidated.latestWithdrawableOriginal || 0)
+  const availableBalanceValue = hasVerifiedRevenue
+    ? showOriginalRevenueAsPrimary
+      ? fmtCurrency(consolidated.revenueOriginal, consolidated.revenueOriginalCurrency)
+      : formatBRL(consolidated.revenueBrl)
     : "—";
-  const availableBalanceSub = hasAvailableBalance
-    ? consolidated.latestWithdrawableCurrency && consolidated.latestWithdrawableCurrency !== "BRL" && consolidated.latestWithdrawableBrl !== null
-      ? `≈ ${formatBRL(consolidated.latestWithdrawableBrl)} · saldo sacável`
-      : "Saldo sacável em tempo real"
-    : "Aguardando postback available_revenue";
+  const availableBalanceSub = hasVerifiedRevenue
+    ? showOriginalRevenueAsPrimary
+      ? `≈ ${formatBRL(consolidated.revenueBrl)} · saldo = revenue acumulado`
+      : "Saldo = revenue acumulado"
+    : "Aguardando postbacks";
 
   // 8 KPIs — always visible
   const kpis = [
