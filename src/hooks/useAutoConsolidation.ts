@@ -28,145 +28,189 @@ export interface ConsolidatedMetrics {
   latestWithdrawableTimestamp: string | null;
 }
 
+type TrackingEventRow = {
+  id: string;
+  platform_id: string | null;
+  canonical_event_name: string;
+  event_timestamp: string;
+  original_amount: number | null;
+  original_currency: string | null;
+  converted_amount_brl: number | null;
+  exchange_rate: number | null;
+  exchange_rate_timestamp: string | null;
+  status: string | null;
+  transaction_id: string | null;
+};
+
+function isValidTrackingEvent(event: TrackingEventRow) {
+  return event.status !== "invalid_legacy" && !event.canonical_event_name?.startsWith("{");
+}
+
+function getEventAmountBrl(event: TrackingEventRow) {
+  if (event.converted_amount_brl != null) return Number(event.converted_amount_brl);
+  if ((event.original_currency || "BRL").toUpperCase() === "BRL" && event.original_amount != null) {
+    return Number(event.original_amount);
+  }
+  return 0;
+}
+
 export function useAutoConsolidation() {
   const { data: platforms } = usePlatforms();
 
-  // Single consolidated query to avoid "Should have a queue" React error
-  const { data: trackingData, isLoading: metricsLoading } = useQuery({
-    queryKey: ["tracking_consolidated_all"],
+  const { data: trackingData, isLoading } = useQuery({
+    queryKey: ["tracking_consolidated_real_source"],
     queryFn: async () => {
-      const [metricsRes, clicksRes, lastEventRes, eventCountRes, withdrawableRes] = await Promise.all([
+      const [eventsRes, clicksRes] = await Promise.all([
         supabase
-          .from("tracking_metrics")
-          .select("*")
+          .from("tracking_events")
+          .select(
+            "id, platform_id, canonical_event_name, event_timestamp, original_amount, original_currency, converted_amount_brl, exchange_rate, exchange_rate_timestamp, status, transaction_id",
+          )
           .eq("is_demo", false)
-          .eq("origem_importacao", "auto_consolidation")
-          .order("data_ref", { ascending: false }),
+          .order("event_timestamp", { ascending: false }),
         supabase
           .from("clicks")
           .select("*", { count: "exact", head: true })
           .eq("is_demo", false),
-        supabase
-          .from("tracking_events")
-          .select("event_timestamp")
-          .eq("is_demo", false)
-          .neq("status", "invalid_legacy")
-          .order("event_timestamp", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        supabase
-          .from("tracking_events")
-          .select("*", { count: "exact", head: true })
-          .eq("is_demo", false)
-          .neq("status", "invalid_legacy"),
-        supabase
-          .from("tracking_events")
-          .select("platform_id, event_timestamp, original_amount, original_currency, converted_amount_brl, exchange_rate")
-          .eq("is_demo", false)
-          .neq("status", "invalid_legacy")
-          .eq("canonical_event_name", "withdrawable_revenue")
-          .order("event_timestamp", { ascending: false })
-          .limit(1)
-          .maybeSingle(),
       ]);
 
+      if (eventsRes.error) throw eventsRes.error;
+      if (clicksRes.error) throw clicksRes.error;
+
       return {
-        metrics: metricsRes.data || [],
+        events: (eventsRes.data || []) as TrackingEventRow[],
         realClicksCount: clicksRes.count || 0,
-        lastEventTs: lastEventRes.data?.event_timestamp || null,
-        eventCount: eventCountRes.count || 0,
-        latestWithdrawable: withdrawableRes.data || null,
       };
     },
     refetchInterval: 5_000,
     refetchOnWindowFocus: true,
   });
 
-  const metrics = trackingData?.metrics ?? [];
   const realClicksCount = trackingData?.realClicksCount ?? 0;
-  const lastEventTs = trackingData?.lastEventTs ?? null;
-  const eventCount = trackingData?.eventCount ?? 0;
-  const latestWithdrawable = trackingData?.latestWithdrawable ?? null;
+  const validEvents = useMemo(
+    () => (trackingData?.events ?? []).filter(isValidTrackingEvent),
+    [trackingData?.events],
+  );
+
+  const latestWithdrawable = useMemo(
+    () => validEvents.find((event) => event.canonical_event_name === "withdrawable_revenue") ?? null,
+    [validEvents],
+  );
 
   const consolidated = useMemo((): ConsolidatedMetrics => {
     const result: ConsolidatedMetrics = {
-      totalClicks: 0,
+      totalClicks: realClicksCount,
       totalRegistrations: 0,
       totalFtd: 0,
       totalDeposits: 0,
       totalRedeposits: 0,
       revenueOriginal: 0,
-      revenueOriginalCurrency: "USD",
+      revenueOriginalCurrency: "BRL",
       revenueBrl: 0,
       lastExchangeRate: null,
       lastExchangeRateTimestamp: null,
-      lastEventTimestamp: lastEventTs,
-      eventCount,
+      lastEventTimestamp: validEvents[0]?.event_timestamp ?? null,
+      eventCount: validEvents.length,
       platformName: null,
       hasMultipleCurrencies: false,
       byCurrency: {},
       realClicksCount,
       latestWithdrawableOriginal: latestWithdrawable?.original_amount ?? latestWithdrawable?.converted_amount_brl ?? null,
-      latestWithdrawableCurrency: latestWithdrawable?.original_currency ?? (latestWithdrawable?.converted_amount_brl != null ? "BRL" : null),
-      latestWithdrawableBrl: latestWithdrawable?.converted_amount_brl ?? latestWithdrawable?.original_amount ?? null,
+      latestWithdrawableCurrency:
+        latestWithdrawable?.original_currency ?? (latestWithdrawable?.converted_amount_brl != null ? "BRL" : null),
+      latestWithdrawableBrl:
+        latestWithdrawable?.converted_amount_brl ??
+        ((latestWithdrawable?.original_currency ?? "BRL") === "BRL" ? latestWithdrawable?.original_amount ?? null : null),
       latestWithdrawableExchangeRate: latestWithdrawable?.exchange_rate ?? null,
       latestWithdrawableTimestamp: latestWithdrawable?.event_timestamp ?? null,
     };
 
-    if (metrics.length === 0 && !latestWithdrawable) return result;
+    if (validEvents.length === 0) {
+      return result;
+    }
 
-    const firstWithPlatform = metrics.find((m: any) => m.platform_id);
-    const platformId = firstWithPlatform?.platform_id || latestWithdrawable?.platform_id || null;
+    const firstWithPlatform = validEvents.find((event) => event.platform_id);
+    const platformId = latestWithdrawable?.platform_id || firstWithPlatform?.platform_id || null;
     if (platformId) {
-      const plat = (platforms as any[])?.find((p: any) => p.id === platformId);
-      if (plat) result.platformName = plat.name;
+      const platform = (platforms as any[])?.find((item: any) => item.id === platformId);
+      if (platform) result.platformName = platform.name;
     }
 
     const currencies = new Set<string>();
+    const countedDepositTransactions = new Set<string>();
 
-    for (const m of metrics as any[]) {
-      result.totalClicks += m.cliques || 0;
-      result.totalRegistrations += m.registros || 0;
-      result.totalFtd += m.ftd || 0;
-      result.totalDeposits += m.depositos_total || 0;
-      result.totalRedeposits += m.redepositos || 0;
-
-      const rev = m.revenue || 0;
-      const origAmount = m.original_amount || 0;
-      const origCurrency = m.original_currency || "BRL";
-      const convertedAmount = m.converted_amount || rev;
-      const rate = m.exchange_rate || null;
-
-      if (rev > 0) {
-        currencies.add(origCurrency);
-        if (!result.byCurrency[origCurrency]) {
-          result.byCurrency[origCurrency] = { total: 0, convertedBrl: 0, rate };
+    for (const event of validEvents) {
+      switch (event.canonical_event_name) {
+        case "registration":
+          result.totalRegistrations += 1;
+          break;
+        case "ftd": {
+          result.totalFtd += 1;
+          const depositKey = event.transaction_id ? `tx:${event.transaction_id}` : `evt:${event.id}`;
+          if (!countedDepositTransactions.has(depositKey)) {
+            countedDepositTransactions.add(depositKey);
+            result.totalDeposits += getEventAmountBrl(event);
+          }
+          break;
         }
-        result.byCurrency[origCurrency].total += origAmount;
-        result.byCurrency[origCurrency].convertedBrl += convertedAmount;
-        if (rate) result.byCurrency[origCurrency].rate = rate;
-
-        result.revenueOriginal += origAmount;
-        result.revenueBrl += convertedAmount;
-        result.revenueOriginalCurrency = origCurrency;
-
-        if (rate) {
-          result.lastExchangeRate = rate;
-          const rateTs = m.exchange_rate_timestamp;
-          if (rateTs) result.lastExchangeRateTimestamp = rateTs;
+        case "deposit":
+        case "redeposit": {
+          if (event.canonical_event_name === "redeposit") {
+            result.totalRedeposits += 1;
+          }
+          const depositKey = event.transaction_id ? `tx:${event.transaction_id}` : `evt:${event.id}`;
+          if (!countedDepositTransactions.has(depositKey)) {
+            countedDepositTransactions.add(depositKey);
+            result.totalDeposits += getEventAmountBrl(event);
+          }
+          break;
         }
+        case "revenue": {
+          const originalCurrency = (event.original_currency || "BRL").toUpperCase();
+          const originalAmount = Number(event.original_amount ?? getEventAmountBrl(event));
+          const convertedAmount = getEventAmountBrl(event);
+          const rate = event.exchange_rate != null ? Number(event.exchange_rate) : null;
+
+          currencies.add(originalCurrency);
+          if (!result.byCurrency[originalCurrency]) {
+            result.byCurrency[originalCurrency] = { total: 0, convertedBrl: 0, rate };
+          }
+
+          result.byCurrency[originalCurrency].total += originalAmount;
+          result.byCurrency[originalCurrency].convertedBrl += convertedAmount;
+          if (rate != null) result.byCurrency[originalCurrency].rate = rate;
+
+          result.revenueOriginal += originalAmount;
+          result.revenueBrl += convertedAmount;
+          result.revenueOriginalCurrency = originalCurrency;
+
+          if (rate != null) {
+            result.lastExchangeRate = rate;
+            if (event.exchange_rate_timestamp) {
+              result.lastExchangeRateTimestamp = event.exchange_rate_timestamp;
+            }
+          }
+          break;
+        }
+        default:
+          break;
       }
     }
 
     result.hasMultipleCurrencies = currencies.size > 1;
 
+    if (result.revenueBrl > 0 && result.revenueOriginal === 0) {
+      result.revenueOriginal = result.revenueBrl;
+      result.revenueOriginalCurrency = "BRL";
+    }
+
     return result;
-  }, [metrics, platforms, realClicksCount, lastEventTs, eventCount, latestWithdrawable]);
+  }, [latestWithdrawable, platforms, realClicksCount, validEvents]);
 
   return {
     consolidated,
-    realEvents: [],
-    isLoading: metricsLoading,
-    hasData: metrics.length > 0 || eventCount > 0 || !!latestWithdrawable,
+    realEvents: validEvents,
+    isLoading,
+    hasData: validEvents.length > 0 || realClicksCount > 0,
   };
 }

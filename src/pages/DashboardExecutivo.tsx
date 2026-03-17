@@ -60,9 +60,21 @@ export default function DashboardExecutivo() {
     [socios]
   );
 
-  const hasVerifiedRevenue = hasTrackingData && consolidated.revenueBrl > 0;
+  const hasVerifiedRevenue = hasTrackingData && (consolidated.revenueOriginal > 0 || consolidated.revenueBrl > 0);
   const hasAvailableBalance = (consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0;
   const hasCaixaRealizado = totalPagosAsaas > 0;
+  const showOriginalRevenueAsPrimary =
+    hasVerifiedRevenue && !consolidated.hasMultipleCurrencies && consolidated.revenueOriginalCurrency !== "BRL";
+  const revenueValue = hasVerifiedRevenue
+    ? showOriginalRevenueAsPrimary
+      ? fmtCurrency(consolidated.revenueOriginal, consolidated.revenueOriginalCurrency)
+      : formatBRL(consolidated.revenueBrl)
+    : "—";
+  const revenueSub = hasVerifiedRevenue
+    ? showOriginalRevenueAsPrimary
+      ? `≈ ${formatBRL(consolidated.revenueBrl)} · revenue reportado`
+      : "Não é caixa — apenas revenue reportado"
+    : "Aguardando postbacks";
   const availableBalanceValue = hasAvailableBalance
     ? consolidated.latestWithdrawableCurrency && consolidated.latestWithdrawableCurrency !== "BRL" && consolidated.latestWithdrawableOriginal !== null
       ? fmtCurrency(consolidated.latestWithdrawableOriginal, consolidated.latestWithdrawableCurrency)
@@ -78,10 +90,10 @@ export default function DashboardExecutivo() {
   const kpis = [
     {
       label: "Revenue Plataforma",
-      value: hasVerifiedRevenue ? formatBRL(consolidated.revenueBrl) : "—",
+      value: revenueValue,
       icon: DollarSign,
       path: "/tracking",
-      sub: hasVerifiedRevenue ? "Não é caixa — apenas revenue reportado" : "Aguardando postbacks",
+      sub: revenueSub,
       pending: !hasVerifiedRevenue,
     },
     {
