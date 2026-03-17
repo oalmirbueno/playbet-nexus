@@ -12,6 +12,7 @@ const CANONICAL_EVENTS = [
 ];
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const TEMPLATE_VALUE_REGEX = /^\{.+\}$/;
 
 function isValidUuid(val: string | null | undefined): boolean {
   return !!val && UUID_REGEX.test(val);
@@ -19,6 +20,10 @@ function isValidUuid(val: string | null | undefined): boolean {
 
 function toUuidOrNull(val: string | null | undefined): string | null {
   return isValidUuid(val) ? val! : null;
+}
+
+function looksLikeTemplateValue(val: string | null | undefined): boolean {
+  return !!val && TEMPLATE_VALUE_REGEX.test(val.trim());
 }
 
 // Fetch USD→BRL exchange rate from free API
@@ -146,6 +151,15 @@ Deno.serve(async (req) => {
     const parsedAmount = params.amount ? parseFloat(params.amount) : null;
     const parsedCommission = params.commission ? parseFloat(params.commission) : null;
 
+    const hasTemplatePayload = [
+      rawEvent,
+      params.transaction_id || params.tid,
+      params.click_id || params.sub1,
+      params.amount,
+      params.currency,
+      params.user_id || params.player_id,
+    ].some((value) => looksLikeTemplateValue(value));
+
     // Determine original currency from params or account
     const originalCurrency = (params.currency || accountCurrency || "BRL").toUpperCase();
     const originalAmount = !isNaN(parsedAmount!) ? parsedAmount : null;
@@ -198,7 +212,7 @@ Deno.serve(async (req) => {
       exchange_rate: exchangeRate,
       exchange_rate_timestamp: exchangeRateTimestamp,
       commission_amount: !isNaN(parsedCommission!) ? parsedCommission : null,
-      status: params.status || null,
+      status: hasTemplatePayload ? "invalid_legacy" : params.status || null,
       country: params.country || null,
       source_type: "postback",
       raw_payload: rawPayload,
@@ -207,20 +221,78 @@ Deno.serve(async (req) => {
       is_duplicate: false,
     };
 
-    // === DEDUPLICATION ===
+    // === DEDUPLICATION / TRANSACTION UPDATES ===
     const txId = eventRecord.transaction_id;
-    if (txId && platformAccountId) {
-      const { data: existing } = await supabase
+    if (txId && (platformAccountId || platformId)) {
+      let existingQuery = supabase
         .from("tracking_events")
-        .select("id")
-        .eq("platform_account_id", platformAccountId)
+        .select("id, amount, original_amount, converted_amount_brl, original_currency, exchange_rate, exchange_rate_timestamp, commission_amount, status, country, platform_user_id, event_timestamp, raw_payload")
         .eq("transaction_id", txId)
         .eq("raw_event_name", rawEvent)
-        .limit(1)
-        .maybeSingle();
+        .limit(1);
+
+      existingQuery = platformAccountId
+        ? existingQuery.eq("platform_account_id", platformAccountId)
+        : existingQuery.eq("platform_id", platformId);
+
+      const { data: existing } = await existingQuery.maybeSingle();
+
       if (existing) {
+        const payloadChanged = JSON.stringify(existing.raw_payload || {}) !== JSON.stringify(eventRecord.raw_payload || {});
+        const hasMeaningfulChange =
+          existing.amount !== eventRecord.amount ||
+          existing.original_amount !== eventRecord.original_amount ||
+          existing.converted_amount_brl !== eventRecord.converted_amount_brl ||
+          existing.original_currency !== eventRecord.original_currency ||
+          existing.exchange_rate !== eventRecord.exchange_rate ||
+          existing.exchange_rate_timestamp !== eventRecord.exchange_rate_timestamp ||
+          existing.commission_amount !== eventRecord.commission_amount ||
+          existing.status !== eventRecord.status ||
+          existing.country !== eventRecord.country ||
+          existing.platform_user_id !== eventRecord.platform_user_id ||
+          existing.event_timestamp !== eventRecord.event_timestamp ||
+          payloadChanged;
+
+        if (!hasMeaningfulChange) {
+          return new Response(
+            JSON.stringify({ status: "duplicate", message: "Event already recorded", existing_id: existing.id }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        let { data: updated, error: updateError } = await supabase
+          .from("tracking_events")
+          .update(eventRecord)
+          .eq("id", existing.id)
+          .select()
+          .single();
+
+        if (updateError?.code === "23503") {
+          console.warn("FK violation on update, retrying without FK fields:", updateError.message);
+          eventRecord.influencer_id = null;
+          eventRecord.campanha_id = null;
+          const retryResult = await supabase
+            .from("tracking_events")
+            .update(eventRecord)
+            .eq("id", existing.id)
+            .select()
+            .single();
+          updated = retryResult.data;
+          updateError = retryResult.error;
+        }
+
+        if (updateError) throw updateError;
+
         return new Response(
-          JSON.stringify({ status: "duplicate", message: "Event already recorded", existing_id: existing.id }),
+          JSON.stringify({
+            status: "updated",
+            event_id: updated.id,
+            canonical_event: canonicalEvent,
+            original_amount: originalAmount,
+            original_currency: originalCurrency,
+            converted_brl: convertedAmountBrl,
+            exchange_rate: exchangeRate,
+          }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
