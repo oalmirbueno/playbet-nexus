@@ -247,9 +247,9 @@ export default function Financeiro() {
               <h3 className="text-sm font-semibold">Nível A — Revenue da Plataforma</h3>
             </div>
             <p className="text-[10px] text-muted-foreground mb-4">
-              Revenue bruto reportado pela plataforma. Não é caixa — ainda não foi sacado.
+              Revenue bruto recebido via postback e saldo sacável atual da plataforma. Não é caixa até o saque acontecer.
             </p>
-            {hasTrackingData && consolidated.revenueBrl > 0 ? (
+            {hasTrackingData && (consolidated.revenueBrl > 0 || hasAvailableBalance) ? (
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 {Object.entries(consolidated.byCurrency).map(([currency, data]) => (
                   <div key={currency} className="bg-secondary/30 rounded-lg p-3 border border-border/50">
@@ -262,6 +262,13 @@ export default function Financeiro() {
                     )}
                   </div>
                 ))}
+                <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+                  <p className="text-[10px] text-muted-foreground uppercase">Saldo disponível</p>
+                  <p className="text-lg font-bold text-primary">{availableBalanceValue}</p>
+                  {hasAvailableBalance && consolidated.latestWithdrawableCurrency !== "BRL" && consolidated.latestWithdrawableBrl !== null && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5">≈ {formatBRL(consolidated.latestWithdrawableBrl)}</p>
+                  )}
+                </div>
                 <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
                   <p className="text-[10px] text-muted-foreground uppercase">Total em BRL</p>
                   <p className="text-lg font-bold text-primary">{formatBRL(consolidated.revenueBrl)}</p>
@@ -278,7 +285,7 @@ export default function Financeiro() {
               </div>
             ) : (
               <div className="text-sm text-muted-foreground bg-secondary/20 p-4 rounded-lg text-center">
-                Sem revenue verificado no tracking. Configure postbacks para receber dados automáticos.
+                Sem revenue verificado no tracking. Configure os postbacks de revenue e saldo disponível para receber dados automáticos.
               </div>
             )}
           </div>

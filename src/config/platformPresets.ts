@@ -231,6 +231,7 @@ export function buildPostbackUrlForEvent(
   // Event-specific native macros
   if (event.has_amount) {
     parts.push(`amount={amount}`);
+    parts.push(`currency={currency}`);
   }
   if (event.has_transaction_id) {
     parts.push(`transaction_id={transaction_id}`);
