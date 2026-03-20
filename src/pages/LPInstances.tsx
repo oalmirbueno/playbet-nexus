@@ -52,15 +52,27 @@ export default function LPInstances() {
   const getInfluencerName = (id: string) => influencers.find(i => i.id === id)?.name || "—";
   const getPlatformName = (id: string) => platforms.find(p => p.id === id)?.name || "";
 
-  // Generate postback URLs for an instance
+  // Generate postback URLs for an instance — fallback to first platform with a known preset
   const getPostbackUrls = (inst: LandingPageInstanceRow) => {
     const platformId = getLPPlatformId(inst.landing_page_id);
-    const platformName = platformId ? getPlatformName(platformId) : "";
-    const preset = platformName ? findPresetByName(platformName) : null;
+    let preset: ReturnType<typeof findPresetByName> = null;
+
+    if (platformId) {
+      preset = findPresetByName(getPlatformName(platformId));
+    }
+
+    // Fallback: try every active platform until a preset matches
+    if (!preset) {
+      for (const p of platforms.filter(p => p.is_active)) {
+        preset = findPresetByName(p.name);
+        if (preset) break;
+      }
+    }
+
     if (!preset) return null;
     return preset.events.map(evt => ({
       event: evt,
-      url: buildPostbackUrlForEvent(preset, evt, undefined, inst.influencer_id, undefined, false),
+      url: buildPostbackUrlForEvent(preset!, evt, undefined, inst.influencer_id, undefined, false),
     }));
   };
 
