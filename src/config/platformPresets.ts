@@ -63,6 +63,7 @@ const WIN_MACROS: PlatformMacro[] = [
   { native: "sub10", internal_meaning: "reserved",               required: false, description: "Reservado",                  category: "tracking" },
   // ── B. Financial / event macros ──
   { native: "amount",         internal_meaning: "amount",         required: false, description: "Valor monetário",            category: "financial" },
+  { native: "currency",       internal_meaning: "currency",       required: false, description: "Moeda do valor (USD, BRL)",  category: "financial" },
   { native: "transaction_id", internal_meaning: "transaction_id", required: false, description: "ID da transação",            category: "financial" },
   { native: "country",        internal_meaning: "country",        required: false, description: "País do jogador",            category: "financial" },
   { native: "user_id",        internal_meaning: "user_id",        required: false, description: "ID do jogador na plataforma", category: "financial" },

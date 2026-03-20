@@ -367,15 +367,19 @@ export default function LPInstances() {
 
       {/* Postback URLs Dialog */}
       <Dialog open={!!postbackOpen} onOpenChange={() => setPostbackOpen(null)}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Radio size={16} className="text-accent" />
-              Postback URLs — {postbackOpen?.slug}
-            </DialogTitle>
-            <p className="text-xs text-muted-foreground mt-1">
-              Cole estas URLs na plataforma de afiliados para rastrear eventos deste link
-            </p>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <Radio size={14} className="text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-base">Postback URLs</DialogTitle>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Slug: <span className="font-mono text-foreground">{postbackOpen?.slug}</span>
+                </p>
+              </div>
+            </div>
           </DialogHeader>
           {postbackOpen && (() => {
             const urls = getPostbackUrls(postbackOpen);
@@ -383,7 +387,7 @@ export default function LPInstances() {
               return (
                 <div className="py-8 text-center text-muted-foreground">
                   <AlertTriangle size={24} className="mx-auto mb-2 opacity-40" />
-                  <p className="text-sm">Nenhum preset de plataforma encontrado para esta LP.</p>
+                  <p className="text-sm">Nenhum preset de plataforma encontrado.</p>
                   <p className="text-xs mt-1">Vincule a LP base a uma plataforma para gerar postback URLs.</p>
                 </div>
               );
@@ -393,52 +397,69 @@ export default function LPInstances() {
               navigator.clipboard.writeText(text);
               toast({ title: "Todos os postbacks copiados!" });
             };
+
+            const eventColors: Record<string, string> = {
+              registration: "bg-blue-500",
+              ftd: "bg-emerald-500",
+              deposit: "bg-cyan-500",
+              redeposit: "bg-teal-500",
+              revenue: "bg-amber-500",
+              withdrawable_revenue: "bg-purple-500",
+              app_install: "bg-rose-500",
+            };
+
             return (
-              <div className="space-y-3 py-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-muted-foreground">
-                    Influencer: <strong className="text-foreground">{getInfluencerName(postbackOpen.influencer_id)}</strong>
-                  </span>
-                  <button className="btn-ghost text-xs" onClick={copyAll}>
-                    <Copy size={12} /> Copiar Todos
+              <div className="space-y-4 py-1">
+                {/* Info bar */}
+                <div className="flex items-center justify-between bg-secondary/40 rounded-lg px-3 py-2 border border-border/50">
+                  <div className="flex items-center gap-4 text-xs">
+                    <span className="text-muted-foreground">
+                      Influencer: <strong className="text-foreground">{getInfluencerName(postbackOpen.influencer_id)}</strong>
+                    </span>
+                    <span className="text-muted-foreground">
+                      LP: <strong className="text-foreground">{getLPName(postbackOpen.landing_page_id)}</strong>
+                    </span>
+                  </div>
+                  <button className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 font-medium transition-colors" onClick={copyAll}>
+                    <Copy size={11} /> Copiar Todos
                   </button>
                 </div>
-                {urls.map(({ event: evt, url }) => (
-                  <div key={evt.raw_event_name} className="bg-secondary/30 border border-border rounded-lg p-3">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className={`w-2 h-2 rounded-full ${
-                          evt.canonical_event_name === "registration" ? "bg-blue-400" :
-                          evt.canonical_event_name === "ftd" ? "bg-emerald-400" :
-                          evt.canonical_event_name === "revenue" ? "bg-amber-400" :
-                          evt.canonical_event_name === "deposit" ? "bg-cyan-400" :
-                          "bg-muted-foreground/40"
-                        }`} />
-                        <span className="text-xs font-medium">{evt.label}</span>
+
+                {/* Event cards */}
+                <div className="space-y-2">
+                  {urls.map(({ event: evt, url }) => (
+                    <div key={evt.raw_event_name} className="rounded-lg border border-border bg-card overflow-hidden">
+                      <div className="flex items-center justify-between px-3 py-2 bg-secondary/20 border-b border-border/50">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-1.5 h-1.5 rounded-full ${eventColors[evt.canonical_event_name] || "bg-muted-foreground/40"}`} />
+                          <span className="text-xs font-semibold">{evt.label}</span>
+                          <span className="text-[9px] font-mono text-muted-foreground bg-secondary/60 px-1.5 py-0.5 rounded">{evt.raw_event_name}</span>
+                        </div>
+                        <button
+                          className="flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                          onClick={() => {
+                            navigator.clipboard.writeText(url);
+                            toast({ title: `URL de ${evt.label} copiada!` });
+                          }}
+                        >
+                          <Copy size={10} /> Copiar
+                        </button>
                       </div>
-                      <button
-                        className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-accent transition-colors"
-                        title={`Copiar URL de ${evt.label}`}
-                        onClick={() => {
-                          navigator.clipboard.writeText(url);
-                          toast({ title: `URL de ${evt.label} copiada!` });
-                        }}
-                      >
-                        <Copy size={12} />
-                      </button>
+                      <div className="px-3 py-2">
+                        <code className="text-[10px] font-mono text-muted-foreground leading-relaxed break-all select-all block">{url}</code>
+                      </div>
                     </div>
-                    <div className="overflow-x-auto invisible-scroll">
-                      <code className="text-[10px] font-mono text-accent/80 whitespace-nowrap leading-relaxed break-all">{url}</code>
-                    </div>
-                  </div>
-                ))}
-                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground">
-                  <p className="font-medium text-foreground mb-1">Como usar:</p>
-                  <ol className="list-decimal list-inside space-y-0.5">
+                  ))}
+                </div>
+
+                {/* Instructions */}
+                <div className="rounded-lg border border-primary/15 bg-primary/5 p-3">
+                  <p className="text-xs font-semibold text-foreground mb-1.5">Como configurar:</p>
+                  <ol className="list-decimal list-inside text-[11px] text-muted-foreground space-y-1">
                     <li>Copie a URL do evento desejado</li>
-                    <li>Acesse o painel de afiliados da plataforma</li>
-                    <li>Cole na seção de "Postback URL" ou "S2S Tracking"</li>
-                    <li>Os macros como <code className="text-accent">{"{sub1}"}</code> serão preenchidos automaticamente pela plataforma</li>
+                    <li>Acesse o painel da plataforma → <strong>Postback / S2S</strong></li>
+                    <li>Cole no campo correspondente ao evento</li>
+                    <li>Os macros <code className="text-primary bg-primary/10 px-1 rounded text-[10px]">{"{sub1}"}</code>, <code className="text-primary bg-primary/10 px-1 rounded text-[10px]">{"{amount}"}</code> etc. são preenchidos automaticamente</li>
                   </ol>
                 </div>
               </div>
