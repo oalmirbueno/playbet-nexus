@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, DollarSign, Link2, Megaphone, Wallet, PenTool, MessageSquare, Copy, Edit, Globe, MousePointerClick } from "lucide-react";
+import { ArrowLeft, DollarSign, Link2, Megaphone, Wallet, PenTool, MessageSquare, Copy, Edit, Globe, MousePointerClick, Activity } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,7 @@ const chartTooltip = { background: "hsl(0 0% 8%)", border: "1px solid hsl(0 0% 1
 
 const tabs = [
   { key: "resumo", label: "Resumo", icon: DollarSign },
+  { key: "tracking", label: "Tracking", icon: Activity },
   { key: "landing", label: "Landing Pages", icon: Globe },
   { key: "campanhas", label: "Campanhas", icon: Megaphone },
   { key: "saques", label: "Saques", icon: Wallet },
@@ -28,6 +29,7 @@ export default function InfluencerDetalhe() {
   const [obs, setObs] = useState("");
   const [editLPOpen, setEditLPOpen] = useState(false);
   const [clicks, setClicks] = useState<any[]>([]);
+  const [trackingEvents, setTrackingEvents] = useState<any[]>([]);
 
   const { data: influencers, isLoading, update } = useInfluencers();
   const { data: instances } = useLandingPageInstances();
@@ -40,12 +42,40 @@ export default function InfluencerDetalhe() {
   useEffect(() => {
     if (id) {
       clickService.getByInfluencer(id).then(setClicks).catch(() => {});
+      // Fetch tracking events for this influencer
+      supabase
+        .from("tracking_events")
+        .select("*")
+        .eq("influencer_id", id)
+        .eq("is_demo", false)
+        .neq("status", "invalid_legacy")
+        .order("event_timestamp", { ascending: false })
+        .then(({ data: evts }) => setTrackingEvents(evts || []));
     }
   }, [id]);
 
   useEffect(() => {
     if (influencer?.notes) setObs(influencer.notes);
   }, [influencer?.notes]);
+
+  // Tracking metrics (before early returns for hooks rule)
+  const trackingMetrics = useMemo(() => {
+    const registrations = trackingEvents.filter(e => e.canonical_event_name === "registration").length;
+    const ftds = trackingEvents.filter(e => e.canonical_event_name === "ftd").length;
+    const deposits = trackingEvents.filter(e => ["deposit", "redeposit", "ftd"].includes(e.canonical_event_name));
+    const depositsTotal = deposits.reduce((s, e) => s + (e.converted_amount_brl || e.original_amount || 0), 0);
+    const revenueEvents = trackingEvents.filter(e => e.canonical_event_name === "revenue");
+    const revenue = revenueEvents.reduce((s, e) => s + (e.converted_amount_brl || e.original_amount || 0), 0);
+    const revenueUsd = revenueEvents.reduce((s, e) => s + (e.original_amount || 0), 0);
+    const redeposits = trackingEvents.filter(e => e.canonical_event_name === "redeposit").length;
+    const revByDay: Record<string, number> = {};
+    revenueEvents.forEach(e => {
+      const day = new Date(e.event_timestamp).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+      revByDay[day] = (revByDay[day] || 0) + (e.converted_amount_brl || e.original_amount || 0);
+    });
+    const revenueChart = Object.entries(revByDay).map(([data, valor]) => ({ data, valor: Number(valor.toFixed(2)) }));
+    return { registrations, ftds, depositsTotal, revenue, revenueUsd, redeposits, revenueChart, total: trackingEvents.length };
+  }, [trackingEvents]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
@@ -87,7 +117,6 @@ export default function InfluencerDetalhe() {
     return acc;
   }, {});
   const clickChartData = Object.entries(clicksByDay).slice(-7).map(([data, cliques]) => ({ data, cliques }));
-
   return (
     <div className="space-y-8">
       <Breadcrumbs items={[{ label: "Influencers", path: "/influencers" }, { label: influencer.name }]} />
@@ -111,12 +140,14 @@ export default function InfluencerDetalhe() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <div className="stat-card border-l-2 border-l-primary"><span className="text-[10px] text-muted-foreground uppercase">Comissão</span><p className="text-lg font-bold">{comissao}%</p></div>
-        <div className="stat-card border-l-2 border-l-accent"><span className="text-[10px] text-muted-foreground uppercase">Total Cliques</span><p className="text-lg font-bold">{totalCliques.toLocaleString()}</p></div>
-        <div className="stat-card border-l-2 border-l-warning"><span className="text-[10px] text-muted-foreground uppercase">LPs Vinculadas</span><p className="text-lg font-bold">{myInstances.length}</p></div>
-        <div className="stat-card border-l-2 border-l-info"><span className="text-[10px] text-muted-foreground uppercase">Campanhas</span><p className="text-lg font-bold">{myCampanhas.length}</p></div>
-        <div className="stat-card border-l-2 border-l-success"><span className="text-[10px] text-muted-foreground uppercase">Saques</span><p className="text-lg font-bold">{mySaques.length}</p></div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div className="stat-card border-l-2 border-l-primary"><span className="text-[10px] text-muted-foreground uppercase">Revenue</span><p className="text-lg font-bold text-emerald-400">R$ {trackingMetrics.revenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p></div>
+        <div className="stat-card border-l-2 border-l-accent"><span className="text-[10px] text-muted-foreground uppercase">FTDs</span><p className="text-lg font-bold">{trackingMetrics.ftds}</p></div>
+        <div className="stat-card border-l-2 border-l-info"><span className="text-[10px] text-muted-foreground uppercase">Registros</span><p className="text-lg font-bold">{trackingMetrics.registrations}</p></div>
+        <div className="stat-card border-l-2 border-l-success"><span className="text-[10px] text-muted-foreground uppercase">Comissão</span><p className="text-lg font-bold">{comissao}%</p></div>
+        <div className="stat-card border-l-2 border-l-warning"><span className="text-[10px] text-muted-foreground uppercase">Total Cliques</span><p className="text-lg font-bold">{totalCliques.toLocaleString()}</p></div>
+        <div className="stat-card border-l-2 border-l-destructive"><span className="text-[10px] text-muted-foreground uppercase">LPs Vinculadas</span><p className="text-lg font-bold">{myInstances.length}</p></div>
+        <div className="stat-card border-l-2 border-l-muted-foreground"><span className="text-[10px] text-muted-foreground uppercase">Eventos</span><p className="text-lg font-bold">{trackingMetrics.total}</p></div>
       </div>
 
       {/* Tabs */}
@@ -170,6 +201,82 @@ export default function InfluencerDetalhe() {
             <button onClick={() => navigate("/landing-pages")} className="btn-ghost text-xs">→ Landing Pages</button>
             <button onClick={() => navigate("/comissoes")} className="btn-ghost text-xs">→ Comissões</button>
             <button onClick={() => navigate("/campanhas")} className="btn-ghost text-xs">→ Campanhas</button>
+          </div>
+        </div>
+      )}
+
+      {/* TRACKING */}
+      {tab === "tracking" && (
+        <div className="space-y-4 animate-fade-in">
+          {/* KPIs */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="stat-card border-l-2 border-l-primary"><span className="text-[10px] text-muted-foreground uppercase">Revenue (BRL)</span><p className="text-lg font-bold text-emerald-400">R$ {trackingMetrics.revenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p></div>
+            <div className="stat-card border-l-2 border-l-accent"><span className="text-[10px] text-muted-foreground uppercase">Revenue (USD)</span><p className="text-lg font-bold">$ {trackingMetrics.revenueUsd.toLocaleString("en-US", { minimumFractionDigits: 2 })}</p></div>
+            <div className="stat-card border-l-2 border-l-info"><span className="text-[10px] text-muted-foreground uppercase">Registros</span><p className="text-lg font-bold">{trackingMetrics.registrations}</p></div>
+            <div className="stat-card border-l-2 border-l-success"><span className="text-[10px] text-muted-foreground uppercase">FTDs</span><p className="text-lg font-bold">{trackingMetrics.ftds}</p></div>
+            <div className="stat-card border-l-2 border-l-warning"><span className="text-[10px] text-muted-foreground uppercase">Depósitos Total</span><p className="text-lg font-bold">R$ {trackingMetrics.depositsTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p></div>
+            <div className="stat-card border-l-2 border-l-destructive"><span className="text-[10px] text-muted-foreground uppercase">Redepósitos</span><p className="text-lg font-bold">{trackingMetrics.redeposits}</p></div>
+          </div>
+
+          {/* Revenue chart */}
+          {trackingMetrics.revenueChart.length > 0 && (
+            <div className="glass-card p-5">
+              <h3 className="section-title">Revenue por Dia (BRL)</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={trackingMetrics.revenueChart}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 15%)" />
+                  <XAxis dataKey="data" stroke="hsl(0 0% 40%)" fontSize={11} />
+                  <YAxis stroke="hsl(0 0% 40%)" fontSize={11} />
+                  <Tooltip contentStyle={chartTooltip} formatter={(v: number) => [`R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, "Revenue"]} />
+                  <Bar dataKey="valor" fill="hsl(142 71% 45%)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Events table */}
+          <div className="glass-card p-5">
+            <h3 className="section-title">Últimos Eventos ({trackingMetrics.total} total)</h3>
+            {trackingEvents.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Activity size={32} className="mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Nenhum evento de tracking recebido para esta influenciadora.</p>
+                <p className="text-xs mt-1">Configure os postbacks na plataforma para começar a receber dados.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto invisible-scroll">
+                <table className="data-table">
+                  <thead>
+                    <tr><th>Data/Hora</th><th>Evento</th><th>Valor</th><th>Moeda</th><th>BRL</th><th>Transaction ID</th><th>País</th></tr>
+                  </thead>
+                  <tbody>
+                    {trackingEvents.slice(0, 20).map((e: any) => (
+                      <tr key={e.id}>
+                        <td className="text-xs whitespace-nowrap">{new Date(e.event_timestamp).toLocaleString("pt-BR")}</td>
+                        <td>
+                          <span className={
+                            e.canonical_event_name === "revenue" ? "badge-success" :
+                            e.canonical_event_name === "ftd" ? "badge-info" :
+                            e.canonical_event_name === "registration" ? "badge-warning" :
+                            "badge-neutral"
+                          }>{e.canonical_event_name}</span>
+                        </td>
+                        <td className="font-mono text-xs">{e.original_amount != null ? Number(e.original_amount).toFixed(2) : "—"}</td>
+                        <td className="text-xs">{e.original_currency || e.currency || "—"}</td>
+                        <td className="font-mono text-xs font-semibold">{e.converted_amount_brl != null ? `R$ ${Number(e.converted_amount_brl).toFixed(2)}` : "—"}</td>
+                        <td className="font-mono text-[10px] text-muted-foreground">{e.transaction_id?.slice(0, 12) || "—"}</td>
+                        <td className="text-xs">{e.country || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <button onClick={() => navigate("/tracking/events")} className="btn-ghost text-xs">→ Ver todos os Eventos</button>
+            <button onClick={() => navigate("/tracking")} className="btn-ghost text-xs">→ Dashboard de Tracking</button>
           </div>
         </div>
       )}
