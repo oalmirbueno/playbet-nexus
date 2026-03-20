@@ -81,64 +81,64 @@ const WIN_EVENTS: PlatformEventPreset[] = [
     raw_event_name: "registration",
     canonical_event_name: "registration",
     label: "Cadastro",
-    extra_macros: ["user_id", "country"],
+    extra_macros: ["user_id"],
     has_amount: false,
     has_transaction_id: false,
-    advanced_macros: ["event_id", "date", "hash_id", "hash_name", "source_id", "source_name"],
+    advanced_macros: ["country", "event_id", "date", "hash_id", "hash_name", "source_id", "source_name"],
   },
   {
     raw_event_name: "revenue",
     canonical_event_name: "revenue",
     label: "Receita",
-    extra_macros: ["user_id", "country"],
+    extra_macros: ["user_id"],
     has_amount: true,
     has_transaction_id: false,
-    advanced_macros: ["event_id", "date", "hash_id", "hash_name", "source_id", "source_name"],
+    advanced_macros: ["country", "currency", "event_id", "date", "hash_id", "hash_name", "source_id", "source_name"],
   },
   {
     raw_event_name: "available_revenue",
     canonical_event_name: "withdrawable_revenue",
     label: "Saldo disponível",
-    extra_macros: ["user_id", "country"],
+    extra_macros: ["user_id"],
     has_amount: true,
     has_transaction_id: false,
-    advanced_macros: ["event_id", "date", "hash_id", "hash_name", "source_id", "source_name"],
+    advanced_macros: ["country", "currency", "event_id", "date", "hash_id", "hash_name", "source_id", "source_name"],
   },
   {
     raw_event_name: "deposit",
     canonical_event_name: "deposit",
     label: "Todos os depósitos",
-    extra_macros: ["user_id", "country"],
+    extra_macros: ["user_id"],
     has_amount: true,
-    has_transaction_id: true,
-    advanced_macros: ["event_id", "date", "hash_id", "hash_name", "source_id", "source_name"],
+    has_transaction_id: false,
+    advanced_macros: ["country", "currency", "transaction_id", "event_id", "date", "hash_id", "hash_name", "source_id", "source_name"],
   },
   {
     raw_event_name: "first_deposit",
     canonical_event_name: "ftd",
     label: "Primeiro depósito",
-    extra_macros: ["user_id", "country"],
+    extra_macros: ["user_id"],
     has_amount: true,
-    has_transaction_id: true,
-    advanced_macros: ["event_id", "date", "hash_id", "hash_name", "source_id", "source_name"],
+    has_transaction_id: false,
+    advanced_macros: ["country", "currency", "transaction_id", "event_id", "date", "hash_id", "hash_name", "source_id", "source_name"],
   },
   {
     raw_event_name: "redeposit",
     canonical_event_name: "redeposit",
     label: "Depósito recorrente",
-    extra_macros: ["user_id", "country"],
+    extra_macros: ["user_id"],
     has_amount: true,
-    has_transaction_id: true,
-    advanced_macros: ["event_id", "date", "hash_id", "hash_name", "source_id", "source_name"],
+    has_transaction_id: false,
+    advanced_macros: ["country", "currency", "transaction_id", "event_id", "date", "hash_id", "hash_name", "source_id", "source_name"],
   },
   {
     raw_event_name: "app_install",
     canonical_event_name: "app_install",
     label: "Inicialização do aplicativo",
-    extra_macros: ["user_id", "country"],
+    extra_macros: ["user_id"],
     has_amount: false,
     has_transaction_id: false,
-    advanced_macros: ["event_id", "date", "hash_id", "hash_name", "source_id", "source_name"],
+    advanced_macros: ["country", "event_id", "date", "hash_id", "hash_name", "source_id", "source_name"],
   },
 ];
 
@@ -193,6 +193,46 @@ export function generateTrackingCode(): string {
 
 const POSTBACK_BASE = `https://rcrrbznhatdqcmfyzgbt.supabase.co/functions/v1/tracking-postback`;
 
+function buildEventMacroParts(event: PlatformEventPreset, advancedMode = false): string[] {
+  const parts: string[] = [];
+  const alwaysIncluded = new Set(event.extra_macros);
+
+  if (event.has_amount) {
+    parts.push(`amount={amount}`);
+  }
+
+  if (alwaysIncluded.has("user_id")) {
+    parts.push(`user_id={user_id}`);
+  }
+
+  if (alwaysIncluded.has("country")) {
+    parts.push(`country={country}`);
+  }
+
+  if (!advancedMode) {
+    return parts;
+  }
+
+  if (event.advanced_macros.includes("currency")) {
+    parts.push(`currency={currency}`);
+  }
+
+  if (event.advanced_macros.includes("transaction_id")) {
+    parts.push(`transaction_id={transaction_id}`);
+  }
+
+  if (!alwaysIncluded.has("country") && event.advanced_macros.includes("country")) {
+    parts.push(`country={country}`);
+  }
+
+  for (const macro of event.advanced_macros) {
+    if (["currency", "transaction_id", "country"].includes(macro)) continue;
+    parts.push(`${macro}={${macro}}`);
+  }
+
+  return parts;
+}
+
 /**
  * Build a clean, production-ready postback URL for a specific event.
  *
@@ -229,29 +269,7 @@ export function buildPostbackUrlForEvent(
     parts.push(`sub6=${trackingCode}`);
   }
 
-  // Event-specific native macros
-  if (event.has_amount) {
-    parts.push(`amount={amount}`);
-    parts.push(`currency={currency}`);
-  }
-  if (event.has_transaction_id) {
-    parts.push(`transaction_id={transaction_id}`);
-  }
-
-  // Always include user_id and country if event supports them
-  if (event.extra_macros.includes("user_id")) {
-    parts.push(`user_id={user_id}`);
-  }
-  if (event.extra_macros.includes("country")) {
-    parts.push(`country={country}`);
-  }
-
-  // Advanced mode: add debug/reconciliation macros
-  if (advancedMode && event.advanced_macros.length > 0) {
-    for (const macro of event.advanced_macros) {
-      parts.push(`${macro}={${macro}}`);
-    }
-  }
+  parts.push(...buildEventMacroParts(event, advancedMode));
 
   return `${POSTBACK_BASE}/${preset.postback_base_path}?${parts.join("&")}`;
 }
@@ -274,20 +292,7 @@ export function buildGlobalPostbackUrls(preset: PlatformPreset): { event: Platfo
     parts.push(`sub3={sub3}`);
     parts.push(`sub6={sub6}`);
 
-    // Event-specific macros
-    if (evt.has_amount) {
-      parts.push(`amount={amount}`);
-      parts.push(`currency={currency}`);
-    }
-    if (evt.has_transaction_id) {
-      parts.push(`transaction_id={transaction_id}`);
-    }
-    if (evt.extra_macros.includes("user_id")) {
-      parts.push(`user_id={user_id}`);
-    }
-    if (evt.extra_macros.includes("country")) {
-      parts.push(`country={country}`);
-    }
+    parts.push(...buildEventMacroParts(evt, false));
 
     return { event: evt, url: `${POSTBACK_BASE}/${preset.postback_base_path}?${parts.join("&")}` };
   });
