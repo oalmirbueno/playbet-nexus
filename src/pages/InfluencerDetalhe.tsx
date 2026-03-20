@@ -58,6 +58,25 @@ export default function InfluencerDetalhe() {
     if (influencer?.notes) setObs(influencer.notes);
   }, [influencer?.notes]);
 
+  // Tracking metrics (before early returns for hooks rule)
+  const trackingMetrics = useMemo(() => {
+    const registrations = trackingEvents.filter(e => e.canonical_event_name === "registration").length;
+    const ftds = trackingEvents.filter(e => e.canonical_event_name === "ftd").length;
+    const deposits = trackingEvents.filter(e => ["deposit", "redeposit", "ftd"].includes(e.canonical_event_name));
+    const depositsTotal = deposits.reduce((s, e) => s + (e.converted_amount_brl || e.original_amount || 0), 0);
+    const revenueEvents = trackingEvents.filter(e => e.canonical_event_name === "revenue");
+    const revenue = revenueEvents.reduce((s, e) => s + (e.converted_amount_brl || e.original_amount || 0), 0);
+    const revenueUsd = revenueEvents.reduce((s, e) => s + (e.original_amount || 0), 0);
+    const redeposits = trackingEvents.filter(e => e.canonical_event_name === "redeposit").length;
+    const revByDay: Record<string, number> = {};
+    revenueEvents.forEach(e => {
+      const day = new Date(e.event_timestamp).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+      revByDay[day] = (revByDay[day] || 0) + (e.converted_amount_brl || e.original_amount || 0);
+    });
+    const revenueChart = Object.entries(revByDay).map(([data, valor]) => ({ data, valor: Number(valor.toFixed(2)) }));
+    return { registrations, ftds, depositsTotal, revenue, revenueUsd, redeposits, revenueChart, total: trackingEvents.length };
+  }, [trackingEvents]);
+
   if (isLoading) {
     return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
   }
