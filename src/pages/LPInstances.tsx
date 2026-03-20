@@ -143,6 +143,37 @@ export default function LPInstances() {
     return inf?.slug || "";
   };
 
+  // Generate slug suggestions based on existing instances
+  const slugSuggestions = (influencerId: string, lpId: string): string[] => {
+    const inf = influencers.find(i => i.id === influencerId);
+    if (!inf) return [];
+    const baseSlug = inf.slug;
+    const existingSlugs = data
+      .filter(inst => inst.landing_page_id === lpId)
+      .map(inst => inst.slug);
+    const suggestions: string[] = [];
+    // Always suggest base slug if not taken
+    if (!existingSlugs.includes(baseSlug)) suggestions.push(baseSlug);
+    // Suggest numbered variants
+    for (let n = 2; n <= 10; n++) {
+      const variant = `${baseSlug}-${n}`;
+      if (!existingSlugs.includes(variant)) {
+        suggestions.push(variant);
+        if (suggestions.length >= 5) break;
+      }
+    }
+    // Also suggest with common suffixes
+    const suffixes = ["promo", "stories", "bio", "reels", "live"];
+    for (const suf of suffixes) {
+      const variant = `${baseSlug}-${suf}`;
+      if (!existingSlugs.includes(variant)) {
+        suggestions.push(variant);
+        if (suggestions.length >= 8) break;
+      }
+    }
+    return suggestions;
+  };
+
   const exportableData = data.map(inst => ({
     id: inst.id, lp_base: getLPName(inst.landing_page_id),
     dominio: getLPDomain(inst.landing_page_id), influencer: getInfluencerName(inst.influencer_id),
@@ -325,7 +356,9 @@ export default function LPInstances() {
                   <label className="text-xs font-medium text-muted-foreground">Influencer *</label>
                   <select className="select-field mt-1 w-full" value={editing?.influencer_id || ""} onChange={e => {
                     const id = e.target.value;
-                    setEditing(p => p ? { ...p, influencer_id: id, slug: p.slug || autoSlug(id) } : p);
+                    const suggestions = id && editing?.landing_page_id ? slugSuggestions(id, editing.landing_page_id) : [];
+                    const newSlug = suggestions.length > 0 ? suggestions[0] : autoSlug(id);
+                    setEditing(p => p ? { ...p, influencer_id: id, slug: newSlug } : p);
                   }}>
                     <option value="">Selecionar influencer...</option>
                     {influencers.filter(i => i.is_active).map(i => (
@@ -342,6 +375,30 @@ export default function LPInstances() {
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Slug *</label>
                   <input className="input-field mt-1" value={editing?.slug || ""} onChange={e => setEditing(p => p ? { ...p, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") } : p)} placeholder="camille-stresser" />
+                  {editing?.influencer_id && editing?.landing_page_id && (
+                    <div className="mt-2">
+                      <p className="text-[10px] text-muted-foreground mb-1.5">Slugs disponíveis (clique para usar):</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {slugSuggestions(editing.influencer_id, editing.landing_page_id).map(s => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setEditing(p => p ? { ...p, slug: s } : p)}
+                            className={`px-2 py-0.5 rounded-md text-xs font-mono transition-colors border ${
+                              editing.slug === s
+                                ? "bg-primary/20 border-primary/40 text-primary"
+                                : "bg-secondary/50 border-border hover:bg-secondary hover:border-primary/30 text-muted-foreground"
+                            }`}
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                      {slugSuggestions(editing.influencer_id, editing.landing_page_id).length === 0 && (
+                        <p className="text-[10px] text-warning">Todos os slugs comuns já estão em uso. Digite um slug personalizado acima.</p>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Affiliate Link *</label>
