@@ -356,7 +356,9 @@ export default function LPInstances() {
                   <label className="text-xs font-medium text-muted-foreground">Influencer *</label>
                   <select className="select-field mt-1 w-full" value={editing?.influencer_id || ""} onChange={e => {
                     const id = e.target.value;
-                    setEditing(p => p ? { ...p, influencer_id: id, slug: p.slug || autoSlug(id) } : p);
+                    const suggestions = id && editing?.landing_page_id ? slugSuggestions(id, editing.landing_page_id) : [];
+                    const newSlug = suggestions.length > 0 ? suggestions[0] : autoSlug(id);
+                    setEditing(p => p ? { ...p, influencer_id: id, slug: newSlug } : p);
                   }}>
                     <option value="">Selecionar influencer...</option>
                     {influencers.filter(i => i.is_active).map(i => (
