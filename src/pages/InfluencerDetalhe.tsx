@@ -117,29 +117,6 @@ export default function InfluencerDetalhe() {
     return acc;
   }, {});
   const clickChartData = Object.entries(clicksByDay).slice(-7).map(([data, cliques]) => ({ data, cliques }));
-
-  // Tracking metrics computed from real events
-  const trackingMetrics = useMemo(() => {
-    const registrations = trackingEvents.filter(e => e.canonical_event_name === "registration").length;
-    const ftds = trackingEvents.filter(e => e.canonical_event_name === "ftd").length;
-    const deposits = trackingEvents.filter(e => ["deposit", "redeposit", "ftd"].includes(e.canonical_event_name));
-    const depositsTotal = deposits.reduce((s, e) => s + (e.converted_amount_brl || e.original_amount || 0), 0);
-    const revenueEvents = trackingEvents.filter(e => e.canonical_event_name === "revenue");
-    const revenue = revenueEvents.reduce((s, e) => s + (e.converted_amount_brl || e.original_amount || 0), 0);
-    const revenueUsd = revenueEvents.reduce((s, e) => s + (e.original_amount || 0), 0);
-    const redeposits = trackingEvents.filter(e => e.canonical_event_name === "redeposit").length;
-
-    // Group revenue by day for chart
-    const revByDay: Record<string, number> = {};
-    revenueEvents.forEach(e => {
-      const day = new Date(e.event_timestamp).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
-      revByDay[day] = (revByDay[day] || 0) + (e.converted_amount_brl || e.original_amount || 0);
-    });
-    const revenueChart = Object.entries(revByDay).map(([data, valor]) => ({ data, valor: Number(valor.toFixed(2)) }));
-
-    return { registrations, ftds, depositsTotal, revenue, revenueUsd, redeposits, revenueChart, total: trackingEvents.length };
-  }, [trackingEvents]);
-
   return (
     <div className="space-y-8">
       <Breadcrumbs items={[{ label: "Influencers", path: "/influencers" }, { label: influencer.name }]} />
