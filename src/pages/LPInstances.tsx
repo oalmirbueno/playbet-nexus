@@ -106,10 +106,7 @@ export default function LPInstances() {
         toast({ title: "Slug duplicado", description: "Esse slug já existe nessa LP base.", variant: "destructive" });
         return;
       }
-      if (dup === "influencer") {
-        toast({ title: "Instância duplicada", description: "Esse influencer já possui uma instância nessa LP base.", variant: "destructive" });
-        return;
-      }
+      // Múltiplas instâncias do mesmo influencer na mesma LP são permitidas (com slugs diferentes)
 
       const payload = {
         landing_page_id: editing.landing_page_id, influencer_id: editing.influencer_id,
