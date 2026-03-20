@@ -339,13 +339,23 @@ export default function Financeiro() {
               <h3 className="text-sm font-semibold">Nível C — Distribuição Societária</h3>
             </div>
             <p className="text-[10px] text-muted-foreground mb-4">
-              Calculada sobre o caixa realizado. Camilly (sócia) não entra como débito de influencer.
+              {decomposicao?.fonte === "caixa"
+                ? "Calculada sobre o caixa realizado (Asaas). Camilly (sócia) não entra como débito de influencer."
+                : decomposicao
+                  ? "⚠️ Projeção baseada no saldo real da plataforma — ainda não é caixa realizado."
+                  : "Aguardando revenue ou caixa realizado para calcular distribuição."}
             </p>
             {decomposicao ? (
               <div className="space-y-4">
+                {decomposicao.fonte === "plataforma" && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-warning/10 border border-warning/20 text-sm text-warning">
+                    <AlertTriangle size={14} />
+                    <span>Projeção sobre saldo da plataforma ({availableBalanceValue}). A distribuição real só será efetivada após saque e pagamento via Asaas.</span>
+                  </div>
+                )}
                 <div className="bg-secondary/30 rounded-lg p-4 font-mono text-sm space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-accent">Caixa Realizado (base)</span>
+                    <span className="text-accent">{decomposicao.fonte === "caixa" ? "Caixa Realizado (base)" : "Saldo Plataforma (projeção)"}</span>
                     <span className="font-semibold">{formatBRL(decomposicao.receitaBase)}</span>
                   </div>
                   <div className="flex justify-between text-success">
@@ -372,6 +382,9 @@ export default function Financeiro() {
                           <span className="text-xs text-muted-foreground ml-auto">{s.participacao}%</span>
                         </div>
                         <p className="text-lg font-bold">{formatBRL(s.valor)}</p>
+                        {decomposicao.fonte === "plataforma" && (
+                          <p className="text-[10px] text-warning">projeção</p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -379,7 +392,7 @@ export default function Financeiro() {
               </div>
             ) : (
               <div className="text-sm text-muted-foreground bg-secondary/20 p-4 rounded-lg text-center">
-                Sem caixa realizado para distribuir. A decomposição societária é calculada sobre pagamentos efetivados via Asaas, não sobre revenue da plataforma.
+                Sem revenue ou caixa realizado para distribuir. Configure os postbacks no Tracking Hub.
               </div>
             )}
           </div>
