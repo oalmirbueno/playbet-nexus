@@ -350,6 +350,91 @@ export default function LPInstances() {
         </DialogContent>
       </Dialog>
 
+      {/* Postback URLs Dialog */}
+      <Dialog open={!!postbackOpen} onOpenChange={() => setPostbackOpen(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Radio size={16} className="text-accent" />
+              Postback URLs — {postbackOpen?.slug}
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Cole estas URLs na plataforma de afiliados para rastrear eventos deste link
+            </p>
+          </DialogHeader>
+          {postbackOpen && (() => {
+            const urls = getPostbackUrls(postbackOpen);
+            if (!urls) {
+              return (
+                <div className="py-8 text-center text-muted-foreground">
+                  <AlertTriangle size={24} className="mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">Nenhum preset de plataforma encontrado para esta LP.</p>
+                  <p className="text-xs mt-1">Vincule a LP base a uma plataforma para gerar postback URLs.</p>
+                </div>
+              );
+            }
+            const copyAll = () => {
+              const text = urls.map(u => `${u.event.label}: ${u.url}`).join("\n\n");
+              navigator.clipboard.writeText(text);
+              toast({ title: "Todos os postbacks copiados!" });
+            };
+            return (
+              <div className="space-y-3 py-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    Influencer: <strong className="text-foreground">{getInfluencerName(postbackOpen.influencer_id)}</strong>
+                  </span>
+                  <button className="btn-ghost text-xs" onClick={copyAll}>
+                    <Copy size={12} /> Copiar Todos
+                  </button>
+                </div>
+                {urls.map(({ event: evt, url }) => (
+                  <div key={evt.raw_event_name} className="bg-secondary/30 border border-border rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${
+                          evt.canonical_event_name === "registration" ? "bg-blue-400" :
+                          evt.canonical_event_name === "ftd" ? "bg-emerald-400" :
+                          evt.canonical_event_name === "revenue" ? "bg-amber-400" :
+                          evt.canonical_event_name === "deposit" ? "bg-cyan-400" :
+                          "bg-muted-foreground/40"
+                        }`} />
+                        <span className="text-xs font-medium">{evt.label}</span>
+                      </div>
+                      <button
+                        className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-accent transition-colors"
+                        title={`Copiar URL de ${evt.label}`}
+                        onClick={() => {
+                          navigator.clipboard.writeText(url);
+                          toast({ title: `URL de ${evt.label} copiada!` });
+                        }}
+                      >
+                        <Copy size={12} />
+                      </button>
+                    </div>
+                    <div className="overflow-x-auto invisible-scroll">
+                      <code className="text-[10px] font-mono text-accent/80 whitespace-nowrap leading-relaxed break-all">{url}</code>
+                    </div>
+                  </div>
+                ))}
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground">
+                  <p className="font-medium text-foreground mb-1">Como usar:</p>
+                  <ol className="list-decimal list-inside space-y-0.5">
+                    <li>Copie a URL do evento desejado</li>
+                    <li>Acesse o painel de afiliados da plataforma</li>
+                    <li>Cole na seção de "Postback URL" ou "S2S Tracking"</li>
+                    <li>Os macros como <code className="text-accent">{"{sub1}"}</code> serão preenchidos automaticamente pela plataforma</li>
+                  </ol>
+                </div>
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <button className="btn-ghost" onClick={() => setPostbackOpen(null)}>Fechar</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Create/Edit Wizard Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
         <DialogContent className="max-w-lg">
