@@ -36,17 +36,33 @@ export default function LPInstances() {
   const { data, isLoading, create, update, toggle, isCreating, isUpdating } = useLandingPageInstances();
   const { data: landingPages } = useLandingPages();
   const { data: influencers } = useInfluencers();
+  const { data: platforms } = usePlatforms();
   const [modalOpen, setModalOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [editing, setEditing] = useState<EditingState | null>(null);
   const [previewOpen, setPreviewOpen] = useState<LandingPageInstanceRow | null>(null);
+  const [postbackOpen, setPostbackOpen] = useState<LandingPageInstanceRow | null>(null);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [filterLP, setFilterLP] = useState("Todos");
 
   const getLPName = (id: string) => landingPages.find(l => l.id === id)?.name || "—";
   const getLPDomain = (id: string) => landingPages.find(l => l.id === id)?.domain || "";
+  const getLPPlatformId = (id: string) => landingPages.find(l => l.id === id)?.platform_id || null;
   const getInfluencerName = (id: string) => influencers.find(i => i.id === id)?.name || "—";
+  const getPlatformName = (id: string) => platforms.find(p => p.id === id)?.name || "";
+
+  // Generate postback URLs for an instance
+  const getPostbackUrls = (inst: LandingPageInstanceRow) => {
+    const platformId = getLPPlatformId(inst.landing_page_id);
+    const platformName = platformId ? getPlatformName(platformId) : "";
+    const preset = platformName ? findPresetByName(platformName) : null;
+    if (!preset) return null;
+    return preset.events.map(evt => ({
+      event: evt,
+      url: buildPostbackUrlForEvent(preset, evt, undefined, inst.influencer_id, undefined, false),
+    }));
+  };
 
   const filtered = data.filter(inst => {
     if (search) {
