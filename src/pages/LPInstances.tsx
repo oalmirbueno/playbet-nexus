@@ -143,6 +143,37 @@ export default function LPInstances() {
     return inf?.slug || "";
   };
 
+  // Generate slug suggestions based on existing instances
+  const slugSuggestions = (influencerId: string, lpId: string): string[] => {
+    const inf = influencers.find(i => i.id === influencerId);
+    if (!inf) return [];
+    const baseSlug = inf.slug;
+    const existingSlugs = data
+      .filter(inst => inst.landing_page_id === lpId)
+      .map(inst => inst.slug);
+    const suggestions: string[] = [];
+    // Always suggest base slug if not taken
+    if (!existingSlugs.includes(baseSlug)) suggestions.push(baseSlug);
+    // Suggest numbered variants
+    for (let n = 2; n <= 10; n++) {
+      const variant = `${baseSlug}-${n}`;
+      if (!existingSlugs.includes(variant)) {
+        suggestions.push(variant);
+        if (suggestions.length >= 5) break;
+      }
+    }
+    // Also suggest with common suffixes
+    const suffixes = ["promo", "stories", "bio", "reels", "live"];
+    for (const suf of suffixes) {
+      const variant = `${baseSlug}-${suf}`;
+      if (!existingSlugs.includes(variant)) {
+        suggestions.push(variant);
+        if (suggestions.length >= 8) break;
+      }
+    }
+    return suggestions;
+  };
+
   const exportableData = data.map(inst => ({
     id: inst.id, lp_base: getLPName(inst.landing_page_id),
     dominio: getLPDomain(inst.landing_page_id), influencer: getInfluencerName(inst.influencer_id),
