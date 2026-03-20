@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, DollarSign, Link2, Megaphone, Wallet, PenTool, MessageSquare, Copy, Edit, Globe, MousePointerClick } from "lucide-react";
+import { ArrowLeft, DollarSign, Link2, Megaphone, Wallet, PenTool, MessageSquare, Copy, Edit, Globe, MousePointerClick, Activity } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,7 @@ const chartTooltip = { background: "hsl(0 0% 8%)", border: "1px solid hsl(0 0% 1
 
 const tabs = [
   { key: "resumo", label: "Resumo", icon: DollarSign },
+  { key: "tracking", label: "Tracking", icon: Activity },
   { key: "landing", label: "Landing Pages", icon: Globe },
   { key: "campanhas", label: "Campanhas", icon: Megaphone },
   { key: "saques", label: "Saques", icon: Wallet },
