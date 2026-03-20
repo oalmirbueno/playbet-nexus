@@ -140,12 +140,14 @@ export default function InfluencerDetalhe() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        <div className="stat-card border-l-2 border-l-primary"><span className="text-[10px] text-muted-foreground uppercase">Comissão</span><p className="text-lg font-bold">{comissao}%</p></div>
-        <div className="stat-card border-l-2 border-l-accent"><span className="text-[10px] text-muted-foreground uppercase">Total Cliques</span><p className="text-lg font-bold">{totalCliques.toLocaleString()}</p></div>
-        <div className="stat-card border-l-2 border-l-warning"><span className="text-[10px] text-muted-foreground uppercase">LPs Vinculadas</span><p className="text-lg font-bold">{myInstances.length}</p></div>
-        <div className="stat-card border-l-2 border-l-info"><span className="text-[10px] text-muted-foreground uppercase">Campanhas</span><p className="text-lg font-bold">{myCampanhas.length}</p></div>
-        <div className="stat-card border-l-2 border-l-success"><span className="text-[10px] text-muted-foreground uppercase">Saques</span><p className="text-lg font-bold">{mySaques.length}</p></div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div className="stat-card border-l-2 border-l-primary"><span className="text-[10px] text-muted-foreground uppercase">Revenue</span><p className="text-lg font-bold text-emerald-400">R$ {trackingMetrics.revenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p></div>
+        <div className="stat-card border-l-2 border-l-accent"><span className="text-[10px] text-muted-foreground uppercase">FTDs</span><p className="text-lg font-bold">{trackingMetrics.ftds}</p></div>
+        <div className="stat-card border-l-2 border-l-info"><span className="text-[10px] text-muted-foreground uppercase">Registros</span><p className="text-lg font-bold">{trackingMetrics.registrations}</p></div>
+        <div className="stat-card border-l-2 border-l-success"><span className="text-[10px] text-muted-foreground uppercase">Comissão</span><p className="text-lg font-bold">{comissao}%</p></div>
+        <div className="stat-card border-l-2 border-l-warning"><span className="text-[10px] text-muted-foreground uppercase">Total Cliques</span><p className="text-lg font-bold">{totalCliques.toLocaleString()}</p></div>
+        <div className="stat-card border-l-2 border-l-destructive"><span className="text-[10px] text-muted-foreground uppercase">LPs Vinculadas</span><p className="text-lg font-bold">{myInstances.length}</p></div>
+        <div className="stat-card border-l-2 border-l-muted-foreground"><span className="text-[10px] text-muted-foreground uppercase">Eventos</span><p className="text-lg font-bold">{trackingMetrics.total}</p></div>
       </div>
 
       {/* Tabs */}
