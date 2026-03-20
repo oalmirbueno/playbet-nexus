@@ -29,6 +29,7 @@ export default function InfluencerDetalhe() {
   const [obs, setObs] = useState("");
   const [editLPOpen, setEditLPOpen] = useState(false);
   const [clicks, setClicks] = useState<any[]>([]);
+  const [trackingEvents, setTrackingEvents] = useState<any[]>([]);
 
   const { data: influencers, isLoading, update } = useInfluencers();
   const { data: instances } = useLandingPageInstances();
@@ -41,6 +42,15 @@ export default function InfluencerDetalhe() {
   useEffect(() => {
     if (id) {
       clickService.getByInfluencer(id).then(setClicks).catch(() => {});
+      // Fetch tracking events for this influencer
+      supabase
+        .from("tracking_events")
+        .select("*")
+        .eq("influencer_id", id)
+        .eq("is_demo", false)
+        .neq("status", "invalid_legacy")
+        .order("event_timestamp", { ascending: false })
+        .then(({ data: evts }) => setTrackingEvents(evts || []));
     }
   }, [id]);
 
