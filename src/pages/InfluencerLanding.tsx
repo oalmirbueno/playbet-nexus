@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Gamepad2, Star, Shield, ArrowRight, Zap, Trophy, Gift } from "lucide-react";
@@ -12,15 +12,32 @@ interface ResolvedLanding {
   influencer_name: string;
   instance_id: string | null;
   landing_page_id: string | null;
+  tracking_link_id: string | null;
+  click_id: string;
+  click_id_param: string; // e.g. "sub1"
 }
 
-/**
- * Detect the current hostname and find the matching LP base in the central DB.
- * Matches by checking if the landing_page.domain contains the hostname.
- * e.g. hostname "oportunidades.playbet.app.br" matches domain "https://oportunidades.playbet.app.br"
- */
+/** Generate a unique click_id for attribution */
+function generateClickId(): string {
+  const ts = Date.now().toString(36);
+  const rand = Math.random().toString(36).substring(2, 10);
+  return `clk_${ts}_${rand}`;
+}
+
+/** Append click_id (sub1) to the affiliate URL */
+function injectClickId(url: string, paramName: string, clickId: string): string {
+  try {
+    const u = new URL(url);
+    u.searchParams.set(paramName, clickId);
+    return u.toString();
+  } catch {
+    // If URL parsing fails, try simple append
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}${paramName}=${clickId}`;
+  }
+}
+
 async function findLPBaseByHostname(hostname: string) {
-  // Get all active landing pages with a domain set
   const { data: lps } = await supabase
     .from("landing_pages")
     .select("id, domain, name")
@@ -28,14 +45,11 @@ async function findLPBaseByHostname(hostname: string) {
 
   if (!lps || lps.length === 0) return null;
 
-  // Normalize hostname (strip port for dev)
   const normalizedHost = hostname.split(":")[0].toLowerCase();
 
-  // Try exact domain match first
   for (const lp of lps) {
     if (!lp.domain) continue;
     try {
-      // Domain may be stored as "https://oportunidades.playbet.app.br" or "oportunidades.playbet.app.br"
       const domainHost = lp.domain.replace(/^https?:\/\//, "").replace(/\/+$/, "").toLowerCase();
       if (domainHost === normalizedHost) return lp;
     } catch {
@@ -46,10 +60,36 @@ async function findLPBaseByHostname(hostname: string) {
   return null;
 }
 
+/** Find tracking_link for a given instance or influencer */
+async function findTrackingLink(instanceId: string | null, influencerId: string) {
+  // Priority 1: by instance
+  if (instanceId) {
+    const { data } = await supabase
+      .from("tracking_links")
+      .select("id, click_id_param_name, base_url")
+      .eq("landing_page_instance_id", instanceId)
+      .eq("status", "active")
+      .limit(1)
+      .maybeSingle();
+    if (data) return data;
+  }
+
+  // Priority 2: by influencer
+  const { data } = await supabase
+    .from("tracking_links")
+    .select("id, click_id_param_name, base_url")
+    .eq("influencer_id", influencerId)
+    .eq("status", "active")
+    .limit(1)
+    .maybeSingle();
+
+  return data || null;
+}
+
 export default function InfluencerLanding() {
   const { slug: pathSlug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
-  const slug = searchParams.get("ref") || pathSlug; // ?ref= takes priority, /i/:slug as fallback
+  const slug = searchParams.get("ref") || pathSlug;
   const [state, setState] = useState<LoadState>("loading");
   const [resolved, setResolved] = useState<ResolvedLanding | null>(null);
   const [clicking, setClicking] = useState(false);
@@ -59,13 +99,55 @@ export default function InfluencerLanding() {
 
     (async () => {
       const hostname = window.location.hostname;
+      const clickId = generateClickId();
 
-      // ── STRATEGY 1: Domain-aware resolution (production subdomains) ──
-      // Detect which LP base this subdomain corresponds to, then find instance by slug + LP base
+      // Helper to finalize resolution
+      const finalize = async (
+        affiliateLink: string,
+        influencerId: string,
+        influencerName: string,
+        instanceId: string | null,
+        landingPageId: string | null,
+      ) => {
+        const tl = await findTrackingLink(instanceId, influencerId);
+        const paramName = tl?.click_id_param_name || "sub1";
+
+        setResolved({
+          affiliate_link: affiliateLink,
+          influencer_id: influencerId,
+          influencer_name: influencerName,
+          instance_id: instanceId,
+          landing_page_id: landingPageId,
+          tracking_link_id: tl?.id || null,
+          click_id: clickId,
+          click_id_param: paramName,
+        });
+        setState("ready");
+
+        // Register click event in tracking_events (non-blocking)
+        supabase.from("tracking_events").insert({
+          canonical_event_name: "click",
+          raw_event_name: "lp_click_view",
+          click_id: clickId,
+          influencer_id: influencerId,
+          landing_page_id: landingPageId,
+          landing_page_instance_id: instanceId,
+          tracking_link_id: tl?.id || null,
+          source_type: "landing_page",
+          event_timestamp: new Date().toISOString(),
+          raw_payload: {
+            slug,
+            hostname,
+            user_agent: navigator.userAgent,
+            referrer: document.referrer || null,
+          },
+        }).then(() => {});
+      };
+
+      // ── STRATEGY 1: Domain-aware ──
       const lpBase = await findLPBaseByHostname(hostname);
 
       if (lpBase) {
-        // Find instance matching this slug AND this LP base
         const { data: instance } = await supabase
           .from("landing_page_instances")
           .select("*")
@@ -82,19 +164,11 @@ export default function InfluencerLanding() {
           .eq("id", instance.influencer_id)
           .maybeSingle();
 
-        setResolved({
-          affiliate_link: instance.affiliate_link,
-          influencer_id: instance.influencer_id,
-          influencer_name: inf?.name || "",
-          instance_id: instance.id,
-          landing_page_id: instance.landing_page_id,
-        });
-        setState("ready");
+        await finalize(instance.affiliate_link, instance.influencer_id, inf?.name || "", instance.id, instance.landing_page_id);
         return;
       }
 
-      // ── STRATEGY 2: Generic resolution (preview/lovable.app or unknown domain) ──
-      // Try landing_page_instances by slug (any LP base)
+      // ── STRATEGY 2: Generic instance ──
       const { data: instance } = await supabase
         .from("landing_page_instances")
         .select("*")
@@ -110,18 +184,11 @@ export default function InfluencerLanding() {
           .eq("id", instance.influencer_id)
           .maybeSingle();
 
-        setResolved({
-          affiliate_link: instance.affiliate_link,
-          influencer_id: instance.influencer_id,
-          influencer_name: inf?.name || "",
-          instance_id: instance.id,
-          landing_page_id: instance.landing_page_id,
-        });
-        setState("ready");
+        await finalize(instance.affiliate_link, instance.influencer_id, inf?.name || "", instance.id, instance.landing_page_id);
         return;
       }
 
-      // ── STRATEGY 3: Legacy fallback (influencers table by slug) ──
+      // ── STRATEGY 3: Legacy influencer ──
       const { data: influencer } = await supabase
         .from("influencers")
         .select("*")
@@ -131,21 +198,15 @@ export default function InfluencerLanding() {
       if (!influencer) { setState("not_found"); return; }
       if (!influencer.is_active) { setState("inactive"); return; }
 
-      setResolved({
-        affiliate_link: influencer.affiliate_link || "",
-        influencer_id: influencer.id,
-        influencer_name: influencer.name,
-        instance_id: null,
-        landing_page_id: null,
-      });
-      setState("ready");
+      await finalize(influencer.affiliate_link || "", influencer.id, influencer.name, null, null);
     })();
   }, [slug]);
 
-  const handleCTA = async () => {
+  const handleCTA = useCallback(async () => {
     if (!resolved?.affiliate_link || clicking) return;
     setClicking(true);
 
+    // Insert click record (legacy clicks table)
     try {
       await supabase.from("clicks").insert({
         influencer_id: resolved.influencer_id,
@@ -157,11 +218,13 @@ export default function InfluencerLanding() {
         source: resolved.instance_id ? "lp_instance" : "legacy_influencer",
       });
     } catch {
-      // Don't block redirect on tracking failure
+      // Don't block redirect
     }
 
-    window.location.href = resolved.affiliate_link;
-  };
+    // Inject click_id into affiliate link for attribution
+    const finalUrl = injectClickId(resolved.affiliate_link, resolved.click_id_param, resolved.click_id);
+    window.location.href = finalUrl;
+  }, [resolved, clicking, slug]);
 
   // ── Loading ──
   if (state === "loading") {
@@ -228,7 +291,7 @@ export default function InfluencerLanding() {
           <button
             onClick={handleCTA}
             disabled={clicking || !hasLink}
-            className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-8 py-3.5 rounded-xl text-base transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-400/30"
+            className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-8 py-3.5 rounded-xl text-base transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-400/30 active:scale-[0.97]"
           >
             {clicking ? "Redirecionando..." : "Cadastrar Agora"} <ArrowRight size={18} />
           </button>
@@ -280,7 +343,7 @@ export default function InfluencerLanding() {
           <button
             onClick={handleCTA}
             disabled={clicking || !hasLink}
-            className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-8 py-3 rounded-xl text-sm transition-all shadow-lg shadow-emerald-500/25"
+            className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-8 py-3 rounded-xl text-sm transition-all shadow-lg shadow-emerald-500/25 active:scale-[0.97]"
           >
             {clicking ? "Redirecionando..." : "Quero Meu Bônus"} <ArrowRight size={16} />
           </button>
