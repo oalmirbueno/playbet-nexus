@@ -83,11 +83,13 @@ export default function Financeiro() {
     return { totalGanhosSocios, totalDisponivelSocios, mediaComissaoInfluencer };
   }, [socios, influencers]);
 
-  // ── Decomposição: only calculate when there's realized cash ──
+  // ── Decomposição: calculate from caixa realizado OR from platform balance ──
   const decomposicao = useMemo(() => {
-    // Only decompose if there's actual paid cash
-    const base = caixaMetrics.totalPagos;
+    const baseCaixa = caixaMetrics.totalPagos;
+    const basePlataforma = consolidated.latestWithdrawableBrl || consolidated.latestWithdrawableOriginal || 0;
+    const base = baseCaixa > 0 ? baseCaixa : basePlataforma;
     if (base <= 0) return null;
+    const fonte = baseCaixa > 0 ? "caixa" as const : "plataforma" as const;
     const comissao = base * (socioMetrics.mediaComissaoInfluencer / 100);
     const operacional = base * 0.10;
     const baseSocietaria = base - comissao - operacional;
@@ -96,13 +98,14 @@ export default function Financeiro() {
       comissao,
       operacional,
       baseSocietaria,
+      fonte,
       porSocio: socios.map((s: any) => ({
         nome: s.nome,
         participacao: Number(s.participacao || 0),
         valor: baseSocietaria * (Number(s.participacao || 0) / 100),
       })),
     };
-  }, [caixaMetrics.totalPagos, socioMetrics, socios]);
+  }, [caixaMetrics.totalPagos, consolidated, socioMetrics, socios]);
 
   // ── Charts ──
   const saquesPorStatus = useMemo(() => {
