@@ -8,7 +8,7 @@ import type { LandingPageInstanceRow } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ExportDropdown from "@/components/ExportDropdown";
-import { findPresetByName, buildPostbackUrlForEvent, type PlatformPreset } from "@/config/platformPresets";
+import { findPresetByName, buildPostbackUrlForEvent } from "@/config/platformPresets";
 
 type EditingState = {
   id?: string;
@@ -52,24 +52,20 @@ export default function LPInstances() {
   const getInfluencerName = (id: string) => influencers.find(i => i.id === id)?.name || "—";
   const getPlatformName = (id: string) => platforms.find(p => p.id === id)?.name || "";
 
-  // Generate postback URLs for an instance — fallback to first platform with a known preset
+  // Generate postback URLs for an instance — always prefer the 1win preset
   const getPostbackUrls = (inst: LandingPageInstanceRow) => {
     const platformId = getLPPlatformId(inst.landing_page_id);
-    let preset: ReturnType<typeof findPresetByName> = null;
+    let preset = findPresetByName("1win");
 
     if (platformId) {
-      preset = findPresetByName(getPlatformName(platformId));
-    }
-
-    // Fallback: try every active platform until a preset matches
-    if (!preset) {
-      for (const p of platforms.filter(p => p.is_active)) {
-        preset = findPresetByName(p.name);
-        if (preset) break;
+      const linkedPreset = findPresetByName(getPlatformName(platformId));
+      if (linkedPreset?.slug === "1win") {
+        preset = linkedPreset;
       }
     }
 
     if (!preset) return null;
+
     return preset.events.map(evt => ({
       event: evt,
       url: buildPostbackUrlForEvent(preset!, evt, undefined, inst.influencer_id, undefined, false),
