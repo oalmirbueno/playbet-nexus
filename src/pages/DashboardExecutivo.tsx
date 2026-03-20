@@ -270,47 +270,81 @@ export default function DashboardExecutivo() {
             </div>
           )}
 
-          {/* Bloco Societário — ALWAYS visible */}
+          {/* Bloco Societário + Distribuição */}
           <div className="glass-card p-6 border-l-4 border-l-accent">
             <div className="flex items-center gap-2 mb-1">
               <Users size={14} className="text-accent" />
-              <h3 className="text-sm font-semibold">Status Societário</h3>
+              <h3 className="text-sm font-semibold">Distribuição Societária</h3>
             </div>
             <p className="text-xs text-muted-foreground mb-3">
-              {hasCaixaRealizado
-                ? "Distribuição calculada sobre caixa realizado."
-                : "Aguardando caixa realizado (saque + Asaas) para cálculo de distribuição."}
+              {distribuicao?.fonte === "caixa"
+                ? "Calculada sobre caixa realizado (Asaas)."
+                : distribuicao
+                  ? "Projeção sobre saldo real da plataforma."
+                  : "Aguardando revenue ou caixa para calcular."}
             </p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
-                <p className="text-[10px] text-muted-foreground uppercase">Sócios</p>
-                <p className="text-lg font-bold">{socios.length > 0 ? socios.length : "—"}</p>
-                {socios.length === 0 && <p className="text-[10px] text-warning">Nenhum sócio cadastrado</p>}
-                {socios.length > 0 && (
-                  <div className="mt-1 space-y-0.5">
-                    {socios.slice(0, 3).map((s: any) => (
-                      <p key={s.id} className="text-[10px] text-muted-foreground">{s.nome} · {s.participacao}%</p>
-                    ))}
+
+            {distribuicao ? (
+              <div className="space-y-4">
+                {distribuicao.fonte === "plataforma" && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-warning/10 border border-warning/20 text-xs text-warning">
+                    <AlertTriangle size={13} />
+                    <span>Projeção — distribuição real após saque + Asaas</span>
                   </div>
                 )}
+                <div className="bg-secondary/30 rounded-lg p-3 font-mono text-xs space-y-1.5">
+                  <div className="flex justify-between">
+                    <span className="text-accent">{distribuicao.fonte === "caixa" ? "Caixa Realizado" : "Saldo Plataforma"}</span>
+                    <span className="font-semibold">{formatBRL(distribuicao.base)}</span>
+                  </div>
+                  <div className="flex justify-between text-success">
+                    <span>− Comissão Influencers ({mediaComissaoInfluencer.toFixed(1)}%)</span>
+                    <span>- {formatBRL(distribuicao.comissao)}</span>
+                  </div>
+                  <div className="flex justify-between text-primary">
+                    <span>− Retenção Operacional (10%)</span>
+                    <span>- {formatBRL(distribuicao.operacional)}</span>
+                  </div>
+                  <div className="h-px bg-border my-1" />
+                  <div className="flex justify-between font-bold text-primary">
+                    <span>= Base Societária</span>
+                    <span>{formatBRL(distribuicao.baseSocietaria)}</span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {distribuicao.porSocio.map((s, i) => (
+                    <div key={s.nome} className="bg-secondary/20 rounded-lg p-3 border border-border/50">
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                        <span className="text-sm font-medium">{s.nome}</span>
+                        <span className="text-xs text-muted-foreground ml-auto">{s.participacao}%</span>
+                      </div>
+                      <p className="text-lg font-bold">{formatBRL(s.valor)}</p>
+                      {distribuicao.fonte === "plataforma" && (
+                        <p className="text-[10px] text-warning">projeção</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
-                <p className="text-[10px] text-muted-foreground uppercase">Saldo Sócios (declarado)</p>
-                <p className="text-lg font-bold">{totalDisponivelSocios > 0 ? formatBRL(totalDisponivelSocios) : "—"}</p>
-                <p className="text-[10px] text-muted-foreground">Origem: cadastro manual</p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+                  <p className="text-[10px] text-muted-foreground uppercase">Sócios</p>
+                  <p className="text-lg font-bold">{socios.length > 0 ? socios.length : "—"}</p>
+                  {socios.length === 0 && <p className="text-[10px] text-warning">Nenhum sócio cadastrado</p>}
+                </div>
+                <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+                  <p className="text-[10px] text-muted-foreground uppercase">Caixa Realizado</p>
+                  <p className="text-lg font-bold text-muted-foreground">—</p>
+                  <p className="text-[10px] text-muted-foreground">Aguardando Asaas</p>
+                </div>
+                <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+                  <p className="text-[10px] text-muted-foreground uppercase">Influencers Ativos</p>
+                  <p className="text-lg font-bold">{influencers.filter((i: any) => i.is_active).length}</p>
+                </div>
               </div>
-              <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
-                <p className="text-[10px] text-muted-foreground uppercase">Caixa Realizado</p>
-                <p className={`text-lg font-bold ${hasCaixaRealizado ? "text-success" : "text-muted-foreground"}`}>
-                  {hasCaixaRealizado ? formatBRL(totalPagosAsaas) : "—"}
-                </p>
-                <p className="text-[10px] text-muted-foreground">{hasCaixaRealizado ? "Pago via Asaas" : "Aguardando integração Asaas"}</p>
-              </div>
-              <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
-                <p className="text-[10px] text-muted-foreground uppercase">Influencers Ativos</p>
-                <p className="text-lg font-bold">{influencers.filter((i: any) => i.is_active).length}</p>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Tracking Overview */}
