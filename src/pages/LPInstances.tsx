@@ -375,6 +375,30 @@ export default function LPInstances() {
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Slug *</label>
                   <input className="input-field mt-1" value={editing?.slug || ""} onChange={e => setEditing(p => p ? { ...p, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") } : p)} placeholder="camille-stresser" />
+                  {editing?.influencer_id && editing?.landing_page_id && (
+                    <div className="mt-2">
+                      <p className="text-[10px] text-muted-foreground mb-1.5">Slugs disponíveis (clique para usar):</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {slugSuggestions(editing.influencer_id, editing.landing_page_id).map(s => (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setEditing(p => p ? { ...p, slug: s } : p)}
+                            className={`px-2 py-0.5 rounded-md text-xs font-mono transition-colors border ${
+                              editing.slug === s
+                                ? "bg-primary/20 border-primary/40 text-primary"
+                                : "bg-secondary/50 border-border hover:bg-secondary hover:border-primary/30 text-muted-foreground"
+                            }`}
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+                      {slugSuggestions(editing.influencer_id, editing.landing_page_id).length === 0 && (
+                        <p className="text-[10px] text-warning">Todos os slugs comuns já estão em uso. Digite um slug personalizado acima.</p>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Affiliate Link *</label>
