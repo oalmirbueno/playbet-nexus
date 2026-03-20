@@ -203,6 +203,82 @@ export default function InfluencerDetalhe() {
         </div>
       )}
 
+      {/* TRACKING */}
+      {tab === "tracking" && (
+        <div className="space-y-4 animate-fade-in">
+          {/* KPIs */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="stat-card border-l-2 border-l-primary"><span className="text-[10px] text-muted-foreground uppercase">Revenue (BRL)</span><p className="text-lg font-bold text-emerald-400">R$ {trackingMetrics.revenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p></div>
+            <div className="stat-card border-l-2 border-l-accent"><span className="text-[10px] text-muted-foreground uppercase">Revenue (USD)</span><p className="text-lg font-bold">$ {trackingMetrics.revenueUsd.toLocaleString("en-US", { minimumFractionDigits: 2 })}</p></div>
+            <div className="stat-card border-l-2 border-l-info"><span className="text-[10px] text-muted-foreground uppercase">Registros</span><p className="text-lg font-bold">{trackingMetrics.registrations}</p></div>
+            <div className="stat-card border-l-2 border-l-success"><span className="text-[10px] text-muted-foreground uppercase">FTDs</span><p className="text-lg font-bold">{trackingMetrics.ftds}</p></div>
+            <div className="stat-card border-l-2 border-l-warning"><span className="text-[10px] text-muted-foreground uppercase">Depósitos Total</span><p className="text-lg font-bold">R$ {trackingMetrics.depositsTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p></div>
+            <div className="stat-card border-l-2 border-l-destructive"><span className="text-[10px] text-muted-foreground uppercase">Redepósitos</span><p className="text-lg font-bold">{trackingMetrics.redeposits}</p></div>
+          </div>
+
+          {/* Revenue chart */}
+          {trackingMetrics.revenueChart.length > 0 && (
+            <div className="glass-card p-5">
+              <h3 className="section-title">Revenue por Dia (BRL)</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={trackingMetrics.revenueChart}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 15%)" />
+                  <XAxis dataKey="data" stroke="hsl(0 0% 40%)" fontSize={11} />
+                  <YAxis stroke="hsl(0 0% 40%)" fontSize={11} />
+                  <Tooltip contentStyle={chartTooltip} formatter={(v: number) => [`R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, "Revenue"]} />
+                  <Bar dataKey="valor" fill="hsl(142 71% 45%)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Events table */}
+          <div className="glass-card p-5">
+            <h3 className="section-title">Últimos Eventos ({trackingMetrics.total} total)</h3>
+            {trackingEvents.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <Activity size={32} className="mx-auto mb-2 opacity-30" />
+                <p className="text-sm">Nenhum evento de tracking recebido para esta influenciadora.</p>
+                <p className="text-xs mt-1">Configure os postbacks na plataforma para começar a receber dados.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto invisible-scroll">
+                <table className="data-table">
+                  <thead>
+                    <tr><th>Data/Hora</th><th>Evento</th><th>Valor</th><th>Moeda</th><th>BRL</th><th>Transaction ID</th><th>País</th></tr>
+                  </thead>
+                  <tbody>
+                    {trackingEvents.slice(0, 20).map((e: any) => (
+                      <tr key={e.id}>
+                        <td className="text-xs whitespace-nowrap">{new Date(e.event_timestamp).toLocaleString("pt-BR")}</td>
+                        <td>
+                          <span className={
+                            e.canonical_event_name === "revenue" ? "badge-success" :
+                            e.canonical_event_name === "ftd" ? "badge-info" :
+                            e.canonical_event_name === "registration" ? "badge-warning" :
+                            "badge-neutral"
+                          }>{e.canonical_event_name}</span>
+                        </td>
+                        <td className="font-mono text-xs">{e.original_amount != null ? Number(e.original_amount).toFixed(2) : "—"}</td>
+                        <td className="text-xs">{e.original_currency || e.currency || "—"}</td>
+                        <td className="font-mono text-xs font-semibold">{e.converted_amount_brl != null ? `R$ ${Number(e.converted_amount_brl).toFixed(2)}` : "—"}</td>
+                        <td className="font-mono text-[10px] text-muted-foreground">{e.transaction_id?.slice(0, 12) || "—"}</td>
+                        <td className="text-xs">{e.country || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <button onClick={() => navigate("/tracking/events")} className="btn-ghost text-xs">→ Ver todos os Eventos</button>
+            <button onClick={() => navigate("/tracking")} className="btn-ghost text-xs">→ Dashboard de Tracking</button>
+          </div>
+        </div>
+      )}
+
       {/* LANDING PAGES */}
       {tab === "landing" && (
         <div className="space-y-4 animate-fade-in">
