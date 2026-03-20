@@ -341,6 +341,9 @@ export default function LPInstances() {
           <DialogFooter>
             {previewOpen && (
               <>
+                <button className="btn-ghost" onClick={() => { setPreviewOpen(null); setPostbackOpen(previewOpen); }}>
+                  <Radio size={12} /> Postback URLs
+                </button>
                 <button className="btn-ghost" onClick={() => copyUrl(previewOpen)}>Copiar URL</button>
                 <button className="btn-ghost" onClick={() => copyAffLink(previewOpen)}>Copiar Affiliate</button>
               </>
