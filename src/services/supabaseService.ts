@@ -192,7 +192,7 @@ export const landingPageInstanceService = {
   async toggleActive(id: string, current: boolean) {
     return this.update(id, { is_active: !current });
   },
-  async checkDuplicate(lpId: string, influencerId: string, slug: string, excludeId?: string) {
+  async checkDuplicate(lpId: string, _influencerId: string, slug: string, excludeId?: string) {
     let query = supabase.from("landing_page_instances")
       .select("id")
       .eq("landing_page_id", lpId)
@@ -200,14 +200,6 @@ export const landingPageInstanceService = {
     if (excludeId) query = query.neq("id", excludeId);
     const { data } = await query;
     if (data && data.length > 0) return "slug";
-    
-    let query2 = supabase.from("landing_page_instances")
-      .select("id")
-      .eq("landing_page_id", lpId)
-      .eq("influencer_id", influencerId);
-    if (excludeId) query2 = query2.neq("id", excludeId);
-    const { data: data2 } = await query2;
-    if (data2 && data2.length > 0) return "influencer";
     
     return null;
   },
