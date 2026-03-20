@@ -299,6 +299,7 @@ export default function LPInstances() {
                   <td>
                     <div className="flex gap-0.5">
                       <button onClick={() => setPreviewOpen(inst)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Preview"><Eye size={12} /></button>
+                      <button onClick={() => setPostbackOpen(inst)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-accent transition-colors" title="Postback URLs"><Radio size={12} /></button>
                       <button onClick={() => openEdit(inst)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Editar"><Edit size={12} /></button>
                       <button onClick={() => copyUrl(inst)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Copiar URL"><Copy size={12} /></button>
                       <button onClick={() => copyAffLink(inst)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Copiar Affiliate Link"><Link2 size={12} /></button>
