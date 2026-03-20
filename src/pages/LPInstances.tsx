@@ -1,13 +1,14 @@
 import { useState } from "react";
-import { Plus, Edit, Copy, Eye, XCircle, CheckCircle, Search, ExternalLink, AlertTriangle, Link2 } from "lucide-react";
+import { Plus, Edit, Copy, Eye, XCircle, CheckCircle, Search, ExternalLink, AlertTriangle, Link2, Radio } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useLandingPageInstances, useLandingPages, useInfluencers } from "@/hooks/useSupabaseQuery";
+import { useLandingPageInstances, useLandingPages, useInfluencers, usePlatforms } from "@/hooks/useSupabaseQuery";
 import { landingPageInstanceService } from "@/services/supabaseService";
 import type { LandingPageInstanceRow } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ExportDropdown from "@/components/ExportDropdown";
+import { findPresetByName, buildPostbackUrlForEvent, type PlatformPreset } from "@/config/platformPresets";
 
 type EditingState = {
   id?: string;
@@ -35,17 +36,33 @@ export default function LPInstances() {
   const { data, isLoading, create, update, toggle, isCreating, isUpdating } = useLandingPageInstances();
   const { data: landingPages } = useLandingPages();
   const { data: influencers } = useInfluencers();
+  const { data: platforms } = usePlatforms();
   const [modalOpen, setModalOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [editing, setEditing] = useState<EditingState | null>(null);
   const [previewOpen, setPreviewOpen] = useState<LandingPageInstanceRow | null>(null);
+  const [postbackOpen, setPostbackOpen] = useState<LandingPageInstanceRow | null>(null);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [filterLP, setFilterLP] = useState("Todos");
 
   const getLPName = (id: string) => landingPages.find(l => l.id === id)?.name || "—";
   const getLPDomain = (id: string) => landingPages.find(l => l.id === id)?.domain || "";
+  const getLPPlatformId = (id: string) => landingPages.find(l => l.id === id)?.platform_id || null;
   const getInfluencerName = (id: string) => influencers.find(i => i.id === id)?.name || "—";
+  const getPlatformName = (id: string) => platforms.find(p => p.id === id)?.name || "";
+
+  // Generate postback URLs for an instance
+  const getPostbackUrls = (inst: LandingPageInstanceRow) => {
+    const platformId = getLPPlatformId(inst.landing_page_id);
+    const platformName = platformId ? getPlatformName(platformId) : "";
+    const preset = platformName ? findPresetByName(platformName) : null;
+    if (!preset) return null;
+    return preset.events.map(evt => ({
+      event: evt,
+      url: buildPostbackUrlForEvent(preset, evt, undefined, inst.influencer_id, undefined, false),
+    }));
+  };
 
   const filtered = data.filter(inst => {
     if (search) {
@@ -282,6 +299,7 @@ export default function LPInstances() {
                   <td>
                     <div className="flex gap-0.5">
                       <button onClick={() => setPreviewOpen(inst)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Preview"><Eye size={12} /></button>
+                      <button onClick={() => setPostbackOpen(inst)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-accent transition-colors" title="Postback URLs"><Radio size={12} /></button>
                       <button onClick={() => openEdit(inst)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Editar"><Edit size={12} /></button>
                       <button onClick={() => copyUrl(inst)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Copiar URL"><Copy size={12} /></button>
                       <button onClick={() => copyAffLink(inst)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Copiar Affiliate Link"><Link2 size={12} /></button>
@@ -323,11 +341,99 @@ export default function LPInstances() {
           <DialogFooter>
             {previewOpen && (
               <>
+                <button className="btn-ghost" onClick={() => { setPreviewOpen(null); setPostbackOpen(previewOpen); }}>
+                  <Radio size={12} /> Postback URLs
+                </button>
                 <button className="btn-ghost" onClick={() => copyUrl(previewOpen)}>Copiar URL</button>
                 <button className="btn-ghost" onClick={() => copyAffLink(previewOpen)}>Copiar Affiliate</button>
               </>
             )}
             <button className="btn-ghost" onClick={() => setPreviewOpen(null)}>Fechar</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Postback URLs Dialog */}
+      <Dialog open={!!postbackOpen} onOpenChange={() => setPostbackOpen(null)}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Radio size={16} className="text-accent" />
+              Postback URLs — {postbackOpen?.slug}
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Cole estas URLs na plataforma de afiliados para rastrear eventos deste link
+            </p>
+          </DialogHeader>
+          {postbackOpen && (() => {
+            const urls = getPostbackUrls(postbackOpen);
+            if (!urls) {
+              return (
+                <div className="py-8 text-center text-muted-foreground">
+                  <AlertTriangle size={24} className="mx-auto mb-2 opacity-40" />
+                  <p className="text-sm">Nenhum preset de plataforma encontrado para esta LP.</p>
+                  <p className="text-xs mt-1">Vincule a LP base a uma plataforma para gerar postback URLs.</p>
+                </div>
+              );
+            }
+            const copyAll = () => {
+              const text = urls.map(u => `${u.event.label}: ${u.url}`).join("\n\n");
+              navigator.clipboard.writeText(text);
+              toast({ title: "Todos os postbacks copiados!" });
+            };
+            return (
+              <div className="space-y-3 py-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">
+                    Influencer: <strong className="text-foreground">{getInfluencerName(postbackOpen.influencer_id)}</strong>
+                  </span>
+                  <button className="btn-ghost text-xs" onClick={copyAll}>
+                    <Copy size={12} /> Copiar Todos
+                  </button>
+                </div>
+                {urls.map(({ event: evt, url }) => (
+                  <div key={evt.raw_event_name} className="bg-secondary/30 border border-border rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${
+                          evt.canonical_event_name === "registration" ? "bg-blue-400" :
+                          evt.canonical_event_name === "ftd" ? "bg-emerald-400" :
+                          evt.canonical_event_name === "revenue" ? "bg-amber-400" :
+                          evt.canonical_event_name === "deposit" ? "bg-cyan-400" :
+                          "bg-muted-foreground/40"
+                        }`} />
+                        <span className="text-xs font-medium">{evt.label}</span>
+                      </div>
+                      <button
+                        className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-accent transition-colors"
+                        title={`Copiar URL de ${evt.label}`}
+                        onClick={() => {
+                          navigator.clipboard.writeText(url);
+                          toast({ title: `URL de ${evt.label} copiada!` });
+                        }}
+                      >
+                        <Copy size={12} />
+                      </button>
+                    </div>
+                    <div className="overflow-x-auto invisible-scroll">
+                      <code className="text-[10px] font-mono text-accent/80 whitespace-nowrap leading-relaxed break-all">{url}</code>
+                    </div>
+                  </div>
+                ))}
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-xs text-muted-foreground">
+                  <p className="font-medium text-foreground mb-1">Como usar:</p>
+                  <ol className="list-decimal list-inside space-y-0.5">
+                    <li>Copie a URL do evento desejado</li>
+                    <li>Acesse o painel de afiliados da plataforma</li>
+                    <li>Cole na seção de "Postback URL" ou "S2S Tracking"</li>
+                    <li>Os macros como <code className="text-accent">{"{sub1}"}</code> serão preenchidos automaticamente pela plataforma</li>
+                  </ol>
+                </div>
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <button className="btn-ghost" onClick={() => setPostbackOpen(null)}>Fechar</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
