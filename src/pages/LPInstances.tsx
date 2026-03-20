@@ -1,13 +1,14 @@
-import { useState } from "react";
-import { Plus, Edit, Copy, Eye, XCircle, CheckCircle, Search, ExternalLink, AlertTriangle, Link2 } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Plus, Edit, Copy, Eye, XCircle, CheckCircle, Search, ExternalLink, AlertTriangle, Link2, Radio, ChevronDown, ChevronUp } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useLandingPageInstances, useLandingPages, useInfluencers } from "@/hooks/useSupabaseQuery";
+import { useLandingPageInstances, useLandingPages, useInfluencers, usePlatforms, useTrackingLinks } from "@/hooks/useSupabaseQuery";
 import { landingPageInstanceService } from "@/services/supabaseService";
 import type { LandingPageInstanceRow } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ExportDropdown from "@/components/ExportDropdown";
+import { findPresetByName, buildPostbackUrlForEvent, type PlatformPreset } from "@/config/platformPresets";
 
 type EditingState = {
   id?: string;
