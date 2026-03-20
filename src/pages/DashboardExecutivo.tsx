@@ -61,6 +61,32 @@ export default function DashboardExecutivo() {
     [socios]
   );
 
+  const mediaComissaoInfluencer = useMemo(() =>
+    influencers.length > 0
+      ? influencers.reduce((a: number, i: any) => a + Number(i.commission_percent || 0), 0) / influencers.length
+      : 0,
+    [influencers]
+  );
+
+  const distribuicao = useMemo(() => {
+    const baseCaixa = totalPagosAsaas;
+    const basePlataforma = consolidated.latestWithdrawableBrl || consolidated.latestWithdrawableOriginal || 0;
+    const base = baseCaixa > 0 ? baseCaixa : basePlataforma;
+    if (base <= 0 || socios.length === 0) return null;
+    const fonte = baseCaixa > 0 ? "caixa" as const : "plataforma" as const;
+    const comissao = base * (mediaComissaoInfluencer / 100);
+    const operacional = base * 0.10;
+    const baseSocietaria = base - comissao - operacional;
+    return {
+      base, fonte, comissao, operacional, baseSocietaria,
+      porSocio: socios.map((s: any) => ({
+        nome: s.nome,
+        participacao: Number(s.participacao || 0),
+        valor: baseSocietaria * (Number(s.participacao || 0) / 100),
+      })),
+    };
+  }, [totalPagosAsaas, consolidated, socios, mediaComissaoInfluencer]);
+
   const hasVerifiedRevenue = hasTrackingData && (consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0;
   const hasAvailableBalance = hasVerifiedRevenue;
   const hasCaixaRealizado = totalPagosAsaas > 0;
