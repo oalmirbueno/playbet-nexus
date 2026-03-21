@@ -131,7 +131,7 @@ export default function Dashboard() {
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase">Saldo</p>
+              <p className="text-[10px] text-muted-foreground uppercase">Saldo vivo</p>
               <p className="text-lg font-bold text-primary">
                 {consolidated.latestWithdrawableCurrency && consolidated.latestWithdrawableCurrency !== "BRL" && consolidated.latestWithdrawableOriginal != null
                   ? consolidated.latestWithdrawableOriginal.toLocaleString("pt-BR", { style: "currency", currency: "USD" })

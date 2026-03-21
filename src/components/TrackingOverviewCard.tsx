@@ -62,11 +62,14 @@ export default function TrackingOverviewCard() {
           </div>
           <div>
             <p className="text-[10px] text-muted-foreground uppercase">Receita</p>
-            <p className="text-lg font-bold">
-              {consolidated.revenueOriginalCurrency !== "BRL" && consolidated.revenueOriginal > 0
-                ? fmtCurrency(consolidated.revenueOriginal, consolidated.revenueOriginalCurrency)
-                : fmtCurrency(consolidated.revenueBrl, "BRL")}
-            </p>
+            {consolidated.revenueOriginalCurrency !== "BRL" && consolidated.revenueOriginal > 0 ? (
+              <>
+                <p className="text-lg font-bold">{fmtCurrency(consolidated.revenueOriginal, consolidated.revenueOriginalCurrency)}</p>
+                <p className="text-[10px] text-muted-foreground">≈ {fmtCurrency(consolidated.revenueBrl, "BRL")}</p>
+              </>
+            ) : (
+              <p className="text-lg font-bold">{fmtCurrency(consolidated.revenueBrl, "BRL")}</p>
+            )}
           </div>
           <div>
             <p className="text-[10px] text-muted-foreground uppercase">Links ativos</p>

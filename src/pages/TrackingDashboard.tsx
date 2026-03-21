@@ -229,7 +229,7 @@ export default function TrackingDashboard() {
 
   const revenueCardValue =
     revenueCurrency !== "BRL" && revenueOriginal > 0
-      ? fmt(revenueOriginal, revenueCurrency === "BRL" ? "BRL" : "USD")
+      ? `${fmt(revenueOriginal, revenueCurrency === "BRL" ? "BRL" : "USD")} · ${fmt(revenueBrl, "BRL")}`
       : fmt(effectiveKpis.revenue);
 
   const kpiCards = [
@@ -342,7 +342,7 @@ export default function TrackingDashboard() {
               <DollarSign size={14} className="text-primary" />
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Saldo Plataforma (tempo real)</span>
               {!hasManualData && (
-                <Badge variant="secondary" className="text-[10px] ml-auto">Dados do último postback</Badge>
+                <Badge variant="secondary" className="text-[10px] ml-auto">Atualização dinâmica</Badge>
               )}
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

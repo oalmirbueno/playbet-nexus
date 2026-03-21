@@ -51,6 +51,9 @@ export default function Financeiro() {
       ? fmtCurrency(consolidated.latestWithdrawableOriginal, consolidated.latestWithdrawableCurrency)
       : formatBRL(consolidated.latestWithdrawableBrl || consolidated.latestWithdrawableOriginal || 0)
     : "—";
+  const availableBalanceSecondary = hasAvailableBalance && consolidated.latestWithdrawableCurrency !== "BRL" && consolidated.latestWithdrawableBrl !== null
+    ? formatBRL(consolidated.latestWithdrawableBrl)
+    : null;
 
   const loading = loadingSocios || loadingSaques || loadingInfluencers;
 

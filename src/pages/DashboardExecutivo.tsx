@@ -111,8 +111,8 @@ export default function DashboardExecutivo() {
     : "—";
   const availableBalanceSub = hasAvailableBalance
     ? consolidated.latestWithdrawableCurrency && consolidated.latestWithdrawableCurrency !== "BRL" && consolidated.latestWithdrawableBrl !== null
-      ? `≈ ${formatBRL(consolidated.latestWithdrawableBrl)} · saldo sacável real da plataforma`
-      : "Saldo sacável em tempo real"
+      ? `≈ ${formatBRL(consolidated.latestWithdrawableBrl)} · saldo vivo da plataforma`
+      : "Saldo vivo em tempo real"
     : "Aguardando postback available_revenue";
 
   // 8 KPIs — always visible
