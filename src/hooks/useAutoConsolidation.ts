@@ -45,11 +45,20 @@ type TrackingEventRow = {
     amount?: string | number | null;
     commission?: string | number | null;
     currency?: string | null;
+     event?: string | null;
   } | null;
 };
 
 function isValidTrackingEvent(event: TrackingEventRow) {
   return event.status !== "invalid_legacy" && !event.canonical_event_name?.startsWith("{");
+}
+
+function isWithdrawableTrackingEvent(event: TrackingEventRow) {
+  const rawEvent = typeof event.raw_payload?.event === "string"
+    ? event.raw_payload.event.trim().toLowerCase()
+    : null;
+
+  return event.canonical_event_name === "withdrawable_revenue" || rawEvent === "available_revenue";
 }
 
 function parseEventNumber(value: unknown) {
@@ -144,15 +153,65 @@ export function useAutoConsolidation() {
   );
 
   const latestWithdrawable = useMemo(
-    () => validEvents.find((event) => event.canonical_event_name === "withdrawable_revenue") ?? null,
+    () => validEvents.find(isWithdrawableTrackingEvent) ?? null,
     [validEvents],
   );
 
   const consolidated = useMemo((): ConsolidatedMetrics => {
     const latestWithdrawableOriginalAmount = latestWithdrawable ? getEventOriginalAmount(latestWithdrawable) : null;
     const latestWithdrawableCurrency = latestWithdrawable ? getEventOriginalCurrency(latestWithdrawable) : null;
-    const latestWithdrawableBrl = latestWithdrawable?.converted_amount_brl ??
+    let latestWithdrawableBrl = latestWithdrawable?.converted_amount_brl ??
       (latestWithdrawableCurrency === "BRL" ? latestWithdrawableOriginalAmount : null);
+    let latestWithdrawableOriginal = latestWithdrawableOriginalAmount ?? latestWithdrawable?.converted_amount_brl ?? null;
+    let latestWithdrawableExchangeRate = latestWithdrawable?.exchange_rate ?? null;
+    let latestWithdrawableTimestamp = latestWithdrawable?.event_timestamp ?? null;
+
+    if (latestWithdrawable) {
+      const snapshotTime = Date.parse(latestWithdrawable.event_timestamp);
+
+      for (const event of validEvents) {
+        if (event.canonical_event_name !== "revenue") continue;
+
+        const eventTime = Date.parse(event.event_timestamp);
+        if (!Number.isFinite(eventTime) || eventTime <= snapshotTime) continue;
+
+        const eventAmountBrl = getEventAmountBrl(event);
+        const eventOriginalAmount = getEventOriginalAmount(event);
+        const eventOriginalCurrency = getEventOriginalCurrency(event);
+
+        if (latestWithdrawableBrl == null) {
+          latestWithdrawableBrl = 0;
+        }
+        latestWithdrawableBrl += eventAmountBrl;
+
+        if (latestWithdrawableCurrency === "BRL") {
+          if (latestWithdrawableOriginal == null) latestWithdrawableOriginal = 0;
+          latestWithdrawableOriginal += eventAmountBrl;
+        } else if (
+          latestWithdrawableCurrency &&
+          eventOriginalCurrency === latestWithdrawableCurrency &&
+          eventOriginalAmount != null
+        ) {
+          if (latestWithdrawableOriginal == null) latestWithdrawableOriginal = 0;
+          latestWithdrawableOriginal += eventOriginalAmount;
+        }
+
+        if (event.exchange_rate != null) {
+          latestWithdrawableExchangeRate = Number(event.exchange_rate);
+        }
+
+        if (!latestWithdrawableTimestamp || event.event_timestamp > latestWithdrawableTimestamp) {
+          latestWithdrawableTimestamp = event.event_timestamp;
+        }
+      }
+    }
+
+    if (latestWithdrawableBrl != null) {
+      latestWithdrawableBrl = Math.round(latestWithdrawableBrl * 100) / 100;
+    }
+    if (latestWithdrawableOriginal != null) {
+      latestWithdrawableOriginal = Math.round(latestWithdrawableOriginal * 100) / 100;
+    }
 
     const result: ConsolidatedMetrics = {
       totalClicks: realClicksCount,
@@ -171,11 +230,11 @@ export function useAutoConsolidation() {
       hasMultipleCurrencies: false,
       byCurrency: {},
       realClicksCount,
-      latestWithdrawableOriginal: latestWithdrawableOriginalAmount ?? latestWithdrawable?.converted_amount_brl ?? null,
+      latestWithdrawableOriginal,
       latestWithdrawableCurrency,
       latestWithdrawableBrl,
-      latestWithdrawableExchangeRate: latestWithdrawable?.exchange_rate ?? null,
-      latestWithdrawableTimestamp: latestWithdrawable?.event_timestamp ?? null,
+      latestWithdrawableExchangeRate,
+      latestWithdrawableTimestamp,
     };
 
     if (validEvents.length === 0) {

@@ -11,6 +11,11 @@ const CANONICAL_EVENTS = [
   "revenue", "withdrawable_revenue", "app_install", "qualified_player",
 ];
 
+const EVENT_ALIASES: Record<string, string> = {
+  available_revenue: "withdrawable_revenue",
+  first_deposit: "ftd",
+};
+
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TEMPLATE_VALUE_REGEX = /^\{.+\}$/;
 
@@ -167,7 +172,7 @@ Deno.serve(async (req) => {
     // Get event mapping
     const rawEventInput = params.event || params.action || params.type || "unknown";
     const rawEvent = sanitizeTemplateString(rawEventInput) ?? "unknown";
-    let canonicalEvent = rawEvent;
+    let canonicalEvent = EVENT_ALIASES[rawEvent] || rawEvent;
 
     if (platformId) {
       const { data: m } = await supabase
@@ -186,6 +191,8 @@ Deno.serve(async (req) => {
     // If no mapping found, try to match canonical directly
     if (CANONICAL_EVENTS.includes(rawEvent)) {
       canonicalEvent = rawEvent;
+    } else if (EVENT_ALIASES[rawEvent]) {
+      canonicalEvent = EVENT_ALIASES[rawEvent];
     }
 
     // Extract SUBIDs
