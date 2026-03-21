@@ -120,7 +120,7 @@ export default function Dashboard() {
       </div>
 
       {/* Tracking Revenue Summary - when real tracking data exists */}
-      {hasTrackingData && (consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0 && (
+      {hasTrackingData && ((consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0 || consolidated.revenueBrl > 0) && (
         <div className="glass-card p-6 border-l-4 border-l-primary cursor-pointer hover:bg-secondary/20 transition-colors" onClick={() => navigate("/tracking")}>
           <div className="flex items-center justify-between mb-3">
             <div>
