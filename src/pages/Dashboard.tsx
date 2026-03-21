@@ -120,7 +120,7 @@ export default function Dashboard() {
       </div>
 
       {/* Tracking Revenue Summary - when real tracking data exists */}
-      {hasTrackingData && (consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0 && (
+      {hasTrackingData && ((consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0 || consolidated.revenueBrl > 0) && (
         <div className="glass-card p-6 border-l-4 border-l-primary cursor-pointer hover:bg-secondary/20 transition-colors" onClick={() => navigate("/tracking")}>
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -139,6 +139,17 @@ export default function Dashboard() {
               </p>
               {consolidated.latestWithdrawableCurrency !== "BRL" && consolidated.latestWithdrawableBrl != null && (
                 <p className="text-[10px] text-muted-foreground">≈ {formatBRL(consolidated.latestWithdrawableBrl)}</p>
+              )}
+            </div>
+            <div>
+              <p className="text-[10px] text-muted-foreground uppercase">Receita (comissões)</p>
+              <p className="text-lg font-bold text-primary">
+                {consolidated.revenueOriginalCurrency !== "BRL" && consolidated.revenueOriginal > 0
+                  ? consolidated.revenueOriginal.toLocaleString("pt-BR", { style: "currency", currency: "USD" })
+                  : formatBRL(consolidated.revenueBrl)}
+              </p>
+              {consolidated.revenueOriginalCurrency !== "BRL" && consolidated.revenueBrl > 0 && (
+                <p className="text-[10px] text-muted-foreground">≈ {formatBRL(consolidated.revenueBrl)}</p>
               )}
             </div>
             <div>
