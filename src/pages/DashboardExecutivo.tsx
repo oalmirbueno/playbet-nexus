@@ -87,22 +87,22 @@ export default function DashboardExecutivo() {
     };
   }, [totalPagosAsaas, consolidated, socios, mediaComissaoInfluencer]);
 
-  const hasVerifiedRevenue = hasTrackingData && (consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0;
-  const hasAvailableBalance = hasVerifiedRevenue;
+  const hasVerifiedRevenue = hasTrackingData && consolidated.revenueBrl > 0;
+  const hasAvailableBalance = hasTrackingData && (consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0;
   const hasCaixaRealizado = totalPagosAsaas > 0;
 
-  const revCurrency = consolidated.latestWithdrawableCurrency || "BRL";
+  const revCurrency = consolidated.revenueOriginalCurrency || "BRL";
   const showOriginalRevenueAsPrimary = hasVerifiedRevenue && revCurrency !== "BRL";
 
   const revenueValue = hasVerifiedRevenue
     ? showOriginalRevenueAsPrimary
-      ? fmtCurrency(consolidated.latestWithdrawableOriginal!, revCurrency)
-      : formatBRL(consolidated.latestWithdrawableBrl || consolidated.latestWithdrawableOriginal || 0)
+      ? fmtCurrency(consolidated.revenueOriginal, revCurrency)
+      : formatBRL(consolidated.revenueBrl)
     : "—";
   const revenueSub = hasVerifiedRevenue
     ? showOriginalRevenueAsPrimary
-      ? `≈ ${formatBRL(consolidated.latestWithdrawableBrl!)} · saldo real da plataforma`
-      : "Saldo real da plataforma"
+      ? `≈ ${formatBRL(consolidated.revenueBrl)} · receita real dos postbacks`
+      : "Receita real dos postbacks"
     : "Aguardando postbacks";
   const availableBalanceValue = hasAvailableBalance
     ? consolidated.latestWithdrawableCurrency && consolidated.latestWithdrawableCurrency !== "BRL" && consolidated.latestWithdrawableOriginal !== null
@@ -241,15 +241,21 @@ export default function DashboardExecutivo() {
                 <DollarSign size={14} className="text-primary" />
                 <h3 className="text-sm font-semibold">Plataforma em tempo real</h3>
               </div>
-              <p className="text-xs text-muted-foreground mb-3">Saldo sacável atual reportado pela plataforma.</p>
+              <p className="text-xs text-muted-foreground mb-3">Receita real dos postbacks e saldo sacável atual da plataforma.</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                 <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
-                  <p className="text-[10px] text-muted-foreground uppercase">Saldo Plataforma</p>
+                  <p className="text-[10px] text-muted-foreground uppercase">Receita Real</p>
                   <p className="text-lg font-bold text-primary">{revenueValue}</p>
-                  {showOriginalRevenueAsPrimary && consolidated.latestWithdrawableBrl !== null && (
-                    <p className="text-[10px] text-muted-foreground mt-0.5">≈ {formatBRL(consolidated.latestWithdrawableBrl)}</p>
+                  {showOriginalRevenueAsPrimary && consolidated.revenueBrl > 0 && (
+                    <p className="text-[10px] text-muted-foreground mt-0.5">≈ {formatBRL(consolidated.revenueBrl)}</p>
                   )}
                 </div>
+                {hasAvailableBalance && (
+                  <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
+                    <p className="text-[10px] text-muted-foreground uppercase">Saldo Plataforma</p>
+                    <p className="text-lg font-bold text-primary">{availableBalanceValue}</p>
+                  </div>
+                )}
                 <div className="bg-secondary/30 rounded-lg p-3 border border-border/50">
                   <p className="text-[10px] text-muted-foreground uppercase">Funil</p>
                   <p className="text-sm font-bold">{consolidated.realClicksCount} cliques → {consolidated.totalRegistrations} reg → {consolidated.totalFtd} FTD</p>

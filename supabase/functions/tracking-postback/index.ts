@@ -205,8 +205,10 @@ Deno.serve(async (req) => {
 
     // Determine original currency from params or account
     const originalCurrency = (sanitizeTemplateString(params.currency) || accountCurrency || "BRL").toUpperCase();
-    const originalAmount = parsedAmount !== null && !Number.isNaN(parsedAmount) ? parsedAmount : null;
     const commissionAmount = parsedCommission !== null && !Number.isNaN(parsedCommission) ? parsedCommission : null;
+    const originalAmount = parsedAmount !== null && !Number.isNaN(parsedAmount)
+      ? parsedAmount
+      : ((canonicalEvent === "revenue" || canonicalEvent === "withdrawable_revenue") ? commissionAmount : null);
     const hasTemplatePayload = shouldMarkAsInvalidLegacy(params, rawEventInput, originalAmount, commissionAmount);
 
     // Convert to BRL if needed

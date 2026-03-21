@@ -24,7 +24,7 @@ export default function Reconciliacao() {
         .from("tracking_events")
         .select("id, platform_id, canonical_event_name, raw_event_name, original_amount, original_currency, converted_amount_brl, exchange_rate, event_timestamp, transaction_id, status, source_type")
         .eq("is_demo", false)
-        .neq("status", "invalid_legacy")
+        .or("status.is.null,status.neq.invalid_legacy")
         .order("event_timestamp", { ascending: false })
         .limit(50);
       if (res.error) throw res.error;
