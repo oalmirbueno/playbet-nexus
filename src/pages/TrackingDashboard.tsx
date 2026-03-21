@@ -98,7 +98,9 @@ export default function TrackingDashboard() {
     };
   }, [metrics]);
 
-  // Use withdrawable_revenue as the single source of truth for revenue display
+  const revenueOriginal = consolidated.revenueOriginal ?? 0;
+  const revenueBrl = consolidated.revenueBrl ?? 0;
+  const revenueCurrency = consolidated.revenueOriginalCurrency || "BRL";
   const withdrawableOriginal = consolidated.latestWithdrawableOriginal ?? 0;
   const withdrawableBrl = consolidated.latestWithdrawableBrl ?? 0;
   const withdrawableCurrency = consolidated.latestWithdrawableCurrency || "BRL";
@@ -111,22 +113,22 @@ export default function TrackingDashboard() {
       ftd: consolidated.totalFtd,
       redepositos: consolidated.totalRedeposits,
       depositos: consolidated.totalDeposits,
-      revenue: withdrawableBrl,
-      revLiq: withdrawableBrl,
+      revenue: revenueBrl,
+      revLiq: revenueBrl,
       saque: 0,
       custoTrafego: 0,
       custoInfluencer: 0,
       custoTotal: 0,
       crRegistro: consolidated.totalClicks ? (consolidated.totalRegistrations / consolidated.totalClicks) * 100 : 0,
       crFtd: consolidated.totalClicks ? (consolidated.totalFtd / consolidated.totalClicks) * 100 : 0,
-      epc: consolidated.totalClicks ? withdrawableBrl / consolidated.totalClicks : 0,
+      epc: consolidated.totalClicks ? revenueBrl / consolidated.totalClicks : 0,
       roi: 0,
       ticketMedio: 0,
-      revenuePerRegistro: consolidated.totalRegistrations ? withdrawableBrl / consolidated.totalRegistrations : 0,
-      revenuePerFtd: consolidated.totalFtd ? withdrawableBrl / consolidated.totalFtd : 0,
-      lucro: withdrawableBrl,
+      revenuePerRegistro: consolidated.totalRegistrations ? revenueBrl / consolidated.totalRegistrations : 0,
+      revenuePerFtd: consolidated.totalFtd ? revenueBrl / consolidated.totalFtd : 0,
+      lucro: revenueBrl,
     };
-  }, [metrics, kpis, consolidated, withdrawableBrl]);
+  }, [consolidated, revenueBrl]);
 
   const hasManualData = metrics.length > 0;
   const hasAnyData = hasManualData || hasAutoData;
@@ -226,15 +228,15 @@ export default function TrackingDashboard() {
   const realEvents = recentEvents.filter(e => !e.click_id?.startsWith("{") && e.status !== "invalid_legacy" && !e.canonical_event_name?.startsWith("{"));
 
   const revenueCardValue =
-    withdrawableCurrency !== "BRL" && withdrawableOriginal > 0
-      ? fmt(withdrawableOriginal, withdrawableCurrency === "BRL" ? "BRL" : "USD")
+    revenueCurrency !== "BRL" && revenueOriginal > 0
+      ? fmt(revenueOriginal, revenueCurrency === "BRL" ? "BRL" : "USD")
       : fmt(effectiveKpis.revenue);
 
   const kpiCards = [
     { label: "Cliques Reais (LP)", value: fmtNum(consolidated.realClicksCount || effectiveKpis.cliques), icon: MousePointerClick, color: "text-primary" },
     { label: "Registros", value: fmtNum(effectiveKpis.registros), icon: UserPlus, color: "text-chart-2" },
     { label: "FTD", value: fmtNum(effectiveKpis.ftd), icon: Target, color: "text-chart-3" },
-    { label: "Revenue (plataforma)", value: revenueCardValue, icon: DollarSign, color: "text-chart-5" },
+    { label: "Revenue (postbacks)", value: revenueCardValue, icon: DollarSign, color: "text-chart-5" },
     { label: "Redepósitos", value: fmtNum(effectiveKpis.redepositos), icon: ArrowRightLeft, color: "text-chart-4" },
     { label: "Eventos Válidos", value: fmtNum(consolidated.eventCount), icon: Activity, color: "text-primary" },
   ];
