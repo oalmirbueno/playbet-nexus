@@ -38,19 +38,70 @@ type TrackingEventRow = {
   converted_amount_brl: number | null;
   exchange_rate: number | null;
   exchange_rate_timestamp: string | null;
+  commission_amount: number | null;
   status: string | null;
   transaction_id: string | null;
+  raw_payload?: {
+    amount?: string | number | null;
+    commission?: string | number | null;
+    currency?: string | null;
+  } | null;
 };
 
 function isValidTrackingEvent(event: TrackingEventRow) {
   return event.status !== "invalid_legacy" && !event.canonical_event_name?.startsWith("{");
 }
 
+function parseEventNumber(value: unknown) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "string") {
+    const normalized = Number(value.replace(",", "."));
+    return Number.isFinite(normalized) ? normalized : null;
+  }
+  return null;
+}
+
+function getEventOriginalCurrency(event: TrackingEventRow) {
+  if (event.original_currency?.trim()) return event.original_currency.trim().toUpperCase();
+  if (typeof event.raw_payload?.currency === "string") {
+    const currency = event.raw_payload.currency.trim();
+    if (currency && !currency.startsWith("{")) return currency.toUpperCase();
+  }
+  return event.converted_amount_brl != null ? "BRL" : null;
+}
+
+function getEventOriginalAmount(event: TrackingEventRow) {
+  const storedAmount = parseEventNumber(event.original_amount);
+  if (storedAmount != null) return storedAmount;
+
+  if (event.canonical_event_name === "revenue") {
+    const storedCommission = parseEventNumber(event.commission_amount);
+    if (storedCommission != null) return storedCommission;
+
+    const payloadCommission = parseEventNumber(event.raw_payload?.commission);
+    if (payloadCommission != null) return payloadCommission;
+  }
+
+  const payloadAmount = parseEventNumber(event.raw_payload?.amount);
+  if (payloadAmount != null) return payloadAmount;
+
+  return null;
+}
+
 function getEventAmountBrl(event: TrackingEventRow) {
   if (event.converted_amount_brl != null) return Number(event.converted_amount_brl);
-  if ((event.original_currency || "BRL").toUpperCase() === "BRL" && event.original_amount != null) {
-    return Number(event.original_amount);
+
+  const originalAmount = getEventOriginalAmount(event);
+  const originalCurrency = getEventOriginalCurrency(event);
+
+  if (originalAmount != null && originalCurrency === "BRL") {
+    return originalAmount;
   }
+
+  if (originalAmount != null && originalCurrency && originalCurrency !== "BRL" && event.exchange_rate != null) {
+    return Math.round(originalAmount * Number(event.exchange_rate) * 100) / 100;
+  }
+
   return 0;
 }
 
@@ -64,7 +115,7 @@ export function useAutoConsolidation() {
         supabase
           .from("tracking_events")
           .select(
-            "id, platform_id, canonical_event_name, event_timestamp, original_amount, original_currency, converted_amount_brl, exchange_rate, exchange_rate_timestamp, status, transaction_id",
+            "id, platform_id, canonical_event_name, event_timestamp, original_amount, original_currency, converted_amount_brl, exchange_rate, exchange_rate_timestamp, commission_amount, status, transaction_id, raw_payload",
           )
           .eq("is_demo", false)
           .order("event_timestamp", { ascending: false }),
@@ -98,6 +149,11 @@ export function useAutoConsolidation() {
   );
 
   const consolidated = useMemo((): ConsolidatedMetrics => {
+    const latestWithdrawableOriginalAmount = latestWithdrawable ? getEventOriginalAmount(latestWithdrawable) : null;
+    const latestWithdrawableCurrency = latestWithdrawable ? getEventOriginalCurrency(latestWithdrawable) : null;
+    const latestWithdrawableBrl = latestWithdrawable?.converted_amount_brl ??
+      (latestWithdrawableCurrency === "BRL" ? latestWithdrawableOriginalAmount : null);
+
     const result: ConsolidatedMetrics = {
       totalClicks: realClicksCount,
       totalRegistrations: 0,
@@ -115,12 +171,9 @@ export function useAutoConsolidation() {
       hasMultipleCurrencies: false,
       byCurrency: {},
       realClicksCount,
-      latestWithdrawableOriginal: latestWithdrawable?.original_amount ?? latestWithdrawable?.converted_amount_brl ?? null,
-      latestWithdrawableCurrency:
-        latestWithdrawable?.original_currency ?? (latestWithdrawable?.converted_amount_brl != null ? "BRL" : null),
-      latestWithdrawableBrl:
-        latestWithdrawable?.converted_amount_brl ??
-        ((latestWithdrawable?.original_currency ?? "BRL") === "BRL" ? latestWithdrawable?.original_amount ?? null : null),
+      latestWithdrawableOriginal: latestWithdrawableOriginalAmount ?? latestWithdrawable?.converted_amount_brl ?? null,
+      latestWithdrawableCurrency,
+      latestWithdrawableBrl,
       latestWithdrawableExchangeRate: latestWithdrawable?.exchange_rate ?? null,
       latestWithdrawableTimestamp: latestWithdrawable?.event_timestamp ?? null,
     };
@@ -166,10 +219,14 @@ export function useAutoConsolidation() {
           break;
         }
         case "revenue": {
-          const originalCurrency = (event.original_currency || "BRL").toUpperCase();
-          const originalAmount = Number(event.original_amount ?? getEventAmountBrl(event));
+          const originalCurrency = getEventOriginalCurrency(event) ?? "BRL";
+          const originalAmount = Number(getEventOriginalAmount(event) ?? getEventAmountBrl(event));
           const convertedAmount = getEventAmountBrl(event);
           const rate = event.exchange_rate != null ? Number(event.exchange_rate) : null;
+
+          if (originalAmount === 0 && convertedAmount === 0) {
+            break;
+          }
 
           currencies.add(originalCurrency);
           if (!result.byCurrency[originalCurrency]) {
