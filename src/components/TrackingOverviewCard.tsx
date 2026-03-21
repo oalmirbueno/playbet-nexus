@@ -57,16 +57,20 @@ export default function TrackingOverviewCard() {
       <CardContent className="pt-0">
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-3">
           <div>
-            <p className="text-[10px] text-muted-foreground uppercase">Plataformas</p>
-            <p className="text-lg font-bold">{(platforms as any[]).length}</p>
+            <p className="text-[10px] text-muted-foreground uppercase">Cliques reais</p>
+            <p className="text-lg font-bold">{consolidated.realClicksCount}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase">Receita</p>
+            <p className="text-lg font-bold">
+              {consolidated.revenueOriginalCurrency !== "BRL" && consolidated.revenueOriginal > 0
+                ? fmtCurrency(consolidated.revenueOriginal, consolidated.revenueOriginalCurrency)
+                : fmtCurrency(consolidated.revenueBrl, "BRL")}
+            </p>
           </div>
           <div>
             <p className="text-[10px] text-muted-foreground uppercase">Links ativos</p>
             <p className="text-lg font-bold">{links.length}</p>
-          </div>
-          <div>
-            <p className="text-[10px] text-muted-foreground uppercase">Cliques reais</p>
-            <p className="text-lg font-bold">{consolidated.realClicksCount}</p>
           </div>
           <div>
             <p className="text-[10px] text-muted-foreground uppercase">Eventos válidos</p>

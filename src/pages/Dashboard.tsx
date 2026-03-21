@@ -142,6 +142,17 @@ export default function Dashboard() {
               )}
             </div>
             <div>
+              <p className="text-[10px] text-muted-foreground uppercase">Receita (comissões)</p>
+              <p className="text-lg font-bold text-primary">
+                {consolidated.revenueOriginalCurrency !== "BRL" && consolidated.revenueOriginal > 0
+                  ? consolidated.revenueOriginal.toLocaleString("pt-BR", { style: "currency", currency: "USD" })
+                  : formatBRL(consolidated.revenueBrl)}
+              </p>
+              {consolidated.revenueOriginalCurrency !== "BRL" && consolidated.revenueBrl > 0 && (
+                <p className="text-[10px] text-muted-foreground">≈ {formatBRL(consolidated.revenueBrl)}</p>
+              )}
+            </div>
+            <div>
               <p className="text-[10px] text-muted-foreground uppercase">Cliques reais</p>
               <p className="text-lg font-bold">{consolidated.realClicksCount}</p>
             </div>
