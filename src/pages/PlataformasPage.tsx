@@ -120,42 +120,22 @@ export default function PlataformasPage() {
   return (
     <div className="space-y-6">
       <Breadcrumbs items={[{ label: "Gestão de Ativos", path: "/plataformas" }, { label: "Plataformas" }]} />
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="page-header">Plataformas</h1>
-          <p className="page-subtitle">Gestão de plataformas parceiras, modelos de comissão e performance operacional</p>
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <ExportDropdown data={exportableData} filename="plataformas-playbet" />
-          <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Adicionar Plataforma</button>
-        </div>
-      </div>
-
-      {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      {/* KPIs compactos */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {stats.map(s => (
-          <div key={s.label} className={`stat-card border-l-2 ${s.variant}`}>
-            <div className="flex items-center justify-between">
+          <div key={s.label} className="glass-card p-3.5">
+            <div className="flex items-center justify-between mb-1">
               <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide">{s.label}</span>
-              <s.icon size={14} className="text-muted-foreground" />
+              <s.icon size={13} className="text-muted-foreground/60" />
             </div>
-            <div className="text-sm font-bold">{s.value}</div>
+            <div className="text-xl font-semibold tracking-tight">{s.value}</div>
           </div>
         ))}
       </div>
 
-      {/* Quick Nav */}
-      <div className="flex flex-wrap gap-2">
-        <button className="btn-ghost text-xs" onClick={() => navigate("/jogos")}>→ Jogos</button>
-        <button className="btn-ghost text-xs" onClick={() => navigate("/links")}>→ Links Afiliados</button>
-        <button className="btn-ghost text-xs" onClick={() => navigate("/landing-pages")}>→ Landing Pages</button>
-        <button className="btn-ghost text-xs" onClick={() => navigate("/campanhas")}>→ Campanhas</button>
-        <button className="btn-ghost text-xs" onClick={() => navigate("/financeiro")}>→ Financeiro</button>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <div className="flex items-center gap-2 bg-secondary/50 border border-border rounded-lg px-3 py-1.5 flex-1 max-w-xs">
+      {/* Filtros */}
+      <div className="flex flex-wrap gap-2 items-center">
+        <div className="flex items-center gap-2 bg-secondary/50 border border-border rounded-md px-3 py-1.5 flex-1 max-w-xs">
           <Search size={13} className="text-muted-foreground shrink-0" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar plataforma..." className="bg-transparent text-xs text-foreground placeholder:text-muted-foreground focus:outline-none w-full" />
         </div>
@@ -167,43 +147,70 @@ export default function PlataformasPage() {
         </select>
       </div>
 
-      {/* Table */}
+      {/* Tabela enxuta */}
       <div className="glass-card overflow-x-auto invisible-scroll">
         <table className="data-table">
           <thead>
             <tr>
-              <th>Plataforma</th><th>Tipo Comissão</th><th>RevShare</th><th>CPA</th><th>Moeda</th><th>Pagamento</th>
-              <th>Gerente</th><th>Status</th><th>Ações</th>
+              <th>Plataforma</th>
+              <th>Comissão</th>
+              <th>Moeda</th>
+              <th>Pagamento</th>
+              <th>Gerente</th>
+              <th>Status</th>
+              <th className="w-[1%]"></th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map(p => (
-              <tr key={p.id}>
-                <td>
-                  <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate(`/plataformas/${p.id}`)}>
-                    <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-bold text-accent">{p.name.charAt(0)}</div>
-                    <span className="font-medium hover:text-accent transition-colors">{p.name}</span>
-                  </div>
-                </td>
-                <td><span className="badge-primary">{p.commission_type || "—"}</span></td>
-                <td>{p.revshare ? `${p.revshare}%` : "—"}</td>
-                <td>{p.cpa ? `R$ ${p.cpa}` : "—"}</td>
-                <td>{p.currency || "BRL"}</td>
-                <td className="text-xs">{p.payout_method || "—"}</td>
-                <td className="text-xs">{p.affiliate_manager || "—"}</td>
-                <td><span className={p.is_active ? "badge-success" : "badge-danger"}>{p.is_active ? "Ativo" : "Inativo"}</span></td>
-                <td>
-                  <div className="flex gap-0.5" onClick={e => e.stopPropagation()}>
-                    <button onClick={() => navigate(`/plataformas/${p.id}`)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Ver detalhe"><Eye size={12} /></button>
-                    <button onClick={() => openEdit(p)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Editar"><Edit size={12} /></button>
-                    <button onClick={() => copyLink(p)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Copiar link"><Copy size={12} /></button>
-                    <button onClick={() => handleToggle(p)} className={`p-1 rounded transition-colors text-muted-foreground ${p.is_active ? "hover:bg-destructive/15 hover:text-destructive" : "hover:bg-success/15 hover:text-success"}`} title={p.is_active ? "Desativar" : "Ativar"}>
-                      {p.is_active ? <XCircle size={12} /> : <CheckCircle size={12} />}
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {filtered.map(p => {
+              const comissao = [
+                p.revshare ? `${p.revshare}% RS` : null,
+                p.cpa ? `R$ ${p.cpa} CPA` : null,
+              ].filter(Boolean).join(" + ") || "—";
+              return (
+                <tr key={p.id}>
+                  <td>
+                    <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate(`/plataformas/${p.id}`)}>
+                      <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center text-[10px] font-semibold text-accent">{p.name.charAt(0)}</div>
+                      <div className="flex flex-col">
+                        <span className="font-medium text-[13px] hover:text-accent transition-colors">{p.name}</span>
+                        <span className="text-[10px] text-muted-foreground">{p.commission_type || "Sem tipo"}</span>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="text-xs">{comissao}</td>
+                  <td className="text-xs">{p.currency || "BRL"}</td>
+                  <td className="text-xs">{p.payout_method || "—"}</td>
+                  <td className="text-xs">{p.affiliate_manager || "—"}</td>
+                  <td><span className={p.is_active ? "badge-success" : "badge-danger"}>{p.is_active ? "Ativo" : "Inativo"}</span></td>
+                  <td onClick={e => e.stopPropagation()}>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Ações">
+                          <MoreHorizontal size={14} />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-44">
+                        <DropdownMenuItem onClick={() => navigate(`/plataformas/${p.id}`)}>
+                          <Eye size={13} className="mr-2" /> Ver detalhe
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => openEdit(p)}>
+                          <Edit size={13} className="mr-2" /> Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => copyLink(p)}>
+                          <Copy size={13} className="mr-2" /> Copiar link
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleToggle(p)} className={p.is_active ? "text-destructive focus:text-destructive" : "text-success focus:text-success"}>
+                          {p.is_active ? <XCircle size={13} className="mr-2" /> : <CheckCircle size={13} className="mr-2" />}
+                          {p.is_active ? "Desativar" : "Ativar"}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
