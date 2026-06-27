@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Plus, Edit, Eye, XCircle, CheckCircle, Copy, Search, DollarSign, Globe, Gamepad2, Link2, Users, AlertTriangle } from "lucide-react";
+import { Plus, Edit, Eye, XCircle, CheckCircle, Copy, Search, Globe, Link2, MoreHorizontal } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { usePlatforms } from "@/hooks/useSupabaseQuery";
 import type { PlatformRow } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
