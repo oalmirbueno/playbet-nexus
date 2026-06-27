@@ -120,6 +120,18 @@ export default function PlataformasPage() {
   return (
     <div className="space-y-6">
       <Breadcrumbs items={[{ label: "Gestão de Ativos", path: "/plataformas" }, { label: "Plataformas" }]} />
+
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="page-header">Plataformas</h1>
+          <p className="page-subtitle">Parceiros, modelos de comissão e status operacional</p>
+        </div>
+        <div className="flex gap-2">
+          <ExportDropdown data={exportableData} filename="plataformas-playbet" />
+          <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Adicionar</button>
+        </div>
+      </div>
+
       {/* KPIs compactos */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {stats.map(s => (
