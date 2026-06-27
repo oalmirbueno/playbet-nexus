@@ -49,12 +49,10 @@ export default function PlataformasPage() {
   const activeCount = data.filter(p => p.is_active).length;
 
   const stats = [
-    { label: "Total Plataformas", value: String(data.length), icon: Globe, variant: "border-l-primary" },
-    { label: "Ativas", value: String(activeCount), icon: CheckCircle, variant: "border-l-success" },
-    { label: "Inativas", value: String(data.length - activeCount), icon: XCircle, variant: "border-l-warning" },
-    { label: "Revenue Share", value: String(data.filter(p => p.commission_type === "Revenue Share").length), icon: DollarSign, variant: "border-l-accent" },
-    { label: "CPA", value: String(data.filter(p => p.commission_type === "CPA").length), icon: Link2, variant: "border-l-info" },
-    { label: "Hybrid", value: String(data.filter(p => p.hybrid).length), icon: Gamepad2, variant: "border-l-primary" },
+    { label: "Total", value: String(data.length), icon: Globe },
+    { label: "Ativas", value: String(activeCount), icon: CheckCircle },
+    { label: "Inativas", value: String(data.length - activeCount), icon: XCircle },
+    { label: "Com integração", value: String(data.filter(p => p.commission_type).length), icon: Link2 },
   ];
 
   const openCreate = () => { setEditing({ ...emptyEditing }); setModalOpen(true); };
