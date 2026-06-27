@@ -19,80 +19,57 @@ const sections: MenuSection[] = [
   {
     title: "VISÃO GERAL",
     items: [
-      { label: "Dashboard Executivo", icon: LayoutDashboard, path: "/" },
-      { label: "Dashboard Operacional", icon: Activity, path: "/operacional" },
+      { label: "Dashboard", icon: LayoutDashboard, path: "/" },
+      { label: "Operacional", icon: Activity, path: "/operacional" },
     ],
   },
   {
-    title: "TRACKING HUB",
+    title: "TRACKING",
     items: [
-      { label: "Tracking Dashboard", icon: BarChart3, path: "/tracking" },
-      { label: "Contas Plataforma", icon: Monitor, path: "/tracking/accounts" },
-      { label: "Tracking Links", icon: Link2, path: "/tracking/links" },
-      { label: "Mapeamentos", icon: GitBranch, path: "/tracking/mappings" },
+      { label: "Tracking Hub", icon: BarChart3, path: "/tracking" },
+      { label: "Links", icon: Link2, path: "/tracking/links" },
       { label: "Eventos", icon: Activity, path: "/tracking/events" },
-      { label: "Snapshots", icon: ClipboardList, path: "/tracking/snapshots" },
-      { label: "Registrar Métrica", icon: Activity, path: "/tracking/metrics" },
       { label: "Reconciliação", icon: Scale, path: "/tracking/reconciliacao" },
     ],
   },
   {
-    title: "GESTÃO DE RECEITA",
+    title: "FINANCEIRO",
     items: [
       { label: "Financeiro", icon: DollarSign, path: "/financeiro" },
       { label: "Saques", icon: Wallet, path: "/saques" },
       { label: "Comissões", icon: PieChart, path: "/comissoes" },
-      { label: "Asaas / Pagamentos", icon: CreditCard, path: "/asaas" },
+      { label: "Asaas", icon: CreditCard, path: "/asaas" },
     ],
   },
   {
-    title: "GESTÃO DE PESSOAS",
+    title: "PESSOAS",
     items: [
       { label: "Influencers", icon: Users, path: "/influencers" },
       { label: "Sócios", icon: UserCheck, path: "/socios" },
-      { label: "Usuários Internos", icon: ShieldCheck, path: "/usuarios" },
     ],
   },
   {
-    title: "GESTÃO DE ATIVOS",
+    title: "ATIVOS",
     items: [
       { label: "Jogos", icon: Gamepad2, path: "/jogos" },
       { label: "Plataformas", icon: Monitor, path: "/plataformas" },
-      { label: "Links Afiliados", icon: Link2, path: "/links" },
       { label: "Landing Pages", icon: FileText, path: "/landing-pages" },
-      { label: "Distribuição de LPs", icon: GitBranch, path: "/lp-instances" },
-      { label: "Performance de LPs", icon: BarChart3, path: "/lp-performance" },
-      { label: "Templates de LP", icon: FileText, path: "/lp-templates" },
-      { label: "Engine de Links", icon: Link2, path: "/link-engine" },
-      { label: "Hubs / Rotas", icon: GitBranch, path: "/hubs" },
+      { label: "Distribuição LPs", icon: GitBranch, path: "/lp-instances" },
     ],
   },
   {
-    title: "MARKETING E CONTEÚDO",
+    title: "MARKETING",
     items: [
-      { label: "Calendário Editorial", icon: Calendar, path: "/calendario" },
-      { label: "Conteúdos", icon: PenTool, path: "/conteudo" },
-      { label: "Estratégia", icon: Lightbulb, path: "/estrategia" },
       { label: "Campanhas", icon: Megaphone, path: "/campanhas" },
-    ],
-  },
-  {
-    title: "MÉTRICAS E RASTREIO",
-    items: [
-      { label: "Analytics", icon: BarChart3, path: "/analytics" },
-      { label: "Conversões", icon: ArrowRightLeft, path: "/conversoes" },
-      { label: "UTMs / SubIDs", icon: Tag, path: "/utms" },
-      { label: "Auditoria", icon: ClipboardList, path: "/auditoria" },
+      { label: "Conteúdos", icon: PenTool, path: "/conteudo" },
     ],
   },
   {
     title: "CONFIGURAÇÕES",
     items: [
-      { label: "Config. Gerais", icon: Settings, path: "/configuracoes" },
+      { label: "Geral", icon: Settings, path: "/configuracoes" },
       { label: "Regras Financeiras", icon: Scale, path: "/regras" },
-      { label: "Permissões", icon: Lock, path: "/permissoes" },
       { label: "Integrações", icon: Plug, path: "/integracoes" },
-      { label: "Developer Settings", icon: Code2, path: "/developer" },
     ],
   },
 ];
