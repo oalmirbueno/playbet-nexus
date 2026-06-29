@@ -319,7 +319,8 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
                     <p className="text-[9px] font-semibold text-primary uppercase tracking-wider">Link final</p>
                     <code className="block text-[10px] font-mono text-foreground break-all">{finalUrl}</code>
                   </div>
-                <button onClick={() => navigator.clipboard.writeText(finalUrl)} className="text-primary hover:text-primary/80 shrink-0" title="Copiar"><Copy size={11} /></button>
+                  <button onClick={() => navigator.clipboard.writeText(finalUrl)} className="text-primary hover:text-primary/80 shrink-0" title="Copiar"><Copy size={11} /></button>
+                </div>
               </div>
             )}
           </div>
