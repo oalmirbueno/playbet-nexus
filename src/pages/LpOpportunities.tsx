@@ -622,6 +622,16 @@ export default function LpOpportunities() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <OpportunityWizard
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        platforms={platforms as any}
+        landingPages={lps as any}
+        campanhas={campanhas as any}
+        onCreate={(payload) => create(payload)}
+        defaultLandingPageId={filterLp !== "all" ? filterLp : undefined}
+      />
     </div>
   );
 }
