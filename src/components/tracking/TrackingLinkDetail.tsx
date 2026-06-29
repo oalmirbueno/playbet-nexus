@@ -81,13 +81,19 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
 
   const primaryLink = hasInstanceLink ? instanceAffiliateLink : (link.base_url || "");
 
-  const buildFinalUrl = () => {
-    if (link.final_url) return link.final_url;
-    if (!primaryLink) return "";
-    const param = link.click_id_param_name || "sub1";
-    const sep = primaryLink.includes("?") ? "&" : "?";
-    return `${primaryLink}${sep}${param}={${param}}`;
-  };
+  // Public LP URL (the link the influencer actually shares — passes through the LP)
+  const { buildPublicLpUrl, buildTrackedAffiliateUrl } = require("@/lib/trackingUrl");
+  const publicLpUrl: string = buildPublicLpUrl(lp?.domain, instance?.slug, link.influencer_id || "", link.campanha_id || "");
+  const trackedAffiliateUrl: string = buildTrackedAffiliateUrl(
+    primaryLink,
+    link.click_id_param_name || "sub1",
+    (influencer as any)?.slug || "",
+    link.influencer_id || "",
+    link.campanha_id || "",
+  );
+  const shareUrl = publicLpUrl || trackedAffiliateUrl;
+
+  const buildFinalUrl = () => shareUrl || link.final_url || "";
 
   const missingFields: string[] = [];
   if (!link.platform_account_id) missingFields.push("Conta");
