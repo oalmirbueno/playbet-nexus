@@ -279,12 +279,15 @@ export default function LpOpportunities() {
             A landing pública lê estes cards automaticamente. Use no máximo 3 destaques ativos por campanha.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={copyJsonPreview}>
             <Copy className="w-4 h-4" /> Copiar JSON
           </Button>
-          <Button onClick={openNew}>
-            <Plus className="w-4 h-4" /> Nova oportunidade
+          <Button variant="secondary" onClick={openNew}>
+            <Plus className="w-4 h-4" /> Novo manual
+          </Button>
+          <Button onClick={() => setWizardOpen(true)}>
+            <Wand2 className="w-4 h-4" /> Assistente
           </Button>
         </div>
       </div>
