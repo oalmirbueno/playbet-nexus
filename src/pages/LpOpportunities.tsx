@@ -42,6 +42,7 @@ import { useTrackingLinks } from "@/hooks/useTrackingData";
 import type { LpOpportunityRow } from "@/services/lpOpportunityService";
 import { OpportunityWizard } from "@/components/lp/OpportunityWizard";
 import { SportsEventsPanel } from "@/components/lp/SportsEventsPanel";
+import { SignalRoomPanel } from "@/components/lp/SignalRoomPanel";
 import { isSelfLandingLoop } from "@/lib/opportunityDetect";
 
 const CATEGORIES = [
