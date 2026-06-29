@@ -126,6 +126,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
         final_url: finalUrl,
         tracking_code: trackingCode,
         click_id_param_name: "sub1",
+        commission_percent: (selectedInfluencer as any)?.commission_percent ?? null,
         status: "active",
       } as any);
 
