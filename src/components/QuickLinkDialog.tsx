@@ -4,91 +4,126 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useInfluencers } from "@/hooks/useSupabaseQuery";
+import { useInfluencers, useLandingPages, usePlatforms, useCampanhas } from "@/hooks/useSupabaseQuery";
 import { usePlatformAccounts, useTrackingLinks } from "@/hooks/useTrackingData";
 import { toast } from "@/hooks/use-toast";
-import { Link2, CheckCircle2 } from "lucide-react";
+import { Link2, CheckCircle2, Plus, Sparkles, Copy } from "lucide-react";
+import { detectPlatformByUrl, appendSubId } from "@/lib/platformDetect";
 
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   defaultInfluencerId?: string;
+  defaultLandingPageId?: string;
 }
 
 /**
- * Cadastro unificado de link de afiliado.
- * Fluxo de 2 cliques: escolher influencer + plataforma, colar o link bruto, salvar.
- * Gera tracking_link com subid (slug do influencer) e o postback existente assume daí.
+ * Esteira universal de criação de link de afiliado.
+ * Fluxo: Influencer → LP (opcional) → cola URL → plataforma é detectada → SubID → salvar.
+ * Cada campo permite criar inline se o item não existir.
+ * Funciona com qualquer casa de apostas (1win, SuperBet, PlayBet, etc.).
  */
-export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerId = "" }: Props) {
-  const { data: influencers } = useInfluencers();
-  const { data: accounts } = usePlatformAccounts();
-  const { create } = useTrackingLinks();
+export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerId = "", defaultLandingPageId = "" }: Props) {
+  const { data: influencers, create: createInfluencer } = useInfluencers();
+  const { data: landingPages, create: createLP } = useLandingPages();
+  const { data: platforms, create: createPlatform } = usePlatforms();
+  const { data: accounts, create: createAccount } = usePlatformAccounts();
+  const { data: campanhas } = useCampanhas();
+  const { create: createLink } = useTrackingLinks();
 
   const [influencerId, setInfluencerId] = useState(defaultInfluencerId);
+  const [landingPageId, setLandingPageId] = useState(defaultLandingPageId);
   const [accountId, setAccountId] = useState("");
   const [rawLink, setRawLink] = useState("");
   const [subid, setSubid] = useState("");
+  const [campanhaId, setCampanhaId] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Inline-create modal states
+  const [newInfluencer, setNewInfluencer] = useState({ open: false, name: "", slug: "" });
+  const [newLP, setNewLP] = useState({ open: false, name: "", base_url: "" });
+  const [newPlatform, setNewPlatform] = useState({ open: false, name: "", domain: "" });
 
   useEffect(() => {
     if (open) {
       setInfluencerId(defaultInfluencerId);
+      setLandingPageId(defaultLandingPageId);
       setAccountId("");
       setRawLink("");
       setSubid("");
+      setCampanhaId("");
     }
-  }, [open, defaultInfluencerId]);
+  }, [open, defaultInfluencerId, defaultLandingPageId]);
 
   const selectedInfluencer = useMemo(
     () => influencers.find((i: any) => i.id === influencerId),
     [influencers, influencerId],
   );
 
-  // Auto-fill subid with influencer slug
+  // Auto-fill subid from influencer slug
   useEffect(() => {
-    if (selectedInfluencer && !subid) {
-      setSubid((selectedInfluencer as any).slug || "");
+    if (selectedInfluencer) setSubid((selectedInfluencer as any).slug || "");
+  }, [selectedInfluencer]);
+
+  // 🧠 Universal platform auto-detection from pasted URL
+  const detectedPlatform = useMemo(() => {
+    if (!rawLink) return null;
+    return detectPlatformByUrl(rawLink, platforms as any[]);
+  }, [rawLink, platforms]);
+
+  // Auto-select the first account belonging to the detected platform
+  useEffect(() => {
+    if (detectedPlatform && !accountId) {
+      const match = accounts.find((a: any) => a.platform_id === detectedPlatform.id);
+      if (match) setAccountId(match.id);
     }
-  }, [selectedInfluencer]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [detectedPlatform]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const selectedAccount = useMemo(() => accounts.find((a: any) => a.id === accountId), [accounts, accountId]);
+  const finalUrl = useMemo(() => appendSubId(rawLink, "sub1", subid), [rawLink, subid]);
 
   const trackingCode = useMemo(() => {
     const slug = (selectedInfluencer as any)?.slug || "link";
     return `${slug}-${Date.now().toString(36)}`;
   }, [selectedInfluencer]);
 
-  const buildFinalUrl = () => {
-    if (!rawLink) return "";
-    try {
-      const url = new URL(rawLink);
-      if (subid) url.searchParams.set("sub1", subid);
-      return url.toString();
-    } catch {
-      const sep = rawLink.includes("?") ? "&" : "?";
-      return subid ? `${rawLink}${sep}sub1=${encodeURIComponent(subid)}` : rawLink;
-    }
-  };
-
-  const canSave = influencerId && accountId && rawLink.trim();
+  const canSave = influencerId && rawLink.trim() && (accountId || detectedPlatform);
 
   const handleSave = async () => {
     if (!canSave) {
-      toast({ title: "Faltam dados", description: "Influencer, plataforma e link são obrigatórios.", variant: "destructive" });
+      toast({ title: "Faltam dados", description: "Influencer e link são obrigatórios.", variant: "destructive" });
       return;
     }
     try {
       setSaving(true);
-      const finalUrl = buildFinalUrl();
-      await create({
+      let finalAccountId = accountId;
+
+      // If user pasted a link from a detected platform but has no account, create one on-the-fly
+      if (!finalAccountId && detectedPlatform) {
+        const created: any = await createAccount({
+          platform_id: detectedPlatform.id,
+          nome_conta: `${detectedPlatform.name} · Principal`,
+          is_demo: false,
+        } as any);
+        finalAccountId = created?.id;
+      }
+
+      await createLink({
         influencer_id: influencerId,
-        platform_account_id: accountId,
+        platform_account_id: finalAccountId,
+        landing_page_id: landingPageId || null,
+        campanha_id: campanhaId || null,
         base_url: rawLink.trim(),
         final_url: finalUrl,
         tracking_code: trackingCode,
         click_id_param_name: "sub1",
         status: "active",
       } as any);
-      toast({ title: "Link cadastrado", description: "Postback ativo: a receita será puxada automaticamente." });
+
+      // Copy to clipboard
+      try { await navigator.clipboard.writeText(finalUrl); } catch {}
+
+      toast({ title: "Link cadastrado", description: "Link copiado. Postback ativo." });
       onOpenChange(false);
     } catch (err: any) {
       toast({ title: "Erro ao salvar", description: err?.message || "Tente novamente.", variant: "destructive" });
@@ -97,81 +132,190 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
     }
   };
 
+  // ── Inline creators ────────────────────────────
+  const handleCreateInfluencer = async () => {
+    if (!newInfluencer.name.trim()) return;
+    const slug = newInfluencer.slug || newInfluencer.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const created: any = await createInfluencer({ name: newInfluencer.name.trim(), slug, is_active: true } as any);
+    if (created?.id) setInfluencerId(created.id);
+    setNewInfluencer({ open: false, name: "", slug: "" });
+  };
+
+  const handleCreateLP = async () => {
+    if (!newLP.name.trim()) return;
+    const slug = newLP.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const created: any = await createLP({ name: newLP.name.trim(), slug, base_url: newLP.base_url || null, is_active: true } as any);
+    if (created?.id) setLandingPageId(created.id);
+    setNewLP({ open: false, name: "", base_url: "" });
+  };
+
+  const handleCreatePlatform = async () => {
+    if (!newPlatform.name.trim()) return;
+    const slug = newPlatform.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const domains = newPlatform.domain ? [newPlatform.domain.trim().toLowerCase()] : [];
+    const created: any = await createPlatform({ name: newPlatform.name.trim(), slug, domains, is_active: true } as any);
+    if (created?.id) {
+      const acc: any = await createAccount({ platform_id: created.id, nome_conta: `${newPlatform.name} · Principal`, is_demo: false } as any);
+      if (acc?.id) setAccountId(acc.id);
+    }
+    setNewPlatform({ open: false, name: "", domain: "" });
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><Link2 size={16} className="text-primary" /> Novo Link de Afiliado</DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Link2 size={16} className="text-primary" /> Novo Link de Afiliado</DialogTitle>
+          </DialogHeader>
 
-        <div className="space-y-3 py-2">
-          <div>
-            <Label className="text-xs font-medium">Influencer *</Label>
-            <Select value={influencerId} onValueChange={setInfluencerId}>
-              <SelectTrigger className="h-9 text-xs mt-1"><SelectValue placeholder="Selecione o influencer" /></SelectTrigger>
-              <SelectContent>
-                {influencers.map((i: any) => (
-                  <SelectItem key={i.id} value={i.id}>
-                    {i.name}{(i as any).team_label ? ` · ${(i as any).team_label}` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label className="text-xs font-medium">Plataforma *</Label>
-            <Select value={accountId} onValueChange={setAccountId}>
-              <SelectTrigger className="h-9 text-xs mt-1"><SelectValue placeholder="PlayBet, SuperBet, 1win…" /></SelectTrigger>
-              <SelectContent>
-                {accounts.map((a: any) => (
-                  <SelectItem key={a.id} value={a.id}>{a.nome_conta}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label className="text-xs font-medium">Link de afiliado (cole da plataforma) *</Label>
-            <Input
-              className="h-9 text-xs font-mono mt-1"
-              value={rawLink}
-              onChange={(e) => setRawLink(e.target.value)}
-              placeholder="https://1wxxxx.com/casino/list?open=register&p=xxxx"
-            />
-          </div>
-
-          <div>
-            <Label className="text-xs font-medium">SubID / apelido</Label>
-            <Input
-              className="h-9 text-xs font-mono mt-1"
-              value={subid}
-              onChange={(e) => setSubid(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ""))}
-              placeholder="auto: slug do influencer"
-            />
-            <p className="text-[10px] text-muted-foreground mt-1">
-              Identifica o clique no postback. Mantém auto se quiser.
-            </p>
-          </div>
-
-          {canSave && (
-            <div className="flex items-start gap-2 bg-primary/10 border border-primary/20 rounded-md px-3 py-2">
-              <CheckCircle2 size={13} className="text-primary mt-0.5 shrink-0" />
-              <div className="space-y-0.5 min-w-0 flex-1">
-                <p className="text-[10px] font-semibold text-primary uppercase tracking-wide">Link final</p>
-                <code className="block text-[10px] font-mono text-foreground break-all">{buildFinalUrl()}</code>
+          <div className="space-y-3 py-2">
+            {/* 1. INFLUENCER */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-xs font-medium">1. Influencer *</Label>
+                <button onClick={() => setNewInfluencer({ ...newInfluencer, open: true })} className="text-[10px] text-primary hover:underline flex items-center gap-1"><Plus size={10} /> Novo</button>
               </div>
+              <Select value={influencerId} onValueChange={setInfluencerId}>
+                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione o influencer" /></SelectTrigger>
+                <SelectContent>
+                  {influencers.map((i: any) => (
+                    <SelectItem key={i.id} value={i.id}>
+                      {i.name}{i.team_label ? ` · ${i.team_label}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-          )}
-        </div>
 
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={!canSave || saving}>
-            {saving ? "Salvando…" : "Salvar link"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            {/* 2. LANDING PAGE */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-xs font-medium">2. Landing Page (opcional)</Label>
+                <button onClick={() => setNewLP({ ...newLP, open: true })} className="text-[10px] text-primary hover:underline flex items-center gap-1"><Plus size={10} /> Nova</button>
+              </div>
+              <Select value={landingPageId || "none"} onValueChange={(v) => setLandingPageId(v === "none" ? "" : v)}>
+                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Sem LP" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem LP (direto)</SelectItem>
+                  {landingPages.map((lp: any) => <SelectItem key={lp.id} value={lp.id}>{lp.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 3. RAW LINK + auto detect */}
+            <div>
+              <Label className="text-xs font-medium">3. Cole o link de afiliado *</Label>
+              <Input
+                className="h-9 text-xs font-mono mt-1"
+                value={rawLink}
+                onChange={(e) => setRawLink(e.target.value)}
+                placeholder="https://qualquer-casa.com/?p=xxxx"
+              />
+              {rawLink && (
+                <div className="mt-1.5 flex items-center justify-between gap-2">
+                  {detectedPlatform ? (
+                    <span className="text-[10px] flex items-center gap-1 text-emerald-500"><Sparkles size={10} /> Detectado: <strong className="text-foreground">{detectedPlatform.name}</strong></span>
+                  ) : (
+                    <span className="text-[10px] text-amber-500">Plataforma não reconhecida — selecione ou cadastre.</span>
+                  )}
+                  <button onClick={() => setNewPlatform({ ...newPlatform, open: true })} className="text-[10px] text-primary hover:underline flex items-center gap-1"><Plus size={10} /> Nova plataforma</button>
+                </div>
+              )}
+            </div>
+
+            {/* 4. PLATFORM ACCOUNT (auto-filled, editable) */}
+            {(!detectedPlatform || !selectedAccount) && (
+              <div>
+                <Label className="text-xs font-medium">4. Conta na plataforma</Label>
+                <Select value={accountId} onValueChange={setAccountId}>
+                  <SelectTrigger className="h-9 text-xs mt-1"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((a: any) => <SelectItem key={a.id} value={a.id}>{a.nome_conta}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* 5. SUBID */}
+            <div>
+              <Label className="text-xs font-medium">5. SubID (universal)</Label>
+              <Input
+                className="h-9 text-xs font-mono mt-1"
+                value={subid}
+                onChange={(e) => setSubid(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ""))}
+                placeholder="auto: slug do influencer"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">Anexado como <code>?sub1=</code> em qualquer URL.</p>
+            </div>
+
+            {/* 6. CAMPANHA opcional */}
+            <div>
+              <Label className="text-xs font-medium">6. Campanha (opcional)</Label>
+              <Select value={campanhaId || "none"} onValueChange={(v) => setCampanhaId(v === "none" ? "" : v)}>
+                <SelectTrigger className="h-9 text-xs mt-1"><SelectValue placeholder="Sem campanha" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem campanha</SelectItem>
+                  {campanhas.map((c: any) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* PREVIEW */}
+            {canSave && (
+              <div className="flex items-start gap-2 bg-primary/10 border border-primary/20 rounded-md px-3 py-2">
+                <CheckCircle2 size={13} className="text-primary mt-0.5 shrink-0" />
+                <div className="space-y-0.5 min-w-0 flex-1">
+                  <p className="text-[10px] font-semibold text-primary uppercase tracking-wide">Link final</p>
+                  <code className="block text-[10px] font-mono text-foreground break-all">{finalUrl}</code>
+                </div>
+                <button onClick={() => navigator.clipboard.writeText(finalUrl)} className="text-primary hover:text-primary/80 shrink-0" title="Copiar"><Copy size={11} /></button>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button onClick={handleSave} disabled={!canSave || saving}>{saving ? "Salvando…" : "Salvar e copiar"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Inline: Novo Influencer ── */}
+      <Dialog open={newInfluencer.open} onOpenChange={(v) => setNewInfluencer({ ...newInfluencer, open: v })}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Novo Influencer</DialogTitle></DialogHeader>
+          <div className="space-y-2.5 py-2">
+            <div><Label className="text-xs">Nome *</Label><Input className="h-9 text-xs mt-1" value={newInfluencer.name} onChange={(e) => setNewInfluencer({ ...newInfluencer, name: e.target.value })} /></div>
+            <div><Label className="text-xs">Slug (opcional, gera do nome)</Label><Input className="h-9 text-xs mt-1 font-mono" value={newInfluencer.slug} onChange={(e) => setNewInfluencer({ ...newInfluencer, slug: e.target.value.replace(/[^a-z0-9-]/g, "") })} /></div>
+          </div>
+          <DialogFooter><Button onClick={handleCreateInfluencer}>Criar e selecionar</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Inline: Nova LP ── */}
+      <Dialog open={newLP.open} onOpenChange={(v) => setNewLP({ ...newLP, open: v })}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Nova Landing Page</DialogTitle></DialogHeader>
+          <div className="space-y-2.5 py-2">
+            <div><Label className="text-xs">Nome *</Label><Input className="h-9 text-xs mt-1" value={newLP.name} onChange={(e) => setNewLP({ ...newLP, name: e.target.value })} /></div>
+            <div><Label className="text-xs">URL base (opcional)</Label><Input className="h-9 text-xs mt-1 font-mono" value={newLP.base_url} onChange={(e) => setNewLP({ ...newLP, base_url: e.target.value })} placeholder="https://..." /></div>
+          </div>
+          <DialogFooter><Button onClick={handleCreateLP}>Criar e selecionar</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Inline: Nova Plataforma ── */}
+      <Dialog open={newPlatform.open} onOpenChange={(v) => setNewPlatform({ ...newPlatform, open: v })}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Nova Plataforma</DialogTitle></DialogHeader>
+          <div className="space-y-2.5 py-2">
+            <div><Label className="text-xs">Nome *</Label><Input className="h-9 text-xs mt-1" value={newPlatform.name} onChange={(e) => setNewPlatform({ ...newPlatform, name: e.target.value })} placeholder="SuperBet" /></div>
+            <div><Label className="text-xs">Domínio (para auto-detecção)</Label><Input className="h-9 text-xs mt-1 font-mono" value={newPlatform.domain} onChange={(e) => setNewPlatform({ ...newPlatform, domain: e.target.value })} placeholder="superbet.com" /></div>
+          </div>
+          <DialogFooter><Button onClick={handleCreatePlatform}>Criar e selecionar</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
