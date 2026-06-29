@@ -8,6 +8,7 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import EmptyState from "@/components/EmptyState";
 
 import TrackingLinkForm, { emptyForm, formFromRow, type FormState } from "@/components/tracking/TrackingLinkForm";
+import QuickLinkDialog from "@/components/QuickLinkDialog";
 import TrackingLinkDetail from "@/components/tracking/TrackingLinkDetail";
 import TrackingSetupWizard from "@/components/tracking/TrackingSetupWizard";
 import HistoricalImport from "@/components/tracking/HistoricalImport";
