@@ -164,6 +164,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
     const domains = newPlatform.domain ? [newPlatform.domain.trim().toLowerCase()] : [];
     const created: any = await createPlatform({ name: newPlatform.name.trim(), slug, domains, is_active: true } as any);
     if (created?.id) {
+      setPlatformId(created.id);
       const acc: any = await createAccount({ platform_id: created.id, nome_conta: `${newPlatform.name} · Principal`, is_demo: false } as any);
       if (acc?.id) setAccountId(acc.id);
     }
