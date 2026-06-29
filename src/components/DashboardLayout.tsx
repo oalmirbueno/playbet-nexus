@@ -17,36 +17,23 @@ interface MenuSection { title: string; items: MenuItem[]; }
 
 const sections: MenuSection[] = [
   {
-    title: "VISÃO GERAL",
+    title: "OPERAÇÃO",
     items: [
       { label: "Dashboard", icon: LayoutDashboard, path: "/" },
-      { label: "Operacional", icon: Activity, path: "/operacional" },
+      { label: "Tracking", icon: BarChart3, path: "/tracking" },
+      { label: "Pessoas", icon: Users, path: "/pessoas" },
     ],
   },
   {
-    title: "LINKS DE AFILIADOS",
+    title: "AFILIADOS",
     items: [
-      { label: "Links Afiliados", icon: Link2, path: "/tracking/links" },
-      { label: "Distribuição LPs", icon: GitBranch, path: "/lp-instances" },
+      { label: "Links", icon: Link2, path: "/tracking/links" },
       { label: "Landing Pages", icon: FileText, path: "/landing-pages" },
       { label: "Plataformas", icon: Monitor, path: "/plataformas" },
     ],
   },
   {
-    title: "PESSOAS",
-    items: [
-      { label: "Pessoas", icon: Users, path: "/pessoas" },
-    ],
-  },
-  {
-    title: "TRACKING",
-    items: [
-      { label: "Tracking Hub", icon: BarChart3, path: "/tracking" },
-      { label: "Eventos", icon: Activity, path: "/tracking/events" },
-    ],
-  },
-  {
-    title: "MARKETING",
+    title: "GROWTH",
     items: [
       { label: "Campanhas", icon: Megaphone, path: "/campanhas" },
       { label: "Conteúdos", icon: PenTool, path: "/conteudo" },
@@ -56,17 +43,14 @@ const sections: MenuSection[] = [
     title: "FINANCEIRO",
     items: [
       { label: "Financeiro", icon: DollarSign, path: "/financeiro" },
-      { label: "Saques", icon: Wallet, path: "/saques" },
-      { label: "Comissões", icon: PieChart, path: "/comissoes" },
       { label: "Asaas", icon: CreditCard, path: "/asaas" },
     ],
   },
   {
-    title: "CONFIGURAÇÕES",
+    title: "SISTEMA",
     items: [
-      { label: "Geral", icon: Settings, path: "/configuracoes" },
+      { label: "Configurações", icon: Settings, path: "/configuracoes" },
       { label: "Integrações", icon: Plug, path: "/integracoes" },
-      { label: "Regras Financeiras", icon: Scale, path: "/regras" },
     ],
   },
 ];
