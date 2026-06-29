@@ -24,9 +24,18 @@ const sections: MenuSection[] = [
     ],
   },
   {
-    title: "LINKS",
+    title: "LINKS DE AFILIADOS",
     items: [
       { label: "Links Afiliados", icon: Link2, path: "/tracking/links" },
+      { label: "Distribuição LPs", icon: GitBranch, path: "/lp-instances" },
+      { label: "Landing Pages", icon: FileText, path: "/landing-pages" },
+      { label: "Plataformas", icon: Monitor, path: "/plataformas" },
+    ],
+  },
+  {
+    title: "PESSOAS",
+    items: [
+      { label: "Pessoas", icon: Users, path: "/pessoas" },
     ],
   },
   {
@@ -35,20 +44,6 @@ const sections: MenuSection[] = [
       { label: "Tracking Hub", icon: BarChart3, path: "/tracking" },
       { label: "Eventos", icon: Activity, path: "/tracking/events" },
       { label: "Reconciliação", icon: Scale, path: "/tracking/reconciliacao" },
-    ],
-  },
-  {
-    title: "ATIVOS",
-    items: [
-      { label: "Plataformas", icon: Monitor, path: "/plataformas" },
-      { label: "Landing Pages", icon: FileText, path: "/landing-pages" },
-      { label: "Distribuição LPs", icon: GitBranch, path: "/lp-instances" },
-    ],
-  },
-  {
-    title: "PESSOAS",
-    items: [
-      { label: "Pessoas", icon: Users, path: "/pessoas" },
     ],
   },
   {
