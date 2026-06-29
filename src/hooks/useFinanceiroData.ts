@@ -155,7 +155,7 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
     });
   }, [metricsQuery.data, influencerMap]);
 
-  const splitByCategory = (rows: (RankingRow & { category: string })[]) => {
+  const splitByCategory = (rows: RankingRow[]) => {
     const total = rows.reduce((a, b) => a + b.revenue, 0) || 1;
     return rows
       .map((r) => ({ ...r, share: (r.revenue / total) * 100 }))
@@ -163,12 +163,12 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
   };
 
   const rankingInfluencers = useMemo<RankingRow[]>(
-    () => splitByCategory(baseInfluencerRows.filter((r: any) => r.category !== "streamer")),
+    () => splitByCategory(baseInfluencerRows.filter((r) => r.category !== "streamer")),
     [baseInfluencerRows],
   );
 
   const rankingStreamers = useMemo<RankingRow[]>(
-    () => splitByCategory(baseInfluencerRows.filter((r: any) => r.category === "streamer")),
+    () => splitByCategory(baseInfluencerRows.filter((r) => r.category === "streamer")),
     [baseInfluencerRows],
   );
 
