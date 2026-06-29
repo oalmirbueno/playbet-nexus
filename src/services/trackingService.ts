@@ -104,6 +104,8 @@ export interface TrackingLinkRow {
   status: string | null;
   notes: string | null;
   is_demo: boolean;
+  use_lp?: boolean | null;
+  tracking_role?: string | null;
   created_at: string | null;
   updated_at: string | null;
 }
