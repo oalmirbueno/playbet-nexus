@@ -30,7 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Copy, AlertTriangle, Sparkles } from "lucide-react";
+import { Plus, Pencil, Trash2, Copy, AlertTriangle, Sparkles, Wand2, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLpOpportunities } from "@/hooks/useLpOpportunities";
 import {
@@ -40,6 +40,8 @@ import {
 } from "@/hooks/useSupabaseQuery";
 import { useTrackingLinks } from "@/hooks/useTrackingData";
 import type { LpOpportunityRow } from "@/services/lpOpportunityService";
+import { OpportunityWizard } from "@/components/lp/OpportunityWizard";
+import { isSelfLandingLoop } from "@/lib/opportunityDetect";
 
 const CATEGORIES = [
   { value: "sports", label: "Esportes" },
@@ -113,11 +115,20 @@ export default function LpOpportunities() {
   const { data: trackingLinks = [] } = useTrackingLinks();
 
   const [open, setOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(empty);
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterLp, setFilterLp] = useState<string>("all");
+
+  const todaysHighlights = useMemo(() => {
+    return (rows || [])
+      .filter((r: LpOpportunityRow) => r.is_active)
+      .sort((a: LpOpportunityRow, b: LpOpportunityRow) => (b.sort_order || 0) - (a.sort_order || 0))
+      .slice(0, 3)
+      .map((r: LpOpportunityRow) => r.id);
+  }, [rows]);
 
   const filtered = useMemo(() => {
     return (rows || []).filter((r: LpOpportunityRow) => {
@@ -205,6 +216,14 @@ export default function LpOpportunities() {
       });
       return;
     }
+    if (isSelfLandingLoop(form.destination_url)) {
+      toast({
+        title: "Loop bloqueado",
+        description: "O destino não pode apontar para oportunidades.playbet.app.br. Use o deep link da casa.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (form.is_active && !form.landing_page_id) {
       toast({
         title: "Atenção",
@@ -260,12 +279,15 @@ export default function LpOpportunities() {
             A landing pública lê estes cards automaticamente. Use no máximo 3 destaques ativos por campanha.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={copyJsonPreview}>
             <Copy className="w-4 h-4" /> Copiar JSON
           </Button>
-          <Button onClick={openNew}>
-            <Plus className="w-4 h-4" /> Nova oportunidade
+          <Button variant="secondary" onClick={openNew}>
+            <Plus className="w-4 h-4" /> Novo manual
+          </Button>
+          <Button onClick={() => setWizardOpen(true)}>
+            <Wand2 className="w-4 h-4" /> Assistente
           </Button>
         </div>
       </div>
@@ -340,12 +362,19 @@ export default function LpOpportunities() {
                   const lp = lps.find((l: any) => l.id === r.landing_page_id);
                   const overLimit =
                     r.campanha_id && (activeCountByCampaign.get(r.campanha_id) || 0) > 3;
+                  const isHighlight = todaysHighlights.includes(r.id);
                   return (
-                    <TableRow key={r.id}>
-                      <TableCell className="text-muted-foreground">{r.sort_order}</TableCell>
+                    <TableRow key={r.id} className={isHighlight ? "bg-primary/5" : ""}>
+                      <TableCell className="text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          {isHighlight && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />}
+                          {r.sort_order}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <div className="font-medium flex items-center gap-2">
                           {r.title}
+                          {isHighlight && <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/30" variant="outline">Destaque de hoje</Badge>}
                           {r.badge && <Badge variant="secondary">{r.badge}</Badge>}
                           {overLimit && (
                             <span title="Mais de 3 ativos nesta campanha">
@@ -593,6 +622,16 @@ export default function LpOpportunities() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <OpportunityWizard
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        platforms={platforms as any}
+        landingPages={lps as any}
+        campanhas={campanhas as any}
+        onCreate={(payload) => create(payload)}
+        defaultLandingPageId={filterLp !== "all" ? filterLp : undefined}
+      />
     </div>
   );
 }
