@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CheckCircle2, AlertTriangle, DollarSign, Wallet, Activity, Clock } from "lucide-react";
+import DistributionCard from "@/components/DistributionCard";
 
 const fmt = (v: number, currency = "BRL") =>
   v.toLocaleString("pt-BR", { style: "currency", currency: currency === "BRL" ? "BRL" : "USD" });
@@ -87,6 +88,15 @@ export default function Reconciliacao() {
   const withdrawOrig = consolidated.latestWithdrawableOriginal ?? 0;
   const withdrawCurrency = consolidated.latestWithdrawableCurrency || "BRL";
   const withdrawBrl = consolidated.latestWithdrawableBrl ?? 0;
+
+  // Receita validada preferencial: saldo retirável (BRL); fallback para soma de revenue.
+  const validatedRevenueBrl = withdrawBrl > 0 ? withdrawBrl : (consolidated.revenueBrl ?? 0);
+  const validatedSource = withdrawBrl > 0 ? "saldo retirável da plataforma" : "soma de eventos revenue";
+  const perPlatformValidated = byPlatform.map(([pid, g]) => ({
+    id: pid,
+    name: g.name,
+    brl: (g.withdrawable?.brl ?? 0) > 0 ? (g.withdrawable!.brl) : g.revenueSum.brl,
+  })).filter((p) => p.brl > 0);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -173,6 +183,13 @@ export default function Reconciliacao() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Distribuição automática conforme PLAYBET_MODELO_OFICIAL.md */}
+      <DistributionCard
+        revenueBrl={validatedRevenueBrl}
+        sourceLabel={validatedSource}
+        perPlatform={perPlatformValidated}
+      />
 
       {/* Per-platform breakdown */}
       {byPlatform.map(([pid, group]) => (
