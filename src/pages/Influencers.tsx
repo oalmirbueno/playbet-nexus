@@ -317,7 +317,7 @@ export default function Influencers() {
                     <div className="overflow-x-auto invisible-scroll">
                       <table className="data-table">
                         <thead>
-                          <tr><th>Nome</th><th>Instagram</th><th>Seguidores</th><th>%</th><th>Slug</th><th>Link</th><th>Status</th><th className="text-right">Ações</th></tr>
+                          <tr><th>Nome</th><th>Instagram</th><th>Seguidores</th><th>Nível</th><th>%</th><th>Slug</th><th>Link</th><th>Status</th><th className="text-right">Ações</th></tr>
                         </thead>
                         <tbody>
                           {grp.rows.map((inf: any) => (
