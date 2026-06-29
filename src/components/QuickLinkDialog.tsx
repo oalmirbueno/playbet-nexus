@@ -60,10 +60,14 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
     [influencers, influencerId],
   );
 
-  // Auto-fill subid from influencer slug
+  // Auto-generate a UNIQUE subid per link: <influencer-slug>-<base36-timestamp>
+  // Editable, but regenerated whenever the influencer changes or the dialog reopens.
   useEffect(() => {
-    if (selectedInfluencer) setSubid((selectedInfluencer as any).slug || "");
-  }, [selectedInfluencer]);
+    if (!open) return;
+    const base = (selectedInfluencer as any)?.slug || "link";
+    const unique = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    setSubid(`${base}-${unique}`);
+  }, [selectedInfluencer, open]);
 
   // 🧠 Universal platform auto-detection from pasted URL
   const detectedPlatform = useMemo(() => {
@@ -82,10 +86,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   const selectedAccount = useMemo(() => accounts.find((a: any) => a.id === accountId), [accounts, accountId]);
   const finalUrl = useMemo(() => appendSubId(rawLink, "sub1", subid), [rawLink, subid]);
 
-  const trackingCode = useMemo(() => {
-    const slug = (selectedInfluencer as any)?.slug || "link";
-    return `${slug}-${Date.now().toString(36)}`;
-  }, [selectedInfluencer]);
+  const trackingCode = useMemo(() => subid || `link-${Date.now().toString(36)}`, [subid]);
 
   const canSave = influencerId && rawLink.trim() && (accountId || detectedPlatform);
 
@@ -239,14 +240,14 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
 
             {/* 5. SUBID */}
             <div>
-              <Label className="text-xs font-medium">5. SubID (universal)</Label>
+              <Label className="text-xs font-medium">5. SubID único (auto)</Label>
               <Input
                 className="h-9 text-xs font-mono mt-1"
                 value={subid}
                 onChange={(e) => setSubid(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ""))}
-                placeholder="auto: slug do influencer"
+                placeholder="influencer-xxxxx"
               />
-              <p className="text-[10px] text-muted-foreground mt-1">Anexado como <code>?sub1=</code> em qualquer URL.</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Gerado automaticamente por link · anexado como <code>?sub1=</code>.</p>
             </div>
 
             {/* 6. CAMPANHA opcional */}
