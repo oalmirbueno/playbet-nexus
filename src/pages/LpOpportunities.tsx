@@ -310,7 +310,13 @@ export default function LpOpportunities() {
         onCreateOpportunity={(payload) => create(payload)}
       />
 
+      <SignalRoomPanel
+        platforms={platforms as any}
+        onCreateOpportunity={(payload) => create(payload)}
+      />
+
       <Card>
+
 
         <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
