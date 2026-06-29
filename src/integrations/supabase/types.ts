@@ -1246,6 +1246,7 @@ export type Database = {
           base_url: string | null
           campanha_id: string | null
           click_id_param_name: string | null
+          commission_percent: number | null
           conteudo_id: string | null
           created_at: string | null
           final_url: string | null
@@ -1267,6 +1268,7 @@ export type Database = {
           base_url?: string | null
           campanha_id?: string | null
           click_id_param_name?: string | null
+          commission_percent?: number | null
           conteudo_id?: string | null
           created_at?: string | null
           final_url?: string | null
@@ -1288,6 +1290,7 @@ export type Database = {
           base_url?: string | null
           campanha_id?: string | null
           click_id_param_name?: string | null
+          commission_percent?: number | null
           conteudo_id?: string | null
           created_at?: string | null
           final_url?: string | null
