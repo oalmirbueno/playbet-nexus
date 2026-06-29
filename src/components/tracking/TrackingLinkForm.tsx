@@ -326,6 +326,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
 
           {/* 2. Landing page (pick the LP; instance + affiliate link auto-resolve) */}
           {useLp && (
+            <div className="space-y-1.5">
             <Step n={2} label="Landing page" />
             <Select
               value={form.landing_page_id}
