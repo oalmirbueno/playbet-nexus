@@ -922,6 +922,9 @@ export type Database = {
       }
       saques: {
         Row: {
+          asaas_payment_id: string | null
+          asaas_status: string | null
+          asaas_synced_at: string | null
           codigo: string
           conta: string | null
           created_at: string | null
@@ -930,6 +933,8 @@ export type Database = {
           is_demo: boolean
           nome: string
           origem: string | null
+          pix_key: string | null
+          pix_key_type: string | null
           responsavel: string | null
           status: string | null
           tipo: string
@@ -937,6 +942,9 @@ export type Database = {
           valor: number
         }
         Insert: {
+          asaas_payment_id?: string | null
+          asaas_status?: string | null
+          asaas_synced_at?: string | null
           codigo: string
           conta?: string | null
           created_at?: string | null
@@ -945,6 +953,8 @@ export type Database = {
           is_demo?: boolean
           nome: string
           origem?: string | null
+          pix_key?: string | null
+          pix_key_type?: string | null
           responsavel?: string | null
           status?: string | null
           tipo?: string
@@ -952,6 +962,9 @@ export type Database = {
           valor?: number
         }
         Update: {
+          asaas_payment_id?: string | null
+          asaas_status?: string | null
+          asaas_synced_at?: string | null
           codigo?: string
           conta?: string | null
           created_at?: string | null
@@ -960,6 +973,8 @@ export type Database = {
           is_demo?: boolean
           nome?: string
           origem?: string | null
+          pix_key?: string | null
+          pix_key_type?: string | null
           responsavel?: string | null
           status?: string | null
           tipo?: string
