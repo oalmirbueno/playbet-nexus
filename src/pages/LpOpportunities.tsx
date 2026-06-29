@@ -362,12 +362,19 @@ export default function LpOpportunities() {
                   const lp = lps.find((l: any) => l.id === r.landing_page_id);
                   const overLimit =
                     r.campanha_id && (activeCountByCampaign.get(r.campanha_id) || 0) > 3;
+                  const isHighlight = todaysHighlights.includes(r.id);
                   return (
-                    <TableRow key={r.id}>
-                      <TableCell className="text-muted-foreground">{r.sort_order}</TableCell>
+                    <TableRow key={r.id} className={isHighlight ? "bg-primary/5" : ""}>
+                      <TableCell className="text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          {isHighlight && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />}
+                          {r.sort_order}
+                        </div>
+                      </TableCell>
                       <TableCell>
                         <div className="font-medium flex items-center gap-2">
                           {r.title}
+                          {isHighlight && <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/30" variant="outline">Destaque de hoje</Badge>}
                           {r.badge && <Badge variant="secondary">{r.badge}</Badge>}
                           {overLimit && (
                             <span title="Mais de 3 ativos nesta campanha">
