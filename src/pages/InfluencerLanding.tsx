@@ -124,10 +124,11 @@ export default function InfluencerLanding() {
         });
         setState("ready");
 
-        // Register click event in tracking_events (non-blocking)
+        // Register LP VIEW event (does not count as outbound click in metrics).
+        // The actual 'click' canonical event is registered on CTA press below.
         supabase.from("tracking_events").insert({
-          canonical_event_name: "click",
-          raw_event_name: "lp_click_view",
+          canonical_event_name: "lp_view",
+          raw_event_name: "lp_view",
           click_id: clickId,
           influencer_id: influencerId,
           landing_page_id: landingPageId,
@@ -138,10 +139,13 @@ export default function InfluencerLanding() {
           raw_payload: {
             slug,
             hostname,
+            sub2: searchParams.get("sub2"),
+            sub3: searchParams.get("sub3"),
             user_agent: navigator.userAgent,
             referrer: document.referrer || null,
           },
         }).then(() => {});
+
       };
 
       // ── STRATEGY 1: Domain-aware ──
