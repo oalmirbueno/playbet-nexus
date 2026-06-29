@@ -356,11 +356,14 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
           {form.platform_account_id && (
             <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
               <div className="flex items-center justify-between">
-                <Step n={4} label="Link de afiliado + atribuição" />
+                <Step n={4} label="Link de afiliado (destino do CTA)" />
                 <span className="text-[9px] uppercase tracking-wider text-primary/80 font-semibold">
                   AFP / sub1 = atribuição
                 </span>
               </div>
+              <p className="text-[10px] text-muted-foreground -mt-1">
+                Esse link entra no <b>botão da landing page</b>. O visitante chega na LP primeiro, clica no CTA e só então é redirecionado para a casa.
+              </p>
 
               <Input
                 className="h-9 text-xs font-mono"
@@ -416,12 +419,28 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                 </div>
               </div>
 
-              {finalUrl && form.base_url && (
-                <div className="flex items-start gap-1.5 text-[10px] text-foreground pt-1 border-t border-border/40">
-                  <CheckCircle2 size={11} className="text-primary mt-0.5 shrink-0" />
-                  <code className="font-mono break-all text-muted-foreground">{finalUrl}</code>
+              {trackedAffiliateUrl && form.base_url && (
+                <div className="flex items-start gap-1.5 text-[10px] pt-1 border-t border-border/40">
+                  <span className="text-[9px] uppercase tracking-wider text-muted-foreground mt-0.5 shrink-0">CTA →</span>
+                  <code className="font-mono break-all text-muted-foreground">{trackedAffiliateUrl}</code>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Public LP share link — what the influencer actually sends */}
+          {publicLpUrl && (
+            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={12} className="text-emerald-500" />
+                <span className="text-[10px] uppercase tracking-wider font-semibold text-emerald-500">
+                  Link para divulgar (passa pela landing page)
+                </span>
+              </div>
+              <code className="block font-mono text-xs break-all text-foreground">{publicLpUrl}</code>
+              <p className="text-[9px] text-muted-foreground">
+                Visitante → LP → clica no CTA → redireciona para o afiliado com <code>{form.click_id_param_name}</code> de atribuição.
+              </p>
             </div>
           )}
 
