@@ -164,6 +164,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
     const domains = newPlatform.domain ? [newPlatform.domain.trim().toLowerCase()] : [];
     const created: any = await createPlatform({ name: newPlatform.name.trim(), slug, domains, is_active: true } as any);
     if (created?.id) {
+      setPlatformId(created.id);
       const acc: any = await createAccount({ platform_id: created.id, nome_conta: `${newPlatform.name} · Principal`, is_demo: false } as any);
       if (acc?.id) setAccountId(acc.id);
     }
@@ -246,7 +247,16 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <Label className="text-xs font-medium">4. Plataforma</Label>
-                  {detectedPlatform && <span className="text-[9px] text-emerald-500 flex items-center gap-0.5"><Sparkles size={9} /> auto</span>}
+                  <div className="flex items-center gap-2">
+                    {detectedPlatform && <span className="text-[9px] text-emerald-500 flex items-center gap-0.5"><Sparkles size={9} /> auto</span>}
+                    <button
+                      type="button"
+                      onClick={() => setNewPlatform({ ...newPlatform, open: true })}
+                      className="text-[10px] text-primary hover:underline flex items-center gap-0.5"
+                    >
+                      <Plus size={9} /> Nova
+                    </button>
+                  </div>
                 </div>
                 <Select value={platformId} onValueChange={(v) => { setPlatformId(v); setAccountId(""); }}>
                   <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Casa de aposta" /></SelectTrigger>
