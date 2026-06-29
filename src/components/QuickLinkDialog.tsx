@@ -86,10 +86,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   const selectedAccount = useMemo(() => accounts.find((a: any) => a.id === accountId), [accounts, accountId]);
   const finalUrl = useMemo(() => appendSubId(rawLink, "sub1", subid), [rawLink, subid]);
 
-  const trackingCode = useMemo(() => {
-    const slug = (selectedInfluencer as any)?.slug || "link";
-    return `${slug}-${Date.now().toString(36)}`;
-  }, [selectedInfluencer]);
+  const trackingCode = useMemo(() => subid || `link-${Date.now().toString(36)}`, [subid]);
 
   const canSave = influencerId && rawLink.trim() && (accountId || detectedPlatform);
 
