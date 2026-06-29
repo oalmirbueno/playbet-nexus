@@ -34,6 +34,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   const [influencerId, setInfluencerId] = useState(defaultInfluencerId);
   const [landingPageId, setLandingPageId] = useState(defaultLandingPageId);
   const [accountId, setAccountId] = useState("");
+  const [platformId, setPlatformId] = useState("");
   const [rawLink, setRawLink] = useState("");
   const [subid, setSubid] = useState("");
   const [campanhaId, setCampanhaId] = useState("");
