@@ -11,10 +11,12 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import { useTrackingMetrics, usePlatformAccounts, useTrackingEvents } from "@/hooks/useTrackingData";
 import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
 import { useInfluencers, useCampanhas, usePlatforms, useLandingPages } from "@/hooks/useSupabaseQuery";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   BarChart3, TrendingUp, Users, MousePointerClick, UserPlus, DollarSign,
   Wallet, Target, ArrowRightLeft, Activity, Download, Filter, RefreshCcw,
-  AlertTriangle, Zap, Link2, Map, MoreHorizontal, ArrowUpDown,
+  AlertTriangle, Zap, Link2, Map, MoreHorizontal, ArrowUpDown, CloudDownload,
 } from "lucide-react";
 
 import PlatformActivationChecklist from "@/components/PlatformActivationChecklist";
