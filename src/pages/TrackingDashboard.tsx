@@ -51,6 +51,24 @@ export default function TrackingDashboard() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [showHistoricalImport, setShowHistoricalImport] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSmarticoPull = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("tracking-puller-smartico", {
+        body: { source: "manual", mode: "recent" },
+      });
+      if (error) throw error;
+      const r = data as { ok?: boolean; rows_received?: number; upserts?: number; error?: string };
+      if (r?.ok === false) throw new Error(r.error || "Falha no pull");
+      toast.success(`Estrela/VUPI sincronizado: ${r.upserts ?? 0} linhas (${r.rows_received ?? 0} brutas)`);
+    } catch (e) {
+      toast.error(`Falha ao sincronizar: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const filters = useMemo(() => ({
     platform_id: platformFilter !== "all" ? platformFilter : undefined,
