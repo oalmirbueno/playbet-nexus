@@ -300,8 +300,32 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
             </Select>
           </div>
 
+          {/* Mode toggle: Com LP / Sem LP */}
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-secondary/30 p-2.5">
+            <div className="text-[11px]">
+              <div className="font-semibold text-foreground">Fluxo do link</div>
+              <div className="text-[10px] text-muted-foreground">
+                {useLp
+                  ? "Visitante → landing page → clica no CTA → afiliado"
+                  : "Visitante → afiliado direto (sem LP)"}
+              </div>
+            </div>
+            <div className="inline-flex rounded-md border border-border bg-background p-0.5 text-[10px] font-medium">
+              <button
+                type="button"
+                onClick={() => setUseLp(true)}
+                className={`px-2.5 py-1 rounded ${useLp ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >Com LP</button>
+              <button
+                type="button"
+                onClick={() => setUseLp(false)}
+                className={`px-2.5 py-1 rounded ${!useLp ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >Sem LP</button>
+            </div>
+          </div>
+
           {/* 2. Landing page (pick the LP; instance + affiliate link auto-resolve) */}
-          <div className="space-y-1.5">
+          {useLp && (
             <Step n={2} label="Landing page" />
             <Select
               value={form.landing_page_id}
