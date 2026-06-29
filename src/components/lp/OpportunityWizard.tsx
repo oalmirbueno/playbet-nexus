@@ -9,20 +9,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Wand2, AlertTriangle, Copy, Send, Power, Sparkles, ChevronDown, Trophy, Dices, Gift, BookOpen } from "lucide-react";
+import {
+  Wand2, AlertTriangle, Copy, Send, Power, Sparkles, ChevronDown,
+  Trophy, Dices, Gift, BookOpen, ImageIcon, ShieldCheck,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import {
-  detectOpportunity,
-  applyUtms,
-  isSelfLandingLoop,
-  looksLikePublicNoTracking,
-  scoreSports,
-  scoreCasino,
-  slugify,
-  type DetectedOpportunity,
-  type OpportunityCategory,
-  type PlatformLite,
-  type ScoreResult,
+  detectOpportunity, applyUtms, isSelfLandingLoop, looksLikePublicNoTracking,
+  scoreSports, scoreCasino, slugify,
+  type DetectedOpportunity, type OpportunityCategory, type PlatformLite, type ScoreResult,
 } from "@/lib/opportunityDetect";
 import type { LpOpportunityRow } from "@/services/lpOpportunityService";
 
@@ -34,6 +29,8 @@ interface Props {
   campanhas: Array<{ id: string; nome?: string | null; slug?: string | null }>;
   onCreate: (payload: Partial<LpOpportunityRow>) => Promise<LpOpportunityRow | void>;
   defaultLandingPageId?: string;
+  /** Active highlights per LP id (sort_order >= 20) — used to alert when > 3. */
+  highlightsCountByLp?: Map<string, number>;
 }
 
 type Mode = OpportunityCategory;
@@ -59,14 +56,37 @@ const GUIDE_CTAS = ["Ler guia", "Saiba mais"];
 const CASINO_TYPES = ["slot", "crash", "roleta", "ao vivo", "mines", "blackjack", "destaque"];
 const CASINO_BADGES = ["Jogo em destaque", "Novidade", "Cassino em alta", "Oferta oficial"];
 
+const MEDIA_TYPES: Array<{ v: string; label: string }> = [
+  { v: "image", label: "Imagem" },
+  { v: "screenshot", label: "Screenshot" },
+  { v: "banner", label: "Banner" },
+  { v: "game_thumb", label: "Thumb do jogo" },
+  { v: "odds_print", label: "Print da odd" },
+];
+
+const SOURCE_LABELS = [
+  "Print oficial", "Banner da casa", "Imagem do jogo", "Print da odd", "Mídia própria",
+];
+
+// Copy proibida — bloqueia publicação para qualquer campo textual.
+const FORBIDDEN_RX = /\b(mais\s+chance(s)?\s+de\s+ganhar|ganho\s+certo|lucro|garantido|garantia\s+de\s+ganho)\b/i;
+
 function toIso(local: string): string | null {
   if (!local) return null;
   const d = new Date(local);
   return isNaN(d.getTime()) ? null : d.toISOString();
 }
 
+function hasForbidden(...parts: Array<string | null | undefined>): string | null {
+  for (const p of parts) {
+    if (p && FORBIDDEN_RX.test(p)) return p;
+  }
+  return null;
+}
+
 export function OpportunityWizard({
-  open, onOpenChange, platforms, landingPages, campanhas, onCreate, defaultLandingPageId,
+  open, onOpenChange, platforms, landingPages, campanhas, onCreate,
+  defaultLandingPageId, highlightsCountByLp,
 }: Props) {
   const { toast } = useToast();
 
@@ -77,6 +97,7 @@ export function OpportunityWizard({
   const [casa, setCasa] = useState("");
   const [prioridade, setPrioridade] = useState<number>(10);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [techOpen, setTechOpen] = useState(false);
 
   // Sports
   const [evento, setEvento] = useState("");
@@ -99,6 +120,13 @@ export function OpportunityWizard({
   const [genericSubtitle, setGenericSubtitle] = useState("");
   const [genericCta, setGenericCta] = useState(OFFER_CTAS[0]);
 
+  // Media
+  const [imageUrl, setImageUrl] = useState("");
+  const [imageAlt, setImageAlt] = useState("");
+  const [mediaType, setMediaType] = useState<string>("image");
+  const [sourceLabel, setSourceLabel] = useState<string>("");
+  const [sourceUrl, setSourceUrl] = useState("");
+
   useEffect(() => {
     if (open && defaultLandingPageId && !landingPageId) setLandingPageId(defaultLandingPageId);
   }, [open, defaultLandingPageId, landingPageId]);
@@ -106,6 +134,10 @@ export function OpportunityWizard({
   useEffect(() => {
     if (mode === "offer") setGenericCta(OFFER_CTAS[0]);
     if (mode === "guide") setGenericCta(GUIDE_CTAS[0]);
+    // default media type sugerido por modo
+    if (mode === "sports") setMediaType((m) => m || "odds_print");
+    else if (mode === "casino") setMediaType((m) => m || "game_thumb");
+    else setMediaType((m) => m || "image");
   }, [mode]);
 
   const campanhaSlug = useMemo(() => {
@@ -128,16 +160,11 @@ export function OpportunityWizard({
   const detected: DetectedOpportunity | null = useMemo(() => {
     if (!raw.trim()) return null;
     return detectOpportunity({
-      rawInput: raw,
-      platforms,
-      campaignSlug: campanhaSlug,
-      forcedCategory: mode,
-      channel: channelHint,
-      itemSlug,
+      rawInput: raw, platforms, campaignSlug: campanhaSlug,
+      forcedCategory: mode, channel: channelHint, itemSlug,
     });
   }, [raw, platforms, campanhaSlug, mode, channelHint, itemSlug]);
 
-  // Auto-detect mode on first paste if user didn't override yet
   const [modeTouched, setModeTouched] = useState(false);
   useEffect(() => {
     if (!modeTouched && detected) setMode(detected.category);
@@ -170,11 +197,37 @@ export function OpportunityWizard({
     return { score: finalUrl ? 60 : 0, labels: [], reasons: [] };
   }, [detected, mode, finalUrl, casa, odd, mercado, startsAt, gameName, gameType, provider, casinoBadge]);
 
+  // Preview computed
+  const preview = useMemo(() => {
+    let title = "Oportunidade";
+    let subtitle = "";
+    let badge: string | null = null;
+    let cta = "Ver";
+    if (mode === "sports") {
+      title = evento || "Aposta sugerida";
+      subtitle = [mercado, casa].filter(Boolean).join(" · ");
+      badge = odd ? `Odd ${odd}` : "Odd em destaque";
+      cta = sportsCta;
+    } else if (mode === "casino") {
+      title = gameName || "Jogo em destaque";
+      subtitle = [provider, gameType, casa].filter(Boolean).join(" · ");
+      badge = casinoBadge;
+      cta = casinoCta;
+    } else {
+      title = genericTitle || (mode === "offer" ? "Oferta exclusiva" : "Guia rápido");
+      subtitle = genericSubtitle || (detected?.suggestedSubtitle ?? "");
+      badge = mode === "offer" ? "Oferta oficial" : "Guia rápido";
+      cta = genericCta;
+    }
+    return { title, subtitle, badge, cta };
+  }, [mode, evento, mercado, casa, odd, sportsCta, gameName, provider, gameType, casinoBadge, casinoCta, genericTitle, genericSubtitle, genericCta, detected]);
+
   function reset() {
-    setRaw(""); setCasa(""); setPrioridade(10); setAdvancedOpen(false);
+    setRaw(""); setCasa(""); setPrioridade(10); setAdvancedOpen(false); setTechOpen(false);
     setEvento(""); setMercado(""); setOdd(""); setStartsAt(""); setEndsAt(""); setSportsCta(SPORTS_CTAS[1]);
     setGameName(""); setGameType(""); setProvider(""); setCasinoOffer(""); setCasinoBadge(CASINO_BADGES[0]); setCasinoCta(CASINO_CTAS[0]);
     setGenericTitle(""); setGenericSubtitle(""); setGenericCta(OFFER_CTAS[0]);
+    setImageUrl(""); setImageAlt(""); setMediaType("image"); setSourceLabel(""); setSourceUrl("");
     setModeTouched(false);
   }
 
@@ -188,6 +241,17 @@ export function OpportunityWizard({
     let event_name: string | null = null;
     let market_name: string | null = null;
     let odd_label: string | null = null;
+
+    const media = imageUrl
+      ? {
+          image_url: imageUrl.trim(),
+          image_alt: imageAlt.trim() || preview.title,
+          media_type: mediaType,
+          source_label: sourceLabel || null,
+          source_url: sourceUrl.trim() || null,
+        }
+      : null;
+
     const meta: Record<string, unknown> = {
       wizard: true,
       mode,
@@ -203,6 +267,7 @@ export function OpportunityWizard({
       },
       score: score?.score ?? null,
       labels: score?.labels ?? [],
+      media,
     };
 
     if (mode === "sports") {
@@ -255,6 +320,12 @@ export function OpportunityWizard({
       return "Link inválido ou vazio.";
     }
     if (active && !landingPageId) return "Selecione a landing page para publicar.";
+
+    const offender = hasForbidden(
+      evento, mercado, casinoOffer, genericTitle, genericSubtitle, sourceLabel, imageAlt,
+    );
+    if (offender) return `Copy proibida detectada ("${offender}"). Evite prometer ganho, lucro ou garantia.`;
+
     return null;
   }
 
@@ -262,12 +333,22 @@ export function OpportunityWizard({
     const err = validate(active);
     if (err) { toast({ title: "Não foi possível salvar", description: err, variant: "destructive" }); return; }
 
-    // Alertas leves (não bloqueiam)
     if (mode === "sports" && (!mercado || !odd)) {
       toast({ title: "Atenção", description: "Sports sem mercado/odd ainda pode ser publicado, mas perde força." });
     }
     if (mode === "casino" && !gameName) {
       toast({ title: "Atenção", description: "Cassino sem nome do jogo perde clareza no card." });
+    }
+    if (!imageUrl) {
+      toast({ title: "Sem imagem", description: "Recomendado: anexar print/banner real para o card da LP." });
+    }
+    // Destaque > 3 por LP
+    if (sortOverride === 20 && landingPageId && highlightsCountByLp) {
+      const current = highlightsCountByLp.get(landingPageId) || 0;
+      if (current >= 3) {
+        const ok = confirm(`Esta landing já tem ${current} destaques ativos. Recomendado no máximo 3. Publicar mesmo assim?`);
+        if (!ok) return;
+      }
     }
 
     const payload = buildPayload(active, sortOverride)!;
@@ -281,7 +362,7 @@ export function OpportunityWizard({
 
   function copyJson() {
     if (!detected) return;
-    navigator.clipboard.writeText(JSON.stringify({ mode, detected, finalUrl, score }, null, 2));
+    navigator.clipboard.writeText(JSON.stringify({ mode, detected, finalUrl, score, media: { imageUrl, imageAlt, mediaType, sourceLabel, sourceUrl } }, null, 2));
     toast({ title: "JSON copiado" });
   }
 
@@ -290,7 +371,7 @@ export function OpportunityWizard({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Wand2 className="w-4 h-4 text-primary" /> Assistente de Oportunidade
@@ -340,15 +421,16 @@ export function OpportunityWizard({
                   <Badge variant="outline">{MODES.find((m) => m.value === mode)?.label}</Badge>
                   {detected.shareCode && <Badge>shareCode: {detected.shareCode}</Badge>}
                   {detected.betId && <Badge>aposta: {detected.betId}</Badge>}
-                  {detected.hasAffiliateTracking && <Badge variant="secondary">tracking preservado</Badge>}
+                  {detected.hasAffiliateTracking && (
+                    <Badge variant="secondary" className="gap-1">
+                      <ShieldCheck className="w-3 h-3" /> tracking preservado
+                    </Badge>
+                  )}
                   {score && (
                     <Badge variant={score.score >= 70 ? "default" : score.score >= 40 ? "secondary" : "outline"}>
                       Recomendação {score.score}/100
                     </Badge>
                   )}
-                </div>
-                <div className="text-[11px] text-muted-foreground font-mono break-all p-2 rounded bg-muted">
-                  {finalUrl || "—"}
                 </div>
               </CardContent>
             </Card>
@@ -475,6 +557,78 @@ export function OpportunityWizard({
             </div>
           )}
 
+          {/* 4. MEDIA */}
+          <Card>
+            <CardContent className="p-3 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <ImageIcon className="w-4 h-4 text-primary" /> Imagem / Print do card
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="md:col-span-2">
+                  <Label>URL da imagem</Label>
+                  <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://cdn.exemplo.com/print.jpg" />
+                </div>
+                <div>
+                  <Label>Tipo</Label>
+                  <Select value={mediaType} onValueChange={setMediaType}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{MEDIA_TYPES.map((m) => <SelectItem key={m.v} value={m.v}>{m.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Rótulo da fonte</Label>
+                  <Select value={sourceLabel || "__"} onValueChange={(v) => setSourceLabel(v === "__" ? "" : v)}>
+                    <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__">—</SelectItem>
+                      {SOURCE_LABELS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Alt text</Label>
+                  <Input value={imageAlt} onChange={(e) => setImageAlt(e.target.value)} placeholder="Descrição curta da imagem" />
+                </div>
+                <div>
+                  <Label>URL da fonte (opcional)</Label>
+                  <Input value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="https://…" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* PREVIEW DO CARD */}
+          <div>
+            <Label className="text-xs uppercase tracking-wide text-muted-foreground">Prévia do card na LP</Label>
+            <div className="mt-2 rounded-xl border bg-card overflow-hidden max-w-sm shadow-sm">
+              <div className="aspect-[16/9] bg-muted relative">
+                {imageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={imageUrl} alt={imageAlt || preview.title} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                    <ImageIcon className="w-5 h-5 mr-2" /> sem imagem
+                  </div>
+                )}
+                {preview.badge && (
+                  <span className="absolute top-2 left-2 text-[10px] uppercase tracking-wider px-2 py-1 rounded bg-primary text-primary-foreground font-semibold">
+                    {preview.badge}
+                  </span>
+                )}
+              </div>
+              <div className="p-3 space-y-1">
+                <div className="text-sm font-semibold leading-tight">{preview.title}</div>
+                {preview.subtitle && (
+                  <div className="text-xs text-muted-foreground">{preview.subtitle}</div>
+                )}
+                <Button size="sm" className="w-full mt-2">{preview.cta}</Button>
+                <div className="text-[10px] text-muted-foreground pt-1">
+                  Jogue com responsabilidade · +18 · Conteúdo informativo
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* ADVANCED */}
           <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
             <CollapsibleTrigger asChild>
@@ -511,10 +665,29 @@ export function OpportunityWizard({
                 <Label>Fim (vigência)</Label>
                 <Input type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} />
               </div>
+            </CollapsibleContent>
+          </Collapsible>
+
+          {/* DETALHES TÉCNICOS */}
+          <Collapsible open={techOpen} onOpenChange={setTechOpen}>
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="gap-1">
+                <ChevronDown className={`w-4 h-4 transition-transform ${techOpen ? "rotate-180" : ""}`} />
+                Detalhes técnicos
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-3 space-y-2 text-[11px] text-muted-foreground">
+              <div>
+                <span className="uppercase tracking-wide font-semibold">URL final</span>
+                <div className="font-mono break-all p-2 rounded bg-muted mt-1">{finalUrl || "—"}</div>
+              </div>
               {detected && (
-                <div className="md:col-span-2 text-[11px] text-muted-foreground font-mono break-all">
+                <div className="font-mono break-all">
                   utm_source={detected.utm_source} · utm_medium={detected.utm_medium} · utm_campaign={detected.utm_campaign} · utm_content={detected.utm_content}
                 </div>
+              )}
+              {score && (
+                <div>Score: {score.score}/100 · {score.reasons.join(" · ")}</div>
               )}
             </CollapsibleContent>
           </Collapsible>
