@@ -76,17 +76,42 @@ const TRACKING_ROLES = [
   { value: "interno", label: "Interno / Teste" },
 ];
 
-/** Universal UTM appender — works for any house. */
-function buildFinalUrl(baseUrl: string, paramName: string, subid: string): string {
-  if (!baseUrl || !subid) return baseUrl;
+/**
+ * Universal sub-id appender — works on any house (EstrelaBet AFP, Vooopi AFP,
+ * 1win sub1/2/3, Betano clickid, etc).
+ *
+ * Standard:
+ *   sub1 = click_id    → atribuição de receita (AFP em casas BR)
+ *   sub2 = influencer  → quem trouxe o jogador
+ *   sub3 = campanha    → criativo / campanha de origem
+ *
+ * The postback edge function (`tracking-postback`) reads exactly these 3
+ * fields and closes the loop click → FTD → revenue → comissão.
+ */
+function appendParam(url: string, name: string, value: string): string {
+  if (!url || !value) return url;
   try {
-    const u = new URL(baseUrl);
-    u.searchParams.set(paramName, subid);
+    const u = new URL(url);
+    u.searchParams.set(name, value);
     return u.toString();
   } catch {
-    const sep = baseUrl.includes("?") ? "&" : "?";
-    return `${baseUrl}${sep}${paramName}=${encodeURIComponent(subid)}`;
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}${name}=${encodeURIComponent(value)}`;
   }
+}
+
+export function buildTrackedUrl(
+  baseUrl: string,
+  paramName: string,
+  sub1: string,
+  sub2: string,
+  sub3: string,
+): string {
+  let out = baseUrl;
+  if (sub1) out = appendParam(out, paramName, sub1);
+  if (sub2) out = appendParam(out, "sub2", sub2);
+  if (sub3) out = appendParam(out, "sub3", sub3);
+  return out;
 }
 
 function Step({ n, label }: { n: number; label: string }) {
@@ -139,9 +164,16 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
   const [subid, setSubid] = useState(currentSubid);
   useEffect(() => { setSubid(currentSubid); /* eslint-disable-next-line */ }, [form.influencer_id, form.base_url]);
 
+  // sub1 = click_id slug (atribuição). Editável. Default = slug do influencer.
+  const sub1Value = subid;
+  // sub2 = influencer_id (UUID). Automático.
+  const sub2Value = form.influencer_id || "";
+  // sub3 = campanha_id (UUID). Automático quando campanha selecionada.
+  const sub3Value = form.campanha_id || "";
+
   const finalUrl = useMemo(
-    () => buildFinalUrl(form.base_url, form.click_id_param_name, subid),
-    [form.base_url, form.click_id_param_name, subid],
+    () => buildTrackedUrl(form.base_url, form.click_id_param_name, sub1Value, sub2Value, sub3Value),
+    [form.base_url, form.click_id_param_name, sub1Value, sub2Value, sub3Value],
   );
 
   const canSave = form.influencer_id && form.platform_account_id && form.base_url;
@@ -203,26 +235,72 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
             {platformName && <p className="text-[10px] text-primary/80">Plataforma: {platformName}</p>}
           </div>
 
-          {/* 4. Affiliate link + subid (appears once platform chosen) */}
+          {/* 4. Affiliate link + auto sub1/sub2/sub3 */}
           {form.platform_account_id && (
-            <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
-              <Step n={4} label="Link de afiliado + slug" />
-              <div className="grid grid-cols-[1fr_140px] gap-2">
-                <Input
-                  className="h-9 text-xs font-mono"
-                  value={form.base_url}
-                  onChange={e => set("base_url", e.target.value)}
-                  placeholder="Cole o link bruto da plataforma"
-                />
-                <Input
-                  className="h-9 text-xs font-mono"
-                  value={subid}
-                  onChange={e => setSubid(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ""))}
-                  placeholder="slug"
-                />
+            <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+              <div className="flex items-center justify-between">
+                <Step n={4} label="Link de afiliado + atribuição" />
+                <span className="text-[9px] uppercase tracking-wider text-primary/80 font-semibold">
+                  AFP / sub1 = atribuição
+                </span>
               </div>
+
+              <Input
+                className="h-9 text-xs font-mono"
+                value={form.base_url}
+                onChange={e => set("base_url", e.target.value)}
+                placeholder="Cole o link bruto da plataforma"
+              />
+
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  Parâmetro de atribuição (escolha o equivalente na casa)
+                </Label>
+                <div className="grid grid-cols-[1fr_140px] gap-2">
+                  <Select value={form.click_id_param_name} onValueChange={v => set("click_id_param_name", v)}>
+                    <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="sub1">sub1 (padrão universal)</SelectItem>
+                      <SelectItem value="afp">AFP (EstrelaBet, Vooopi)</SelectItem>
+                      <SelectItem value="click_id">click_id (1win, Alanbase)</SelectItem>
+                      <SelectItem value="clickid">clickid (Betano)</SelectItem>
+                      <SelectItem value="aff_sub">aff_sub (Stake)</SelectItem>
+                      <SelectItem value="s1">s1 (genérico)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    className="h-9 text-xs font-mono"
+                    value={subid}
+                    onChange={e => setSubid(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ""))}
+                    placeholder="slug"
+                  />
+                </div>
+              </div>
+
+              {/* Sub breakdown */}
+              <div className="grid grid-cols-3 gap-2 pt-1">
+                <div className="rounded border border-border/60 bg-background/40 p-2">
+                  <div className="text-[9px] uppercase text-primary font-semibold">{form.click_id_param_name} · atribuição</div>
+                  <div className="font-mono text-[10px] mt-0.5 truncate text-foreground" title={sub1Value}>
+                    {sub1Value || <span className="text-muted-foreground">—</span>}
+                  </div>
+                </div>
+                <div className="rounded border border-border/60 bg-background/40 p-2">
+                  <div className="text-[9px] uppercase text-muted-foreground font-semibold">sub2 · influencer</div>
+                  <div className="font-mono text-[10px] mt-0.5 truncate" title={sub2Value}>
+                    {sub2Value ? <span className="text-foreground">{sub2Value.slice(0, 8)}…</span> : <span className="text-muted-foreground">—</span>}
+                  </div>
+                </div>
+                <div className="rounded border border-border/60 bg-background/40 p-2">
+                  <div className="text-[9px] uppercase text-muted-foreground font-semibold">sub3 · campanha</div>
+                  <div className="font-mono text-[10px] mt-0.5 truncate" title={sub3Value}>
+                    {sub3Value ? <span className="text-foreground">{sub3Value.slice(0, 8)}…</span> : <span className="text-muted-foreground">—</span>}
+                  </div>
+                </div>
+              </div>
+
               {finalUrl && form.base_url && (
-                <div className="flex items-start gap-1.5 text-[10px] text-foreground">
+                <div className="flex items-start gap-1.5 text-[10px] text-foreground pt-1 border-t border-border/40">
                   <CheckCircle2 size={11} className="text-primary mt-0.5 shrink-0" />
                   <code className="font-mono break-all text-muted-foreground">{finalUrl}</code>
                 </div>
