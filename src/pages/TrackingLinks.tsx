@@ -8,6 +8,7 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import EmptyState from "@/components/EmptyState";
 
 import TrackingLinkForm, { emptyForm, formFromRow, type FormState } from "@/components/tracking/TrackingLinkForm";
+import QuickLinkDialog from "@/components/QuickLinkDialog";
 import TrackingLinkDetail from "@/components/tracking/TrackingLinkDetail";
 import TrackingSetupWizard from "@/components/tracking/TrackingSetupWizard";
 import HistoricalImport from "@/components/tracking/HistoricalImport";
@@ -39,6 +40,7 @@ export default function TrackingLinks() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<FormState>(emptyForm);
+  const [quickOpen, setQuickOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [copiedType, setCopiedType] = useState("");
   const [search, setSearch] = useState("");
@@ -54,7 +56,7 @@ export default function TrackingLinks() {
 
   const getName = (list: any[], id: string | null, field = "name") => list.find(i => i.id === id)?.[field] || "—";
 
-  const openCreate = () => { setEditing(emptyForm); setModalOpen(true); };
+  const openCreate = () => setQuickOpen(true);
   const openEdit = (l: TrackingLinkRow) => { setEditing(formFromRow(l)); setModalOpen(true); };
 
   const handleSave = async (form: FormState) => {
@@ -141,10 +143,10 @@ export default function TrackingLinks() {
           <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
             <Upload size={14} className="mr-1.5" /> Importar Histórico
           </Button>
-          <Button size="sm" variant="outline" onClick={openCreate}>
-            <Plus size={14} className="mr-1.5" /> Manual
+          <Button size="sm" onClick={openCreate}>
+            <Plus size={14} className="mr-1.5" /> Novo Link
           </Button>
-          <Button size="sm" onClick={() => setWizardOpen(true)}>
+          <Button size="sm" variant="outline" onClick={() => setWizardOpen(true)}>
             <Sparkles size={14} className="mr-1.5" /> Setup Guiado
           </Button>
         </div>
@@ -275,6 +277,8 @@ export default function TrackingLinks() {
         lpInstances={lpInstances as any[]}
         platforms={platforms as any[]}
       />
+
+      <QuickLinkDialog open={quickOpen} onOpenChange={setQuickOpen} />
 
       <TrackingLinkForm
         open={modalOpen}
