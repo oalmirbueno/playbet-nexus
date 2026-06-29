@@ -14,6 +14,7 @@ import {
   saqueService,
   conteudoService,
 } from "@/services/supabaseService";
+import { squadService } from "@/services/squadService";
 
 
 // ── Generic hook factory ──
@@ -111,3 +112,4 @@ export const useSocios = () => useEntityCrud("socios", socioService, "Sócio");
 export const useSaques = () => useEntityCrud("saques", saqueService, "Saque");
 export const useConteudo = () => useEntityCrud("conteudo", conteudoService, "Conteúdo");
 export const useLandingPageInstances = () => useEntityCrud("landing_page_instances", landingPageInstanceService, "Instância de LP");
+export const useSquads = () => useEntityCrud("squads", squadService, "Squad");
