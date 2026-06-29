@@ -371,19 +371,33 @@ export function OpportunityWizard({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Wand2 className="w-4 h-4 text-primary" /> Assistente de Oportunidade
-          </DialogTitle>
+      <DialogContent className="max-w-2xl p-0 gap-0 max-h-[92vh] flex flex-col overflow-hidden border-border">
+        {/* STICKY HEADER */}
+        <DialogHeader className="sticky top-0 z-20 px-6 py-4 bg-card/85 backdrop-blur-md border-b border-border space-y-0">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <DialogTitle className="flex items-center gap-2 text-base font-semibold tracking-tight">
+                <Wand2 className="w-4 h-4 text-primary shrink-0" />
+                Assistente de Oportunidade
+              </DialogTitle>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mt-1">
+                Oportunidades LP
+              </p>
+            </div>
+          </div>
         </DialogHeader>
 
-        <div className="space-y-5">
-          {/* MODE TABS */}
+        {/* SCROLLABLE BODY */}
+        <div className="flex-1 overflow-y-auto main-scroll px-6 py-6 space-y-7">
+          {/* MODE TABS — segmented */}
           <Tabs value={mode} onValueChange={(v) => { setMode(v as Mode); setModeTouched(true); }}>
-            <TabsList className="grid grid-cols-4 w-full">
+            <TabsList className="grid grid-cols-4 w-full h-auto p-1 bg-secondary/60 rounded-lg">
               {MODES.map((m) => (
-                <TabsTrigger key={m.value} value={m.value} className="gap-1.5">
+                <TabsTrigger
+                  key={m.value}
+                  value={m.value}
+                  className="gap-1.5 py-2 text-xs font-medium rounded-md data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm"
+                >
                   <m.icon className="w-3.5 h-3.5" /> {m.label}
                 </TabsTrigger>
               ))}
@@ -391,219 +405,231 @@ export function OpportunityWizard({
           </Tabs>
 
           {/* PASTE LINK */}
-          <div>
-            <Label>1. Cole o link oficial, shareCode ou ID</Label>
+          <section className="space-y-2">
+            <Label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Link da oportunidade
+            </Label>
             <Textarea
               rows={2}
               value={raw}
               onChange={(e) => setRaw(e.target.value)}
               placeholder="https://casa.com/share/AB12CD  •  AB12CD  •  3489271"
-              className="font-mono text-sm"
+              className="font-mono text-sm resize-none"
             />
             {loop && (
-              <p className="text-xs text-destructive mt-1 flex items-center gap-1">
+              <p className="text-xs text-destructive flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3" /> Link aponta para a própria landing — bloqueado por segurança.
               </p>
             )}
             {publicNoTracking && (
-              <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+              <p className="text-xs text-warning flex items-center gap-1">
                 <AlertTriangle className="w-3 h-3" /> Confirme se este link mantém afiliado/tracking antes de publicar.
               </p>
             )}
-          </div>
 
-          {/* DETECTION SUMMARY */}
-          {detected && (
-            <Card>
-              <CardContent className="p-3 space-y-2">
-                <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                  <Badge variant="secondary">{platformName || "Casa não detectada"}</Badge>
-                  <Badge variant="outline">{MODES.find((m) => m.value === mode)?.label}</Badge>
-                  {detected.shareCode && <Badge>shareCode: {detected.shareCode}</Badge>}
-                  {detected.betId && <Badge>aposta: {detected.betId}</Badge>}
-                  {detected.hasAffiliateTracking && (
-                    <Badge variant="secondary" className="gap-1">
-                      <ShieldCheck className="w-3 h-3" /> tracking preservado
-                    </Badge>
-                  )}
-                  {score && (
-                    <Badge variant={score.score >= 70 ? "default" : score.score >= 40 ? "secondary" : "outline"}>
-                      Recomendação {score.score}/100
-                    </Badge>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+            {detected && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <Badge variant="secondary">{platformName || "Casa não detectada"}</Badge>
+                <Badge variant="outline">{MODES.find((m) => m.value === mode)?.label}</Badge>
+                {detected.shareCode && <Badge>shareCode: {detected.shareCode}</Badge>}
+                {detected.betId && <Badge>aposta: {detected.betId}</Badge>}
+                {detected.hasAffiliateTracking && (
+                  <Badge variant="secondary" className="gap-1">
+                    <ShieldCheck className="w-3 h-3" /> tracking preservado
+                  </Badge>
+                )}
+                {score && (
+                  <Badge variant={score.score >= 70 ? "default" : score.score >= 40 ? "secondary" : "outline"}>
+                    Recomendação {score.score}/100
+                  </Badge>
+                )}
+              </div>
+            )}
+          </section>
 
-          {/* 2. Casa + LP */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <Label>2. Casa</Label>
-              <Input value={casa || platformName || ""} onChange={(e) => setCasa(e.target.value)} placeholder="VUPI, EstrelaBet…" />
-            </div>
-            <div>
-              <Label>Landing page</Label>
-              <Select value={landingPageId || "__"} onValueChange={(v) => setLandingPageId(v === "__" ? "" : v)}>
-                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__">—</SelectItem>
-                  {landingPages.map((lp) => (
-                    <SelectItem key={lp.id} value={lp.id}>{lp.name || lp.slug}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          {/* 3. CAMPOS PRINCIPAIS POR MODO */}
-          {mode === "sports" && (
+          {/* CASA + LP */}
+          <section className="space-y-3 pt-6 border-t border-border-subtle">
+            <Label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Destino
+            </Label>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="md:col-span-2">
-                <Label>3. Evento</Label>
-                <Input value={evento} onChange={(e) => setEvento(e.target.value)} placeholder="Alemanha x Paraguai" />
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Casa</Label>
+                <Input value={casa || platformName || ""} onChange={(e) => setCasa(e.target.value)} placeholder="VUPI, EstrelaBet…" />
               </div>
-              <div>
-                <Label>Mercado</Label>
-                <Input value={mercado} onChange={(e) => setMercado(e.target.value)} placeholder="Favorito vence, +1.5 gols" />
-              </div>
-              <div>
-                <Label>Odd</Label>
-                <Input value={odd} onChange={(e) => setOdd(e.target.value)} placeholder="1.30" />
-              </div>
-              <div>
-                <Label>Horário do jogo</Label>
-                <Input type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
-              </div>
-              <div>
-                <Label>CTA</Label>
-                <Select value={sportsCta} onValueChange={setSportsCta}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{SPORTS_CTAS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-
-          {mode === "casino" && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="md:col-span-2">
-                <Label>3. Nome do jogo</Label>
-                <Input value={gameName} onChange={(e) => setGameName(e.target.value)} placeholder="Fortune Tiger" />
-              </div>
-              <div>
-                <Label>Tipo</Label>
-                <Select value={gameType || "__"} onValueChange={(v) => setGameType(v === "__" ? "" : v)}>
-                  <SelectTrigger><SelectValue placeholder="Slot, crash, roleta…" /></SelectTrigger>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Landing page</Label>
+                <Select value={landingPageId || "__"} onValueChange={(v) => setLandingPageId(v === "__" ? "" : v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__">—</SelectItem>
-                    {CASINO_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Provedor (opcional)</Label>
-                <Input value={provider} onChange={(e) => setProvider(e.target.value)} placeholder="Pragmatic, PG Soft, Evolution…" />
-              </div>
-              <div>
-                <Label>Badge</Label>
-                <Select value={casinoBadge} onValueChange={setCasinoBadge}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{CASINO_BADGES.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>CTA</Label>
-                <Select value={casinoCta} onValueChange={setCasinoCta}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{CASINO_CTAS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
-              <div className="md:col-span-2">
-                <Label>Oferta / benefício (opcional)</Label>
-                <Input value={casinoOffer} onChange={(e) => setCasinoOffer(e.target.value)} placeholder="50 giros grátis, cashback semanal…" />
-              </div>
-            </div>
-          )}
-
-          {(mode === "offer" || mode === "guide") && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="md:col-span-2">
-                <Label>3. Título</Label>
-                <Input value={genericTitle} onChange={(e) => setGenericTitle(e.target.value)} placeholder={mode === "offer" ? "Bônus de boas-vindas" : "Como começar com responsabilidade"} />
-              </div>
-              <div className="md:col-span-2">
-                <Label>Subtítulo</Label>
-                <Input value={genericSubtitle} onChange={(e) => setGenericSubtitle(e.target.value)} placeholder="Resumo curto e claro" />
-              </div>
-              <div>
-                <Label>CTA</Label>
-                <Select value={genericCta} onValueChange={setGenericCta}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {(mode === "offer" ? OFFER_CTAS : GUIDE_CTAS).map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    {landingPages.map((lp) => (
+                      <SelectItem key={lp.id} value={lp.id}>{lp.name || lp.slug}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label>Prioridade</Label>
-                <Select value={String(prioridade)} onValueChange={(v) => setPrioridade(Number(v))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{PRIORITY_OPTS.map((p) => <SelectItem key={p.v} value={String(p.v)}>{p.label}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
             </div>
-          )}
+          </section>
 
-          {/* 4. MEDIA */}
-          <Card>
-            <CardContent className="p-3 space-y-3">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <ImageIcon className="w-4 h-4 text-primary" /> Imagem / Print do card
-              </div>
+          {/* CAMPOS POR MODO */}
+          <section className="space-y-3 pt-6 border-t border-border-subtle">
+            <Label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Conteúdo do card
+            </Label>
+
+            {mode === "sports" && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="md:col-span-2">
-                  <Label>URL da imagem</Label>
-                  <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://cdn.exemplo.com/print.jpg" />
+                <div className="md:col-span-2 space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Evento</Label>
+                  <Input value={evento} onChange={(e) => setEvento(e.target.value)} placeholder="Alemanha x Paraguai" />
                 </div>
-                <div>
-                  <Label>Tipo</Label>
-                  <Select value={mediaType} onValueChange={setMediaType}>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Mercado</Label>
+                  <Input value={mercado} onChange={(e) => setMercado(e.target.value)} placeholder="Favorito vence, +1.5 gols" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Odd</Label>
+                  <Input value={odd} onChange={(e) => setOdd(e.target.value)} placeholder="1.30" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Horário do jogo</Label>
+                  <Input type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">CTA</Label>
+                  <Select value={sportsCta} onValueChange={setSportsCta}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{MEDIA_TYPES.map((m) => <SelectItem key={m.v} value={m.v}>{m.label}</SelectItem>)}</SelectContent>
+                    <SelectContent>{SPORTS_CTAS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label>Rótulo da fonte</Label>
-                  <Select value={sourceLabel || "__"} onValueChange={(v) => setSourceLabel(v === "__" ? "" : v)}>
-                    <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+              </div>
+            )}
+
+            {mode === "casino" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="md:col-span-2 space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Nome do jogo</Label>
+                  <Input value={gameName} onChange={(e) => setGameName(e.target.value)} placeholder="Fortune Tiger" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Tipo</Label>
+                  <Select value={gameType || "__"} onValueChange={(v) => setGameType(v === "__" ? "" : v)}>
+                    <SelectTrigger><SelectValue placeholder="Slot, crash, roleta…" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__">—</SelectItem>
-                      {SOURCE_LABELS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                      {CASINO_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label>Alt text</Label>
-                  <Input value={imageAlt} onChange={(e) => setImageAlt(e.target.value)} placeholder="Descrição curta da imagem" />
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Provedor (opcional)</Label>
+                  <Input value={provider} onChange={(e) => setProvider(e.target.value)} placeholder="Pragmatic, PG Soft, Evolution…" />
                 </div>
-                <div>
-                  <Label>URL da fonte (opcional)</Label>
-                  <Input value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="https://…" />
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Badge</Label>
+                  <Select value={casinoBadge} onValueChange={setCasinoBadge}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{CASINO_BADGES.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">CTA</Label>
+                  <Select value={casinoCta} onValueChange={setCasinoCta}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{CASINO_CTAS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="md:col-span-2 space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Oferta / benefício (opcional)</Label>
+                  <Input value={casinoOffer} onChange={(e) => setCasinoOffer(e.target.value)} placeholder="50 giros grátis, cashback semanal…" />
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            )}
+
+            {(mode === "offer" || mode === "guide") && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="md:col-span-2 space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Título</Label>
+                  <Input value={genericTitle} onChange={(e) => setGenericTitle(e.target.value)} placeholder={mode === "offer" ? "Bônus de boas-vindas" : "Como começar com responsabilidade"} />
+                </div>
+                <div className="md:col-span-2 space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Subtítulo</Label>
+                  <Input value={genericSubtitle} onChange={(e) => setGenericSubtitle(e.target.value)} placeholder="Resumo curto e claro" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">CTA</Label>
+                  <Select value={genericCta} onValueChange={setGenericCta}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {(mode === "offer" ? OFFER_CTAS : GUIDE_CTAS).map((c) => (
+                        <SelectItem key={c} value={c}>{c}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Prioridade</Label>
+                  <Select value={String(prioridade)} onValueChange={(v) => setPrioridade(Number(v))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{PRIORITY_OPTS.map((p) => <SelectItem key={p.v} value={String(p.v)}>{p.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* MEDIA */}
+          <section className="space-y-3 pt-6 border-t border-border-subtle">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground flex items-center gap-1.5">
+                <ImageIcon className="w-3.5 h-3.5" /> Mídia visual
+              </Label>
+              {!imageUrl && (
+                <span className="text-[10px] text-muted-foreground">Recomendado 16:9</span>
+              )}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="md:col-span-2 space-y-1.5">
+                <Label className="text-xs text-muted-foreground">URL da imagem</Label>
+                <Input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://cdn.exemplo.com/print.jpg" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Tipo</Label>
+                <Select value={mediaType} onValueChange={setMediaType}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{MEDIA_TYPES.map((m) => <SelectItem key={m.v} value={m.v}>{m.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Rótulo da fonte</Label>
+                <Select value={sourceLabel || "__"} onValueChange={(v) => setSourceLabel(v === "__" ? "" : v)}>
+                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__">—</SelectItem>
+                    {SOURCE_LABELS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Alt text</Label>
+                <Input value={imageAlt} onChange={(e) => setImageAlt(e.target.value)} placeholder="Descrição curta da imagem" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">URL da fonte (opcional)</Label>
+                <Input value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="https://…" />
+              </div>
+            </div>
+          </section>
 
           {/* PREVIEW DO CARD */}
-          <div>
-            <Label className="text-xs uppercase tracking-wide text-muted-foreground">Prévia do card na LP</Label>
-            <div className="mt-2 rounded-xl border bg-card overflow-hidden max-w-sm shadow-sm">
+          <section className="space-y-3 pt-6 border-t border-border-subtle">
+            <Label className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Prévia do card
+            </Label>
+            <div className="rounded-xl border border-border bg-card overflow-hidden max-w-sm">
               <div className="aspect-[16/9] bg-muted relative">
                 {imageUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img src={imageUrl} alt={imageAlt || preview.title} className="w-full h-full object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
@@ -627,19 +653,19 @@ export function OpportunityWizard({
                 </div>
               </div>
             </div>
-          </div>
+          </section>
 
           {/* ADVANCED */}
           <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-1">
-                <ChevronDown className={`w-4 h-4 transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
+            <CollapsibleTrigger className="w-full flex items-center justify-between py-3 border-t border-border-subtle group text-left">
+              <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                 Mais opções
-              </Button>
+              </span>
+              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <Label>Campanha</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Campanha</Label>
                 <Select value={campaignId || "__"} onValueChange={(v) => setCampaignId(v === "__" ? "" : v)}>
                   <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                   <SelectContent>
@@ -649,20 +675,20 @@ export function OpportunityWizard({
                 </Select>
               </div>
               {mode !== "offer" && mode !== "guide" && (
-                <div>
-                  <Label>Prioridade</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Prioridade</Label>
                   <Select value={String(prioridade)} onValueChange={(v) => setPrioridade(Number(v))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>{PRIORITY_OPTS.map((p) => <SelectItem key={p.v} value={String(p.v)}>{p.label}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
               )}
-              <div>
-                <Label>Início (vigência)</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Início (vigência)</Label>
                 <Input type="datetime-local" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} />
               </div>
-              <div>
-                <Label>Fim (vigência)</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Fim (vigência)</Label>
                 <Input type="datetime-local" value={endsAt} onChange={(e) => setEndsAt(e.target.value)} />
               </div>
             </CollapsibleContent>
@@ -670,11 +696,11 @@ export function OpportunityWizard({
 
           {/* DETALHES TÉCNICOS */}
           <Collapsible open={techOpen} onOpenChange={setTechOpen}>
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="gap-1">
-                <ChevronDown className={`w-4 h-4 transition-transform ${techOpen ? "rotate-180" : ""}`} />
+            <CollapsibleTrigger className="w-full flex items-center justify-between py-3 border-t border-border-subtle group text-left">
+              <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                 Detalhes técnicos
-              </Button>
+              </span>
+              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${techOpen ? "rotate-180" : ""}`} />
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-3 space-y-2 text-[11px] text-muted-foreground">
               <div>
@@ -693,19 +719,22 @@ export function OpportunityWizard({
           </Collapsible>
         </div>
 
-        <DialogFooter className="flex-wrap gap-2">
-          <Button variant="ghost" size="sm" onClick={copyJson} disabled={!detected}>
-            <Copy className="w-4 h-4" /> JSON
+        {/* STICKY FOOTER */}
+        <DialogFooter className="sticky bottom-0 z-20 px-6 py-4 bg-card/85 backdrop-blur-md border-t border-border flex-row items-center justify-between gap-2 sm:justify-between">
+          <Button variant="ghost" size="sm" onClick={copyJson} disabled={!detected} className="gap-1.5">
+            <Copy className="w-3.5 h-3.5" /> JSON
           </Button>
-          <Button variant="outline" onClick={() => persist(false)} disabled={!detected || !finalUrl}>
-            Salvar rascunho
-          </Button>
-          <Button variant="secondary" onClick={() => persist(true)} disabled={!detected || !finalUrl || !landingPageId}>
-            <Send className="w-4 h-4" /> Publicar
-          </Button>
-          <Button onClick={() => persist(true, 20)} disabled={!detected || !finalUrl || !landingPageId}>
-            <Sparkles className="w-4 h-4" /> Publicar como destaque
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <Button variant="ghost" size="sm" onClick={() => persist(false)} disabled={!detected || !finalUrl}>
+              Salvar rascunho
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => persist(true)} disabled={!detected || !finalUrl || !landingPageId} className="gap-1.5">
+              <Send className="w-3.5 h-3.5" /> Publicar
+            </Button>
+            <Button size="sm" onClick={() => persist(true, 20)} disabled={!detected || !finalUrl || !landingPageId} className="gap-1.5 bg-accent text-accent-foreground hover:bg-accent/90 shadow-[0_0_18px_-4px_hsl(var(--accent)/0.45)]">
+              <Sparkles className="w-3.5 h-3.5" /> Publicar como destaque
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
