@@ -43,7 +43,6 @@ const sections: MenuSection[] = [
     items: [
       { label: "Tracking Hub", icon: BarChart3, path: "/tracking" },
       { label: "Eventos", icon: Activity, path: "/tracking/events" },
-      { label: "Reconciliação", icon: Scale, path: "/tracking/reconciliacao" },
     ],
   },
   {

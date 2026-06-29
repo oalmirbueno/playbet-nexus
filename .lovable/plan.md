@@ -1,75 +1,82 @@
-# Refatoração: Links, Pessoas, Tracking e Reconciliação
-
 ## Objetivo
-Tornar o fluxo universal (não focado em 1win), reduzir cliques, organizar hierarquia de pessoas (Squad → Gerente → Influencer → Sócio) e limpar abas redundantes.
 
-## 1. Novo Link Afiliado (TrackingLinkForm)
-Esteira única no diálogo, com **criação inline** quando o item não existe:
-- **Influencer** → select + botão "+ Novo" (cria direto, slug auto)
-- **Landing Page** → select + "+ Nova LP" inline (nome, url base)
-- **Plataforma** → select + "+ Nova" inline
-- **Link de afiliado bruto** → cola URL → detecta plataforma automaticamente (match por domínio em `platforms.domains`)
-- **SubID/slug** → preenchido com slug do influencer (editável)
-- **Campanha** (opcional) → select
-- **Papel do vínculo** → select compacto
-- Preview do link final com `sub1` universal (qualquer casa)
-- Botão "Salvar e copiar"
+Transformar `Financeiro` na única página de comando financeiro: caixa real (Asaas), revenue atribuído (Tracking), ranking de quem gerou dinheiro, distribuição automática de comissões e fila de saques — tudo com números reais do banco, design limpo e leitura imediata.
 
-## 2. Detecção universal de plataforma
-- Coluna `domains text[]` em `platforms` (ex.: `['1win.com','1wxxxx.com']`)
-- Função `detectPlatformByUrl(url, platforms)` no client casa hostname → platform_id
-- Remove qualquer lógica hardcoded 1win do form
+## Estrutura da nova página `/financeiro`
 
-## 3. Sidebar reorganizado
-Estrutura final:
+```text
+┌────────────────────────────────────────────────────────┐
+│  HEADER  Período: [Este mês ▾]   Plataforma: [Todas ▾] │
+├────────────────────────────────────────────────────────┤
+│  CAIXA REAL (Asaas)        REVENUE ATRIBUÍDO (Tracking)│
+│  R$ 100.000  saldo + recv  R$ 98.400  soma metrics     │
+│  ↑ vs período anterior     Δ -R$ 1.600 (diverg. 1,6%)  │
+├────────────────────────────────────────────────────────┤
+│  Tabs: [Distribuição] [Influencers] [Gerentes] [Saques]│
+├────────────────────────────────────────────────────────┤
+│  Conteúdo da tab ativa                                  │
+└────────────────────────────────────────────────────────┘
 ```
-VISÃO GERAL → Dashboard
-LINKS       → Links Afiliados
-TRACKING    → Eventos, Reconciliação, Postbacks
-ATIVOS      → Plataformas, Landing Pages (Templates+Instances unificado), Distribuição LP
-PESSOAS     → Squads, Gerentes, Influencers, Sócios  (tudo em sub-itens, sem duplicar)
-MARKETING   → Campanhas, Conteúdo
-FINANCEIRO  → Reconciliação, Comissões, Saques, Asaas
-CONFIG
-```
-- **Remove "Jogos"** do menu principal (mantém tabela, oculta UI)
-- "Pessoas" vira hub com 4 abas internas em uma única página
 
-## 4. Página Pessoas (refator)
-- Abas: **Squads | Gerentes | Influencers | Sócios**
-- Aba Squads: card por squad mostra Gerente responsável + lista de influencers vinculados
-- Aba Gerentes: ao clicar, abre painel lateral com seleção de squad + lista de influencers do squad
-- Aba Influencers: já existe, mantém com filtro por squad/gerente
-- Aba Sócios: migra de `Socios.tsx` pra cá
+### Tab 1 — Distribuição (default)
+Aplica a fórmula do `PLAYBET_MODELO_OFICIAL.md` sobre o **caixa Asaas** do período:
+- Cards: Bruto · Custos fixos · Líquido · Sócios · Reinvestimento · Comissões
+- Tabela "quem recebe o quê" (influencer, gerente, sócio) com valor e botão **Gerar saque** que cria o registro em `saques` já vinculado ao `externalReference`.
 
-### DB
-- Tabela `squads` (id, name, color, manager_id, monthly_goal)
-- `influencers.squad_id` (FK)
-- `managers.squad_id` opcional (gerente pode liderar 1 squad)
+### Tab 2 — Influencers (ranking)
+Tabela ordenada por revenue, colunas:
+`#  Influencer  Plataforma  FTDs  Depósitos  Revenue  % do total  Comissão  Status saque`
 
-## 5. Tracking & Reconciliação
-- **Eventos**: tabela limpa com filtros (data, plataforma, evento canônico, status), badge de status, sem colunas técnicas redundantes
-- **Reconciliação financeira**: dashboard com 3 colunas → Esperado (postback) | Confirmado (plataforma) | Asaas (recebido). Diferenças destacadas. Botão "Marcar reconciliado".
-- Universal: nada hardcoded por casa; tudo via `platform_event_mappings`
+### Tab 3 — Gerentes
+Mesmo formato, agregado pelo `manager_id` do influencer.
 
-## 6. Distribuição de LP
-- Reorganiza `LPInstances` em board: LP-mãe → instâncias por influencer → link gerado. Botão único "Distribuir para influencer" que abre o mesmo diálogo de Novo Link já com LP preenchida.
+### Tab 4 — Saques
+Lista da tabela `saques` com filtro por status, status pintado pelo webhook Asaas (já sincroniza), ação "Reenviar PIX".
 
----
+## Dados
 
-## Resumo técnico
-- 1 migration: `squads`, FKs em `influencers`/`managers`, `platforms.domains text[]`
-- Reescrita: `TrackingLinkForm.tsx`, `QuickLinkDialog.tsx`, `Influencers.tsx` (vira `Pessoas.tsx`), `DashboardLayout.tsx`, `TrackingEvents.tsx`, `Reconciliacao.tsx`, `LPInstances.tsx`
-- Novos componentes: `InlineCreateCombobox`, `PlatformDetector`, `SquadBoard`
-- Remove rota/menu Jogos (mantém dados)
+| Card / Tabela | Fonte |
+|---|---|
+| Caixa Asaas | edge `asaas-balance` + `saques` confirmados no período |
+| Revenue Tracking | `tracking_metrics` agregado por período/plataforma |
+| Ranking influencer | `tracking_metrics` join `platform_accounts` join `influencers` |
+| Ranking gerente | mesmo, agrupado por `influencers.manager_id` join `managers` |
+| Distribuição | `src/lib/distribution.ts` (já existe) recebe o caixa Asaas |
+| Saques | `saques` + log `asaas_webhook_events` |
 
-## Ordem de execução
-1. Migration (squads + domains)
-2. Sidebar + rotas
-3. Página Pessoas unificada
-4. Form Novo Link com criação inline + detecção universal
-5. Tracking Eventos enxuto
-6. Reconciliação 3 colunas
-7. Distribuição LP
+## Componentes a criar
 
-Quer que eu siga nessa ordem ou priorize algum bloco?
+- `src/components/financeiro/PeriodFilter.tsx` — período + plataforma (URL state).
+- `src/components/financeiro/KpiDuo.tsx` — par de cards Caixa × Tracking com delta.
+- `src/components/financeiro/RankingTable.tsx` — tabela reutilizável (influencer/gerente).
+- `src/components/financeiro/DistribuicaoTab.tsx` — usa `DistributionCard` + tabela de pagamentos.
+- `src/components/financeiro/SaquesTab.tsx` — extrai a lista atual.
+- `src/hooks/useFinanceiroData.ts` — um único hook que retorna `{ caixa, revenue, rankingInfluencers, rankingGerentes, distribuicao, saques }` com React Query.
+
+## Arquivos alterados
+
+- `src/pages/Financeiro.tsx` — reescrita: header + KPIs + tabs (≈250 linhas).
+- `src/pages/Reconciliacao.tsx` — vira redirect para `/financeiro?tab=distribuicao` (mantém link antigo).
+- `src/App.tsx` — remove rota dedicada de Reconciliação do menu (mantém redirect).
+- Sidebar: item "Reconciliação" sai, "Financeiro" ganha badge se houver saque pendente.
+
+## Design
+
+- Tokens semânticos existentes (`bg-card`, `text-muted-foreground`, `border-border`).
+- KPIs em grid 2col responsivo, números em `text-3xl font-semibold tabular-nums`.
+- Delta com seta + cor semântica (`text-success` / `text-destructive`).
+- Tabelas com `tabular-nums`, zebra sutil, header sticky, sem bordas pesadas.
+- Empty states profissionais ("Nenhum revenue no período" + CTA configurar tracking).
+- Skeletons enquanto carrega — KPIs nunca somem.
+
+## Fora de escopo
+
+- Não mexer no schema (já temos `saques`, `tracking_metrics`, `asaas_webhook_events`).
+- Não tocar nas regras de comissão em `RegrasFinanceiras` — só consumir.
+- Não criar nova edge function — `asaas-balance` e `asaas-webhook` já cobrem.
+
+## Validação
+
+1. Build + typecheck limpos.
+2. Playwright: abrir `/financeiro`, validar que os 4 KPIs/tabs renderizam, screenshot.
+3. Conferir que o número da Tab Distribuição = caixa Asaas × % da fórmula.
