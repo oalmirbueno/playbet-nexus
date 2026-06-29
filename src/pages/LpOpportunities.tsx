@@ -436,199 +436,240 @@ export default function LpOpportunities() {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingId ? "Editar oportunidade" : "Nova oportunidade"}</DialogTitle>
+        <DialogContent className="max-w-3xl p-0 gap-0 max-h-[92vh] overflow-hidden flex flex-col">
+          <DialogHeader className="sticky top-0 z-10 px-6 py-4 border-b border-border/60 bg-card/85 backdrop-blur-md">
+            <DialogTitle className="text-base font-semibold tracking-tight">
+              {editingId ? "Editar oportunidade" : "Nova oportunidade"}
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Edição manual. Para detecção automática use o Assistente.
+            </p>
           </DialogHeader>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div>
-                <Label>Landing page</Label>
-                <Select
-                  value={form.landing_page_id || NONE}
-                  onValueChange={(v) => setForm({ ...form, landing_page_id: v === NONE ? "" : v })}
-                >
-                  <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NONE}>—</SelectItem>
-                    {lps.map((lp: any) => (
-                      <SelectItem key={lp.id} value={lp.id}>{lp.name || lp.slug}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+          <div className="main-scroll flex-1 overflow-y-auto px-6 py-5 space-y-7 min-w-0">
+            {/* Destino */}
+            <section className="space-y-3">
+              <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground font-medium">Destino</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1.5 min-w-0">
+                  <Label className="text-xs text-muted-foreground">Landing page</Label>
+                  <Select
+                    value={form.landing_page_id || NONE}
+                    onValueChange={(v) => setForm({ ...form, landing_page_id: v === NONE ? "" : v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE}>—</SelectItem>
+                      {lps.map((lp: any) => (
+                        <SelectItem key={lp.id} value={lp.id}>{lp.name || lp.slug}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5 min-w-0">
+                  <Label className="text-xs text-muted-foreground">Tracking link (opcional)</Label>
+                  <Select
+                    value={form.tracking_link_id || NONE}
+                    onValueChange={(v) => pickTrackingLink(v === NONE ? "" : v)}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Usar destino manual" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE}>— manual —</SelectItem>
+                      {trackingLinks.map((tl: any) => (
+                        <SelectItem key={tl.id} value={tl.id}>
+                          {tl.subid || tl.name || tl.id.slice(0, 8)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div>
-                <Label>Tracking link (opcional)</Label>
-                <Select
-                  value={form.tracking_link_id || NONE}
-                  onValueChange={(v) => pickTrackingLink(v === NONE ? "" : v)}
-                >
-                  <SelectTrigger><SelectValue placeholder="Usar destino manual" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={NONE}>— manual —</SelectItem>
-                    {trackingLinks.map((tl: any) => (
-                      <SelectItem key={tl.id} value={tl.id}>
-                        {tl.subid || tl.name || tl.id.slice(0, 8)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">URL final (afiliado / casa)</Label>
+                <Input
+                  value={form.destination_url}
+                  onChange={(e) => setForm({ ...form, destination_url: e.target.value })}
+                  placeholder="https://casa.com/?subid=..."
+                  className="font-mono text-xs"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Use o deep link do afiliado — nunca a URL pública da LP (evita loop).
+                </p>
               </div>
-            </div>
+            </section>
 
-            <div className="md:col-span-2">
-              <Label>Destino (URL final do afiliado / casa)</Label>
-              <Input
-                value={form.destination_url}
-                onChange={(e) => setForm({ ...form, destination_url: e.target.value })}
-                placeholder="https://casa.com/?subid=..."
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Use o deep link do afiliado, nunca a URL pública da LP — para evitar loop.
-              </p>
-            </div>
+            <div className="border-t border-border/50" />
 
-            <div className="md:col-span-2">
-              <Label>Título *</Label>
-              <Input
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                placeholder="Ex.: Alemanha vence o Paraguai"
-              />
-            </div>
+            {/* Conteúdo */}
+            <section className="space-y-3">
+              <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground font-medium">Conteúdo</p>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Título *</Label>
+                <Input
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  placeholder="Ex.: Alemanha vence o Paraguai"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Subtítulo</Label>
+                <Textarea
+                  rows={2}
+                  value={form.subtitle}
+                  onChange={(e) => setForm({ ...form, subtitle: e.target.value })}
+                  className="resize-none"
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1.5 min-w-0">
+                  <Label className="text-xs text-muted-foreground">Categoria</Label>
+                  <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIES.map((c) => (
+                        <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5 min-w-0">
+                  <Label className="text-xs text-muted-foreground">Badge</Label>
+                  <Input
+                    value={form.badge}
+                    onChange={(e) => setForm({ ...form, badge: e.target.value })}
+                    placeholder="Ex.: SuperBoost, Ao vivo"
+                  />
+                </div>
+              </div>
+            </section>
 
-            <div className="md:col-span-2">
-              <Label>Subtítulo</Label>
-              <Textarea
-                rows={2}
-                value={form.subtitle}
-                onChange={(e) => setForm({ ...form, subtitle: e.target.value })}
-              />
-            </div>
+            <div className="border-t border-border/50" />
 
-            <div>
-              <Label>Categoria</Label>
-              <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {CATEGORIES.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Evento */}
+            <section className="space-y-3">
+              <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground font-medium">Evento & odds</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1.5 min-w-0">
+                  <Label className="text-xs text-muted-foreground">Evento</Label>
+                  <Input
+                    value={form.event_name}
+                    onChange={(e) => setForm({ ...form, event_name: e.target.value })}
+                    placeholder="Alemanha x Paraguai"
+                  />
+                </div>
+                <div className="space-y-1.5 min-w-0">
+                  <Label className="text-xs text-muted-foreground">Mercado</Label>
+                  <Input
+                    value={form.market_name}
+                    onChange={(e) => setForm({ ...form, market_name: e.target.value })}
+                    placeholder="Alemanha vence, +1.5 gols"
+                  />
+                </div>
+                <div className="space-y-1.5 min-w-0">
+                  <Label className="text-xs text-muted-foreground">Odd</Label>
+                  <Input
+                    value={form.odd_label}
+                    onChange={(e) => setForm({ ...form, odd_label: e.target.value })}
+                    placeholder="Odd 1.30"
+                  />
+                </div>
+                <div className="space-y-1.5 min-w-0">
+                  <Label className="text-xs text-muted-foreground">Texto do CTA</Label>
+                  <Input
+                    value={form.cta_label}
+                    onChange={(e) => setForm({ ...form, cta_label: e.target.value })}
+                  />
+                </div>
+              </div>
+            </section>
 
-            <div>
-              <Label>Badge</Label>
-              <Input
-                value={form.badge}
-                onChange={(e) => setForm({ ...form, badge: e.target.value })}
-                placeholder="Ex.: SuperBoost, Ao vivo"
-              />
-            </div>
+            <div className="border-t border-border/50" />
 
-            <div>
-              <Label>Evento</Label>
-              <Input
-                value={form.event_name}
-                onChange={(e) => setForm({ ...form, event_name: e.target.value })}
-                placeholder="Alemanha x Paraguai"
-              />
-            </div>
-            <div>
-              <Label>Mercado</Label>
-              <Input
-                value={form.market_name}
-                onChange={(e) => setForm({ ...form, market_name: e.target.value })}
-                placeholder="Alemanha vence, +1.5 gols"
-              />
-            </div>
+            {/* Vínculos */}
+            <section className="space-y-3">
+              <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground font-medium">Vínculos</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1.5 min-w-0">
+                  <Label className="text-xs text-muted-foreground">Plataforma</Label>
+                  <Select
+                    value={form.platform_id || NONE}
+                    onValueChange={(v) => setForm({ ...form, platform_id: v === NONE ? "" : v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE}>—</SelectItem>
+                      {platforms.map((p: any) => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5 min-w-0">
+                  <Label className="text-xs text-muted-foreground">Campanha</Label>
+                  <Select
+                    value={form.campanha_id || NONE}
+                    onValueChange={(v) => setForm({ ...form, campanha_id: v === NONE ? "" : v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={NONE}>—</SelectItem>
+                      {campanhas.map((c: any) => (
+                        <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </section>
 
-            <div>
-              <Label>Odd</Label>
-              <Input
-                value={form.odd_label}
-                onChange={(e) => setForm({ ...form, odd_label: e.target.value })}
-                placeholder="Odd 1.30"
-              />
-            </div>
-            <div>
-              <Label>Texto do CTA</Label>
-              <Input
-                value={form.cta_label}
-                onChange={(e) => setForm({ ...form, cta_label: e.target.value })}
-              />
-            </div>
+            <div className="border-t border-border/50" />
 
-            <div>
-              <Label>Plataforma (opcional)</Label>
-              <Select
-                value={form.platform_id || NONE}
-                onValueChange={(v) => setForm({ ...form, platform_id: v === NONE ? "" : v })}
-              >
-                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE}>—</SelectItem>
-                  {platforms.map((p: any) => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Campanha (opcional)</Label>
-              <Select
-                value={form.campanha_id || NONE}
-                onValueChange={(v) => setForm({ ...form, campanha_id: v === NONE ? "" : v })}
-              >
-                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={NONE}>—</SelectItem>
-                  {campanhas.map((c: any) => (
-                    <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label>Início</Label>
-              <Input
-                type="datetime-local"
-                value={form.starts_at}
-                onChange={(e) => setForm({ ...form, starts_at: e.target.value })}
-              />
-            </div>
-            <div>
-              <Label>Fim</Label>
-              <Input
-                type="datetime-local"
-                value={form.ends_at}
-                onChange={(e) => setForm({ ...form, ends_at: e.target.value })}
-              />
-            </div>
-
-            <div>
-              <Label>Ordem</Label>
-              <Input
-                type="number"
-                value={form.sort_order}
-                onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })}
-              />
-            </div>
-            <div className="flex items-center gap-3 pt-6">
-              <Switch
-                checked={form.is_active}
-                onCheckedChange={(v) => setForm({ ...form, is_active: v })}
-              />
-              <Label>Ativo</Label>
-            </div>
+            {/* Agendamento */}
+            <section className="space-y-3">
+              <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground font-medium">Agendamento</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1.5 min-w-0">
+                  <Label className="text-xs text-muted-foreground">Início</Label>
+                  <Input
+                    type="datetime-local"
+                    value={form.starts_at}
+                    onChange={(e) => setForm({ ...form, starts_at: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5 min-w-0">
+                  <Label className="text-xs text-muted-foreground">Fim</Label>
+                  <Input
+                    type="datetime-local"
+                    value={form.ends_at}
+                    onChange={(e) => setForm({ ...form, ends_at: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5 min-w-0">
+                  <Label className="text-xs text-muted-foreground">Ordem</Label>
+                  <Input
+                    type="number"
+                    value={form.sort_order}
+                    onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="flex items-center justify-between rounded-md border border-border/60 px-3 py-2 min-w-0">
+                  <div>
+                    <Label className="text-xs">Ativo</Label>
+                    <p className="text-[11px] text-muted-foreground">Publicar na LP</p>
+                  </div>
+                  <Switch
+                    checked={form.is_active}
+                    onCheckedChange={(v) => setForm({ ...form, is_active: v })}
+                  />
+                </div>
+              </div>
+            </section>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave}>{editingId ? "Salvar" : "Criar"}</Button>
+          <DialogFooter className="sticky bottom-0 z-10 px-6 py-3 border-t border-border/60 bg-card/85 backdrop-blur-md gap-2">
+            <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button onClick={handleSave}>{editingId ? "Salvar alterações" : "Criar oportunidade"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
