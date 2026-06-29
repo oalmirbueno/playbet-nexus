@@ -34,6 +34,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   const [influencerId, setInfluencerId] = useState(defaultInfluencerId);
   const [landingPageId, setLandingPageId] = useState(defaultLandingPageId);
   const [accountId, setAccountId] = useState("");
+  const [platformId, setPlatformId] = useState("");
   const [rawLink, setRawLink] = useState("");
   const [subid, setSubid] = useState("");
   const [campanhaId, setCampanhaId] = useState("");
@@ -49,6 +50,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       setInfluencerId(defaultInfluencerId);
       setLandingPageId(defaultLandingPageId);
       setAccountId("");
+      setPlatformId("");
       setRawLink("");
       setSubid("");
       setCampanhaId("");
@@ -75,13 +77,19 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
     return detectPlatformByUrl(rawLink, platforms as any[]);
   }, [rawLink, platforms]);
 
-  // Auto-select the first account belonging to the detected platform
+  // Sync detected platform → platformId, then auto-pick first matching account
   useEffect(() => {
-    if (detectedPlatform && !accountId) {
+    if (detectedPlatform) {
+      setPlatformId(detectedPlatform.id);
       const match = accounts.find((a: any) => a.platform_id === detectedPlatform.id);
       if (match) setAccountId(match.id);
     }
   }, [detectedPlatform]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const platformAccounts = useMemo(
+    () => platformId ? accounts.filter((a: any) => a.platform_id === platformId) : accounts,
+    [accounts, platformId],
+  );
 
   const selectedAccount = useMemo(() => accounts.find((a: any) => a.id === accountId), [accounts, accountId]);
   const finalUrl = useMemo(() => appendSubId(rawLink, "sub1", subid), [rawLink, subid]);
@@ -233,18 +241,30 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
               )}
             </div>
 
-            {/* 4. PLATFORM ACCOUNT (auto-filled, editable) */}
-            {(!detectedPlatform || !selectedAccount) && (
+            {/* 4. PLATFORM (auto-detected) + ACCOUNT */}
+            <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label className="text-xs font-medium">4. Conta na plataforma</Label>
-                <Select value={accountId} onValueChange={setAccountId}>
-                  <SelectTrigger className="h-9 text-xs mt-1"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <div className="flex items-center justify-between mb-1">
+                  <Label className="text-xs font-medium">4. Plataforma</Label>
+                  {detectedPlatform && <span className="text-[9px] text-emerald-500 flex items-center gap-0.5"><Sparkles size={9} /> auto</span>}
+                </div>
+                <Select value={platformId} onValueChange={(v) => { setPlatformId(v); setAccountId(""); }}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Casa de aposta" /></SelectTrigger>
                   <SelectContent>
-                    {accounts.map((a: any) => <SelectItem key={a.id} value={a.id}>{a.nome_conta}</SelectItem>)}
+                    {(platforms as any[]).map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-            )}
+              <div>
+                <Label className="text-xs font-medium mb-1 block">5. Conta</Label>
+                <Select value={accountId} onValueChange={setAccountId} disabled={!platformId && platformAccounts.length === 0}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue placeholder={platformId ? "Selecione" : "Escolha plataforma"} /></SelectTrigger>
+                  <SelectContent>
+                    {platformAccounts.map((a: any) => <SelectItem key={a.id} value={a.id}>{a.nome_conta}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
             {/* 5. SUBID */}
             <div>
