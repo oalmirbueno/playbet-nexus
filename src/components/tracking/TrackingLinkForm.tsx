@@ -164,9 +164,16 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
   const [subid, setSubid] = useState(currentSubid);
   useEffect(() => { setSubid(currentSubid); /* eslint-disable-next-line */ }, [form.influencer_id, form.base_url]);
 
+  // sub1 = click_id slug (atribuição). Editável. Default = slug do influencer.
+  const sub1Value = subid;
+  // sub2 = influencer_id (UUID). Automático.
+  const sub2Value = form.influencer_id || "";
+  // sub3 = campanha_id (UUID). Automático quando campanha selecionada.
+  const sub3Value = form.campanha_id || "";
+
   const finalUrl = useMemo(
-    () => buildFinalUrl(form.base_url, form.click_id_param_name, subid),
-    [form.base_url, form.click_id_param_name, subid],
+    () => buildTrackedUrl(form.base_url, form.click_id_param_name, sub1Value, sub2Value, sub3Value),
+    [form.base_url, form.click_id_param_name, sub1Value, sub2Value, sub3Value],
   );
 
   const canSave = form.influencer_id && form.platform_account_id && form.base_url;
