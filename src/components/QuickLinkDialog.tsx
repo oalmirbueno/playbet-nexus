@@ -302,12 +302,23 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
 
             {/* PREVIEW */}
             {canSave && (
-              <div className="flex items-start gap-2 bg-primary/10 border border-primary/20 rounded-md px-3 py-2">
-                <CheckCircle2 size={13} className="text-primary mt-0.5 shrink-0" />
-                <div className="space-y-0.5 min-w-0 flex-1">
-                  <p className="text-[10px] font-semibold text-primary uppercase tracking-wide">Link final</p>
-                  <code className="block text-[10px] font-mono text-foreground break-all">{finalUrl}</code>
+              <div className="space-y-2 bg-primary/10 border border-primary/20 rounded-md px-3 py-2.5">
+                <div className="grid grid-cols-2 gap-2 pb-2 border-b border-primary/15">
+                  <div>
+                    <p className="text-[9px] font-semibold text-primary uppercase tracking-wider">SubID</p>
+                    <code className="block text-[10px] font-mono text-foreground break-all">{subid || "—"}</code>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-semibold text-primary uppercase tracking-wider">Tracking code</p>
+                    <code className="block text-[10px] font-mono text-foreground break-all">{trackingCode}</code>
+                  </div>
                 </div>
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 size={13} className="text-primary mt-0.5 shrink-0" />
+                  <div className="space-y-0.5 min-w-0 flex-1">
+                    <p className="text-[9px] font-semibold text-primary uppercase tracking-wider">Link final</p>
+                    <code className="block text-[10px] font-mono text-foreground break-all">{finalUrl}</code>
+                  </div>
                 <button onClick={() => navigator.clipboard.writeText(finalUrl)} className="text-primary hover:text-primary/80 shrink-0" title="Copiar"><Copy size={11} /></button>
               </div>
             )}
