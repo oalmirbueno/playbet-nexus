@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.tracking-postback]
 verify_jwt = false
+
+[functions.tracking-puller-smartico]
+verify_jwt = false
