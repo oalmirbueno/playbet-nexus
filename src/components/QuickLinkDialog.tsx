@@ -126,6 +126,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
         final_url: finalUrl,
         tracking_code: trackingCode,
         click_id_param_name: "sub1",
+        commission_percent: (selectedInfluencer as any)?.commission_percent ?? null,
         status: "active",
       } as any);
 
@@ -303,14 +304,22 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
             {/* PREVIEW */}
             {canSave && (
               <div className="space-y-2 bg-primary/10 border border-primary/20 rounded-md px-3 py-2.5">
-                <div className="grid grid-cols-2 gap-2 pb-2 border-b border-primary/15">
+                <div className="grid grid-cols-3 gap-2 pb-2 border-b border-primary/15">
                   <div>
                     <p className="text-[9px] font-semibold text-primary uppercase tracking-wider">SubID</p>
                     <code className="block text-[10px] font-mono text-foreground break-all">{subid || "—"}</code>
                   </div>
                   <div>
-                    <p className="text-[9px] font-semibold text-primary uppercase tracking-wider">Tracking code</p>
+                    <p className="text-[9px] font-semibold text-primary uppercase tracking-wider">Tracking</p>
                     <code className="block text-[10px] font-mono text-foreground break-all">{trackingCode}</code>
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-semibold text-primary uppercase tracking-wider">Comissão</p>
+                    <code className="block text-[10px] font-mono text-foreground">
+                      {(selectedInfluencer as any)?.commission_percent != null
+                        ? `${(selectedInfluencer as any).commission_percent}%`
+                        : "—"}
+                    </code>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
