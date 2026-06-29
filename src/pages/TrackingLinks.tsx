@@ -56,7 +56,7 @@ export default function TrackingLinks() {
 
   const getName = (list: any[], id: string | null, field = "name") => list.find(i => i.id === id)?.[field] || "—";
 
-  const openCreate = () => { setEditing(emptyForm); setModalOpen(true); };
+  const openCreate = () => setQuickOpen(true);
   const openEdit = (l: TrackingLinkRow) => { setEditing(formFromRow(l)); setModalOpen(true); };
 
   const handleSave = async (form: FormState) => {
