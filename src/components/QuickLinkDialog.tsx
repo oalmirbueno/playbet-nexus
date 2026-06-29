@@ -31,6 +31,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   const { data: platforms, create: createPlatform } = usePlatforms();
   const { data: accounts, create: createAccount } = usePlatformAccounts();
   const { data: campanhas } = useCampanhas();
+  const { data: lpInstances } = useLandingPageInstances();
   const { create: createLink } = useTrackingLinks();
 
   const [influencerId, setInfluencerId] = useState(defaultInfluencerId);
