@@ -14,7 +14,6 @@ import { usePlatforms } from "@/hooks/useSupabaseQuery";
 import { Zap, Filter, RefreshCcw, Eye, Search, Copy, Check } from "lucide-react";
 import type { TrackingEventRow } from "@/services/trackingService";
 import { useToast } from "@/hooks/use-toast";
-import { PLATFORM_METADATA_FIELDS } from "@/config/platformPresets";
 
 const CANONICAL_EVENTS = [
   "click", "registration", "ftd", "deposit", "redeposit",
@@ -94,9 +93,8 @@ export default function TrackingEvents() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground tracking-tight">Eventos de Tracking</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Eventos brutos recebidos via postback, API ou importação manual</p>
+          <p className="text-sm text-muted-foreground mt-0.5">Universal · qualquer casa de aposta · postback, API ou import manual</p>
         </div>
-        
       </div>
 
       {/* Stats */}
@@ -276,33 +274,32 @@ export default function TrackingEvents() {
                 <div><span className="text-muted-foreground">Duplicado:</span> {selectedEvent.is_duplicate ? "Sim" : "Não"}</div>
                 <div><span className="text-muted-foreground">Demo:</span> {selectedEvent.is_demo ? "Sim" : "Não"}</div>
               </div>
-              {/* Platform metadata (debug/reconciliation) */}
-              {(() => {
-                const payload = selectedEvent.raw_payload as Record<string, any> | null;
-                const meta = payload?._platform_meta || {};
-                // Also check top-level payload for these fields (backward compat)
-                const metaEntries = PLATFORM_METADATA_FIELDS
-                  .map(f => ({ ...f, value: meta[f.key] || payload?.[f.key] }))
-                  .filter(f => f.value);
-
-                if (metaEntries.length === 0) return null;
-                return (
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground mb-2">Metadados da Plataforma (debug)</p>
+              {/* Universal payload preview */}
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Metadados recebidos</p>
+                {(() => {
+                  const payload = (selectedEvent.raw_payload as Record<string, any>) || {};
+                  const flatEntries = Object.entries({ ...payload, ...(payload._platform_meta || {}) })
+                    .filter(([k, v]) => k !== "_platform_meta" && (typeof v === "string" || typeof v === "number"))
+                    .slice(0, 12);
+                  if (flatEntries.length === 0) {
+                    return <p className="text-xs text-muted-foreground italic">Nenhum metadado adicional.</p>;
+                  }
+                  return (
                     <div className="grid grid-cols-2 gap-2 text-sm border rounded-md p-3 bg-muted/30">
-                      {metaEntries.map(f => (
-                        <div key={f.key} className="flex items-center gap-1">
-                          <span className="text-muted-foreground text-xs">{f.label}:</span>
-                          <span className="font-mono text-xs">{f.value}</span>
-                          <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => copyField(String(f.value), f.label)}>
-                            {copiedField === f.label ? <Check size={10} className="text-green-500" /> : <Copy size={10} />}
+                      {flatEntries.map(([k, v]) => (
+                        <div key={k} className="flex items-center gap-1 min-w-0">
+                          <span className="text-muted-foreground text-xs shrink-0">{k}:</span>
+                          <span className="font-mono text-xs truncate">{String(v)}</span>
+                          <Button variant="ghost" size="icon" className="h-5 w-5 shrink-0" onClick={() => copyField(String(v), k)}>
+                            {copiedField === k ? <Check size={10} className="text-green-500" /> : <Copy size={10} />}
                           </Button>
                         </div>
                       ))}
                     </div>
-                  </div>
-                );
-              })()}
+                  );
+                })()}
+              </div>
               <div>
                 <p className="text-xs font-medium text-muted-foreground mb-2">Raw Payload (debug)</p>
                 <pre className="bg-secondary/50 rounded-md p-3 text-xs overflow-auto max-h-[300px] font-mono">
