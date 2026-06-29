@@ -9,12 +9,12 @@ describe("trackingUrl — Com LP", () => {
       "inf-uuid",
       "camp-uuid",
     );
-    expect(url).toBe("https://oportunidades.playbet.app.br/camilly?sub2=inf-uuid&sub3=camp-uuid");
+    expect(url).toBe("https://oportunidades.playbet.app.br/?ref=camilly&sub2=inf-uuid&sub3=camp-uuid");
   });
 
   it("buildPublicLpUrl strips trailing slashes from domain", () => {
     const url = buildPublicLpUrl("https://oportunidades.playbet.app.br/", "camilly", "x", "y");
-    expect(url.startsWith("https://oportunidades.playbet.app.br/camilly")).toBe(true);
+    expect(url.startsWith("https://oportunidades.playbet.app.br/?ref=camilly")).toBe(true);
   });
 
   it("buildPublicLpUrl returns empty when domain or slug missing", () => {
@@ -32,7 +32,7 @@ describe("trackingUrl — Com LP", () => {
       sub2: "inf-uuid",
       sub3: "camp-uuid",
     });
-    expect(url).toBe("https://oportunidades.playbet.app.br/camilly?sub2=inf-uuid&sub3=camp-uuid");
+    expect(url).toBe("https://oportunidades.playbet.app.br/?ref=camilly&sub2=inf-uuid&sub3=camp-uuid");
     expect(url.includes("lkrh.pro")).toBe(false);
   });
 

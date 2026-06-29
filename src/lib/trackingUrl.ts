@@ -4,7 +4,7 @@
  *
  * Rule:
  *  - If the tracking link is bound to an LP instance AND the LP has a public
- *    domain, the shared URL is the PUBLIC LP URL (`<domain>/<slug>?sub2&sub3`).
+ *    domain, the shared URL is the PUBLIC LP URL (`<domain>/?ref=<slug>&sub2&sub3`).
  *    Visitors land on the LP, click the CTA, and only then are redirected to
  *    the affiliate URL (which carries sub1/sub2/sub3 attribution).
  *  - Otherwise, the shared URL is the affiliate URL itself with sub1/2/3.
@@ -44,7 +44,7 @@ export function buildPublicLpUrl(
 ): string {
   if (!lpDomain || !instanceSlug) return "";
   const base = lpDomain.replace(/\/+$/, "");
-  let url = `${base}/${instanceSlug}`;
+  let url = appendParam(base, "ref", instanceSlug);
   if (sub2) url = appendParam(url, "sub2", sub2);
   if (sub3) url = appendParam(url, "sub3", sub3);
   return url;

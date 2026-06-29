@@ -86,15 +86,16 @@ describe("InfluencerLanding — Com LP end-to-end", () => {
       writable: true,
       value: {
         hostname: "oportunidades.playbet.app.br",
-        href: "https://oportunidades.playbet.app.br/camilly?sub2=inf-1&sub3=camp-1",
+        href: "https://oportunidades.playbet.app.br/?ref=camilly&sub2=inf-1&sub3=camp-1",
       },
     });
   });
 
   it("loads the LP and CTA redirects to affiliate preserving sub2/sub3 + injecting sub1", async () => {
     render(
-      <MemoryRouter initialEntries={["/camilly?sub2=inf-1&sub3=camp-1"]}>
+      <MemoryRouter initialEntries={["/?ref=camilly&sub2=inf-1&sub3=camp-1"]}>
         <Routes>
+          <Route path="/" element={<InfluencerLanding />} />
           <Route path="/:slug" element={<InfluencerLanding />} />
         </Routes>
       </MemoryRouter>,
