@@ -240,8 +240,14 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
 
             {/* 5. SUBID */}
             <div>
-              <Label className="text-xs font-medium">5. SubID (universal)</Label>
+              <Label className="text-xs font-medium">5. SubID único (auto)</Label>
               <Input
+                className="h-9 text-xs font-mono mt-1"
+                value={subid}
+                onChange={(e) => setSubid(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ""))}
+                placeholder="influencer-xxxxx"
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">Gerado automaticamente por link · anexado como <code>?sub1=</code>.</p>
                 className="h-9 text-xs font-mono mt-1"
                 value={subid}
                 onChange={(e) => setSubid(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ""))}
