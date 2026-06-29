@@ -94,16 +94,40 @@ export default function Reconciliacao() {
 
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Reconciliação Financeira</h1>
-        <p className="text-sm text-muted-foreground mt-1">Comparação lado a lado: saldo da plataforma, revenue acumulado e últimos postbacks</p>
+        <p className="text-sm text-muted-foreground mt-1">Universal · três fontes lado a lado para garantir que nada se perde</p>
       </div>
 
-      {/* Side by side cards */}
+      {/* 3 colunas universais: Esperado (postback) → Confirmado (plataforma) → Recebido (Asaas) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* 1. ESPERADO */}
+        <Card className="border-border">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <DollarSign size={16} className="text-muted-foreground" />
+              <CardTitle className="text-sm">1. Esperado <span className="text-[10px] font-normal text-muted-foreground">(postbacks)</span></CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">
+              {consolidated.revenueOriginal > 0
+                ? fmt(consolidated.revenueOriginal, consolidated.revenueOriginalCurrency)
+                : "—"}
+            </p>
+            {consolidated.revenueOriginalCurrency !== "BRL" && consolidated.revenueBrl > 0 && (
+              <p className="text-xs text-muted-foreground mt-1">≈ {fmt(consolidated.revenueBrl)}</p>
+            )}
+            <Badge variant="outline" className="mt-2 text-[10px] text-muted-foreground">
+              Soma dos eventos de revenue
+            </Badge>
+          </CardContent>
+        </Card>
+
+        {/* 2. CONFIRMADO */}
         <Card className="border-primary/30 bg-primary/[0.03]">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
               <Wallet size={16} className="text-primary" />
-              <CardTitle className="text-sm">Saldo Plataforma (Real)</CardTitle>
+              <CardTitle className="text-sm">2. Confirmado <span className="text-[10px] font-normal text-muted-foreground">(plataforma)</span></CardTitle>
             </div>
           </CardHeader>
           <CardContent>
@@ -119,60 +143,33 @@ export default function Reconciliacao() {
                 {new Date(consolidated.latestWithdrawableTimestamp).toLocaleString("pt-BR")}
               </p>
             )}
-            <Badge variant="outline" className="mt-2 text-[10px] text-primary">
-              <CheckCircle2 size={10} className="mr-1" /> Fonte: postback available_revenue
-            </Badge>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border">
-          <CardHeader className="pb-2">
-            <div className="flex items-center gap-2">
-              <DollarSign size={16} className="text-muted-foreground" />
-              <CardTitle className="text-sm">Revenue Acumulado (soma eventos)</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-muted-foreground">
-              {consolidated.revenueOriginal > 0
-                ? fmt(consolidated.revenueOriginal, consolidated.revenueOriginalCurrency)
-                : "—"}
-            </p>
-            {consolidated.revenueOriginalCurrency !== "BRL" && consolidated.revenueBrl > 0 && (
-              <p className="text-xs text-muted-foreground mt-1">≈ {fmt(consolidated.revenueBrl)}</p>
+            {withdrawOrig > 0 && consolidated.revenueOriginal > 0 ? (() => {
+              const diff = withdrawOrig - consolidated.revenueOriginal;
+              const isOk = Math.abs(diff) < 0.5;
+              return (
+                <Badge variant="outline" className={`mt-2 text-[10px] ${isOk ? "text-emerald-500" : "text-amber-500"}`}>
+                  {isOk ? <><CheckCircle2 size={10} className="mr-1" /> Conciliado</> : <><AlertTriangle size={10} className="mr-1" /> Δ {fmt(diff, withdrawCurrency)}</>}
+                </Badge>
+              );
+            })() : (
+              <Badge variant="outline" className="mt-2 text-[10px] text-primary">Saldo retirável</Badge>
             )}
-            <Badge variant="outline" className="mt-2 text-[10px] text-muted-foreground">
-              <AlertTriangle size={10} className="mr-1" /> Soma de postbacks individuais (pode divergir)
-            </Badge>
           </CardContent>
         </Card>
 
+        {/* 3. RECEBIDO (Asaas) */}
         <Card className="border-border">
           <CardHeader className="pb-2">
             <div className="flex items-center gap-2">
               <Activity size={16} className="text-muted-foreground" />
-              <CardTitle className="text-sm">Divergência</CardTitle>
+              <CardTitle className="text-sm">3. Recebido <span className="text-[10px] font-normal text-muted-foreground">(Asaas)</span></CardTitle>
             </div>
           </CardHeader>
           <CardContent>
-            {withdrawOrig > 0 && consolidated.revenueOriginal > 0 ? (() => {
-              const diff = withdrawOrig - consolidated.revenueOriginal;
-              const pct = ((diff / withdrawOrig) * 100).toFixed(1);
-              const isOk = Math.abs(diff) < 0.5;
-              return (
-                <>
-                  <p className={`text-2xl font-bold ${isOk ? "text-emerald-500" : "text-amber-500"}`}>
-                    {diff >= 0 ? "+" : ""}{fmt(diff, withdrawCurrency)}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">{pct}% de diferença</p>
-                  <Badge variant="outline" className={`mt-2 text-[10px] ${isOk ? "text-emerald-500" : "text-amber-500"}`}>
-                    {isOk ? <><CheckCircle2 size={10} className="mr-1" /> Conciliado</> : <><AlertTriangle size={10} className="mr-1" /> Divergência detectada</>}
-                  </Badge>
-                </>
-              );
-            })() : (
-              <p className="text-lg text-muted-foreground">Aguardando dados</p>
-            )}
+            <p className="text-2xl font-bold text-muted-foreground">—</p>
+            <Badge variant="outline" className="mt-2 text-[10px] text-muted-foreground">
+              <Clock size={10} className="mr-1" /> Aguardando integração Asaas
+            </Badge>
           </CardContent>
         </Card>
       </div>
