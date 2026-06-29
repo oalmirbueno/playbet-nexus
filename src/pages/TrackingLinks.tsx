@@ -143,10 +143,10 @@ export default function TrackingLinks() {
           <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}>
             <Upload size={14} className="mr-1.5" /> Importar Histórico
           </Button>
-          <Button size="sm" variant="outline" onClick={openCreate}>
-            <Plus size={14} className="mr-1.5" /> Manual
+          <Button size="sm" onClick={openCreate}>
+            <Plus size={14} className="mr-1.5" /> Novo Link
           </Button>
-          <Button size="sm" onClick={() => setWizardOpen(true)}>
+          <Button size="sm" variant="outline" onClick={() => setWizardOpen(true)}>
             <Sparkles size={14} className="mr-1.5" /> Setup Guiado
           </Button>
         </div>
