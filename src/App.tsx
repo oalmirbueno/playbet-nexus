@@ -123,22 +123,49 @@ function ProtectedRoutes() {
   );
 }
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/i/:slug" element={<InfluencerLanding />} />
-            <Route path="*" element={<ProtectedRoutes />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+/**
+ * The painel and the public LPs share this same SPA. We split routing by host:
+ *  · Painel hosts → admin app (auth, dashboards, etc.)
+ *  · Any other host (LP custom domain) → public landing pages, where the path
+ *    `/:slug` resolves the influencer instance.
+ */
+const PAINEL_HOSTS = ["painelcentral.playbet.app.br", "localhost", "127.0.0.1"];
+const PAINEL_HOST_SUFFIXES = [".lovable.app", ".lovableproject.com", ".lovable.dev"];
+
+function isPainelHost(host: string): boolean {
+  const h = host.split(":")[0].toLowerCase();
+  if (PAINEL_HOSTS.includes(h)) return true;
+  return PAINEL_HOST_SUFFIXES.some((suf) => h.endsWith(suf));
+}
+
+const App = () => {
+  const lpHost = typeof window !== "undefined" && !isPainelHost(window.location.hostname);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            {lpHost ? (
+              <Routes>
+                <Route path="/:slug" element={<InfluencerLanding />} />
+                <Route path="/i/:slug" element={<InfluencerLanding />} />
+                <Route path="*" element={<InfluencerLanding />} />
+              </Routes>
+            ) : (
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/i/:slug" element={<InfluencerLanding />} />
+                <Route path="*" element={<ProtectedRoutes />} />
+              </Routes>
+            )}
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
