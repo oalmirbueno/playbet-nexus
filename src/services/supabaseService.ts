@@ -10,6 +10,51 @@ export type LandingPageRow = Database["public"]["Tables"]["landing_pages"]["Row"
 export type UtmRow = Database["public"]["Tables"]["utms"]["Row"];
 export type ClickRow = Database["public"]["Tables"]["clicks"]["Row"];
 
+// ── Managers (Gerentes) ──
+const sbAny = supabase as any;
+
+export type ManagerRow = {
+  id: string;
+  name: string;
+  slug: string;
+  team_name: string;
+  team_color: string;
+  monthly_goal: number | null;
+  notes: string | null;
+  is_active: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+export const managerService = {
+  async getAll(): Promise<ManagerRow[]> {
+    const { data, error } = await sbAny.from("managers").select("*").order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data || []) as ManagerRow[];
+  },
+  async create(item: Partial<ManagerRow>) {
+    const { data, error } = await sbAny.from("managers").insert(item).select().single();
+    if (error) throw error;
+    return data as ManagerRow;
+  },
+  async update(id: string, updates: Partial<ManagerRow>) {
+    const { data, error } = await sbAny.from("managers").update(updates).eq("id", id).select().single();
+    if (error) throw error;
+    // Sync team_label on influencers if team_name changed
+    if (updates.team_name !== undefined) {
+      await sbAny.from("influencers").update({ team_label: updates.team_name }).eq("manager_id", id);
+    }
+    return data as ManagerRow;
+  },
+  async toggleActive(id: string, current: boolean) {
+    return this.update(id, { is_active: !current });
+  },
+  async remove(id: string) {
+    const { error } = await sbAny.from("managers").delete().eq("id", id);
+    if (error) throw error;
+  },
+};
+
 // ── Influencers ──
 export const influencerService = {
   async getAll() {
@@ -45,6 +90,7 @@ export const influencerService = {
     if (error) throw error;
   },
 };
+
 
 // ── Platforms ──
 export const platformService = {
