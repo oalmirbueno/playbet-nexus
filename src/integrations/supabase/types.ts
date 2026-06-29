@@ -139,6 +139,56 @@ export type Database = {
         }
         Relationships: []
       }
+      asaas_webhook_events: {
+        Row: {
+          asaas_payment_id: string | null
+          event_id: string | null
+          event_name: string
+          external_reference: string | null
+          id: string
+          processed: boolean
+          processed_at: string | null
+          processing_error: string | null
+          raw_payload: Json
+          received_at: string
+          saque_id: string | null
+        }
+        Insert: {
+          asaas_payment_id?: string | null
+          event_id?: string | null
+          event_name: string
+          external_reference?: string | null
+          id?: string
+          processed?: boolean
+          processed_at?: string | null
+          processing_error?: string | null
+          raw_payload: Json
+          received_at?: string
+          saque_id?: string | null
+        }
+        Update: {
+          asaas_payment_id?: string | null
+          event_id?: string | null
+          event_name?: string
+          external_reference?: string | null
+          id?: string
+          processed?: boolean
+          processed_at?: string | null
+          processing_error?: string | null
+          raw_payload?: Json
+          received_at?: string
+          saque_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asaas_webhook_events_saque_id_fkey"
+            columns: ["saque_id"]
+            isOneToOne: false
+            referencedRelation: "saques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campanhas: {
         Row: {
           created_at: string | null

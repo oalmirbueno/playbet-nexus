@@ -61,9 +61,42 @@ Deno.serve(async (req) => {
 
     const payload = await req.json();
     const event = payload?.event as string | undefined;
-    const payment = payload?.payment ?? payload?.transfer;
-    const asaasId = payment?.id ?? null;
-    const externalRef = payment?.externalReference ?? null;
+    const eventId = (payload?.id ?? payload?.event_id ?? null) as string | null;
+    const entity = payload?.payment ?? payload?.transfer ?? null;
+    const asaasId = entity?.id ?? null;
+    const externalRef = entity?.externalReference ?? null;
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+
+    // Idempotency: if Asaas resends the same event_id, skip
+    if (eventId) {
+      const { data: existing } = await supabase
+        .from("asaas_webhook_events")
+        .select("id, processed")
+        .eq("event_id", eventId)
+        .maybeSingle();
+      if (existing?.processed) {
+        return new Response(JSON.stringify({ ok: true, duplicate: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // Log raw event up-front so nothing is lost even if processing fails
+    const { data: logRow } = await supabase
+      .from("asaas_webhook_events")
+      .insert({
+        event_id: eventId,
+        event_name: event ?? "UNKNOWN",
+        asaas_payment_id: asaasId,
+        external_reference: externalRef,
+        raw_payload: payload,
+      })
+      .select("id")
+      .single();
 
     if (!event || !asaasId) {
       return new Response(JSON.stringify({ ok: true, ignored: true }), {
@@ -71,33 +104,48 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
-
     const newStatus = STATUS_MAP[event] ?? "Pendente";
     const updates: Record<string, unknown> = {
       asaas_status: event,
       status: newStatus,
+      asaas_payment_id: asaasId,
       asaas_synced_at: new Date().toISOString(),
     };
 
-    // Try match by asaas_payment_id first, then by externalReference (saque.id or codigo)
-    let query = supabase.from("saques").update(updates);
-    if (externalRef) {
-      // accept uuid id or human codigo
-      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(externalRef);
-      query = isUuid ? query.eq("id", externalRef) : query.eq("codigo", externalRef);
-    } else {
-      query = query.eq("asaas_payment_id", asaasId);
-    }
-    const { error } = await query;
-    if (error) throw error;
+    // Match by externalReference (uuid or codigo) first, then asaas_payment_id
+    let matchedSaqueId: string | null = null;
+    try {
+      let query = supabase.from("saques").update(updates).select("id");
+      if (externalRef) {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(externalRef);
+        query = isUuid ? query.eq("id", externalRef) : query.eq("codigo", externalRef);
+      } else {
+        query = query.eq("asaas_payment_id", asaasId);
+      }
+      const { data: updated, error } = await query;
+      if (error) throw error;
+      matchedSaqueId = updated?.[0]?.id ?? null;
 
-    return new Response(JSON.stringify({ ok: true, event, status: newStatus }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+      await supabase
+        .from("asaas_webhook_events")
+        .update({
+          processed: true,
+          processed_at: new Date().toISOString(),
+          saque_id: matchedSaqueId,
+        })
+        .eq("id", logRow!.id);
+    } catch (err) {
+      await supabase
+        .from("asaas_webhook_events")
+        .update({ processing_error: (err as Error).message })
+        .eq("id", logRow!.id);
+      throw err;
+    }
+
+    return new Response(
+      JSON.stringify({ ok: true, event, status: newStatus, saque_id: matchedSaqueId }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (err) {
     console.error("asaas-webhook error", err);
     return new Response(JSON.stringify({ error: (err as Error).message }), {
