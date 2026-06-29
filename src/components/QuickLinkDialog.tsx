@@ -4,11 +4,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useInfluencers, useLandingPages, usePlatforms, useCampanhas } from "@/hooks/useSupabaseQuery";
+import { useInfluencers, useLandingPages, useLandingPageInstances, usePlatforms, useCampanhas } from "@/hooks/useSupabaseQuery";
 import { usePlatformAccounts, useTrackingLinks } from "@/hooks/useTrackingData";
+import { landingPageInstanceService } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
 import { Link2, CheckCircle2, Plus, Sparkles, Copy } from "lucide-react";
 import { detectPlatformByUrl, appendSubId } from "@/lib/platformDetect";
+import { buildPublicLpUrl, buildTrackedAffiliateUrl } from "@/lib/trackingUrl";
 
 interface Props {
   open: boolean;
