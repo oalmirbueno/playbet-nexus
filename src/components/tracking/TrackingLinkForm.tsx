@@ -128,8 +128,13 @@ function Step({ n, label }: { n: number; label: string }) {
 
 export default function TrackingLinkForm({ open, onOpenChange, editing: initialEditing, onSave, accounts, influencers, campanhas, landingPages, lpInstances, platforms }: Props) {
   const [form, setForm] = useState<FormState>(initialEditing);
+  const [useLp, setUseLp] = useState<boolean>(true);
 
-  useEffect(() => { setForm(initialEditing); }, [initialEditing]);
+  useEffect(() => {
+    setForm(initialEditing);
+    // When editing an existing link, infer mode from whether it has an instance.
+    setUseLp(initialEditing.id ? !!initialEditing.landing_page_instance_id : true);
+  }, [initialEditing]);
 
   const set = (field: keyof FormState, value: string) => setForm(p => ({ ...p, [field]: value }));
 
@@ -231,14 +236,14 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
   // Visitors land on the LP, click the CTA, and only then get redirected to
   // the affiliate URL (which is stored on the LP instance).
   const publicLpUrl = useMemo(() => {
+    if (!useLp) return "";
     if (!selectedLP?.domain || !selectedInstance?.slug) return "";
     const base = selectedLP.domain.replace(/\/+$/, "");
-    const slugPath = `/${selectedInstance.slug}`;
-    let url = `${base}${slugPath}`;
+    let url = `${base}/${selectedInstance.slug}`;
     if (sub2Value) url = appendParam(url, "sub2", sub2Value);
     if (sub3Value) url = appendParam(url, "sub3", sub3Value);
     return url;
-  }, [selectedLP, selectedInstance, sub2Value, sub3Value]);
+  }, [useLp, selectedLP, selectedInstance, sub2Value, sub3Value]);
 
   // The deep affiliate URL with attribution params — used by the LP CTA, not shared directly.
   const trackedAffiliateUrl = useMemo(
@@ -246,13 +251,17 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
     [form.base_url, form.click_id_param_name, sub1Value, sub2Value, sub3Value],
   );
 
-  const finalUrl = publicLpUrl || trackedAffiliateUrl; // saved as tracking_link.final_url
+  // Without LP, the shared link goes straight to the affiliate.
+  const finalUrl = useLp ? (publicLpUrl || trackedAffiliateUrl) : trackedAffiliateUrl;
 
-  const canSave = form.influencer_id && form.landing_page_instance_id && form.platform_account_id && form.base_url;
+  const canSave = form.influencer_id
+    && form.platform_account_id
+    && form.base_url
+    && (useLp ? !!form.landing_page_instance_id : true);
 
   const handleSave = async () => {
-    // Persist the affiliate URL on the LP instance so the LP CTA can use it.
-    if (selectedInstance && form.base_url && selectedInstance.affiliate_link !== form.base_url) {
+    // Persist the affiliate URL on the LP instance so the LP CTA can use it (Com LP only).
+    if (useLp && selectedInstance && form.base_url && selectedInstance.affiliate_link !== form.base_url) {
       try {
         await landingPageInstanceService.update(selectedInstance.id, { affiliate_link: form.base_url });
         await qc.invalidateQueries({ queryKey: ["landing_page_instances"] });
@@ -261,7 +270,11 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
         return;
       }
     }
-    onSave({ ...form, final_url: finalUrl });
+    // Sem LP: drop instance/LP refs so the saved tracking_link reflects mode.
+    const payload = useLp
+      ? form
+      : { ...form, landing_page_id: "", landing_page_instance_id: "" };
+    onSave({ ...payload, final_url: finalUrl });
   };
 
   return (
@@ -287,8 +300,33 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
             </Select>
           </div>
 
+          {/* Mode toggle: Com LP / Sem LP */}
+          <div className="flex items-center justify-between gap-3 rounded-lg border border-border bg-secondary/30 p-2.5">
+            <div className="text-[11px]">
+              <div className="font-semibold text-foreground">Fluxo do link</div>
+              <div className="text-[10px] text-muted-foreground">
+                {useLp
+                  ? "Visitante → landing page → clica no CTA → afiliado"
+                  : "Visitante → afiliado direto (sem LP)"}
+              </div>
+            </div>
+            <div className="inline-flex rounded-md border border-border bg-background p-0.5 text-[10px] font-medium">
+              <button
+                type="button"
+                onClick={() => setUseLp(true)}
+                className={`px-2.5 py-1 rounded ${useLp ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >Com LP</button>
+              <button
+                type="button"
+                onClick={() => setUseLp(false)}
+                className={`px-2.5 py-1 rounded ${!useLp ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >Sem LP</button>
+            </div>
+          </div>
+
           {/* 2. Landing page (pick the LP; instance + affiliate link auto-resolve) */}
-          <div className="space-y-1.5">
+          {useLp && (
+            <div className="space-y-1.5">
             <Step n={2} label="Landing page" />
             <Select
               value={form.landing_page_id}
@@ -348,7 +386,8 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                 </div>
               </details>
             )}
-          </div>
+            </div>
+          )}
 
           {/* 3. Platform account */}
           <div className="space-y-1.5">
@@ -438,18 +477,20 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
             </div>
           )}
 
-          {/* Public LP share link — what the influencer actually sends */}
-          {publicLpUrl && (
+          {/* Share link — LP URL (Com LP) or affiliate URL direto (Sem LP) */}
+          {finalUrl && (
             <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-1.5">
               <div className="flex items-center gap-2">
                 <CheckCircle2 size={12} className="text-emerald-500" />
                 <span className="text-[10px] uppercase tracking-wider font-semibold text-emerald-500">
-                  Link para divulgar (passa pela landing page)
+                  Link para divulgar {useLp ? "(passa pela landing page)" : "(direto para o afiliado)"}
                 </span>
               </div>
-              <code className="block font-mono text-xs break-all text-foreground">{publicLpUrl}</code>
+              <code className="block font-mono text-xs break-all text-foreground">{finalUrl}</code>
               <p className="text-[9px] text-muted-foreground">
-                Visitante → LP → clica no CTA → redireciona para o afiliado com <code>{form.click_id_param_name}</code> de atribuição.
+                {useLp
+                  ? <>Visitante → LP → clica no CTA → redireciona para o afiliado com <code>{form.click_id_param_name}</code> de atribuição.</>
+                  : <>Visitante vai direto para o afiliado, já com <code>{form.click_id_param_name}</code> de atribuição.</>}
               </p>
             </div>
           )}
