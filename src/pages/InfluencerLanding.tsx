@@ -210,7 +210,10 @@ export default function InfluencerLanding() {
     if (!resolved?.affiliate_link || clicking) return;
     setClicking(true);
 
-    // Insert click record (legacy clicks table)
+    // Insert CTA click into legacy `clicks` table — DB trigger
+    // `sync_click_to_tracking_event` then creates the canonical
+    // tracking_event with platform_id resolved from the tracking_link,
+    // so the click counts in tracking_metrics for the right casa.
     try {
       await supabase.from("clicks").insert({
         influencer_id: resolved.influencer_id,
@@ -219,11 +222,12 @@ export default function InfluencerLanding() {
         user_agent: navigator.userAgent,
         referrer: document.referrer || null,
         route: `/?ref=${slug}`,
-        source: resolved.instance_id ? "lp_instance" : "legacy_influencer",
+        source: "cta_click",
       });
     } catch {
       // Don't block redirect
     }
+
 
     // Inject click_id (sub1) into affiliate link, and forward sub2/sub3 from
     // the LP's incoming URL so attribution survives the redirect.
