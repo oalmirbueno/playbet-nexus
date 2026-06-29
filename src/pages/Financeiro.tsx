@@ -25,7 +25,7 @@ export default function Financeiro() {
   const {
     range, isLoading,
     caixaRealizado, revenueTracking, diff,
-    saquesInPeriod, rankingInfluencers, rankingGerentes,
+    saquesInPeriod, rankingInfluencers, rankingStreamers, rankingGerentes,
     platforms,
   } = useFinanceiroData({ period, platformId: platformId === "all" ? null : platformId });
 
@@ -64,12 +64,18 @@ export default function Financeiro() {
       )}
 
       <Tabs value={activeTab} onValueChange={(v) => setParam("tab", v)}>
-        <TabsList className="grid grid-cols-4 w-full md:w-auto md:inline-grid">
+        <TabsList className="grid grid-cols-5 w-full md:w-auto md:inline-grid">
           <TabsTrigger value="distribuicao">Distribuição</TabsTrigger>
           <TabsTrigger value="influencers">
             Influencers
             {rankingInfluencers.length > 0 && (
               <span className="ml-2 text-[10px] text-muted-foreground">{rankingInfluencers.length}</span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="streamers">
+            Streamers
+            {rankingStreamers.length > 0 && (
+              <span className="ml-2 text-[10px] text-muted-foreground">{rankingStreamers.length}</span>
             )}
           </TabsTrigger>
           <TabsTrigger value="gerentes">
@@ -100,6 +106,15 @@ export default function Financeiro() {
             title="Quem gerou mais dinheiro · Influencers"
             subjectLabel="Influencer"
             emptyMessage="Nenhum revenue atribuído a influencers no período."
+          />
+        </TabsContent>
+
+        <TabsContent value="streamers" className="mt-6">
+          <RankingTable
+            rows={rankingStreamers}
+            title="Quem gerou mais dinheiro · Streamers"
+            subjectLabel="Streamer"
+            emptyMessage="Nenhum streamer com revenue atribuído. Marque a pessoa como Streamer no cadastro para separá-la dos influencers."
           />
         </TabsContent>
 
