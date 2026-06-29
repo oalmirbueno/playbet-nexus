@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import {
   influencerService,
+  managerService,
   platformService,
   gameService,
   templateService,
@@ -13,6 +14,7 @@ import {
   saqueService,
   conteudoService,
 } from "@/services/supabaseService";
+
 
 // ── Generic hook factory ──
 function useEntityCrud<Row extends Record<string, any>>(
@@ -98,6 +100,7 @@ function useEntityCrud<Row extends Record<string, any>>(
 
 // ── Entity hooks ──
 export const useInfluencers = () => useEntityCrud("influencers", influencerService, "Influencer");
+export const useManagers = () => useEntityCrud("managers", managerService, "Gerente");
 export const usePlatforms = () => useEntityCrud("platforms", platformService, "Plataforma");
 export const useGames = () => useEntityCrud("games", gameService, "Jogo");
 export const useTemplates = () => useEntityCrud("templates", templateService, "Template");
