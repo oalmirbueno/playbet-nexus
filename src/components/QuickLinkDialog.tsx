@@ -50,6 +50,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       setInfluencerId(defaultInfluencerId);
       setLandingPageId(defaultLandingPageId);
       setAccountId("");
+      setPlatformId("");
       setRawLink("");
       setSubid("");
       setCampanhaId("");
