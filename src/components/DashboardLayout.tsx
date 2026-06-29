@@ -24,12 +24,40 @@ const sections: MenuSection[] = [
     ],
   },
   {
+    title: "LINKS",
+    items: [
+      { label: "Links Afiliados", icon: Link2, path: "/tracking/links" },
+    ],
+  },
+  {
     title: "TRACKING",
     items: [
       { label: "Tracking Hub", icon: BarChart3, path: "/tracking" },
-      { label: "Links", icon: Link2, path: "/tracking/links" },
       { label: "Eventos", icon: Activity, path: "/tracking/events" },
       { label: "Reconciliação", icon: Scale, path: "/tracking/reconciliacao" },
+    ],
+  },
+  {
+    title: "ATIVOS",
+    items: [
+      { label: "Jogos", icon: Gamepad2, path: "/jogos" },
+      { label: "Plataformas", icon: Monitor, path: "/plataformas" },
+      { label: "Landing Pages", icon: FileText, path: "/landing-pages" },
+      { label: "Distribuição LPs", icon: GitBranch, path: "/lp-instances" },
+    ],
+  },
+  {
+    title: "PESSOAS",
+    items: [
+      { label: "Pessoas", icon: Users, path: "/influencers" },
+      { label: "Sócios", icon: UserCheck, path: "/socios" },
+    ],
+  },
+  {
+    title: "MARKETING",
+    items: [
+      { label: "Campanhas", icon: Megaphone, path: "/campanhas" },
+      { label: "Conteúdos", icon: PenTool, path: "/conteudo" },
     ],
   },
   {
@@ -42,35 +70,11 @@ const sections: MenuSection[] = [
     ],
   },
   {
-    title: "PESSOAS",
-    items: [
-      { label: "Pessoas", icon: Users, path: "/influencers" },
-      { label: "Sócios", icon: UserCheck, path: "/socios" },
-    ],
-  },
-
-  {
-    title: "ATIVOS",
-    items: [
-      { label: "Jogos", icon: Gamepad2, path: "/jogos" },
-      { label: "Plataformas", icon: Monitor, path: "/plataformas" },
-      { label: "Landing Pages", icon: FileText, path: "/landing-pages" },
-      { label: "Distribuição LPs", icon: GitBranch, path: "/lp-instances" },
-    ],
-  },
-  {
-    title: "MARKETING",
-    items: [
-      { label: "Campanhas", icon: Megaphone, path: "/campanhas" },
-      { label: "Conteúdos", icon: PenTool, path: "/conteudo" },
-    ],
-  },
-  {
     title: "CONFIGURAÇÕES",
     items: [
       { label: "Geral", icon: Settings, path: "/configuracoes" },
-      { label: "Regras Financeiras", icon: Scale, path: "/regras" },
       { label: "Integrações", icon: Plug, path: "/integracoes" },
+      { label: "Regras Financeiras", icon: Scale, path: "/regras" },
     ],
   },
 ];
