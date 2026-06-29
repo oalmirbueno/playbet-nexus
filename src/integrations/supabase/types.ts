@@ -651,8 +651,66 @@ export type Database = {
           },
         ]
       }
+      lp_events: {
+        Row: {
+          away_team: string
+          away_team_logo_url: string | null
+          created_at: string
+          event_image_url: string | null
+          external_ref: string | null
+          home_team: string
+          home_team_logo_url: string | null
+          id: string
+          is_active: boolean
+          league: string | null
+          metadata: Json
+          notes: string | null
+          source: string
+          sport: string
+          starts_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          away_team: string
+          away_team_logo_url?: string | null
+          created_at?: string
+          event_image_url?: string | null
+          external_ref?: string | null
+          home_team: string
+          home_team_logo_url?: string | null
+          id?: string
+          is_active?: boolean
+          league?: string | null
+          metadata?: Json
+          notes?: string | null
+          source?: string
+          sport?: string
+          starts_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          away_team?: string
+          away_team_logo_url?: string | null
+          created_at?: string
+          event_image_url?: string | null
+          external_ref?: string | null
+          home_team?: string
+          home_team_logo_url?: string | null
+          id?: string
+          is_active?: boolean
+          league?: string | null
+          metadata?: Json
+          notes?: string | null
+          source?: string
+          sport?: string
+          starts_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lp_opportunities: {
         Row: {
+          away_team_logo_url: string | null
           badge: string | null
           campanha_id: string | null
           category: string
@@ -660,22 +718,35 @@ export type Database = {
           cta_label: string
           destination_url: string
           ends_at: string | null
+          event_id: string | null
+          event_image_url: string | null
           event_name: string | null
+          game_thumb_url: string | null
+          home_team_logo_url: string | null
           id: string
           is_active: boolean
           landing_page_id: string | null
           market_name: string | null
+          market_type: string | null
           metadata: Json
           odd_label: string | null
           platform_id: string | null
+          provider_logo_url: string | null
+          recommendation_reason: string | null
+          recommendation_score: number | null
+          signal_confidence: string | null
+          signal_id: string | null
+          signal_source: string | null
           sort_order: number
           starts_at: string | null
+          stats_summary: string | null
           subtitle: string | null
           title: string
           tracking_link_id: string | null
           updated_at: string
         }
         Insert: {
+          away_team_logo_url?: string | null
           badge?: string | null
           campanha_id?: string | null
           category?: string
@@ -683,22 +754,35 @@ export type Database = {
           cta_label?: string
           destination_url: string
           ends_at?: string | null
+          event_id?: string | null
+          event_image_url?: string | null
           event_name?: string | null
+          game_thumb_url?: string | null
+          home_team_logo_url?: string | null
           id?: string
           is_active?: boolean
           landing_page_id?: string | null
           market_name?: string | null
+          market_type?: string | null
           metadata?: Json
           odd_label?: string | null
           platform_id?: string | null
+          provider_logo_url?: string | null
+          recommendation_reason?: string | null
+          recommendation_score?: number | null
+          signal_confidence?: string | null
+          signal_id?: string | null
+          signal_source?: string | null
           sort_order?: number
           starts_at?: string | null
+          stats_summary?: string | null
           subtitle?: string | null
           title: string
           tracking_link_id?: string | null
           updated_at?: string
         }
         Update: {
+          away_team_logo_url?: string | null
           badge?: string | null
           campanha_id?: string | null
           category?: string
@@ -706,16 +790,28 @@ export type Database = {
           cta_label?: string
           destination_url?: string
           ends_at?: string | null
+          event_id?: string | null
+          event_image_url?: string | null
           event_name?: string | null
+          game_thumb_url?: string | null
+          home_team_logo_url?: string | null
           id?: string
           is_active?: boolean
           landing_page_id?: string | null
           market_name?: string | null
+          market_type?: string | null
           metadata?: Json
           odd_label?: string | null
           platform_id?: string | null
+          provider_logo_url?: string | null
+          recommendation_reason?: string | null
+          recommendation_score?: number | null
+          signal_confidence?: string | null
+          signal_id?: string | null
+          signal_source?: string | null
           sort_order?: number
           starts_at?: string | null
+          stats_summary?: string | null
           subtitle?: string | null
           title?: string
           tracking_link_id?: string | null
@@ -727,6 +823,13 @@ export type Database = {
             columns: ["campanha_id"]
             isOneToOne: false
             referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lp_opportunities_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "lp_events"
             referencedColumns: ["id"]
           },
           {
@@ -744,10 +847,102 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "lp_opportunities_signal_id_fkey"
+            columns: ["signal_id"]
+            isOneToOne: false
+            referencedRelation: "lp_signals"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "lp_opportunities_tracking_link_id_fkey"
             columns: ["tracking_link_id"]
             isOneToOne: false
             referencedRelation: "tracking_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lp_signals: {
+        Row: {
+          confidence: string
+          created_at: string
+          draft_opportunity_id: string | null
+          event_id: string | null
+          external_id: string | null
+          house_url: string | null
+          id: string
+          market_name: string | null
+          market_type: string | null
+          metadata: Json
+          odd_label: string | null
+          platform_id: string | null
+          raw_text: string
+          received_at: string
+          source_channel: string
+          source_name: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          confidence?: string
+          created_at?: string
+          draft_opportunity_id?: string | null
+          event_id?: string | null
+          external_id?: string | null
+          house_url?: string | null
+          id?: string
+          market_name?: string | null
+          market_type?: string | null
+          metadata?: Json
+          odd_label?: string | null
+          platform_id?: string | null
+          raw_text: string
+          received_at?: string
+          source_channel?: string
+          source_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          confidence?: string
+          created_at?: string
+          draft_opportunity_id?: string | null
+          event_id?: string | null
+          external_id?: string | null
+          house_url?: string | null
+          id?: string
+          market_name?: string | null
+          market_type?: string | null
+          metadata?: Json
+          odd_label?: string | null
+          platform_id?: string | null
+          raw_text?: string
+          received_at?: string
+          source_channel?: string
+          source_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lp_signals_draft_opportunity_id_fkey"
+            columns: ["draft_opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "lp_opportunities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lp_signals_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "lp_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lp_signals_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "platforms"
             referencedColumns: ["id"]
           },
         ]
