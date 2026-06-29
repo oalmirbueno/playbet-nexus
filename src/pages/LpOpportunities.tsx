@@ -150,6 +150,16 @@ export default function LpOpportunities() {
     return m;
   }, [rows]);
 
+  const highlightsCountByLp = useMemo(() => {
+    const m = new Map<string, number>();
+    (rows || []).forEach((r: LpOpportunityRow) => {
+      if (r.is_active && (r.sort_order || 0) >= 20 && r.landing_page_id) {
+        m.set(r.landing_page_id, (m.get(r.landing_page_id) || 0) + 1);
+      }
+    });
+    return m;
+  }, [rows]);
+
   function openNew() {
     setEditingId(null);
     setForm(empty);
@@ -631,6 +641,7 @@ export default function LpOpportunities() {
         campanhas={campanhas as any}
         onCreate={(payload) => create(payload)}
         defaultLandingPageId={filterLp !== "all" ? filterLp : undefined}
+        highlightsCountByLp={highlightsCountByLp}
       />
     </div>
   );
