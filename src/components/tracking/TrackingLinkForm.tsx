@@ -227,12 +227,28 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
   // sub3 = campanha_id (UUID). Automático quando campanha selecionada.
   const sub3Value = form.campanha_id || "";
 
-  const finalUrl = useMemo(
+  // The link the influencer shares = the LP public URL (NOT the affiliate URL).
+  // Visitors land on the LP, click the CTA, and only then get redirected to
+  // the affiliate URL (which is stored on the LP instance).
+  const publicLpUrl = useMemo(() => {
+    if (!selectedLP?.domain || !selectedInstance?.slug) return "";
+    const base = selectedLP.domain.replace(/\/+$/, "");
+    const slugPath = `/${selectedInstance.slug}`;
+    let url = `${base}${slugPath}`;
+    if (sub2Value) url = appendParam(url, "sub2", sub2Value);
+    if (sub3Value) url = appendParam(url, "sub3", sub3Value);
+    return url;
+  }, [selectedLP, selectedInstance, sub2Value, sub3Value]);
+
+  // The deep affiliate URL with attribution params — used by the LP CTA, not shared directly.
+  const trackedAffiliateUrl = useMemo(
     () => buildTrackedUrl(form.base_url, form.click_id_param_name, sub1Value, sub2Value, sub3Value),
     [form.base_url, form.click_id_param_name, sub1Value, sub2Value, sub3Value],
   );
 
-  const canSave = form.influencer_id && form.platform_account_id && form.base_url;
+  const finalUrl = publicLpUrl || trackedAffiliateUrl; // saved as tracking_link.final_url
+
+  const canSave = form.influencer_id && form.landing_page_instance_id && form.platform_account_id && form.base_url;
 
   const handleSave = () => {
     onSave({ ...form, final_url: finalUrl });
