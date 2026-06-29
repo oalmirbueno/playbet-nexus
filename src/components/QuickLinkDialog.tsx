@@ -60,10 +60,14 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
     [influencers, influencerId],
   );
 
-  // Auto-fill subid from influencer slug
+  // Auto-generate a UNIQUE subid per link: <influencer-slug>-<base36-timestamp>
+  // Editable, but regenerated whenever the influencer changes or the dialog reopens.
   useEffect(() => {
-    if (selectedInfluencer) setSubid((selectedInfluencer as any).slug || "");
-  }, [selectedInfluencer]);
+    if (!open) return;
+    const base = (selectedInfluencer as any)?.slug || "link";
+    const unique = Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+    setSubid(`${base}-${unique}`);
+  }, [selectedInfluencer, open]);
 
   // 🧠 Universal platform auto-detection from pasted URL
   const detectedPlatform = useMemo(() => {
