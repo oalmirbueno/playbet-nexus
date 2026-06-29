@@ -236,14 +236,14 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
   // Visitors land on the LP, click the CTA, and only then get redirected to
   // the affiliate URL (which is stored on the LP instance).
   const publicLpUrl = useMemo(() => {
+    if (!useLp) return "";
     if (!selectedLP?.domain || !selectedInstance?.slug) return "";
     const base = selectedLP.domain.replace(/\/+$/, "");
-    const slugPath = `/${selectedInstance.slug}`;
-    let url = `${base}${slugPath}`;
+    let url = `${base}/${selectedInstance.slug}`;
     if (sub2Value) url = appendParam(url, "sub2", sub2Value);
     if (sub3Value) url = appendParam(url, "sub3", sub3Value);
     return url;
-  }, [selectedLP, selectedInstance, sub2Value, sub3Value]);
+  }, [useLp, selectedLP, selectedInstance, sub2Value, sub3Value]);
 
   // The deep affiliate URL with attribution params — used by the LP CTA, not shared directly.
   const trackedAffiliateUrl = useMemo(
@@ -251,13 +251,17 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
     [form.base_url, form.click_id_param_name, sub1Value, sub2Value, sub3Value],
   );
 
-  const finalUrl = publicLpUrl || trackedAffiliateUrl; // saved as tracking_link.final_url
+  // Without LP, the shared link goes straight to the affiliate.
+  const finalUrl = useLp ? (publicLpUrl || trackedAffiliateUrl) : trackedAffiliateUrl;
 
-  const canSave = form.influencer_id && form.landing_page_instance_id && form.platform_account_id && form.base_url;
+  const canSave = form.influencer_id
+    && form.platform_account_id
+    && form.base_url
+    && (useLp ? !!form.landing_page_instance_id : true);
 
   const handleSave = async () => {
-    // Persist the affiliate URL on the LP instance so the LP CTA can use it.
-    if (selectedInstance && form.base_url && selectedInstance.affiliate_link !== form.base_url) {
+    // Persist the affiliate URL on the LP instance so the LP CTA can use it (Com LP only).
+    if (useLp && selectedInstance && form.base_url && selectedInstance.affiliate_link !== form.base_url) {
       try {
         await landingPageInstanceService.update(selectedInstance.id, { affiliate_link: form.base_url });
         await qc.invalidateQueries({ queryKey: ["landing_page_instances"] });
@@ -266,7 +270,11 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
         return;
       }
     }
-    onSave({ ...form, final_url: finalUrl });
+    // Sem LP: drop instance/LP refs so the saved tracking_link reflects mode.
+    const payload = useLp
+      ? form
+      : { ...form, landing_page_id: "", landing_page_instance_id: "" };
+    onSave({ ...payload, final_url: finalUrl });
   };
 
   return (
