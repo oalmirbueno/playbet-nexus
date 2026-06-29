@@ -11,10 +11,12 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import { useTrackingMetrics, usePlatformAccounts, useTrackingEvents } from "@/hooks/useTrackingData";
 import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
 import { useInfluencers, useCampanhas, usePlatforms, useLandingPages } from "@/hooks/useSupabaseQuery";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import {
   BarChart3, TrendingUp, Users, MousePointerClick, UserPlus, DollarSign,
   Wallet, Target, ArrowRightLeft, Activity, Download, Filter, RefreshCcw,
-  AlertTriangle, Zap, Link2, Map, MoreHorizontal, ArrowUpDown,
+  AlertTriangle, Zap, Link2, Map, MoreHorizontal, ArrowUpDown, CloudDownload,
 } from "lucide-react";
 
 import PlatformActivationChecklist from "@/components/PlatformActivationChecklist";
@@ -49,6 +51,24 @@ export default function TrackingDashboard() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [showHistoricalImport, setShowHistoricalImport] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSmarticoPull = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("tracking-puller-smartico", {
+        body: { source: "manual", mode: "recent" },
+      });
+      if (error) throw error;
+      const r = data as { ok?: boolean; rows_received?: number; upserts?: number; error?: string };
+      if (r?.ok === false) throw new Error(r.error || "Falha no pull");
+      toast.success(`Estrela/VUPI sincronizado: ${r.upserts ?? 0} linhas (${r.rows_received ?? 0} brutas)`);
+    } catch (e) {
+      toast.error(`Falha ao sincronizar: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const filters = useMemo(() => ({
     platform_id: platformFilter !== "all" ? platformFilter : undefined,
@@ -276,6 +296,10 @@ export default function TrackingDashboard() {
           </Button>
           <Button variant="outline" size="sm" onClick={() => navigate("/tracking/events")}>
             <Zap size={14} className="mr-1.5" /> Eventos
+          </Button>
+          <Button variant="default" size="sm" onClick={handleSmarticoPull} disabled={syncing}>
+            <CloudDownload size={14} className={`mr-1.5 ${syncing ? "animate-pulse" : ""}`} />
+            {syncing ? "Sincronizando…" : "Sincronizar Estrela/VUPI"}
           </Button>
           <Button variant="outline" size="sm" onClick={() => navigate("/tracking/links")}>
             <Link2 size={14} className="mr-1.5" /> Links
