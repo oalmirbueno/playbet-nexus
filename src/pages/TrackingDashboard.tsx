@@ -297,6 +297,10 @@ export default function TrackingDashboard() {
           <Button variant="outline" size="sm" onClick={() => navigate("/tracking/events")}>
             <Zap size={14} className="mr-1.5" /> Eventos
           </Button>
+          <Button variant="default" size="sm" onClick={handleSmarticoPull} disabled={syncing}>
+            <CloudDownload size={14} className={`mr-1.5 ${syncing ? "animate-pulse" : ""}`} />
+            {syncing ? "Sincronizando…" : "Sincronizar Estrela/VUPI"}
+          </Button>
           <Button variant="outline" size="sm" onClick={() => navigate("/tracking/links")}>
             <Link2 size={14} className="mr-1.5" /> Links
           </Button>
