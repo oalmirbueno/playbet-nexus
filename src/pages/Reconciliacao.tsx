@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CheckCircle2, AlertTriangle, DollarSign, Wallet, Activity, Clock } from "lucide-react";
+import DistributionCard from "@/components/DistributionCard";
 
 const fmt = (v: number, currency = "BRL") =>
   v.toLocaleString("pt-BR", { style: "currency", currency: currency === "BRL" ? "BRL" : "USD" });
