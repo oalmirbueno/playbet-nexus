@@ -25,13 +25,34 @@ const STATUS_MAP: Record<string, string> = {
   TRANSFER_CANCELLED: "Cancelado",
 };
 
+function timingSafeEqual(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  const ab = enc.encode(a);
+  const bb = enc.encode(b);
+  if (ab.length !== bb.length) return false;
+  let diff = 0;
+  for (let i = 0; i < ab.length; i++) diff |= ab[i] ^ bb[i];
+  return diff === 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const expectedToken = Deno.env.get("ASAAS_WEBHOOK_TOKEN");
-    const provided = req.headers.get("asaas-access-token");
-    if (!expectedToken || provided !== expectedToken) {
+    if (!expectedToken) {
+      console.error("asaas-webhook: ASAAS_WEBHOOK_TOKEN não configurado");
+      return new Response(JSON.stringify({ error: "server_misconfigured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const provided = req.headers.get("asaas-access-token") ?? "";
+    if (!timingSafeEqual(provided, expectedToken)) {
+      console.warn("asaas-webhook: token inválido", {
+        ip: req.headers.get("x-forwarded-for"),
+        ua: req.headers.get("user-agent"),
+      });
       return new Response(JSON.stringify({ error: "unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
