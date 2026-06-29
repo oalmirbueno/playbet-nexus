@@ -539,6 +539,40 @@ export default function Influencers() {
                 <label className="text-xs font-medium text-muted-foreground">Meta mensal (R$)</label>
                 <input type="number" className="input-field mt-1" value={editingMgr?.monthly_goal || ""} onChange={(e) => setEditingMgr((p) => p ? { ...p, monthly_goal: e.target.value ? Number(e.target.value) : null } : p)} placeholder="50000" />
               </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Nível de carreira</label>
+                <select
+                  className="select-field mt-1 w-full"
+                  value={editingMgr?.career_level ?? 1}
+                  onChange={(e) => {
+                    const lvl = Number(e.target.value);
+                    setEditingMgr((p) => p ? { ...p, career_level: lvl, commission_percent: suggestPercentForLevel("manager", lvl) } : p);
+                  }}
+                >
+                  {MANAGER_LEVELS.map((l) => (
+                    <option key={l.level} value={l.level}>
+                      {l.level} · {l.label} ({formatLevelRange(l)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">% Comissão (sobre receita validada)</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  className="input-field mt-1"
+                  value={editingMgr?.commission_percent ?? 3}
+                  onChange={(e) => setEditingMgr((p) => p ? { ...p, commission_percent: Number(e.target.value) } : p)}
+                />
+                {editingMgr && !isPercentValidForLevel("manager", editingMgr.career_level, editingMgr.commission_percent || 0) && (
+                  <p className="text-[10px] text-warning mt-1">
+                    Fora da faixa do nível {editingMgr.career_level} ({formatLevelRange(getLevel("manager", editingMgr.career_level)!)}).
+                  </p>
+                )}
+              </div>
               <div className="flex items-end">
                 <label className="flex items-center gap-2 text-xs text-muted-foreground pb-2">
                   <input type="checkbox" checked={editingMgr?.is_active ?? true} onChange={(e) => setEditingMgr((p) => p ? { ...p, is_active: e.target.checked } : p)} /> Ativo
