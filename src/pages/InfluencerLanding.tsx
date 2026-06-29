@@ -124,10 +124,11 @@ export default function InfluencerLanding() {
         });
         setState("ready");
 
-        // Register click event in tracking_events (non-blocking)
+        // Register LP VIEW event (does not count as outbound click in metrics).
+        // The actual 'click' canonical event is registered on CTA press below.
         supabase.from("tracking_events").insert({
-          canonical_event_name: "click",
-          raw_event_name: "lp_click_view",
+          canonical_event_name: "lp_view",
+          raw_event_name: "lp_view",
           click_id: clickId,
           influencer_id: influencerId,
           landing_page_id: landingPageId,
@@ -138,10 +139,13 @@ export default function InfluencerLanding() {
           raw_payload: {
             slug,
             hostname,
+            sub2: searchParams.get("sub2"),
+            sub3: searchParams.get("sub3"),
             user_agent: navigator.userAgent,
             referrer: document.referrer || null,
           },
         }).then(() => {});
+
       };
 
       // ── STRATEGY 1: Domain-aware ──
@@ -206,7 +210,10 @@ export default function InfluencerLanding() {
     if (!resolved?.affiliate_link || clicking) return;
     setClicking(true);
 
-    // Insert click record (legacy clicks table)
+    // Insert CTA click into legacy `clicks` table — DB trigger
+    // `sync_click_to_tracking_event` then creates the canonical
+    // tracking_event with platform_id resolved from the tracking_link,
+    // so the click counts in tracking_metrics for the right casa.
     try {
       await supabase.from("clicks").insert({
         influencer_id: resolved.influencer_id,
@@ -215,11 +222,12 @@ export default function InfluencerLanding() {
         user_agent: navigator.userAgent,
         referrer: document.referrer || null,
         route: `/?ref=${slug}`,
-        source: resolved.instance_id ? "lp_instance" : "legacy_influencer",
+        source: "cta_click",
       });
     } catch {
       // Don't block redirect
     }
+
 
     // Inject click_id (sub1) into affiliate link, and forward sub2/sub3 from
     // the LP's incoming URL so attribution survives the redirect.
