@@ -175,10 +175,18 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
             <div>
               <div className="flex items-center justify-between mb-1">
                 <Label className="text-xs font-medium">1. Influencer *</Label>
-                <button onClick={() => setNewInfluencer({ ...newInfluencer, open: true })} className="text-[10px] text-primary hover:underline flex items-center gap-1"><Plus size={10} /> Novo</button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-6 px-2 text-[10px] gap-1"
+                  onClick={() => setNewInfluencer({ ...newInfluencer, open: true })}
+                >
+                  <Plus size={10} /> Cadastrar novo
+                </Button>
               </div>
               <Select value={influencerId} onValueChange={setInfluencerId}>
-                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione o influencer" /></SelectTrigger>
+                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione ou cadastre um influencer" /></SelectTrigger>
                 <SelectContent>
                   {influencers.map((i: any) => (
                     <SelectItem key={i.id} value={i.id}>
