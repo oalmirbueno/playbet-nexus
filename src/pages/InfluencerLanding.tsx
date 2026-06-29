@@ -221,8 +221,13 @@ export default function InfluencerLanding() {
       // Don't block redirect
     }
 
-    // Inject click_id into affiliate link for attribution
-    const finalUrl = injectClickId(resolved.affiliate_link, resolved.click_id_param, resolved.click_id);
+    // Inject click_id (sub1) into affiliate link, and forward sub2/sub3 from
+    // the LP's incoming URL so attribution survives the redirect.
+    let finalUrl = injectClickId(resolved.affiliate_link, resolved.click_id_param, resolved.click_id);
+    const fwd2 = searchParams.get("sub2");
+    const fwd3 = searchParams.get("sub3");
+    if (fwd2) finalUrl = injectClickId(finalUrl, "sub2", fwd2);
+    if (fwd3) finalUrl = injectClickId(finalUrl, "sub3", fwd3);
     window.location.href = finalUrl;
   }, [resolved, clicking, slug]);
 

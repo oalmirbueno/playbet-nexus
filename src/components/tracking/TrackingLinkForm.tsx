@@ -227,14 +227,40 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
   // sub3 = campanha_id (UUID). Automático quando campanha selecionada.
   const sub3Value = form.campanha_id || "";
 
-  const finalUrl = useMemo(
+  // The link the influencer shares = the LP public URL (NOT the affiliate URL).
+  // Visitors land on the LP, click the CTA, and only then get redirected to
+  // the affiliate URL (which is stored on the LP instance).
+  const publicLpUrl = useMemo(() => {
+    if (!selectedLP?.domain || !selectedInstance?.slug) return "";
+    const base = selectedLP.domain.replace(/\/+$/, "");
+    const slugPath = `/${selectedInstance.slug}`;
+    let url = `${base}${slugPath}`;
+    if (sub2Value) url = appendParam(url, "sub2", sub2Value);
+    if (sub3Value) url = appendParam(url, "sub3", sub3Value);
+    return url;
+  }, [selectedLP, selectedInstance, sub2Value, sub3Value]);
+
+  // The deep affiliate URL with attribution params — used by the LP CTA, not shared directly.
+  const trackedAffiliateUrl = useMemo(
     () => buildTrackedUrl(form.base_url, form.click_id_param_name, sub1Value, sub2Value, sub3Value),
     [form.base_url, form.click_id_param_name, sub1Value, sub2Value, sub3Value],
   );
 
-  const canSave = form.influencer_id && form.platform_account_id && form.base_url;
+  const finalUrl = publicLpUrl || trackedAffiliateUrl; // saved as tracking_link.final_url
 
-  const handleSave = () => {
+  const canSave = form.influencer_id && form.landing_page_instance_id && form.platform_account_id && form.base_url;
+
+  const handleSave = async () => {
+    // Persist the affiliate URL on the LP instance so the LP CTA can use it.
+    if (selectedInstance && form.base_url && selectedInstance.affiliate_link !== form.base_url) {
+      try {
+        await landingPageInstanceService.update(selectedInstance.id, { affiliate_link: form.base_url });
+        await qc.invalidateQueries({ queryKey: ["landing_page_instances"] });
+      } catch (e: any) {
+        toast({ title: "Erro ao salvar link no botão da LP", description: e.message, variant: "destructive" });
+        return;
+      }
+    }
     onSave({ ...form, final_url: finalUrl });
   };
 
@@ -340,11 +366,14 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
           {form.platform_account_id && (
             <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
               <div className="flex items-center justify-between">
-                <Step n={4} label="Link de afiliado + atribuição" />
+                <Step n={4} label="Link de afiliado (destino do CTA)" />
                 <span className="text-[9px] uppercase tracking-wider text-primary/80 font-semibold">
                   AFP / sub1 = atribuição
                 </span>
               </div>
+              <p className="text-[10px] text-muted-foreground -mt-1">
+                Esse link entra no <b>botão da landing page</b>. O visitante chega na LP primeiro, clica no CTA e só então é redirecionado para a casa.
+              </p>
 
               <Input
                 className="h-9 text-xs font-mono"
@@ -400,12 +429,28 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                 </div>
               </div>
 
-              {finalUrl && form.base_url && (
-                <div className="flex items-start gap-1.5 text-[10px] text-foreground pt-1 border-t border-border/40">
-                  <CheckCircle2 size={11} className="text-primary mt-0.5 shrink-0" />
-                  <code className="font-mono break-all text-muted-foreground">{finalUrl}</code>
+              {trackedAffiliateUrl && form.base_url && (
+                <div className="flex items-start gap-1.5 text-[10px] pt-1 border-t border-border/40">
+                  <span className="text-[9px] uppercase tracking-wider text-muted-foreground mt-0.5 shrink-0">CTA →</span>
+                  <code className="font-mono break-all text-muted-foreground">{trackedAffiliateUrl}</code>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Public LP share link — what the influencer actually sends */}
+          {publicLpUrl && (
+            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={12} className="text-emerald-500" />
+                <span className="text-[10px] uppercase tracking-wider font-semibold text-emerald-500">
+                  Link para divulgar (passa pela landing page)
+                </span>
+              </div>
+              <code className="block font-mono text-xs break-all text-foreground">{publicLpUrl}</code>
+              <p className="text-[9px] text-muted-foreground">
+                Visitante → LP → clica no CTA → redireciona para o afiliado com <code>{form.click_id_param_name}</code> de atribuição.
+              </p>
             </div>
           )}
 
