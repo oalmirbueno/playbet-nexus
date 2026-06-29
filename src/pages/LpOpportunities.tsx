@@ -41,6 +41,7 @@ import {
 import { useTrackingLinks } from "@/hooks/useTrackingData";
 import type { LpOpportunityRow } from "@/services/lpOpportunityService";
 import { OpportunityWizard } from "@/components/lp/OpportunityWizard";
+import { SportsEventsPanel } from "@/components/lp/SportsEventsPanel";
 import { isSelfLandingLoop } from "@/lib/opportunityDetect";
 
 const CATEGORIES = [
@@ -302,7 +303,14 @@ export default function LpOpportunities() {
         </div>
       </div>
 
+      <SportsEventsPanel
+        platforms={platforms as any}
+        landingPages={lps as any}
+        onCreateOpportunity={(payload) => create(payload)}
+      />
+
       <Card>
+
         <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
             <Label className="text-xs">Categoria</Label>
