@@ -278,6 +278,8 @@ export default function TrackingLinks() {
         platforms={platforms as any[]}
       />
 
+      <QuickLinkDialog open={quickOpen} onOpenChange={setQuickOpen} />
+
       <TrackingLinkForm
         open={modalOpen}
         onOpenChange={setModalOpen}
