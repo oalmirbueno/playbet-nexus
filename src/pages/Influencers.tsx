@@ -186,10 +186,13 @@ export default function Influencers() {
   };
 
   const openCreateMgr = () => { setEditingMgr({ ...emptyMgr }); setMgrModalOpen(true); };
-  const openEditMgr = (m: ManagerRow) => {
+  const openEditMgr = (m: any) => {
     setEditingMgr({
       id: m.id, name: m.name, slug: m.slug, team_name: m.team_name,
-      team_color: m.team_color, monthly_goal: m.monthly_goal, notes: m.notes || "",
+      team_color: m.team_color, monthly_goal: m.monthly_goal,
+      commission_percent: m.commission_percent ?? 3,
+      career_level: m.career_level || 1,
+      notes: m.notes || "",
       is_active: m.is_active,
     });
     setMgrModalOpen(true);
@@ -200,12 +203,14 @@ export default function Influencers() {
       toast({ title: "Erro", description: "Nome, slug e nome do time são obrigatórios.", variant: "destructive" });
       return;
     }
-    const payload = {
+    const payload: any = {
       name: editingMgr.name,
       slug: editingMgr.slug,
       team_name: editingMgr.team_name,
       team_color: editingMgr.team_color,
       monthly_goal: editingMgr.monthly_goal,
+      commission_percent: editingMgr.commission_percent,
+      career_level: editingMgr.career_level,
       notes: editingMgr.notes || null,
       is_active: editingMgr.is_active,
     };
