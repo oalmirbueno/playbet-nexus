@@ -250,7 +250,17 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
 
   const canSave = form.influencer_id && form.landing_page_instance_id && form.platform_account_id && form.base_url;
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    // Persist the affiliate URL on the LP instance so the LP CTA can use it.
+    if (selectedInstance && form.base_url && selectedInstance.affiliate_link !== form.base_url) {
+      try {
+        await landingPageInstanceService.update(selectedInstance.id, { affiliate_link: form.base_url });
+        await qc.invalidateQueries({ queryKey: ["landing_page_instances"] });
+      } catch (e: any) {
+        toast({ title: "Erro ao salvar link no botão da LP", description: e.message, variant: "destructive" });
+        return;
+      }
+    }
     onSave({ ...form, final_url: finalUrl });
   };
 
