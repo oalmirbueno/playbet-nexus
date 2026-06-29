@@ -1,12 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, Info, CheckCircle2 } from "lucide-react";
+import { CheckCircle2, ArrowRight } from "lucide-react";
 import type { TrackingLinkRow } from "@/services/trackingService";
 
 interface Props {
@@ -71,254 +69,192 @@ export function formFromRow(l: TrackingLinkRow): FormState {
   };
 }
 
-function HelperText({ children }: { children: React.ReactNode }) {
-  return <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{children}</p>;
+const TRACKING_ROLES = [
+  { value: "influencer", label: "Influencer" },
+  { value: "socio", label: "Sócio(a)" },
+  { value: "parceiro", label: "Parceiro" },
+  { value: "interno", label: "Interno / Teste" },
+];
+
+/** Universal UTM appender — works for any house. */
+function buildFinalUrl(baseUrl: string, paramName: string, subid: string): string {
+  if (!baseUrl || !subid) return baseUrl;
+  try {
+    const u = new URL(baseUrl);
+    u.searchParams.set(paramName, subid);
+    return u.toString();
+  } catch {
+    const sep = baseUrl.includes("?") ? "&" : "?";
+    return `${baseUrl}${sep}${paramName}=${encodeURIComponent(subid)}`;
+  }
 }
 
-const TRACKING_ROLES = [
-  { value: "influencer", label: "Influencer", desc: "Comissão padrão de influenciador" },
-  { value: "socio", label: "Sócio(a)", desc: "Rastreia, mas NÃO gera débito de influencer" },
-  { value: "parceiro", label: "Parceiro", desc: "Parceiro externo com regra própria" },
-  { value: "interno", label: "Interno/Teste", desc: "Uso interno, sem regra financeira" },
-];
+function Step({ n, label }: { n: number; label: string }) {
+  return (
+    <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+      <span className="w-4 h-4 rounded-full bg-primary/15 text-primary flex items-center justify-center text-[9px] font-bold">{n}</span>
+      {label}
+    </div>
+  );
+}
 
 export default function TrackingLinkForm({ open, onOpenChange, editing: initialEditing, onSave, accounts, influencers, campanhas, landingPages, lpInstances, platforms }: Props) {
   const [form, setForm] = useState<FormState>(initialEditing);
 
-  useEffect(() => {
-    setForm(initialEditing);
-  }, [initialEditing]);
+  useEffect(() => { setForm(initialEditing); }, [initialEditing]);
 
   const set = (field: keyof FormState, value: string) => setForm(p => ({ ...p, [field]: value }));
 
-  // Auto-fill from LP instance
-  const handleInstanceChange = (instanceId: string) => {
+  // 1. Influencer chosen → filter LP instances by influencer
+  const influencerInstances = useMemo(
+    () => form.influencer_id ? lpInstances.filter((i: any) => i.influencer_id === form.influencer_id) : lpInstances,
+    [lpInstances, form.influencer_id],
+  );
+
+  // 2. Instance auto-fills LP + base_url
+  const handleInstance = (instanceId: string) => {
     const inst = lpInstances.find((i: any) => i.id === instanceId);
-    const updates: Partial<FormState> = { landing_page_instance_id: instanceId };
-    if (inst) {
-      if (inst.influencer_id) updates.influencer_id = inst.influencer_id;
-      if (inst.landing_page_id) updates.landing_page_id = inst.landing_page_id;
-      // Always set base_url from instance affiliate_link (it's the primary operational link)
-      if (inst.affiliate_link) {
-        updates.base_url = inst.affiliate_link;
-      }
-    }
-    setForm(p => ({ ...p, ...updates }));
+    setForm(p => ({
+      ...p,
+      landing_page_instance_id: instanceId,
+      landing_page_id: inst?.landing_page_id || p.landing_page_id,
+      base_url: inst?.affiliate_link || p.base_url,
+    }));
   };
 
-  // Platform info
-  const selectedAccount = accounts.find(a => a.id === form.platform_account_id);
-  const accountPlatformId = selectedAccount?.platform_id;
-  const platformName = platforms.find((p: any) => p.id === accountPlatformId)?.name;
-
-  // Instance info
+  const selectedInfluencer = influencers.find((i: any) => i.id === form.influencer_id);
   const selectedInstance = lpInstances.find((i: any) => i.id === form.landing_page_instance_id);
-  const instanceAffiliateLink = selectedInstance?.affiliate_link || "";
-  const hasInstanceLink = !!instanceAffiliateLink;
-  const hasDivergence = hasInstanceLink && form.base_url && instanceAffiliateLink !== form.base_url;
+  const selectedAccount = accounts.find(a => a.id === form.platform_account_id);
+  const platformName = platforms.find((p: any) => p.id === selectedAccount?.platform_id)?.name;
 
-  const missingFields: string[] = [];
-  if (!form.platform_account_id) missingFields.push("Conta da plataforma");
-  if (!form.influencer_id) missingFields.push("Influencer / Parceiro");
-  if (!form.base_url) missingFields.push("Link operacional");
+  // Default slug = influencer slug (universal subid)
+  const defaultSubid = (selectedInfluencer as any)?.slug || "";
+  const currentSubid = (() => {
+    if (!form.base_url) return defaultSubid;
+    try {
+      const u = new URL(form.base_url);
+      return u.searchParams.get(form.click_id_param_name) || defaultSubid;
+    } catch { return defaultSubid; }
+  })();
+  const [subid, setSubid] = useState(currentSubid);
+  useEffect(() => { setSubid(currentSubid); /* eslint-disable-next-line */ }, [form.influencer_id, form.base_url]);
 
-  // Filter instances by selected LP
-  const filteredInstances = form.landing_page_id
-    ? lpInstances.filter((i: any) => i.landing_page_id === form.landing_page_id)
-    : lpInstances;
+  const finalUrl = useMemo(
+    () => buildFinalUrl(form.base_url, form.click_id_param_name, subid),
+    [form.base_url, form.click_id_param_name, subid],
+  );
 
-  const selectedRole = TRACKING_ROLES.find(r => r.value === form.tracking_role);
+  const canSave = form.influencer_id && form.platform_account_id && form.base_url;
+
+  const handleSave = () => {
+    onSave({ ...form, final_url: finalUrl });
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{form.id ? "Editar Tracking Link" : "Novo Tracking Link"}</DialogTitle>
+          <DialogTitle className="text-base">{form.id ? "Editar link" : "Novo link"}</DialogTitle>
         </DialogHeader>
 
-        <div className="grid gap-4 py-2">
-          {/* Step 1: Instance selection — drives everything */}
-          <div className="border rounded-lg p-3 bg-muted/20 space-y-3">
-            <p className="text-xs font-semibold text-foreground">1. Selecionar instância da LP (recomendado)</p>
-            <HelperText>Ao selecionar a instância, o link já em uso na LP, o influencer e a LP serão preenchidos automaticamente.</HelperText>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs font-medium">Landing Page</Label>
-                <Select value={form.landing_page_id} onValueChange={v => set("landing_page_id", v)}>
-                  <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione a LP" /></SelectTrigger>
-                  <SelectContent>
-                    {(landingPages as any[]).map((lp: any) => <SelectItem key={lp.id} value={lp.id}>{lp.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-xs font-medium">Instância / Slug</Label>
-                <Select value={form.landing_page_instance_id} onValueChange={handleInstanceChange}>
-                  <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione o slug" /></SelectTrigger>
-                  <SelectContent>
-                    {filteredInstances.map((inst: any) => {
-                      const infName = (influencers as any[]).find((i: any) => i.id === inst.influencer_id)?.name || "";
-                      return (
-                        <SelectItem key={inst.id} value={inst.id}>
-                          /{inst.slug} {infName && `— ${infName}`}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+        <div className="space-y-5 py-1">
+          {/* 1. Influencer */}
+          <div className="space-y-1.5">
+            <Step n={1} label="Influencer" />
+            <Select value={form.influencer_id} onValueChange={v => set("influencer_id", v)}>
+              <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="Selecione o influencer" /></SelectTrigger>
+              <SelectContent>
+                {(influencers as any[]).map((i: any) => (
+                  <SelectItem key={i.id} value={i.id}>
+                    {i.name}{i.slug ? ` · ${i.slug}` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            {/* Primary operational link from instance */}
-            {selectedInstance && hasInstanceLink && (
-              <div className="flex items-start gap-2 bg-primary/10 border border-primary/20 rounded-md px-3 py-2">
-                <CheckCircle2 size={14} className="text-primary mt-0.5 shrink-0" />
-                <div className="space-y-1 flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-primary">Link em uso na LP</p>
-                  <code className="block text-[11px] font-mono text-foreground break-all">{instanceAffiliateLink}</code>
-                  <p className="text-[10px] text-muted-foreground">Este é o link principal da operação. O tracking será feito sobre ele.</p>
+          {/* 2. Landing page / slug */}
+          <div className="space-y-1.5">
+            <Step n={2} label="Landing page / slug" />
+            <Select value={form.landing_page_instance_id} onValueChange={handleInstance} disabled={!form.influencer_id}>
+              <SelectTrigger className="h-10 text-sm">
+                <SelectValue placeholder={form.influencer_id ? "Selecione o slug" : "Escolha um influencer primeiro"} />
+              </SelectTrigger>
+              <SelectContent>
+                {influencerInstances.map((inst: any) => {
+                  const lpName = landingPages.find((l: any) => l.id === inst.landing_page_id)?.name || "LP";
+                  return (
+                    <SelectItem key={inst.id} value={inst.id}>/{inst.slug} — {lpName}</SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 3. Platform account */}
+          <div className="space-y-1.5">
+            <Step n={3} label="Conta na plataforma" />
+            <Select value={form.platform_account_id} onValueChange={v => set("platform_account_id", v)}>
+              <SelectTrigger className="h-10 text-sm"><SelectValue placeholder="PlayBet, SuperBet, 1win…" /></SelectTrigger>
+              <SelectContent>
+                {accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.nome_conta}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {platformName && <p className="text-[10px] text-primary/80">Plataforma: {platformName}</p>}
+          </div>
+
+          {/* 4. Affiliate link + subid (appears once platform chosen) */}
+          {form.platform_account_id && (
+            <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
+              <Step n={4} label="Link de afiliado + slug" />
+              <div className="grid grid-cols-[1fr_140px] gap-2">
+                <Input
+                  className="h-9 text-xs font-mono"
+                  value={form.base_url}
+                  onChange={e => set("base_url", e.target.value)}
+                  placeholder="Cole o link bruto da plataforma"
+                />
+                <Input
+                  className="h-9 text-xs font-mono"
+                  value={subid}
+                  onChange={e => setSubid(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ""))}
+                  placeholder="slug"
+                />
+              </div>
+              {finalUrl && form.base_url && (
+                <div className="flex items-start gap-1.5 text-[10px] text-foreground">
+                  <CheckCircle2 size={11} className="text-primary mt-0.5 shrink-0" />
+                  <code className="font-mono break-all text-muted-foreground">{finalUrl}</code>
                 </div>
-              </div>
-            )}
-            {selectedInstance && !hasInstanceLink && (
-              <div className="flex items-start gap-1.5 text-[10px] text-amber-600 bg-amber-500/10 rounded px-2 py-1.5">
-                <AlertTriangle size={10} className="mt-0.5 shrink-0" />
-                <span>Esta instância não possui link de afiliado cadastrado. Preencha o link bruto abaixo manualmente.</span>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
 
-          {/* Platform Account + Influencer */}
+          {/* 5. Campaign (optional) + Role */}
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs font-medium">Conta da Plataforma *</Label>
-              <Select value={form.platform_account_id} onValueChange={v => set("platform_account_id", v)}>
-                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Ex: 1win Principal" /></SelectTrigger>
-                <SelectContent>
-                  {accounts.map(a => <SelectItem key={a.id} value={a.id}>{a.nome_conta}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <HelperText>Casa/plataforma onde o link será usado</HelperText>
-              {platformName && <p className="text-[10px] text-primary font-medium mt-0.5">Plataforma: {platformName}</p>}
-            </div>
-            <div>
-              <Label className="text-xs font-medium">Influencer / Parceiro *</Label>
-              <Select value={form.influencer_id} onValueChange={v => set("influencer_id", v)}>
-                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                <SelectContent>
-                  {(influencers as any[]).map((i: any) => <SelectItem key={i.id} value={i.id}>{i.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <HelperText>Pessoa vinculada a esse rastreio</HelperText>
-            </div>
-          </div>
-
-          {/* Tracking Role + Campaign */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs font-medium">Papel do vínculo</Label>
-              <Select value={form.tracking_role} onValueChange={v => set("tracking_role", v)}>
-                <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {TRACKING_ROLES.map(r => (
-                    <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <HelperText>{selectedRole?.desc}</HelperText>
-            </div>
-            <div>
-              <Label className="text-xs font-medium">Campanha</Label>
+            <div className="space-y-1.5">
+              <Step n={5} label="Campanha (opcional)" />
               <Select value={form.campanha_id} onValueChange={v => set("campanha_id", v)}>
-                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Opcional" /></SelectTrigger>
+                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="—" /></SelectTrigger>
                 <SelectContent>
                   {(campanhas as any[]).map((c: any) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
-          </div>
-
-          {/* URLs — primary is from instance, base_url is secondary/technical */}
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <Label className="text-xs font-medium">
-                {hasInstanceLink ? "Link bruto da plataforma (técnico)" : "Link operacional *"}
-              </Label>
-              {hasInstanceLink && (
-                <Badge variant="secondary" className="text-[9px] h-4">referência</Badge>
-              )}
-            </div>
-            <Input
-              className="h-9 text-xs font-mono"
-              value={form.base_url}
-              onChange={e => set("base_url", e.target.value)}
-              placeholder="https://1wxxxx.com/casino/list?open=register&p=xxxx"
-            />
-            <HelperText>
-              {hasInstanceLink
-                ? "Link bruto/original da plataforma. Quando a LP já tem link em uso, este campo é apenas referência técnica."
-                : "URL original de afiliado. Será usada como link principal se não houver instância com link."}
-            </HelperText>
-          </div>
-
-          {hasDivergence && (
-            <Alert className="py-2 border-primary/30 bg-primary/5">
-              <Info className="h-3.5 w-3.5 text-primary" />
-              <AlertDescription className="text-xs text-foreground">
-                A LP já possui um link em uso (<span className="font-mono text-[10px]">/{selectedInstance?.slug}</span>).
-                O link bruto abaixo está diferente, mas <strong>o link da LP é o principal</strong>.
-                O campo bruto serve apenas como referência técnica da plataforma.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs font-medium">Link final rastreado</Label>
-              <Input className="h-9 text-xs font-mono bg-muted/50" value={form.final_url} onChange={e => set("final_url", e.target.value)} placeholder="Automático ou manual" />
-              <HelperText>URL final com tracking. Se vazio, será gerado a partir do link principal.</HelperText>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs font-medium">Link curto operacional</Label>
-              <Input className="h-9 text-xs font-mono" value={form.short_url} onChange={e => set("short_url", e.target.value)} placeholder="https://bit.ly/xxx" />
-              <HelperText>Link encurtado para bio, stories, etc.</HelperText>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs font-medium">Parâmetro do Click ID</Label>
-              <Select value={form.click_id_param_name} onValueChange={v => set("click_id_param_name", v)}>
+            <div className="space-y-1.5">
+              <Step n={6} label="Papel" />
+              <Select value={form.tracking_role} onValueChange={v => set("tracking_role", v)}>
                 <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {["sub1", "sub2", "sub3", "clickid", "click_id", "aff_sub"].map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                  {TRACKING_ROLES.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <HelperText>Parâmetro que identifica o clique na URL (normalmente sub1)</HelperText>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs font-medium">Observações operacionais</Label>
-              <Input className="h-9 text-xs" value={form.notes} onChange={e => set("notes", e.target.value)} placeholder="Ex: link para stories março" />
             </div>
           </div>
 
-          {missingFields.length > 0 && (
-            <Alert variant="destructive" className="py-2">
-              <AlertTriangle className="h-3.5 w-3.5" />
-              <AlertDescription className="text-xs">
-                Link incompleto para operação real. Falta: {missingFields.join(", ")}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {form.tracking_role === "socio" && (
-            <div className="text-[10px] bg-primary/10 text-primary rounded px-2 py-1.5">
-              ℹ️ Este vínculo é de <strong>sócio(a)</strong>. O tracking funcionará normalmente, mas NÃO gerará débito/comissão de influenciador na regra financeira.
-            </div>
-          )}
-
-          <Button onClick={() => onSave(form)}>
-            {form.id ? "Salvar Alterações" : "Criar Tracking Link"}
+          <Button onClick={handleSave} disabled={!canSave} className="w-full h-10">
+            {form.id ? "Salvar alterações" : "Criar link"}
+            <ArrowRight size={14} className="ml-2" />
           </Button>
         </div>
       </DialogContent>
