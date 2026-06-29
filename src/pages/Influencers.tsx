@@ -148,6 +148,7 @@ export default function Influencers() {
       instagram: inf.instagram || "",
       followers: inf.followers,
       commission_percent: inf.commission_percent,
+      career_level: inf.career_level || 1,
       affiliate_link: inf.affiliate_link || "",
       notes: inf.notes || "",
       is_active: inf.is_active ?? true,
