@@ -477,18 +477,20 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
             </div>
           )}
 
-          {/* Public LP share link — what the influencer actually sends */}
-          {publicLpUrl && (
+          {/* Share link — LP URL (Com LP) or affiliate URL direto (Sem LP) */}
+          {finalUrl && (
             <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-1.5">
               <div className="flex items-center gap-2">
                 <CheckCircle2 size={12} className="text-emerald-500" />
                 <span className="text-[10px] uppercase tracking-wider font-semibold text-emerald-500">
-                  Link para divulgar (passa pela landing page)
+                  Link para divulgar {useLp ? "(passa pela landing page)" : "(direto para o afiliado)"}
                 </span>
               </div>
-              <code className="block font-mono text-xs break-all text-foreground">{publicLpUrl}</code>
+              <code className="block font-mono text-xs break-all text-foreground">{finalUrl}</code>
               <p className="text-[9px] text-muted-foreground">
-                Visitante → LP → clica no CTA → redireciona para o afiliado com <code>{form.click_id_param_name}</code> de atribuição.
+                {useLp
+                  ? <>Visitante → LP → clica no CTA → redireciona para o afiliado com <code>{form.click_id_param_name}</code> de atribuição.</>
+                  : <>Visitante vai direto para o afiliado, já com <code>{form.click_id_param_name}</code> de atribuição.</>}
               </p>
             </div>
           )}
