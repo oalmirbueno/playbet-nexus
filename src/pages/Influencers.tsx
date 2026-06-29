@@ -459,7 +459,38 @@ export default function Influencers() {
                   ))}
                 </select>
               </div>
-              <div><label className="text-xs font-medium text-muted-foreground">% Comissão</label><input type="number" className="input-field mt-1" value={editingInf?.commission_percent ?? 15} onChange={(e) => setEditingInf((p) => p ? { ...p, commission_percent: Number(e.target.value) } : p)} /></div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Nível de carreira</label>
+                <select
+                  className="select-field mt-1 w-full"
+                  value={editingInf?.career_level ?? 1}
+                  onChange={(e) => {
+                    const lvl = Number(e.target.value);
+                    setEditingInf((p) => p ? { ...p, career_level: lvl, commission_percent: suggestPercentForLevel("creator", lvl) } : p);
+                  }}
+                >
+                  {CREATOR_LEVELS.map((l) => (
+                    <option key={l.level} value={l.level}>
+                      {l.level} · {l.label} ({formatLevelRange(l)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">% Comissão (sobre receita validada)</label>
+              <input
+                type="number"
+                step="0.5"
+                className="input-field mt-1"
+                value={editingInf?.commission_percent ?? 10}
+                onChange={(e) => setEditingInf((p) => p ? { ...p, commission_percent: Number(e.target.value) } : p)}
+              />
+              {editingInf && !isPercentValidForLevel("creator", editingInf.career_level, editingInf.commission_percent || 0) && (
+                <p className="text-[10px] text-warning mt-1">
+                  Fora da faixa oficial do nível {editingInf.career_level} ({formatLevelRange(getLevel("creator", editingInf.career_level)!)}). Salva mesmo assim, mas revise.
+                </p>
+              )}
             </div>
             <div><label className="text-xs font-medium text-muted-foreground">Link de afiliado (padrão)</label><input className="input-field mt-1 font-mono text-xs" value={editingInf?.affiliate_link || ""} onChange={(e) => setEditingInf((p) => p ? { ...p, affiliate_link: e.target.value } : p)} placeholder="https://1wxxx.com/…"/></div>
             <div><label className="text-xs font-medium text-muted-foreground">Observações</label><textarea className="input-field mt-1 min-h-[60px]" value={editingInf?.notes || ""} onChange={(e) => setEditingInf((p) => p ? { ...p, notes: e.target.value } : p)} /></div>
