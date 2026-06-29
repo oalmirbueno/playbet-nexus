@@ -97,11 +97,22 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   const selectedAccount = useMemo(() => accounts.find((a: any) => a.id === accountId), [accounts, accountId]);
   const selectedLP = useMemo(() => (landingPages as any[]).find((l: any) => l.id === landingPageId), [landingPages, landingPageId]);
 
-  // Resolve / preview the LP instance for (influencer × LP). If none exists, we'll auto-create on save.
+  // Resolve / preview the LP instance for (influencer × LP × affiliate_link).
+  // Each distinct affiliate URL gets its OWN instance so the LP CTA points to
+  // the right house — never overwrite a sibling instance's affiliate_link.
   const resolvedInstance = useMemo(() => {
     if (!landingPageId || !influencerId) return null;
-    return lpInstances.find((i: any) => i.landing_page_id === landingPageId && i.influencer_id === influencerId) || null;
-  }, [lpInstances, landingPageId, influencerId]);
+    const raw = rawLink.trim();
+    if (!raw) return null;
+    return (
+      lpInstances.find(
+        (i: any) =>
+          i.landing_page_id === landingPageId &&
+          i.influencer_id === influencerId &&
+          (i.affiliate_link || "").trim() === raw,
+      ) || null
+    );
+  }, [lpInstances, landingPageId, influencerId, rawLink]);
 
   // The link the influencer shares:
   //  · With LP → public LP URL (visitors hit the LP, click CTA, then get the affiliate)
@@ -161,12 +172,11 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
           toast({ title: "Erro ao vincular LP", description: e?.message || "Tente novamente.", variant: "destructive" });
           return;
         }
-      } else if (landingPageId && instanceId && resolvedInstance && resolvedInstance.affiliate_link !== rawLink.trim()) {
-        // Keep the LP CTA in sync with the new affiliate link
-        try {
-          await landingPageInstanceService.update(instanceId, { affiliate_link: rawLink.trim() } as any);
-        } catch {/* non-blocking */}
       }
+      // NOTE: never mutate an existing instance's affiliate_link here — sibling
+      // tracking links may share the same (influencer × LP) but point to a
+      // different house. Distinct affiliate URLs always get distinct instances.
+
 
       const useLp = !!landingPageId;
 
