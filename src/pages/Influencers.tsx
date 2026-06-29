@@ -12,6 +12,7 @@ import { toast } from "@/hooks/use-toast";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ExportDropdown from "@/components/ExportDropdown";
 import QuickLinkDialog from "@/components/QuickLinkDialog";
+import { CREATOR_LEVELS, MANAGER_LEVELS, getLevel, suggestPercentForLevel, isPercentValidForLevel, formatLevelRange } from "@/config/careerLevels";
 
 const UNGROUPED = "Sem time";
 
