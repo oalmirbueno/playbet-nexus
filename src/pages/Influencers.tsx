@@ -409,6 +409,17 @@ export default function Influencers() {
                       </div>
                     </div>
 
+                    {(() => {
+                      const lvl = getLevel("manager", (m as any).career_level || 1);
+                      return lvl ? (
+                        <div className="flex items-center justify-between gap-2 px-2 py-1.5 rounded bg-secondary/40 text-[10px]">
+                          <span className="text-muted-foreground">Nível</span>
+                          <span className="font-medium">{lvl.level} · {lvl.label}</span>
+                          <span className="font-mono">{(m as any).commission_percent ?? 0}% <span className="text-muted-foreground">({formatLevelRange(lvl)})</span></span>
+                        </div>
+                      ) : null;
+                    })()}
+
                     <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t border-border">
                       <div>
                         <p className="text-base font-bold">{teamInfs.length}</p>
