@@ -172,12 +172,11 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
           toast({ title: "Erro ao vincular LP", description: e?.message || "Tente novamente.", variant: "destructive" });
           return;
         }
-      } else if (landingPageId && instanceId && resolvedInstance && resolvedInstance.affiliate_link !== rawLink.trim()) {
-        // Keep the LP CTA in sync with the new affiliate link
-        try {
-          await landingPageInstanceService.update(instanceId, { affiliate_link: rawLink.trim() } as any);
-        } catch {/* non-blocking */}
       }
+      // NOTE: never mutate an existing instance's affiliate_link here — sibling
+      // tracking links may share the same (influencer × LP) but point to a
+      // different house. Distinct affiliate URLs always get distinct instances.
+
 
       const useLp = !!landingPageId;
 
