@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import PostbackEventBlocks from "./PostbackEventBlocks";
 import type { TrackingLinkRow } from "@/services/trackingService";
+import { buildPublicLpUrl, buildTrackedAffiliateUrl } from "@/lib/trackingUrl";
 
 const ROLE_LABELS: Record<string, { label: string; color: string }> = {
   influencer: { label: "Influencer", color: "bg-primary/15 text-primary" },
