@@ -26,6 +26,7 @@ import CampanhaDetalhe from "./pages/CampanhaDetalhe";
 import LinksAfiliados from "./pages/LinksAfiliados";
 import LandingPagesPage from "./pages/LandingPagesPage";
 import LPInstances from "./pages/LPInstances";
+import LpOpportunities from "./pages/LpOpportunities";
 import LPPerformance from "./pages/LPPerformance";
 import LPTemplates from "./pages/LPTemplates";
 import LinkEngine from "./pages/LinkEngine";
@@ -91,6 +92,7 @@ function ProtectedRoutes() {
         <Route path="/links" element={<LinksAfiliados />} />
         <Route path="/landing-pages" element={<LandingPagesPage />} />
         <Route path="/lp-instances" element={<LPInstances />} />
+        <Route path="/lp-opportunities" element={<LpOpportunities />} />
         <Route path="/lp-performance" element={<LPPerformance />} />
         <Route path="/lp-templates" element={<LPTemplates />} />
         <Route path="/link-engine" element={<LinkEngine />} />
