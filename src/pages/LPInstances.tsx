@@ -593,6 +593,14 @@ export default function LPInstances() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Quick affiliate link generator pre-filled with this LP + influencer */}
+      <QuickLinkDialog
+        open={!!quickLinkFor}
+        onOpenChange={(v) => { if (!v) setQuickLinkFor(null); }}
+        defaultInfluencerId={quickLinkFor?.influencer_id || ""}
+        defaultLandingPageId={quickLinkFor?.landing_page_id || ""}
+      />
     </div>
   );
 }
