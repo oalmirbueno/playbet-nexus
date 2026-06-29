@@ -94,7 +94,7 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
   );
   const shareUrl = publicLpUrl || trackedAffiliateUrl;
 
-  const buildFinalUrl = () => shareUrl || link.final_url || "";
+  
 
   const missingFields: string[] = [];
   if (!link.platform_account_id) missingFields.push("Conta");
