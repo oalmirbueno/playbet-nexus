@@ -115,11 +115,20 @@ export default function LpOpportunities() {
   const { data: trackingLinks = [] } = useTrackingLinks();
 
   const [open, setOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormState>(empty);
   const [filterCategory, setFilterCategory] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterLp, setFilterLp] = useState<string>("all");
+
+  const todaysHighlights = useMemo(() => {
+    return (rows || [])
+      .filter((r: LpOpportunityRow) => r.is_active)
+      .sort((a: LpOpportunityRow, b: LpOpportunityRow) => (b.sort_order || 0) - (a.sort_order || 0))
+      .slice(0, 3)
+      .map((r: LpOpportunityRow) => r.id);
+  }, [rows]);
 
   const filtered = useMemo(() => {
     return (rows || []).filter((r: LpOpportunityRow) => {
