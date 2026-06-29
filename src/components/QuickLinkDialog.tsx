@@ -97,11 +97,22 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   const selectedAccount = useMemo(() => accounts.find((a: any) => a.id === accountId), [accounts, accountId]);
   const selectedLP = useMemo(() => (landingPages as any[]).find((l: any) => l.id === landingPageId), [landingPages, landingPageId]);
 
-  // Resolve / preview the LP instance for (influencer × LP). If none exists, we'll auto-create on save.
+  // Resolve / preview the LP instance for (influencer × LP × affiliate_link).
+  // Each distinct affiliate URL gets its OWN instance so the LP CTA points to
+  // the right house — never overwrite a sibling instance's affiliate_link.
   const resolvedInstance = useMemo(() => {
     if (!landingPageId || !influencerId) return null;
-    return lpInstances.find((i: any) => i.landing_page_id === landingPageId && i.influencer_id === influencerId) || null;
-  }, [lpInstances, landingPageId, influencerId]);
+    const raw = rawLink.trim();
+    if (!raw) return null;
+    return (
+      lpInstances.find(
+        (i: any) =>
+          i.landing_page_id === landingPageId &&
+          i.influencer_id === influencerId &&
+          (i.affiliate_link || "").trim() === raw,
+      ) || null
+    );
+  }, [lpInstances, landingPageId, influencerId, rawLink]);
 
   // The link the influencer shares:
   //  · With LP → public LP URL (visitors hit the LP, click CTA, then get the affiliate)
