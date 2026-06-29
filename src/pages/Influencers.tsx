@@ -12,6 +12,7 @@ import { toast } from "@/hooks/use-toast";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ExportDropdown from "@/components/ExportDropdown";
 import QuickLinkDialog from "@/components/QuickLinkDialog";
+import { CREATOR_LEVELS, MANAGER_LEVELS, getLevel, suggestPercentForLevel, isPercentValidForLevel, formatLevelRange } from "@/config/careerLevels";
 
 const UNGROUPED = "Sem time";
 
@@ -22,6 +23,7 @@ type InfEdit = {
   instagram: string;
   followers: number | null;
   commission_percent: number | null;
+  career_level: number;
   affiliate_link: string;
   notes: string;
   is_active: boolean;
@@ -36,19 +38,21 @@ type MgrEdit = {
   team_name: string;
   team_color: string;
   monthly_goal: number | null;
+  commission_percent: number | null;
+  career_level: number;
   notes: string;
   is_active: boolean;
 };
 
 const emptyInf: InfEdit = {
   name: "", slug: "", instagram: "", followers: null,
-  commission_percent: 15, affiliate_link: "", notes: "", is_active: true,
+  commission_percent: 10, career_level: 1, affiliate_link: "", notes: "", is_active: true,
   manager_id: null, team_label: null,
 };
 
 const emptyMgr: MgrEdit = {
   name: "", slug: "", team_name: "", team_color: "#3B82F6",
-  monthly_goal: null, notes: "", is_active: true,
+  monthly_goal: null, commission_percent: 3, career_level: 1, notes: "", is_active: true,
 };
 
 const TEAM_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#14B8A6", "#F97316"];
@@ -144,6 +148,7 @@ export default function Influencers() {
       instagram: inf.instagram || "",
       followers: inf.followers,
       commission_percent: inf.commission_percent,
+      career_level: inf.career_level || 1,
       affiliate_link: inf.affiliate_link || "",
       notes: inf.notes || "",
       is_active: inf.is_active ?? true,
@@ -166,6 +171,7 @@ export default function Influencers() {
       instagram: editingInf.instagram || null,
       followers: editingInf.followers,
       commission_percent: editingInf.commission_percent,
+      career_level: editingInf.career_level,
       affiliate_link: editingInf.affiliate_link || null,
       notes: editingInf.notes || null,
       is_active: editingInf.is_active,
@@ -181,10 +187,13 @@ export default function Influencers() {
   };
 
   const openCreateMgr = () => { setEditingMgr({ ...emptyMgr }); setMgrModalOpen(true); };
-  const openEditMgr = (m: ManagerRow) => {
+  const openEditMgr = (m: any) => {
     setEditingMgr({
       id: m.id, name: m.name, slug: m.slug, team_name: m.team_name,
-      team_color: m.team_color, monthly_goal: m.monthly_goal, notes: m.notes || "",
+      team_color: m.team_color, monthly_goal: m.monthly_goal,
+      commission_percent: m.commission_percent ?? 3,
+      career_level: m.career_level || 1,
+      notes: m.notes || "",
       is_active: m.is_active,
     });
     setMgrModalOpen(true);
@@ -195,12 +204,14 @@ export default function Influencers() {
       toast({ title: "Erro", description: "Nome, slug e nome do time são obrigatórios.", variant: "destructive" });
       return;
     }
-    const payload = {
+    const payload: any = {
       name: editingMgr.name,
       slug: editingMgr.slug,
       team_name: editingMgr.team_name,
       team_color: editingMgr.team_color,
       monthly_goal: editingMgr.monthly_goal,
+      commission_percent: editingMgr.commission_percent,
+      career_level: editingMgr.career_level,
       notes: editingMgr.notes || null,
       is_active: editingMgr.is_active,
     };
@@ -306,7 +317,7 @@ export default function Influencers() {
                     <div className="overflow-x-auto invisible-scroll">
                       <table className="data-table">
                         <thead>
-                          <tr><th>Nome</th><th>Instagram</th><th>Seguidores</th><th>%</th><th>Slug</th><th>Link</th><th>Status</th><th className="text-right">Ações</th></tr>
+                          <tr><th>Nome</th><th>Instagram</th><th>Seguidores</th><th>Nível</th><th>%</th><th>Slug</th><th>Link</th><th>Status</th><th className="text-right">Ações</th></tr>
                         </thead>
                         <tbody>
                           {grp.rows.map((inf: any) => (
@@ -321,6 +332,12 @@ export default function Influencers() {
                               </td>
                               <td className="text-accent text-xs">{inf.instagram || "—"}</td>
                               <td className="text-xs">{(inf.followers || 0).toLocaleString()}</td>
+                              <td className="text-xs">
+                                {(() => {
+                                  const l = getLevel("creator", inf.career_level || 1);
+                                  return l ? <span className="badge-neutral text-[10px]">{l.level} · {l.label}</span> : "—";
+                                })()}
+                              </td>
                               <td className="text-xs">{inf.commission_percent || 0}%</td>
                               <td className="font-mono text-xs text-accent">{inf.slug}</td>
                               <td className="text-xs">{inf.affiliate_link ? <span className="text-success">✓</span> : <span className="text-muted-foreground">—</span>}</td>
@@ -392,6 +409,17 @@ export default function Influencers() {
                       </div>
                     </div>
 
+                    {(() => {
+                      const lvl = getLevel("manager", (m as any).career_level || 1);
+                      return lvl ? (
+                        <div className="flex items-center justify-between gap-2 px-2 py-1.5 rounded bg-secondary/40 text-[10px]">
+                          <span className="text-muted-foreground">Nível</span>
+                          <span className="font-medium">{lvl.level} · {lvl.label}</span>
+                          <span className="font-mono">{(m as any).commission_percent ?? 0}% <span className="text-muted-foreground">({formatLevelRange(lvl)})</span></span>
+                        </div>
+                      ) : null;
+                    })()}
+
                     <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t border-border">
                       <div>
                         <p className="text-base font-bold">{teamInfs.length}</p>
@@ -448,7 +476,38 @@ export default function Influencers() {
                   ))}
                 </select>
               </div>
-              <div><label className="text-xs font-medium text-muted-foreground">% Comissão</label><input type="number" className="input-field mt-1" value={editingInf?.commission_percent ?? 15} onChange={(e) => setEditingInf((p) => p ? { ...p, commission_percent: Number(e.target.value) } : p)} /></div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Nível de carreira</label>
+                <select
+                  className="select-field mt-1 w-full"
+                  value={editingInf?.career_level ?? 1}
+                  onChange={(e) => {
+                    const lvl = Number(e.target.value);
+                    setEditingInf((p) => p ? { ...p, career_level: lvl, commission_percent: suggestPercentForLevel("creator", lvl) } : p);
+                  }}
+                >
+                  {CREATOR_LEVELS.map((l) => (
+                    <option key={l.level} value={l.level}>
+                      {l.level} · {l.label} ({formatLevelRange(l)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">% Comissão (sobre receita validada)</label>
+              <input
+                type="number"
+                step="0.5"
+                className="input-field mt-1"
+                value={editingInf?.commission_percent ?? 10}
+                onChange={(e) => setEditingInf((p) => p ? { ...p, commission_percent: Number(e.target.value) } : p)}
+              />
+              {editingInf && !isPercentValidForLevel("creator", editingInf.career_level, editingInf.commission_percent || 0) && (
+                <p className="text-[10px] text-warning mt-1">
+                  Fora da faixa oficial do nível {editingInf.career_level} ({formatLevelRange(getLevel("creator", editingInf.career_level)!)}). Salva mesmo assim, mas revise.
+                </p>
+              )}
             </div>
             <div><label className="text-xs font-medium text-muted-foreground">Link de afiliado (padrão)</label><input className="input-field mt-1 font-mono text-xs" value={editingInf?.affiliate_link || ""} onChange={(e) => setEditingInf((p) => p ? { ...p, affiliate_link: e.target.value } : p)} placeholder="https://1wxxx.com/…"/></div>
             <div><label className="text-xs font-medium text-muted-foreground">Observações</label><textarea className="input-field mt-1 min-h-[60px]" value={editingInf?.notes || ""} onChange={(e) => setEditingInf((p) => p ? { ...p, notes: e.target.value } : p)} /></div>
@@ -496,6 +555,40 @@ export default function Influencers() {
               <div>
                 <label className="text-xs font-medium text-muted-foreground">Meta mensal (R$)</label>
                 <input type="number" className="input-field mt-1" value={editingMgr?.monthly_goal || ""} onChange={(e) => setEditingMgr((p) => p ? { ...p, monthly_goal: e.target.value ? Number(e.target.value) : null } : p)} placeholder="50000" />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Nível de carreira</label>
+                <select
+                  className="select-field mt-1 w-full"
+                  value={editingMgr?.career_level ?? 1}
+                  onChange={(e) => {
+                    const lvl = Number(e.target.value);
+                    setEditingMgr((p) => p ? { ...p, career_level: lvl, commission_percent: suggestPercentForLevel("manager", lvl) } : p);
+                  }}
+                >
+                  {MANAGER_LEVELS.map((l) => (
+                    <option key={l.level} value={l.level}>
+                      {l.level} · {l.label} ({formatLevelRange(l)})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">% Comissão (sobre receita validada)</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  className="input-field mt-1"
+                  value={editingMgr?.commission_percent ?? 3}
+                  onChange={(e) => setEditingMgr((p) => p ? { ...p, commission_percent: Number(e.target.value) } : p)}
+                />
+                {editingMgr && !isPercentValidForLevel("manager", editingMgr.career_level, editingMgr.commission_percent || 0) && (
+                  <p className="text-[10px] text-warning mt-1">
+                    Fora da faixa do nível {editingMgr.career_level} ({formatLevelRange(getLevel("manager", editingMgr.career_level)!)}).
+                  </p>
+                )}
               </div>
               <div className="flex items-end">
                 <label className="flex items-center gap-2 text-xs text-muted-foreground pb-2">

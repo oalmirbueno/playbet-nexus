@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Scale, Edit, Eye, AlertTriangle, ExternalLink, Clock, User, Plus } from "lucide-react";
+import { Scale, Edit, Eye, AlertTriangle, ExternalLink, Clock, User, Plus, Award } from "lucide-react";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { CREATOR_LEVELS, MANAGER_LEVELS, formatLevelRange } from "@/config/careerLevels";
 
 interface Regra {
   id: number; nome: string; categoria: string; valor: string; escopo: string;
@@ -99,25 +100,61 @@ export default function RegrasFinanceiras() {
         </div>
       </div>
 
-      {/* Fluxo de Cálculo */}
+      {/* Fluxo de Cálculo — Modelo Oficial PlayBet v3 */}
       <div className="glass-card p-6">
-        <h3 className="text-sm font-semibold mb-5">Fluxo de Cálculo Padrão</h3>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-sm font-semibold">Fluxo de Distribuição — Modelo Oficial v3</h3>
+          <span className="text-[10px] text-muted-foreground">Sempre sobre receita validada · nunca sobre clique/depósito</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           {[
-            { label: "Receita Bruta", desc: "100%" },
-            { label: "- % Influencer", desc: "Variável (10-22%)" },
-            { label: "- 10% Operacional", desc: "Fixo" },
-            { label: "= Base Societária", desc: "Divisão proporcional" },
+            { label: "Receita Validada", desc: "100%" },
+            { label: "− Influencer", desc: "10–15%" },
+            { label: "− Gerente", desc: "3–8%" },
+            { label: "− Imposto/provisão", desc: "10–20% (15%)" },
+            { label: "− Custos diretos", desc: "Real" },
+            { label: "= Subtotal", desc: "—" },
+            { label: "− Reserva PlayBet", desc: "10% do subtotal" },
+            { label: "÷ 3 Sócios", desc: "Saldo final" },
           ].map((item, i) => (
-            <div key={i} className="flex items-center gap-3">
+            <div key={i} className="flex items-center gap-2">
               {i > 0 && <span className="text-muted-foreground text-xs">→</span>}
-              <div className="glass-card-elevated px-5 py-4 rounded-lg text-center min-w-[160px]">
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{item.label}</p>
-                <p className="font-semibold text-sm">{item.desc}</p>
+              <div className="glass-card-elevated px-3 py-3 rounded-lg text-center min-w-[120px]">
+                <p className="text-[9px] text-muted-foreground uppercase tracking-wider mb-1">{item.label}</p>
+                <p className="font-semibold text-xs">{item.desc}</p>
               </div>
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Faixas oficiais de carreira */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {[
+          { title: "Creators (Influencers)", levels: CREATOR_LEVELS, accent: "border-l-primary" },
+          { title: "Gerentes de Carteira", levels: MANAGER_LEVELS, accent: "border-l-accent" },
+        ].map((trilha) => (
+          <div key={trilha.title} className={`glass-card p-5 border-l-2 ${trilha.accent}`}>
+            <div className="flex items-center gap-2 mb-4">
+              <Award size={14} className="text-muted-foreground" />
+              <h3 className="text-sm font-semibold">{trilha.title}</h3>
+              <span className="text-[10px] text-muted-foreground ml-auto">Faixas oficiais aplicadas no cadastro</span>
+            </div>
+            <div className="space-y-1.5">
+              {trilha.levels.map((l) => (
+                <div key={l.level} className="flex items-center gap-3 px-3 py-2 rounded-md bg-secondary/30">
+                  <span className="text-[10px] font-mono text-muted-foreground w-4">{l.level}</span>
+                  <span className="text-xs font-medium w-24">{l.label}</span>
+                  <span className="text-xs font-mono text-foreground">{formatLevelRange(l)}</span>
+                  <span className="text-[10px] text-muted-foreground flex-1 truncate">{l.description}</span>
+                </div>
+              ))}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-3">
+              Ninguém vira sócio — o topo da trilha é parceiro premium / embaixador / líder de carteira.
+            </p>
+          </div>
+        ))}
       </div>
 
       {/* Alerts */}
