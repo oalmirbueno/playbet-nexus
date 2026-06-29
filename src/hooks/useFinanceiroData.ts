@@ -49,6 +49,7 @@ interface RankingRow {
   commissionPct: number;
   commission: number;
   status?: string | null;
+  category?: "influencer" | "streamer";
 }
 
 export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts) {
