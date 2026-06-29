@@ -402,6 +402,8 @@ export type Database = {
       influencers: {
         Row: {
           affiliate_link: string | null
+          career_label: string | null
+          career_level: number
           commission_percent: number | null
           created_at: string | null
           followers: number | null
@@ -419,6 +421,8 @@ export type Database = {
         }
         Insert: {
           affiliate_link?: string | null
+          career_label?: string | null
+          career_level?: number
           commission_percent?: number | null
           created_at?: string | null
           followers?: number | null
@@ -436,6 +440,8 @@ export type Database = {
         }
         Update: {
           affiliate_link?: string | null
+          career_label?: string | null
+          career_level?: number
           commission_percent?: number | null
           created_at?: string | null
           followers?: number | null
@@ -594,6 +600,9 @@ export type Database = {
       }
       managers: {
         Row: {
+          career_label: string | null
+          career_level: number
+          commission_percent: number | null
           created_at: string
           id: string
           is_active: boolean
@@ -607,6 +616,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          career_label?: string | null
+          career_level?: number
+          commission_percent?: number | null
           created_at?: string
           id?: string
           is_active?: boolean
@@ -620,6 +632,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          career_label?: string | null
+          career_level?: number
+          commission_percent?: number | null
           created_at?: string
           id?: string
           is_active?: boolean
