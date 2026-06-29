@@ -80,42 +80,14 @@ const TRACKING_ROLES = [
 ];
 
 /**
- * Universal sub-id appender — works on any house (EstrelaBet AFP, Vooopi AFP,
- * 1win sub1/2/3, Betano clickid, etc).
- *
- * Standard:
+ * Universal sub-id mapping (see lib/trackingUrl):
  *   sub1 = click_id    → atribuição de receita (AFP em casas BR)
  *   sub2 = influencer  → quem trouxe o jogador
  *   sub3 = campanha    → criativo / campanha de origem
- *
- * The postback edge function (`tracking-postback`) reads exactly these 3
- * fields and closes the loop click → FTD → revenue → comissão.
  */
-function appendParam(url: string, name: string, value: string): string {
-  if (!url || !value) return url;
-  try {
-    const u = new URL(url);
-    u.searchParams.set(name, value);
-    return u.toString();
-  } catch {
-    const sep = url.includes("?") ? "&" : "?";
-    return `${url}${sep}${name}=${encodeURIComponent(value)}`;
-  }
-}
+import { buildPublicLpUrl, buildTrackedAffiliateUrl } from "@/lib/trackingUrl";
 
-export function buildTrackedUrl(
-  baseUrl: string,
-  paramName: string,
-  sub1: string,
-  sub2: string,
-  sub3: string,
-): string {
-  let out = baseUrl;
-  if (sub1) out = appendParam(out, paramName, sub1);
-  if (sub2) out = appendParam(out, "sub2", sub2);
-  if (sub3) out = appendParam(out, "sub3", sub3);
-  return out;
-}
+export const buildTrackedUrl = buildTrackedAffiliateUrl;
 
 function Step({ n, label }: { n: number; label: string }) {
   return (
