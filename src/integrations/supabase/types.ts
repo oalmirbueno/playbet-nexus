@@ -454,6 +454,7 @@ export type Database = {
           affiliate_link: string | null
           career_label: string | null
           career_level: number
+          category: string
           commission_percent: number | null
           created_at: string | null
           followers: number | null
@@ -473,6 +474,7 @@ export type Database = {
           affiliate_link?: string | null
           career_label?: string | null
           career_level?: number
+          category?: string
           commission_percent?: number | null
           created_at?: string | null
           followers?: number | null
@@ -492,6 +494,7 @@ export type Database = {
           affiliate_link?: string | null
           career_label?: string | null
           career_level?: number
+          category?: string
           commission_percent?: number | null
           created_at?: string | null
           followers?: number | null
