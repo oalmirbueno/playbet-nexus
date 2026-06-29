@@ -124,8 +124,8 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
     return m;
   }, [platforms]);
 
-  // RANKING INFLUENCERS
-  const rankingInfluencers = useMemo<RankingRow[]>(() => {
+  // Build base rows from metrics keyed by influencer
+  const baseInfluencerRows = useMemo<RankingRow[]>(() => {
     const buckets = new Map<string, { ftd: number; deposits: number; revenue: number }>();
     for (const m of metricsQuery.data ?? []) {
       const key = (m as any).influencer_id;
@@ -136,30 +136,45 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
       b.revenue += Number((m as any).converted_amount ?? (m as any).revenue ?? 0);
       buckets.set(key, b);
     }
-    const total = Array.from(buckets.values()).reduce((a, b) => a + b.revenue, 0) || 1;
-    return Array.from(buckets.entries())
-      .map(([id, b]) => {
-        const inf = influencerMap.get(id);
-        const pct = Number(inf?.commission_percent ?? 0);
-        return {
-          id,
-          name: inf?.name ?? "(sem cadastro)",
-          subtitle: inf?.team_label ?? null,
-          ftd: b.ftd,
-          deposits: b.deposits,
-          revenue: b.revenue,
-          share: (b.revenue / total) * 100,
-          commissionPct: pct,
-          commission: b.revenue * (pct / 100),
-        };
-      })
-      .sort((a, b) => b.revenue - a.revenue);
+    return Array.from(buckets.entries()).map(([id, b]) => {
+      const inf = influencerMap.get(id);
+      const pct = Number(inf?.commission_percent ?? 0);
+      return {
+        id,
+        name: inf?.name ?? "(sem cadastro)",
+        subtitle: inf?.team_label ?? null,
+        ftd: b.ftd,
+        deposits: b.deposits,
+        revenue: b.revenue,
+        share: 0,
+        commissionPct: pct,
+        commission: b.revenue * (pct / 100),
+        category: (inf?.category ?? "influencer") as "influencer" | "streamer",
+      };
+    });
   }, [metricsQuery.data, influencerMap]);
 
-  // RANKING GERENTES (agregando influencers pelo manager_id)
+  const splitByCategory = (rows: (RankingRow & { category: string })[]) => {
+    const total = rows.reduce((a, b) => a + b.revenue, 0) || 1;
+    return rows
+      .map((r) => ({ ...r, share: (r.revenue / total) * 100 }))
+      .sort((a, b) => b.revenue - a.revenue);
+  };
+
+  const rankingInfluencers = useMemo<RankingRow[]>(
+    () => splitByCategory(baseInfluencerRows.filter((r: any) => r.category !== "streamer")),
+    [baseInfluencerRows],
+  );
+
+  const rankingStreamers = useMemo<RankingRow[]>(
+    () => splitByCategory(baseInfluencerRows.filter((r: any) => r.category === "streamer")),
+    [baseInfluencerRows],
+  );
+
+  // RANKING GERENTES (agregando influencers pelo manager_id — inclui ambas categorias)
   const rankingGerentes = useMemo<RankingRow[]>(() => {
     const buckets = new Map<string, { ftd: number; deposits: number; revenue: number }>();
-    for (const row of rankingInfluencers) {
+    for (const row of baseInfluencerRows) {
       const inf = influencerMap.get(row.id);
       const mgrId = inf?.manager_id;
       if (!mgrId) continue;
@@ -187,7 +202,7 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
         };
       })
       .sort((a, b) => b.revenue - a.revenue);
-  }, [rankingInfluencers, influencerMap, managerMap]);
+  }, [baseInfluencerRows, influencerMap, managerMap]);
 
   return {
     range,
@@ -198,8 +213,10 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
     saquesInPeriod,
     saquesAll: saques ?? [],
     rankingInfluencers,
+    rankingStreamers,
     rankingGerentes,
     platforms: platforms ?? [],
     platformMap,
   };
 }
+
