@@ -30,7 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Pencil, Trash2, Copy, AlertTriangle, Sparkles } from "lucide-react";
+import { Plus, Pencil, Trash2, Copy, AlertTriangle, Sparkles, Wand2, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLpOpportunities } from "@/hooks/useLpOpportunities";
 import {
@@ -40,6 +40,8 @@ import {
 } from "@/hooks/useSupabaseQuery";
 import { useTrackingLinks } from "@/hooks/useTrackingData";
 import type { LpOpportunityRow } from "@/services/lpOpportunityService";
+import { OpportunityWizard } from "@/components/lp/OpportunityWizard";
+import { isSelfLandingLoop } from "@/lib/opportunityDetect";
 
 const CATEGORIES = [
   { value: "sports", label: "Esportes" },
