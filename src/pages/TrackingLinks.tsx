@@ -18,6 +18,7 @@ import { Plus, Pencil, Trash2, Link2, Copy, Check, ExternalLink, AlertTriangle, 
 import { findPresetByName, type PlatformPreset } from "@/config/platformPresets";
 import type { TrackingLinkRow } from "@/services/trackingService";
 import { useToast } from "@/hooks/use-toast";
+import { resolveShareUrl } from "@/lib/trackingUrl";
 
 const ROLE_LABELS: Record<string, string> = {
   influencer: "Influencer",
@@ -110,10 +111,19 @@ export default function TrackingLinks() {
   };
 
   const buildFinalUrl = (l: TrackingLinkRow) => {
-    if (l.final_url) return l.final_url;
-    if (!l.base_url) return l.tracking_code;
-    const sep = l.base_url.includes("?") ? "&" : "?";
-    return `${l.base_url}${sep}${l.click_id_param_name || "sub1"}={click_id}`;
+    const lp = (landingPages as any[]).find((p: any) => p.id === l.landing_page_id);
+    const instance = lpInstances.find((i: any) => i.id === l.landing_page_instance_id);
+    const influencer = (influencers as any[]).find((i: any) => i.id === l.influencer_id);
+    const url = resolveShareUrl({
+      lpDomain: lp?.domain,
+      instanceSlug: instance?.slug,
+      affiliateBaseUrl: l.base_url || "",
+      clickIdParamName: l.click_id_param_name || "sub1",
+      sub1: (influencer as any)?.slug || "",
+      sub2: l.influencer_id || "",
+      sub3: l.campanha_id || "",
+    });
+    return url || l.final_url || l.tracking_code;
   };
 
   const copyToClipboard = (text: string, id: string, type: string) => {

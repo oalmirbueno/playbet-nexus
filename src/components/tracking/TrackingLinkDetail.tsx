@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import PostbackEventBlocks from "./PostbackEventBlocks";
 import type { TrackingLinkRow } from "@/services/trackingService";
+import { buildPublicLpUrl, buildTrackedAffiliateUrl } from "@/lib/trackingUrl";
 
 const ROLE_LABELS: Record<string, { label: string; color: string }> = {
   influencer: { label: "Influencer", color: "bg-primary/15 text-primary" },
@@ -81,13 +82,19 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
 
   const primaryLink = hasInstanceLink ? instanceAffiliateLink : (link.base_url || "");
 
-  const buildFinalUrl = () => {
-    if (link.final_url) return link.final_url;
-    if (!primaryLink) return "";
-    const param = link.click_id_param_name || "sub1";
-    const sep = primaryLink.includes("?") ? "&" : "?";
-    return `${primaryLink}${sep}${param}={${param}}`;
-  };
+  // Public LP URL (the link the influencer actually shares — passes through the LP)
+  // Public LP URL (the link the influencer actually shares — passes through the LP)
+  const publicLpUrl: string = buildPublicLpUrl(lp?.domain, instance?.slug, link.influencer_id || "", link.campanha_id || "");
+  const trackedAffiliateUrl: string = buildTrackedAffiliateUrl(
+    primaryLink,
+    link.click_id_param_name || "sub1",
+    (influencer as any)?.slug || "",
+    link.influencer_id || "",
+    link.campanha_id || "",
+  );
+  const shareUrl = publicLpUrl || trackedAffiliateUrl;
+
+  
 
   const missingFields: string[] = [];
   if (!link.platform_account_id) missingFields.push("Conta");
@@ -132,45 +139,46 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
 
         {/* Copy blocks */}
         <div className="space-y-3">
+          {/* PRIMARY — what the influencer actually shares */}
+          {publicLpUrl ? (
+            <CopyBlock
+              label={`Link para divulgar (passa pela LP /${instance?.slug})`}
+              value={publicLpUrl}
+              primary
+              help="Este é o link que o influencer publica. Visitantes abrem a landing page e só depois são redirecionados para o afiliado."
+            />
+          ) : (
+            <CopyBlock
+              label="Link para divulgar (direto para o afiliado)"
+              value={trackedAffiliateUrl}
+              primary
+              help="Sem LP vinculada — este link aponta direto para o afiliado já com sub1/sub2/sub3."
+            />
+          )}
+
+          {/* Reference blocks */}
+          {publicLpUrl && (
+            <CopyBlock
+              label="Link do afiliado (acionado pelo botão da LP)"
+              value={trackedAffiliateUrl}
+              help="Destino final do botão da landing page. Já carrega sub1/sub2/sub3 para fechar o loop de atribuição."
+              warn={hasDivergence ? "Link bruto difere do link salvo na LP — verifique a instância." : undefined}
+            />
+          )}
+
           <CopyBlock
             label="Código interno de tracking"
             value={link.tracking_code}
             help="Identificador único gerado pelo painel. Usado nos SUBIDs para rastrear conversões."
           />
 
-          {hasInstanceLink && (
+          {link.short_url && (
             <CopyBlock
-              label={`Link em uso na LP (/${instance?.slug})`}
-              value={instanceAffiliateLink}
-              primary
-              help="Este é o link principal em operação. O tracking é feito sobre ele."
+              label="Link curto operacional"
+              value={link.short_url}
+              help="Link encurtado para facilitar compartilhamento (bio, stories, etc)."
             />
           )}
-
-          {link.base_url && (
-            <CopyBlock
-              label={hasInstanceLink ? "Link bruto da plataforma (técnico)" : "Link operacional"}
-              value={link.base_url}
-              primary={!hasInstanceLink}
-              help={hasInstanceLink
-                ? "Referência técnica do link original da plataforma. O link principal é o da LP acima."
-                : "URL principal de afiliado configurada neste tracking."}
-              warn={hasDivergence
-                ? "Diferente do link em uso na LP — mantido apenas como referência técnica."
-                : undefined}
-            />
-          )}
-
-          <CopyBlock
-            label="Link final rastreado"
-            value={buildFinalUrl()}
-            help="URL montada com parâmetro de click ID."
-          />
-          <CopyBlock
-            label="Link curto operacional"
-            value={link.short_url || ""}
-            help="Link encurtado para facilitar compartilhamento (bio, stories, etc)."
-          />
         </div>
 
         {/* Per-event postback blocks */}
