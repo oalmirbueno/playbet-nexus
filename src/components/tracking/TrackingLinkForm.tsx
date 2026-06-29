@@ -37,6 +37,7 @@ export interface FormState {
   click_id_param_name: string;
   tracking_role: string;
   notes: string;
+  use_lp: boolean;
 }
 
 export const emptyForm: FormState = {
@@ -52,9 +53,11 @@ export const emptyForm: FormState = {
   click_id_param_name: "sub1",
   tracking_role: "influencer",
   notes: "",
+  use_lp: true,
 };
 
 export function formFromRow(l: TrackingLinkRow): FormState {
+  const stored = (l as any).use_lp;
   return {
     id: l.id,
     platform_account_id: l.platform_account_id || "",
@@ -69,6 +72,8 @@ export function formFromRow(l: TrackingLinkRow): FormState {
     click_id_param_name: l.click_id_param_name || "sub1",
     tracking_role: (l as any).tracking_role || "influencer",
     notes: l.notes || "",
+    // Prefer the explicit stored mode; fall back to inference for legacy rows.
+    use_lp: typeof stored === "boolean" ? stored : !!(l.landing_page_instance_id || l.landing_page_id),
   };
 }
 
