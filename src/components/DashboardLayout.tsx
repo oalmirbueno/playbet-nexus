@@ -44,10 +44,11 @@ const sections: MenuSection[] = [
   {
     title: "PESSOAS",
     items: [
-      { label: "Influencers", icon: Users, path: "/influencers" },
+      { label: "Pessoas", icon: Users, path: "/influencers" },
       { label: "Sócios", icon: UserCheck, path: "/socios" },
     ],
   },
+
   {
     title: "ATIVOS",
     items: [
