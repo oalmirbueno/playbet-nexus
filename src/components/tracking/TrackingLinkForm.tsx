@@ -4,8 +4,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CheckCircle2, ArrowRight } from "lucide-react";
+import { CheckCircle2, ArrowRight, Loader2, Plus } from "lucide-react";
 import type { TrackingLinkRow } from "@/services/trackingService";
+import { landingPageInstanceService } from "@/services/supabaseService";
+import { toast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Props {
   open: boolean;
@@ -130,25 +133,78 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
 
   const set = (field: keyof FormState, value: string) => setForm(p => ({ ...p, [field]: value }));
 
-  // 1. Influencer chosen → filter LP instances by influencer
-  const influencerInstances = useMemo(
-    () => form.influencer_id ? lpInstances.filter((i: any) => i.influencer_id === form.influencer_id) : lpInstances,
-    [lpInstances, form.influencer_id],
-  );
+  const qc = useQueryClient();
+  const [creatingInstance, setCreatingInstance] = useState(false);
 
-  // 2. Instance auto-fills LP + base_url
-  const handleInstance = (instanceId: string) => {
-    const inst = lpInstances.find((i: any) => i.id === instanceId);
+  // LPs where this influencer already has an instance (resolved + ready)
+  const lpsForInfluencer = useMemo(() => {
+    if (!form.influencer_id) return [] as any[];
+    const lpIds = new Set(
+      lpInstances
+        .filter((i: any) => i.influencer_id === form.influencer_id)
+        .map((i: any) => i.landing_page_id),
+    );
+    return landingPages.filter((lp: any) => lpIds.has(lp.id));
+  }, [lpInstances, landingPages, form.influencer_id]);
+
+  // LPs the influencer doesn't have yet — offered as "create new for"
+  const lpsWithoutInstance = useMemo(() => {
+    if (!form.influencer_id) return [] as any[];
+    const lpIds = new Set(lpsForInfluencer.map((lp: any) => lp.id));
+    return landingPages.filter((lp: any) => !lpIds.has(lp.id));
+  }, [lpsForInfluencer, landingPages, form.influencer_id]);
+
+  // Resolve the instance for (influencer, LP) and autofill base_url
+  const handleLandingPage = (lpId: string) => {
+    const inst = lpInstances.find(
+      (i: any) => i.landing_page_id === lpId && i.influencer_id === form.influencer_id,
+    );
     setForm(p => ({
       ...p,
-      landing_page_instance_id: instanceId,
-      landing_page_id: inst?.landing_page_id || p.landing_page_id,
+      landing_page_id: lpId,
+      landing_page_instance_id: inst?.id || "",
       base_url: inst?.affiliate_link || p.base_url,
     }));
   };
 
+  // Create a new instance for (influencer, LP) when one doesn't exist yet
+  const handleCreateInstanceForLP = async (lpId: string) => {
+    const inf = influencers.find((i: any) => i.id === form.influencer_id);
+    if (!inf) return;
+    const lp = landingPages.find((l: any) => l.id === lpId);
+    const base = (inf.slug || inf.name || "ref").toLowerCase().replace(/[^a-z0-9-]/g, "-");
+    // ensure unique against existing instances of this LP
+    const existing = lpInstances.filter((i: any) => i.landing_page_id === lpId).map((i: any) => i.slug);
+    let slug = base;
+    let n = 2;
+    while (existing.includes(slug)) { slug = `${base}-${n++}`; }
+    setCreatingInstance(true);
+    try {
+      const created: any = await landingPageInstanceService.create({
+        landing_page_id: lpId,
+        influencer_id: form.influencer_id,
+        slug,
+        affiliate_link: "",
+        is_active: true,
+      } as any);
+      await qc.invalidateQueries({ queryKey: ["landing_page_instances"] });
+      setForm(p => ({
+        ...p,
+        landing_page_id: lpId,
+        landing_page_instance_id: created.id,
+        base_url: "",
+      }));
+      toast({ title: "Landing page vinculada", description: `${lp?.name || "LP"} · /${slug}` });
+    } catch (e: any) {
+      toast({ title: "Erro ao vincular LP", description: e.message, variant: "destructive" });
+    } finally {
+      setCreatingInstance(false);
+    }
+  };
+
   const selectedInfluencer = influencers.find((i: any) => i.id === form.influencer_id);
   const selectedInstance = lpInstances.find((i: any) => i.id === form.landing_page_instance_id);
+  const selectedLP = landingPages.find((l: any) => l.id === form.landing_page_id);
   const selectedAccount = accounts.find(a => a.id === form.platform_account_id);
   const platformName = platforms.find((p: any) => p.id === selectedAccount?.platform_id)?.name;
 
@@ -205,22 +261,67 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
             </Select>
           </div>
 
-          {/* 2. Landing page / slug */}
+          {/* 2. Landing page (pick the LP; instance + affiliate link auto-resolve) */}
           <div className="space-y-1.5">
-            <Step n={2} label="Landing page / slug" />
-            <Select value={form.landing_page_instance_id} onValueChange={handleInstance} disabled={!form.influencer_id}>
+            <Step n={2} label="Landing page" />
+            <Select
+              value={form.landing_page_id}
+              onValueChange={handleLandingPage}
+              disabled={!form.influencer_id}
+            >
               <SelectTrigger className="h-10 text-sm">
-                <SelectValue placeholder={form.influencer_id ? "Selecione o slug" : "Escolha um influencer primeiro"} />
+                <SelectValue placeholder={form.influencer_id ? "Escolha a landing page" : "Escolha um influencer primeiro"} />
               </SelectTrigger>
               <SelectContent>
-                {influencerInstances.map((inst: any) => {
-                  const lpName = landingPages.find((l: any) => l.id === inst.landing_page_id)?.name || "LP";
-                  return (
-                    <SelectItem key={inst.id} value={inst.id}>/{inst.slug} — {lpName}</SelectItem>
-                  );
-                })}
+                {lpsForInfluencer.length > 0 && (
+                  <>
+                    <div className="px-2 py-1 text-[9px] uppercase tracking-wider text-muted-foreground">Vinculadas a {selectedInfluencer?.name?.split(" ")[0] || "influencer"}</div>
+                    {lpsForInfluencer.map((lp: any) => {
+                      const inst = lpInstances.find((i: any) => i.landing_page_id === lp.id && i.influencer_id === form.influencer_id);
+                      return (
+                        <SelectItem key={lp.id} value={lp.id}>
+                          {lp.name} <span className="text-muted-foreground">· /{inst?.slug}</span>
+                        </SelectItem>
+                      );
+                    })}
+                  </>
+                )}
               </SelectContent>
             </Select>
+
+            {/* Visual confirmation of resolved affiliate link */}
+            {selectedInstance && (
+              <div className="flex items-center gap-2 text-[10px] text-foreground px-2 py-1.5 rounded bg-primary/5 border border-primary/15">
+                <CheckCircle2 size={11} className="text-primary shrink-0" />
+                <span className="text-muted-foreground">CTA da LP:</span>
+                <code className="font-mono truncate" title={selectedInstance.affiliate_link}>
+                  {selectedInstance.affiliate_link || <em className="not-italic text-muted-foreground">vazio — preencha abaixo</em>}
+                </code>
+              </div>
+            )}
+
+            {/* Inline create instance for LPs not yet linked to this influencer */}
+            {form.influencer_id && lpsWithoutInstance.length > 0 && (
+              <details className="text-[10px] mt-1">
+                <summary className="cursor-pointer text-muted-foreground hover:text-foreground">
+                  + Vincular outra landing page a este influencer
+                </summary>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {lpsWithoutInstance.map((lp: any) => (
+                    <button
+                      key={lp.id}
+                      type="button"
+                      disabled={creatingInstance}
+                      onClick={() => handleCreateInstanceForLP(lp.id)}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded border border-border bg-background hover:bg-secondary text-[10px]"
+                    >
+                      {creatingInstance ? <Loader2 size={10} className="animate-spin" /> : <Plus size={10} />}
+                      {lp.name}
+                    </button>
+                  ))}
+                </div>
+              </details>
+            )}
           </div>
 
           {/* 3. Platform account */}
