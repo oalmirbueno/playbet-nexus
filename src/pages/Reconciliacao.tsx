@@ -184,6 +184,13 @@ export default function Reconciliacao() {
         </Card>
       </div>
 
+      {/* Distribuição automática conforme PLAYBET_MODELO_OFICIAL.md */}
+      <DistributionCard
+        revenueBrl={validatedRevenueBrl}
+        sourceLabel={validatedSource}
+        perPlatform={perPlatformValidated}
+      />
+
       {/* Per-platform breakdown */}
       {byPlatform.map(([pid, group]) => (
         <Card key={pid}>
