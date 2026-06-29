@@ -409,9 +409,11 @@ export type Database = {
           instagram: string | null
           is_active: boolean | null
           is_demo: boolean
+          manager_id: string | null
           name: string
           notes: string | null
           slug: string
+          team_label: string | null
           updated_at: string | null
         }
         Insert: {
@@ -423,9 +425,11 @@ export type Database = {
           instagram?: string | null
           is_active?: boolean | null
           is_demo?: boolean
+          manager_id?: string | null
           name: string
           notes?: string | null
           slug: string
+          team_label?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -437,12 +441,22 @@ export type Database = {
           instagram?: string | null
           is_active?: boolean | null
           is_demo?: boolean
+          manager_id?: string | null
           name?: string
           notes?: string | null
           slug?: string
+          team_label?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "influencers_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       landing_page_instances: {
         Row: {
@@ -567,6 +581,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      managers: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          monthly_goal: number | null
+          name: string
+          notes: string | null
+          slug: string
+          team_color: string
+          team_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          monthly_goal?: number | null
+          name: string
+          notes?: string | null
+          slug: string
+          team_color?: string
+          team_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          monthly_goal?: number | null
+          name?: string
+          notes?: string | null
+          slug?: string
+          team_color?: string
+          team_name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       platform_accounts: {
         Row: {
