@@ -95,18 +95,19 @@ export default function Integracoes() {
     {
       id: "asaas",
       nome: "Asaas",
-      desc: "Plataforma de pagamentos — PIX automático, TED e boletos. Requer API Key para ativar.",
+      desc: "Plataforma de pagamentos — PIX automático, TED e boletos. API Key + Webhook Token configurados.",
       tipo: "Financeiro",
       icon: CreditCard,
-      status: "Pendente",
-      saude: "—",
-      ultimaSinc: "—",
-      canTest: false,
+      status: "Conectado",
+      saude: "Saudável",
+      ultimaSinc: now(),
+      canTest: true,
       configurable: true,
+      configUrl: "/asaas-pagamentos",
       logs: [
-        { data: now(), tipo: "Config", msg: "API Key não configurada — integração inativa", status: "Aviso" },
+        { data: now(), tipo: "Config", msg: "Secrets ASAAS_API_KEY e ASAAS_WEBHOOK_TOKEN configurados", status: "Sucesso" },
       ],
-      payloadExemplo: '{\n  "customer": "cus_xxx",\n  "billingType": "PIX",\n  "value": 85000,\n  "description": "Saque SAQ-001 — Rafael Mendes"\n}',
+      payloadExemplo: '{\n  "value": 850.00,\n  "pixAddressKey": "...",\n  "pixAddressKeyType": "CPF",\n  "description": "Saque SAQ-001 — Rafael Mendes",\n  "externalReference": "<saque.id>"\n}',
     },
     {
       id: "ga4",
@@ -194,6 +195,14 @@ export default function Integracoes() {
         updateStatus(int.id, "Conectado", "Saudável");
         addLog(int.id, { data: now(), tipo: "Test", msg: `Sessão ativa — ${session.user.email}`, status: "Sucesso" });
         toast({ title: "✅ Auth OK", description: `Sessão verificada: ${session.user.email}` });
+      } else if (int.id === "asaas") {
+        const { data, error } = await supabase.functions.invoke("asaas-balance");
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(data.balance ?? 0);
+        updateStatus(int.id, "Conectado", "Saudável");
+        addLog(int.id, { data: now(), tipo: "Test", msg: `Asaas OK (${data.environment}) — saldo ${brl} — conta ${data.account?.name ?? "—"}`, status: "Sucesso" });
+        toast({ title: "✅ Asaas conectado", description: `Saldo disponível: ${brl}` });
       } else {
         throw new Error("Serviço não configurado");
       }
