@@ -188,30 +188,18 @@ Deno.serve(async (req) => {
       };
 
       // Manual upsert because the unique index uses COALESCE(influencer_id, ...)
-      const { data: existing, error: selErr } = await admin
+      let q = admin
         .from("tracking_metrics")
         .select("id")
         .eq("data_ref", b.data_ref)
         .eq("platform_id", b.platform_id)
-        .eq("origem_importacao", "smartico_api_pull")
-        .is("influencer_id", b.influencer_id === null ? true : null as never)
-        .maybeSingle();
-
-      // The .is(...) trick above doesn't work for non-null UUIDs. Re-query when needed.
-      let existingId: string | null = existing?.id ?? null;
-      if (!existing && b.influencer_id !== null) {
-        const { data: ex2, error: e2 } = await admin
-          .from("tracking_metrics")
-          .select("id")
-          .eq("data_ref", b.data_ref)
-          .eq("platform_id", b.platform_id)
-          .eq("influencer_id", b.influencer_id)
-          .eq("origem_importacao", "smartico_api_pull")
-          .maybeSingle();
-        if (e2) { errors.push(e2.message); continue; }
-        existingId = ex2?.id ?? null;
-      }
-      if (selErr && !existingId) { errors.push(selErr.message); continue; }
+        .eq("origem_importacao", "smartico_api_pull");
+      q = b.influencer_id === null
+        ? q.is("influencer_id", null)
+        : q.eq("influencer_id", b.influencer_id);
+      const { data: existing, error: selErr } = await q.maybeSingle();
+      if (selErr) { errors.push(selErr.message); continue; }
+      const existingId: string | null = existing?.id ?? null;
 
       if (existingId) {
         const { error: updErr } = await admin
