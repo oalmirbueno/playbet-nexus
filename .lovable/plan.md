@@ -1,74 +1,75 @@
-# Reorganização: Pessoas (Gerentes/Times/Influencers) + Cadastro unificado de Links
+# Refatoração: Links, Pessoas, Tracking e Reconciliação
 
-Hoje o cadastro está fragmentado: criar influencer em um lugar, vincular link em outro, escolher plataforma em outro. E não existe a camada "Gerente → Time → Influencer" que você descreveu para competição entre equipes.
+## Objetivo
+Tornar o fluxo universal (não focado em 1win), reduzir cliques, organizar hierarquia de pessoas (Squad → Gerente → Influencer → Sócio) e limpar abas redundantes.
 
-Vamos transformar tudo isso em uma esteira de 2 cliques, sem sair de tela.
+## 1. Novo Link Afiliado (TrackingLinkForm)
+Esteira única no diálogo, com **criação inline** quando o item não existe:
+- **Influencer** → select + botão "+ Novo" (cria direto, slug auto)
+- **Landing Page** → select + "+ Nova LP" inline (nome, url base)
+- **Plataforma** → select + "+ Nova" inline
+- **Link de afiliado bruto** → cola URL → detecta plataforma automaticamente (match por domínio em `platforms.domains`)
+- **SubID/slug** → preenchido com slug do influencer (editável)
+- **Campanha** (opcional) → select
+- **Papel do vínculo** → select compacto
+- Preview do link final com `sub1` universal (qualquer casa)
+- Botão "Salvar e copiar"
 
-## 1. Estrutura "Pessoas" com 2 abas
+## 2. Detecção universal de plataforma
+- Coluna `domains text[]` em `platforms` (ex.: `['1win.com','1wxxxx.com']`)
+- Função `detectPlatformByUrl(url, platforms)` no client casa hostname → platform_id
+- Remove qualquer lógica hardcoded 1win do form
 
-A página `/influencers` vira **Pessoas** com duas abas no topo:
-
-- **Gerentes** — nível acima. Cada gerente é dono de um Time (ex.: Time A, Time B, Time Sete).
-- **Influencers** — nível operacional. Cada influencer pertence a 1 gerente / 1 time.
-
-Listagem de Influencers passa a ser **agrupada por Time** (com cabeçalho do gerente, contador, soma de cliques/receita do time). Visual de "esteira": cada time é uma linha de produção, fácil de comparar para ranking/competição.
-
-Filtros: por gerente, por time, por status, busca livre.
-
-## 2. Fluxo único "Adicionar Link de Afiliado"
-
-Um único botão **+ Novo Link** abre um modal de 1 tela com 4 campos, sem navegação:
-
-```text
-[ Influencer  ▾ ]   ← combo com busca; "+ Criar novo" inline se não existir
-[ Plataforma ▾ ]    ← PlayBet, SuperBet, 1win, etc. (lista vinda de platforms)
-[ Link afiliado ]   ← cola o link bruto da plataforma
-[ SubID / apelido ] ← opcional, auto-gerado pelo slug do influencer
-                                              [ Cancelar ]  [ Salvar ]
+## 3. Sidebar reorganizado
+Estrutura final:
 ```
+VISÃO GERAL → Dashboard
+LINKS       → Links Afiliados
+TRACKING    → Eventos, Reconciliação, Postbacks
+ATIVOS      → Plataformas, Landing Pages (Templates+Instances unificado), Distribuição LP
+PESSOAS     → Squads, Gerentes, Influencers, Sócios  (tudo em sub-itens, sem duplicar)
+MARKETING   → Campanhas, Conteúdo
+FINANCEIRO  → Reconciliação, Comissões, Saques, Asaas
+CONFIG
+```
+- **Remove "Jogos"** do menu principal (mantém tabela, oculta UI)
+- "Pessoas" vira hub com 4 abas internas em uma única página
 
-Ao salvar:
-- valida URL, extrai params (utm_source/medium/campaign/subid se já vierem),
-- vincula `influencer_id` + `platform_id` + `manager_id` (herdado do influencer),
-- registra em `tracking_links` e dispara o mapeamento de postback existente — atualização automática de cliques/receita continua igual.
+## 4. Página Pessoas (refator)
+- Abas: **Squads | Gerentes | Influencers | Sócios**
+- Aba Squads: card por squad mostra Gerente responsável + lista de influencers vinculados
+- Aba Gerentes: ao clicar, abre painel lateral com seleção de squad + lista de influencers do squad
+- Aba Influencers: já existe, mantém com filtro por squad/gerente
+- Aba Sócios: migra de `Socios.tsx` pra cá
 
-Esse mesmo botão fica visível em **Pessoas → Influencer (linha)**, em **Links Afiliados** e no header do **Tracking Hub**. Sempre o mesmo modal, sempre 2 cliques.
+### DB
+- Tabela `squads` (id, name, color, manager_id, monthly_goal)
+- `influencers.squad_id` (FK)
+- `managers.squad_id` opcional (gerente pode liderar 1 squad)
 
-## 3. Banco de dados (mudanças mínimas)
+## 5. Tracking & Reconciliação
+- **Eventos**: tabela limpa com filtros (data, plataforma, evento canônico, status), badge de status, sem colunas técnicas redundantes
+- **Reconciliação financeira**: dashboard com 3 colunas → Esperado (postback) | Confirmado (plataforma) | Asaas (recebido). Diferenças destacadas. Botão "Marcar reconciliado".
+- Universal: nada hardcoded por casa; tudo via `platform_event_mappings`
 
-Nova tabela e duas colunas — nada destrutivo:
+## 6. Distribuição de LP
+- Reorganiza `LPInstances` em board: LP-mãe → instâncias por influencer → link gerado. Botão único "Distribuir para influencer" que abre o mesmo diálogo de Novo Link já com LP preenchida.
 
-- `managers` — nome, slug, time_nome, cor (para badge do time), meta_mensal, ativo.
-- `influencers.manager_id` (FK opcional → managers).
-- `influencers.team_label` (cache do nome do time para listagem rápida; alimentado pelo gerente).
+---
 
-RLS: autenticados leem/gravam, service_role total. Sem `anon`.
+## Resumo técnico
+- 1 migration: `squads`, FKs em `influencers`/`managers`, `platforms.domains text[]`
+- Reescrita: `TrackingLinkForm.tsx`, `QuickLinkDialog.tsx`, `Influencers.tsx` (vira `Pessoas.tsx`), `DashboardLayout.tsx`, `TrackingEvents.tsx`, `Reconciliacao.tsx`, `LPInstances.tsx`
+- Novos componentes: `InlineCreateCombobox`, `PlatformDetector`, `SquadBoard`
+- Remove rota/menu Jogos (mantém dados)
 
-Influencers sem gerente continuam aparecendo num grupo "Sem time".
+## Ordem de execução
+1. Migration (squads + domains)
+2. Sidebar + rotas
+3. Página Pessoas unificada
+4. Form Novo Link com criação inline + detecção universal
+5. Tracking Eventos enxuto
+6. Reconciliação 3 colunas
+7. Distribuição LP
 
-## 4. Onde isso aparece
-
-- `src/pages/Influencers.tsx` → vira `Pessoas.tsx` com `<Tabs>` (Gerentes / Influencers). Influencers agrupados por time.
-- `src/pages/Gerentes.tsx` *(novo)* — CRUD de gerentes + cor do time + meta.
-- `src/components/QuickLinkDialog.tsx` *(novo)* — o modal único de cadastro de link.
-- `src/components/DashboardLayout.tsx` → item "Influencers" passa a se chamar **Pessoas**; submenu interno com Gerentes/Influencers fica nas abas, não na sidebar (mantém minimalismo).
-- `src/pages/LinksAfiliados.tsx` → botão "Novo Link" passa a abrir o `QuickLinkDialog` (substitui o modal antigo, 2 cliques).
-
-## 5. Ordem de execução
-
-1. Migration: tabela `managers` + colunas em `influencers` + GRANTs + RLS.
-2. Service + hook `useManagers` (espelho de `useInfluencers`).
-3. `QuickLinkDialog` (componente reutilizável).
-4. Refatorar `Influencers.tsx` → `Pessoas.tsx` com tabs + agrupamento por time.
-5. Criar `Gerentes` (lista + CRUD simples).
-6. Trocar botão de novo link em `LinksAfiliados.tsx` e adicionar no Tracking Hub.
-7. Atualizar sidebar (rótulo "Pessoas") e rotas.
-
-## Detalhe técnico
-
-- Manter `useEntityCrud` para `managers` (mesmo padrão dos outros).
-- `team_label` é sincronizado quando o gerente edita o nome do time (trigger ou no service — preferir service para evitar regressão no trigger global).
-- Postback continua chave por `subid` / `click_id` — nada muda no `tracking-postback`.
-- Competição/ranking entre times é só uma view derivada de `tracking_metrics` agrupada por `manager_id` via join — fica para um próximo passo, mas a estrutura já habilita.
-
-Aprova que eu já abro a migration e sigo nessa ordem?
+Quer que eu siga nessa ordem ou priorize algum bloco?

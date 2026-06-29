@@ -13,6 +13,7 @@ import Saques from "./pages/Saques";
 import Comissoes from "./pages/Comissoes";
 import AsaasPagamentos from "./pages/AsaasPagamentos";
 import Influencers from "./pages/Influencers";
+import Pessoas from "./pages/Pessoas";
 import InfluencerDetalhe from "./pages/InfluencerDetalhe";
 import Socios from "./pages/Socios";
 import SocioDetalhe from "./pages/SocioDetalhe";
@@ -78,6 +79,7 @@ function ProtectedRoutes() {
         <Route path="/comissoes" element={<Comissoes />} />
         <Route path="/asaas" element={<AsaasPagamentos />} />
         <Route path="/influencers" element={<Influencers />} />
+        <Route path="/pessoas" element={<Pessoas />} />
         <Route path="/influencers/:id" element={<InfluencerDetalhe />} />
         <Route path="/socios" element={<Socios />} />
         <Route path="/socios/:id" element={<SocioDetalhe />} />

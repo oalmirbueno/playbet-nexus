@@ -40,7 +40,6 @@ const sections: MenuSection[] = [
   {
     title: "ATIVOS",
     items: [
-      { label: "Jogos", icon: Gamepad2, path: "/jogos" },
       { label: "Plataformas", icon: Monitor, path: "/plataformas" },
       { label: "Landing Pages", icon: FileText, path: "/landing-pages" },
       { label: "Distribuição LPs", icon: GitBranch, path: "/lp-instances" },
@@ -49,8 +48,7 @@ const sections: MenuSection[] = [
   {
     title: "PESSOAS",
     items: [
-      { label: "Pessoas", icon: Users, path: "/influencers" },
-      { label: "Sócios", icon: UserCheck, path: "/socios" },
+      { label: "Pessoas", icon: Users, path: "/pessoas" },
     ],
   },
   {

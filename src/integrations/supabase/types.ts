@@ -413,6 +413,7 @@ export type Database = {
           name: string
           notes: string | null
           slug: string
+          squad_id: string | null
           team_label: string | null
           updated_at: string | null
         }
@@ -429,6 +430,7 @@ export type Database = {
           name: string
           notes?: string | null
           slug: string
+          squad_id?: string | null
           team_label?: string | null
           updated_at?: string | null
         }
@@ -445,6 +447,7 @@ export type Database = {
           name?: string
           notes?: string | null
           slug?: string
+          squad_id?: string | null
           team_label?: string | null
           updated_at?: string | null
         }
@@ -454,6 +457,13 @@ export type Database = {
             columns: ["manager_id"]
             isOneToOne: false
             referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "influencers_squad_id_fkey"
+            columns: ["squad_id"]
+            isOneToOne: false
+            referencedRelation: "squads"
             referencedColumns: ["id"]
           },
         ]
@@ -591,6 +601,7 @@ export type Database = {
           name: string
           notes: string | null
           slug: string
+          squad_id: string | null
           team_color: string
           team_name: string
           updated_at: string
@@ -603,6 +614,7 @@ export type Database = {
           name: string
           notes?: string | null
           slug: string
+          squad_id?: string | null
           team_color?: string
           team_name: string
           updated_at?: string
@@ -615,11 +627,20 @@ export type Database = {
           name?: string
           notes?: string | null
           slug?: string
+          squad_id?: string | null
           team_color?: string
           team_name?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "managers_squad_id_fkey"
+            columns: ["squad_id"]
+            isOneToOne: false
+            referencedRelation: "squads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       platform_accounts: {
         Row: {
@@ -807,6 +828,7 @@ export type Database = {
           cpa: number | null
           created_at: string | null
           currency: string | null
+          domains: string[]
           hybrid: boolean | null
           id: string
           is_active: boolean | null
@@ -823,6 +845,7 @@ export type Database = {
           cpa?: number | null
           created_at?: string | null
           currency?: string | null
+          domains?: string[]
           hybrid?: boolean | null
           id?: string
           is_active?: boolean | null
@@ -839,6 +862,7 @@ export type Database = {
           cpa?: number | null
           created_at?: string | null
           currency?: string | null
+          domains?: string[]
           hybrid?: boolean | null
           id?: string
           is_active?: boolean | null
@@ -967,6 +991,50 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      squads: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          is_active: boolean
+          manager_id: string | null
+          monthly_goal: number | null
+          name: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          manager_id?: string | null
+          monthly_goal?: number | null
+          name: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          manager_id?: string | null
+          monthly_goal?: number | null
+          name?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "squads_manager_fk"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       templates: {
         Row: {
