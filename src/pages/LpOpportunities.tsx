@@ -216,6 +216,14 @@ export default function LpOpportunities() {
       });
       return;
     }
+    if (isSelfLandingLoop(form.destination_url)) {
+      toast({
+        title: "Loop bloqueado",
+        description: "O destino não pode apontar para oportunidades.playbet.app.br. Use o deep link da casa.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (form.is_active && !form.landing_page_id) {
       toast({
         title: "Atenção",
