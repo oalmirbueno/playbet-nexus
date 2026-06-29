@@ -40,6 +40,7 @@ export default function TrackingLinks() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<FormState>(emptyForm);
+  const [quickOpen, setQuickOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [copiedType, setCopiedType] = useState("");
   const [search, setSearch] = useState("");
