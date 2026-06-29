@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Scale, Edit, Eye, AlertTriangle, ExternalLink, Clock, User, Plus } from "lucide-react";
+import { Scale, Edit, Eye, AlertTriangle, ExternalLink, Clock, User, Plus, Award } from "lucide-react";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { CREATOR_LEVELS, MANAGER_LEVELS, formatLevelRange } from "@/config/careerLevels";
 
 interface Regra {
   id: number; nome: string; categoria: string; valor: string; escopo: string;
