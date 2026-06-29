@@ -28,10 +28,11 @@ export interface LpOpportunityRow {
 
 export const lpOpportunityService = {
   async getAll(): Promise<LpOpportunityRow[]> {
+    // Maior prioridade primeiro (destaque=20, alta=10, normal=0) e mais recentes no topo.
     const { data, error } = await db
       .from("lp_opportunities")
       .select("*")
-      .order("sort_order", { ascending: true })
+      .order("sort_order", { ascending: false })
       .order("created_at", { ascending: false });
     if (error) throw error;
     return (data || []) as LpOpportunityRow[];
