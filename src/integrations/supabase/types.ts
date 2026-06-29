@@ -906,6 +906,7 @@ export type Database = {
           payout_method: string | null
           revshare: number | null
           slug: string | null
+          smartico_brand_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -924,6 +925,7 @@ export type Database = {
           payout_method?: string | null
           revshare?: number | null
           slug?: string | null
+          smartico_brand_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -942,6 +944,7 @@ export type Database = {
           payout_method?: string | null
           revshare?: number | null
           slug?: string | null
+          smartico_brand_id?: string | null
           updated_at?: string | null
         }
         Relationships: []
