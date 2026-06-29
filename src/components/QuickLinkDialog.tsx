@@ -76,13 +76,19 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
     return detectPlatformByUrl(rawLink, platforms as any[]);
   }, [rawLink, platforms]);
 
-  // Auto-select the first account belonging to the detected platform
+  // Sync detected platform → platformId, then auto-pick first matching account
   useEffect(() => {
-    if (detectedPlatform && !accountId) {
+    if (detectedPlatform) {
+      setPlatformId(detectedPlatform.id);
       const match = accounts.find((a: any) => a.platform_id === detectedPlatform.id);
       if (match) setAccountId(match.id);
     }
   }, [detectedPlatform]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const platformAccounts = useMemo(
+    () => platformId ? accounts.filter((a: any) => a.platform_id === platformId) : accounts,
+    [accounts, platformId],
+  );
 
   const selectedAccount = useMemo(() => accounts.find((a: any) => a.id === accountId), [accounts, accountId]);
   const finalUrl = useMemo(() => appendSubId(rawLink, "sub1", subid), [rawLink, subid]);
