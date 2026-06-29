@@ -386,7 +386,8 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                 </div>
               </details>
             )}
-          </div>
+            </div>
+          )}
 
           {/* 3. Platform account */}
           <div className="space-y-1.5">
