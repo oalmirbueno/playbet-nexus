@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Edit, Copy, Eye, XCircle, CheckCircle, Search, ExternalLink, AlertTriangle, Link2, Radio } from "lucide-react";
+import { Plus, Edit, Copy, Eye, XCircle, CheckCircle, Search, ExternalLink, AlertTriangle, Link2, Radio, Zap } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useLandingPageInstances, useLandingPages, useInfluencers, usePlatforms } from "@/hooks/useSupabaseQuery";
@@ -8,6 +8,7 @@ import type { LandingPageInstanceRow } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ExportDropdown from "@/components/ExportDropdown";
+import QuickLinkDialog from "@/components/QuickLinkDialog";
 import { findPresetByName, buildPostbackUrlForEvent } from "@/config/platformPresets";
 
 type EditingState = {
@@ -42,6 +43,7 @@ export default function LPInstances() {
   const [editing, setEditing] = useState<EditingState | null>(null);
   const [previewOpen, setPreviewOpen] = useState<LandingPageInstanceRow | null>(null);
   const [postbackOpen, setPostbackOpen] = useState<LandingPageInstanceRow | null>(null);
+  const [quickLinkFor, setQuickLinkFor] = useState<LandingPageInstanceRow | null>(null);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [filterLP, setFilterLP] = useState("Todos");
@@ -52,23 +54,16 @@ export default function LPInstances() {
   const getInfluencerName = (id: string) => influencers.find(i => i.id === id)?.name || "—";
   const getPlatformName = (id: string) => platforms.find(p => p.id === id)?.name || "";
 
-  // Generate postback URLs for an instance — always prefer the 1win preset
+  // Universal postback URL builder — uses the LP's linked platform preset, no hardcoded fallback.
   const getPostbackUrls = (inst: LandingPageInstanceRow) => {
     const platformId = getLPPlatformId(inst.landing_page_id);
-    let preset = findPresetByName("1win");
-
-    if (platformId) {
-      const linkedPreset = findPresetByName(getPlatformName(platformId));
-      if (linkedPreset?.slug === "1win") {
-        preset = linkedPreset;
-      }
-    }
-
+    if (!platformId) return null;
+    const preset = findPresetByName(getPlatformName(platformId));
     if (!preset) return null;
 
     return preset.events.map(evt => ({
       event: evt,
-      url: buildPostbackUrlForEvent(preset!, evt, undefined, inst.influencer_id, undefined, false),
+      url: buildPostbackUrlForEvent(preset, evt, undefined, inst.influencer_id, undefined, false),
     }));
   };
 
@@ -306,6 +301,7 @@ export default function LPInstances() {
                   <td><span className={inst.is_active ? "badge-success" : "badge-danger"}>{inst.is_active ? "Ativo" : "Inativo"}</span></td>
                   <td>
                     <div className="flex gap-0.5">
+                      <button onClick={() => setQuickLinkFor(inst)} className="p-1 rounded hover:bg-primary/15 text-primary transition-colors" title="Gerar link de afiliado"><Zap size={12} /></button>
                       <button onClick={() => setPreviewOpen(inst)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Preview"><Eye size={12} /></button>
                       <button onClick={() => setPostbackOpen(inst)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-accent transition-colors" title="Postback URLs"><Radio size={12} /></button>
                       <button onClick={() => openEdit(inst)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Editar"><Edit size={12} /></button>
