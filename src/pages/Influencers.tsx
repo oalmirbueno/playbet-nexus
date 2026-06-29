@@ -23,6 +23,7 @@ type InfEdit = {
   instagram: string;
   followers: number | null;
   commission_percent: number | null;
+  career_level: number;
   affiliate_link: string;
   notes: string;
   is_active: boolean;
@@ -37,19 +38,21 @@ type MgrEdit = {
   team_name: string;
   team_color: string;
   monthly_goal: number | null;
+  commission_percent: number | null;
+  career_level: number;
   notes: string;
   is_active: boolean;
 };
 
 const emptyInf: InfEdit = {
   name: "", slug: "", instagram: "", followers: null,
-  commission_percent: 15, affiliate_link: "", notes: "", is_active: true,
+  commission_percent: 10, career_level: 1, affiliate_link: "", notes: "", is_active: true,
   manager_id: null, team_label: null,
 };
 
 const emptyMgr: MgrEdit = {
   name: "", slug: "", team_name: "", team_color: "#3B82F6",
-  monthly_goal: null, notes: "", is_active: true,
+  monthly_goal: null, commission_percent: 3, career_level: 1, notes: "", is_active: true,
 };
 
 const TEAM_COLORS = ["#3B82F6", "#10B981", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899", "#14B8A6", "#F97316"];
