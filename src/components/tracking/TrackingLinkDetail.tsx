@@ -83,7 +83,7 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
   const primaryLink = hasInstanceLink ? instanceAffiliateLink : (link.base_url || "");
 
   // Public LP URL (the link the influencer actually shares — passes through the LP)
-  const { buildPublicLpUrl, buildTrackedAffiliateUrl } = require("@/lib/trackingUrl");
+  // Public LP URL (the link the influencer actually shares — passes through the LP)
   const publicLpUrl: string = buildPublicLpUrl(lp?.domain, instance?.slug, link.influencer_id || "", link.campanha_id || "");
   const trackedAffiliateUrl: string = buildTrackedAffiliateUrl(
     primaryLink,
