@@ -4,11 +4,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useInfluencers, useLandingPages, usePlatforms, useCampanhas } from "@/hooks/useSupabaseQuery";
+import { useInfluencers, useLandingPages, useLandingPageInstances, usePlatforms, useCampanhas } from "@/hooks/useSupabaseQuery";
 import { usePlatformAccounts, useTrackingLinks } from "@/hooks/useTrackingData";
+import { landingPageInstanceService } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
 import { Link2, CheckCircle2, Plus, Sparkles, Copy } from "lucide-react";
 import { detectPlatformByUrl, appendSubId } from "@/lib/platformDetect";
+import { buildPublicLpUrl, buildTrackedAffiliateUrl } from "@/lib/trackingUrl";
 
 interface Props {
   open: boolean;
@@ -29,6 +31,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   const { data: platforms, create: createPlatform } = usePlatforms();
   const { data: accounts, create: createAccount } = usePlatformAccounts();
   const { data: campanhas } = useCampanhas();
+  const { data: lpInstances } = useLandingPageInstances();
   const { create: createLink } = useTrackingLinks();
 
   const [influencerId, setInfluencerId] = useState(defaultInfluencerId);
@@ -92,7 +95,25 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   );
 
   const selectedAccount = useMemo(() => accounts.find((a: any) => a.id === accountId), [accounts, accountId]);
-  const finalUrl = useMemo(() => appendSubId(rawLink, "sub1", subid), [rawLink, subid]);
+  const selectedLP = useMemo(() => (landingPages as any[]).find((l: any) => l.id === landingPageId), [landingPages, landingPageId]);
+
+  // Resolve / preview the LP instance for (influencer × LP). If none exists, we'll auto-create on save.
+  const resolvedInstance = useMemo(() => {
+    if (!landingPageId || !influencerId) return null;
+    return lpInstances.find((i: any) => i.landing_page_id === landingPageId && i.influencer_id === influencerId) || null;
+  }, [lpInstances, landingPageId, influencerId]);
+
+  // The link the influencer shares:
+  //  · With LP → public LP URL (visitors hit the LP, click CTA, then get the affiliate)
+  //  · Without LP → affiliate URL directly with sub1/sub2/sub3
+  const finalUrl = useMemo(() => {
+    if (landingPageId && selectedLP?.domain) {
+      const slug = resolvedInstance?.slug || (selectedInfluencer as any)?.slug || "";
+      const lp = buildPublicLpUrl(selectedLP.domain, slug, influencerId || "", campanhaId || "");
+      if (lp) return lp;
+    }
+    return buildTrackedAffiliateUrl(rawLink, "sub1", subid, influencerId || "", campanhaId || "");
+  }, [landingPageId, selectedLP, resolvedInstance, selectedInfluencer, influencerId, campanhaId, rawLink, subid]);
 
   const trackingCode = useMemo(() => subid || `link-${Date.now().toString(36)}`, [subid]);
 
@@ -107,7 +128,6 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       setSaving(true);
       let finalAccountId = accountId;
 
-      // If user pasted a link from a detected platform but has no account, create one on-the-fly
       if (!finalAccountId && detectedPlatform) {
         const created: any = await createAccount({
           platform_id: detectedPlatform.id,
@@ -117,23 +137,60 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
         finalAccountId = created?.id;
       }
 
+      // ── Resolve or create the LP instance so the link routes through the LP ──
+      let instanceId: string | null = resolvedInstance?.id || null;
+      if (landingPageId && !instanceId) {
+        const baseSlug = ((selectedInfluencer as any)?.slug || (selectedInfluencer as any)?.name || "ref")
+          .toLowerCase().replace(/[^a-z0-9-]/g, "-");
+        const taken = new Set(
+          lpInstances.filter((i: any) => i.landing_page_id === landingPageId).map((i: any) => i.slug),
+        );
+        let slug = baseSlug;
+        let n = 2;
+        while (taken.has(slug)) { slug = `${baseSlug}-${n++}`; }
+        try {
+          const created: any = await landingPageInstanceService.create({
+            landing_page_id: landingPageId,
+            influencer_id: influencerId,
+            slug,
+            affiliate_link: rawLink.trim(),
+            is_active: true,
+          } as any);
+          instanceId = created?.id || null;
+        } catch (e: any) {
+          toast({ title: "Erro ao vincular LP", description: e?.message || "Tente novamente.", variant: "destructive" });
+          return;
+        }
+      } else if (landingPageId && instanceId && resolvedInstance && resolvedInstance.affiliate_link !== rawLink.trim()) {
+        // Keep the LP CTA in sync with the new affiliate link
+        try {
+          await landingPageInstanceService.update(instanceId, { affiliate_link: rawLink.trim() } as any);
+        } catch {/* non-blocking */}
+      }
+
+      const useLp = !!landingPageId;
+
       await createLink({
         influencer_id: influencerId,
         platform_account_id: finalAccountId,
         landing_page_id: landingPageId || null,
+        landing_page_instance_id: instanceId,
         campanha_id: campanhaId || null,
         base_url: rawLink.trim(),
         final_url: finalUrl,
         tracking_code: trackingCode,
         click_id_param_name: "sub1",
+        use_lp: useLp,
         commission_percent: (selectedInfluencer as any)?.commission_percent ?? null,
         status: "active",
       } as any);
 
-      // Copy to clipboard
       try { await navigator.clipboard.writeText(finalUrl); } catch {}
 
-      toast({ title: "Link cadastrado", description: "Link copiado. Postback ativo." });
+      toast({
+        title: "Link cadastrado",
+        description: useLp ? "Link da landing page copiado." : "Link copiado. Postback ativo.",
+      });
       onOpenChange(false);
     } catch (err: any) {
       toast({ title: "Erro ao salvar", description: err?.message || "Tente novamente.", variant: "destructive" });
