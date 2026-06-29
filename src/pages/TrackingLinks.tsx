@@ -18,6 +18,7 @@ import { Plus, Pencil, Trash2, Link2, Copy, Check, ExternalLink, AlertTriangle, 
 import { findPresetByName, type PlatformPreset } from "@/config/platformPresets";
 import type { TrackingLinkRow } from "@/services/trackingService";
 import { useToast } from "@/hooks/use-toast";
+import { resolveShareUrl } from "@/lib/trackingUrl";
 
 const ROLE_LABELS: Record<string, string> = {
   influencer: "Influencer",
