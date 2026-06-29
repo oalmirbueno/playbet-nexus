@@ -89,6 +89,15 @@ export default function Reconciliacao() {
   const withdrawCurrency = consolidated.latestWithdrawableCurrency || "BRL";
   const withdrawBrl = consolidated.latestWithdrawableBrl ?? 0;
 
+  // Receita validada preferencial: saldo retirável (BRL); fallback para soma de revenue.
+  const validatedRevenueBrl = withdrawBrl > 0 ? withdrawBrl : (consolidated.revenueBrl ?? 0);
+  const validatedSource = withdrawBrl > 0 ? "saldo retirável da plataforma" : "soma de eventos revenue";
+  const perPlatformValidated = byPlatform.map(([pid, g]) => ({
+    id: pid,
+    name: g.name,
+    brl: (g.withdrawable?.brl ?? 0) > 0 ? (g.withdrawable!.brl) : g.revenueSum.brl,
+  })).filter((p) => p.brl > 0);
+
   return (
     <div className="space-y-6 animate-fade-in">
       <Breadcrumbs items={[{ label: "Tracking Hub", path: "/tracking" }, { label: "Reconciliação" }]} />
