@@ -651,6 +651,107 @@ export type Database = {
           },
         ]
       }
+      lp_opportunities: {
+        Row: {
+          badge: string | null
+          campanha_id: string | null
+          category: string
+          created_at: string
+          cta_label: string
+          destination_url: string
+          ends_at: string | null
+          event_name: string | null
+          id: string
+          is_active: boolean
+          landing_page_id: string | null
+          market_name: string | null
+          metadata: Json
+          odd_label: string | null
+          platform_id: string | null
+          sort_order: number
+          starts_at: string | null
+          subtitle: string | null
+          title: string
+          tracking_link_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          badge?: string | null
+          campanha_id?: string | null
+          category?: string
+          created_at?: string
+          cta_label?: string
+          destination_url: string
+          ends_at?: string | null
+          event_name?: string | null
+          id?: string
+          is_active?: boolean
+          landing_page_id?: string | null
+          market_name?: string | null
+          metadata?: Json
+          odd_label?: string | null
+          platform_id?: string | null
+          sort_order?: number
+          starts_at?: string | null
+          subtitle?: string | null
+          title: string
+          tracking_link_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          badge?: string | null
+          campanha_id?: string | null
+          category?: string
+          created_at?: string
+          cta_label?: string
+          destination_url?: string
+          ends_at?: string | null
+          event_name?: string | null
+          id?: string
+          is_active?: boolean
+          landing_page_id?: string | null
+          market_name?: string | null
+          metadata?: Json
+          odd_label?: string | null
+          platform_id?: string | null
+          sort_order?: number
+          starts_at?: string | null
+          subtitle?: string | null
+          title?: string
+          tracking_link_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lp_opportunities_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lp_opportunities_landing_page_id_fkey"
+            columns: ["landing_page_id"]
+            isOneToOne: false
+            referencedRelation: "landing_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lp_opportunities_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "platforms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lp_opportunities_tracking_link_id_fkey"
+            columns: ["tracking_link_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       managers: {
         Row: {
           career_label: string | null

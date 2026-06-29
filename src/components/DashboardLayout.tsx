@@ -8,7 +8,7 @@ import {
   Users, UserCheck, ShieldCheck, Gamepad2, Monitor, Link2, FileText, GitBranch,
   Calendar, PenTool, Lightbulb, Megaphone, BarChart3, ArrowRightLeft, Tag, ClipboardList,
   Settings, Scale, Lock, Plug, Menu, X, Bell, Search, ChevronDown, PanelLeftClose, PanelLeft,
-  Command, LogOut, Code2,
+  Command, LogOut, Code2, Sparkles,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 
@@ -29,6 +29,7 @@ const sections: MenuSection[] = [
     items: [
       { label: "Links", icon: Link2, path: "/tracking/links" },
       { label: "Landing Pages", icon: FileText, path: "/landing-pages" },
+      { label: "Oportunidades LP", icon: Sparkles, path: "/lp-opportunities" },
       { label: "Plataformas", icon: Monitor, path: "/plataformas" },
     ],
   },
