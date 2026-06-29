@@ -332,6 +332,12 @@ export default function Influencers() {
                               </td>
                               <td className="text-accent text-xs">{inf.instagram || "—"}</td>
                               <td className="text-xs">{(inf.followers || 0).toLocaleString()}</td>
+                              <td className="text-xs">
+                                {(() => {
+                                  const l = getLevel("creator", inf.career_level || 1);
+                                  return l ? <span className="badge-neutral text-[10px]">{l.level} · {l.label}</span> : "—";
+                                })()}
+                              </td>
                               <td className="text-xs">{inf.commission_percent || 0}%</td>
                               <td className="font-mono text-xs text-accent">{inf.slug}</td>
                               <td className="text-xs">{inf.affiliate_link ? <span className="text-success">✓</span> : <span className="text-muted-foreground">—</span>}</td>
