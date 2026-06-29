@@ -319,7 +319,8 @@ export default function LpOpportunities() {
               icon={Sparkles}
               title="Nenhuma oportunidade ainda"
               description="Crie a primeira oportunidade para alimentar a landing pública."
-              action={<Button onClick={openNew}><Plus className="w-4 h-4" /> Nova oportunidade</Button>}
+              actionLabel="Nova oportunidade"
+              onAction={openNew}
             />
           ) : (
             <Table>
