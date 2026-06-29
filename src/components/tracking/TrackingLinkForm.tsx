@@ -105,13 +105,14 @@ function Step({ n, label }: { n: number; label: string }) {
 
 export default function TrackingLinkForm({ open, onOpenChange, editing: initialEditing, onSave, accounts, influencers, campanhas, landingPages, lpInstances, platforms }: Props) {
   const [form, setForm] = useState<FormState>(initialEditing);
-  const [useLp, setUseLp] = useState<boolean>(true);
 
   useEffect(() => {
     setForm(initialEditing);
-    // When editing an existing link, infer mode from whether it has an instance.
-    setUseLp(initialEditing.id ? !!initialEditing.landing_page_instance_id : true);
   }, [initialEditing]);
+
+  // Single source of truth for the mode — persisted on the row as use_lp.
+  const useLp = form.use_lp;
+  const setUseLp = (v: boolean) => setForm(p => ({ ...p, use_lp: v }));
 
   const set = (field: keyof FormState, value: string) => setForm(p => ({ ...p, [field]: value }));
 
