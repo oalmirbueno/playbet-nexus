@@ -241,18 +241,30 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
               )}
             </div>
 
-            {/* 4. PLATFORM ACCOUNT (auto-filled, editable) */}
-            {(!detectedPlatform || !selectedAccount) && (
+            {/* 4. PLATFORM (auto-detected) + ACCOUNT */}
+            <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label className="text-xs font-medium">4. Conta na plataforma</Label>
-                <Select value={accountId} onValueChange={setAccountId}>
-                  <SelectTrigger className="h-9 text-xs mt-1"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <div className="flex items-center justify-between mb-1">
+                  <Label className="text-xs font-medium">4. Plataforma</Label>
+                  {detectedPlatform && <span className="text-[9px] text-emerald-500 flex items-center gap-0.5"><Sparkles size={9} /> auto</span>}
+                </div>
+                <Select value={platformId} onValueChange={(v) => { setPlatformId(v); setAccountId(""); }}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Casa de aposta" /></SelectTrigger>
                   <SelectContent>
-                    {accounts.map((a: any) => <SelectItem key={a.id} value={a.id}>{a.nome_conta}</SelectItem>)}
+                    {(platforms as any[]).map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
-            )}
+              <div>
+                <Label className="text-xs font-medium mb-1 block">5. Conta</Label>
+                <Select value={accountId} onValueChange={setAccountId} disabled={!platformId && platformAccounts.length === 0}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue placeholder={platformId ? "Selecione" : "Escolha plataforma"} /></SelectTrigger>
+                  <SelectContent>
+                    {platformAccounts.map((a: any) => <SelectItem key={a.id} value={a.id}>{a.nome_conta}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
             {/* 5. SUBID */}
             <div>
