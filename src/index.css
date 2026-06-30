@@ -84,7 +84,7 @@
     @apply border border-border rounded-lg;
   }
   .glass-card-hover {
-    @apply glass-card hover:border-[hsl(220,72%,26%,0.2)] hover:shadow-sm transition-all duration-300;
+    @apply glass-card hover:border-primary/25 hover:shadow-[var(--shadow-glow)] transition-all duration-300;
   }
 
   /* ── Stat Cards ────────────────────────────── */
