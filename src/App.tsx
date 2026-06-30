@@ -54,6 +54,9 @@ import TrackingLinks from "./pages/TrackingLinks";
 import Reconciliacao from "./pages/Reconciliacao";
 import NotFound from "./pages/NotFound";
 import InfluencerLanding from "./pages/InfluencerLanding";
+import ComercialPipeline from "./pages/ComercialPipeline";
+import ComercialSquads from "./pages/ComercialSquads";
+import ComercialQualificacao from "./pages/ComercialQualificacao";
 
 const queryClient = new QueryClient();
 
