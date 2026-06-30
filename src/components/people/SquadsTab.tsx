@@ -103,7 +103,7 @@ export default function SquadsTab() {
                 </div>
                 <div className="rounded-md bg-secondary/40 px-2.5 py-1.5">
                   <p className="text-[9px] uppercase text-muted-foreground tracking-wide flex items-center gap-1"><Target size={9} /> Meta</p>
-                  <p className="text-sm font-semibold">{s.monthly_goal ? `R$ ${Number(s.monthly_goal).toLocaleString("pt-BR")}` : "—"}</p>
+                  <p className="text-sm font-semibold">{s.monthly_goal ? `R$ ${Number(s.monthly_goal).toLocaleString("pt-BR")}` : "-"}</p>
                 </div>
               </div>
 

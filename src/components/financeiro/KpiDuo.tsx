@@ -27,7 +27,7 @@ export default function KpiDuo({ caixa, revenue, diff, periodLabel, isLoading }:
             Caixa realizado · Asaas
           </div>
           <div className="mt-2 text-3xl font-semibold tabular-nums">
-            {isLoading ? <span className="text-muted-foreground">—</span> : fmt(caixa)}
+            {isLoading ? <span className="text-muted-foreground">-</span> : fmt(caixa)}
           </div>
           <p className="text-xs text-muted-foreground mt-1">
             Saques pagos e confirmados em {periodLabel.toLowerCase()}
@@ -43,7 +43,7 @@ export default function KpiDuo({ caixa, revenue, diff, periodLabel, isLoading }:
             Revenue atribuído · Tracking
           </div>
           <div className="mt-2 text-3xl font-semibold tabular-nums">
-            {isLoading ? <span className="text-muted-foreground">—</span> : fmt(revenue)}
+            {isLoading ? <span className="text-muted-foreground">-</span> : fmt(revenue)}
           </div>
           <p className={cn("text-xs mt-1 flex items-center gap-1", divergTone)}>
             {(() => { const I = divergIcon; return <I size={12} />; })()}

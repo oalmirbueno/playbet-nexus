@@ -9,7 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 type IntStatus = "Conectado" | "Pendente" | "Erro" | "Testando";
-type IntSaude = "Saudável" | "Atenção" | "Crítico" | "—";
+type IntSaude = "Saudável" | "Atenção" | "Crítico" | "-";
 
 interface LogEntry {
   data: string;
@@ -47,7 +47,7 @@ export default function Integracoes() {
     {
       id: "lovable-cloud",
       nome: "Lovable Cloud",
-      desc: "Backend integrado — banco de dados, autenticação, functions e storage. Já conectado automaticamente ao projeto.",
+      desc: "Backend integrado - banco de dados, autenticação, functions e storage. Já conectado automaticamente ao projeto.",
       tipo: "Infra",
       icon: Cloud,
       status: "Conectado",
@@ -95,7 +95,7 @@ export default function Integracoes() {
     {
       id: "asaas",
       nome: "Asaas",
-      desc: "Plataforma de pagamentos — PIX automático, TED e boletos. API Key + Webhook Token configurados.",
+      desc: "Plataforma de pagamentos - PIX automático, TED e boletos. API Key + Webhook Token configurados.",
       tipo: "Financeiro",
       icon: CreditCard,
       status: "Conectado",
@@ -107,7 +107,7 @@ export default function Integracoes() {
       logs: [
         { data: now(), tipo: "Config", msg: "Secrets ASAAS_API_KEY e ASAAS_WEBHOOK_TOKEN configurados", status: "Sucesso" },
       ],
-      payloadExemplo: '{\n  "value": 850.00,\n  "pixAddressKey": "...",\n  "pixAddressKeyType": "CPF",\n  "description": "Saque SAQ-001 — Rafael Mendes",\n  "externalReference": "<saque.id>"\n}',
+      payloadExemplo: '{\n  "value": 850.00,\n  "pixAddressKey": "...",\n  "pixAddressKeyType": "CPF",\n  "description": "Saque SAQ-001 - Rafael Mendes",\n  "externalReference": "<saque.id>"\n}',
     },
     {
       id: "ga4",
@@ -116,8 +116,8 @@ export default function Integracoes() {
       tipo: "Analytics",
       icon: BarChart3,
       status: "Pendente",
-      saude: "—",
-      ultimaSinc: "—",
+      saude: "-",
+      ultimaSinc: "-",
       canTest: false,
       configurable: true,
       logs: [
@@ -128,12 +128,12 @@ export default function Integracoes() {
     {
       id: "n8n",
       nome: "n8n / Automação",
-      desc: "Automação de workflows — onboarding de influencers, alertas de saques, etc. Requer webhook URL.",
+      desc: "Automação de workflows - onboarding de influencers, alertas de saques, etc. Requer webhook URL.",
       tipo: "Automação",
       icon: Zap,
       status: "Pendente",
-      saude: "—",
-      ultimaSinc: "—",
+      saude: "-",
+      ultimaSinc: "-",
       canTest: false,
       configurable: true,
       logs: [],
@@ -146,8 +146,8 @@ export default function Integracoes() {
       tipo: "API",
       icon: Webhook,
       status: "Pendente",
-      saude: "—",
-      ultimaSinc: "—",
+      saude: "-",
+      ultimaSinc: "-",
       canTest: false,
       configurable: true,
       logs: [],
@@ -176,7 +176,7 @@ export default function Integracoes() {
       return;
     }
 
-    updateStatus(int.id, "Testando", "—");
+    updateStatus(int.id, "Testando", "-");
     addLog(int.id, { data: now(), tipo: "Test", msg: `Testando conexão com ${int.nome}...`, status: "Info" });
 
     try {
@@ -185,7 +185,7 @@ export default function Integracoes() {
         const { data, error } = await supabase.from("profiles").select("id", { count: "exact", head: true });
         if (error) throw error;
         updateStatus(int.id, "Conectado", "Saudável");
-        addLog(int.id, { data: now(), tipo: "Test", msg: "Conexão com banco de dados OK — query executada com sucesso", status: "Sucesso" });
+        addLog(int.id, { data: now(), tipo: "Test", msg: "Conexão com banco de dados OK - query executada com sucesso", status: "Sucesso" });
         toast({ title: "✅ Conexão OK", description: `${int.nome} respondeu com sucesso.` });
       } else if (int.id === "auth") {
         // Test auth by checking session
@@ -193,7 +193,7 @@ export default function Integracoes() {
         if (error) throw error;
         if (!session) throw new Error("Sem sessão ativa");
         updateStatus(int.id, "Conectado", "Saudável");
-        addLog(int.id, { data: now(), tipo: "Test", msg: `Sessão ativa — ${session.user.email}`, status: "Sucesso" });
+        addLog(int.id, { data: now(), tipo: "Test", msg: `Sessão ativa - ${session.user.email}`, status: "Sucesso" });
         toast({ title: "✅ Auth OK", description: `Sessão verificada: ${session.user.email}` });
       } else if (int.id === "asaas") {
         const { data, error } = await supabase.functions.invoke("asaas-balance");
@@ -201,7 +201,7 @@ export default function Integracoes() {
         if (data?.error) throw new Error(data.error);
         const brl = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(data.balance ?? 0);
         updateStatus(int.id, "Conectado", "Saudável");
-        addLog(int.id, { data: now(), tipo: "Test", msg: `Asaas OK (${data.environment}) — saldo ${brl} — conta ${data.account?.name ?? "—"}`, status: "Sucesso" });
+        addLog(int.id, { data: now(), tipo: "Test", msg: `Asaas OK (${data.environment}) - saldo ${brl} - conta ${data.account?.name ?? "-"}`, status: "Sucesso" });
         toast({ title: "✅ Asaas conectado", description: `Saldo disponível: ${brl}` });
       } else {
         throw new Error("Serviço não configurado");
@@ -231,7 +231,7 @@ export default function Integracoes() {
     if (s === "Saudável") return <span className="badge-success">{s}</span>;
     if (s === "Atenção") return <span className="badge-warning">{s}</span>;
     if (s === "Crítico") return <span className="badge-danger">{s}</span>;
-    return <span className="badge-neutral">—</span>;
+    return <span className="badge-neutral">-</span>;
   };
 
   const logStatusBadge = (s: LogEntry["status"]) => {
@@ -251,7 +251,7 @@ export default function Integracoes() {
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Integrações</h1>
-          <p className="text-sm text-muted-foreground mt-1">Central de conexões — status em tempo real, testes e configuração</p>
+          <p className="text-sm text-muted-foreground mt-1">Central de conexões - status em tempo real, testes e configuração</p>
         </div>
         <button onClick={testarTodos} className="btn-primary text-xs">
           <RefreshCw size={13} /> Testar Todas
@@ -477,10 +477,10 @@ export default function Integracoes() {
                   <div className="p-4 bg-secondary/30 rounded-lg border border-border">
                     <h4 className="text-sm font-semibold mb-2">Eventos disponíveis</h4>
                     <div className="text-xs text-muted-foreground space-y-1">
-                      <p>• <code className="bg-secondary px-1 rounded">saque.solicitado</code> — Novo saque criado</p>
-                      <p>• <code className="bg-secondary px-1 rounded">saque.aprovado</code> — Saque aprovado</p>
-                      <p>• <code className="bg-secondary px-1 rounded">influencer.criado</code> — Novo influencer</p>
-                      <p>• <code className="bg-secondary px-1 rounded">campanha.finalizada</code> — Campanha encerrada</p>
+                      <p>• <code className="bg-secondary px-1 rounded">saque.solicitado</code> - Novo saque criado</p>
+                      <p>• <code className="bg-secondary px-1 rounded">saque.aprovado</code> - Saque aprovado</p>
+                      <p>• <code className="bg-secondary px-1 rounded">influencer.criado</code> - Novo influencer</p>
+                      <p>• <code className="bg-secondary px-1 rounded">campanha.finalizada</code> - Campanha encerrada</p>
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground">ℹ️ Configure URLs de destino via backend functions para receber eventos em tempo real.</p>

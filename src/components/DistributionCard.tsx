@@ -10,7 +10,7 @@ const fmt = (v: number) =>
 const STORAGE_KEY = "playbet.distribution.params";
 
 interface Props {
-  /** Receita validada em BRL — usa saldo retirável quando existir; senão soma de revenue */
+  /** Receita validada em BRL - usa saldo retirável quando existir; senão soma de revenue */
   revenueBrl: number;
   /** Rótulo da fonte do valor (ex: "saldo retirável", "soma revenue") */
   sourceLabel: string;
@@ -78,7 +78,7 @@ export default function DistributionCard({ revenueBrl, sourceLabel, perPlatform 
         </div>
         <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
           <Info size={11} /> Cálculo sobre <strong className="text-foreground mx-1">receita validada</strong>
-          — nunca sobre clique, depósito bruto ou promessa da casa.
+          - nunca sobre clique, depósito bruto ou promessa da casa.
         </p>
       </CardHeader>
       <CardContent className="space-y-5">

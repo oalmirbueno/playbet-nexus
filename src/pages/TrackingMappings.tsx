@@ -67,7 +67,7 @@ export default function TrackingMappings() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<typeof emptyForm & { id?: string }>({ ...emptyForm });
 
-  const getPlatformName = (id: string) => (platforms as any[]).find((p: any) => p.id === id)?.name || "—";
+  const getPlatformName = (id: string) => (platforms as any[]).find((p: any) => p.id === id)?.name || "-";
 
   const openCreate = () => { setEditing({ ...emptyForm }); setModalOpen(true); };
   const openEdit = (m: PlatformEventMappingRow) => {
@@ -180,10 +180,10 @@ export default function TrackingMappings() {
                       <TableCell>
                         <Badge variant="secondary" className="text-[10px]">{m.canonical_event_name}</Badge>
                       </TableCell>
-                      <TableCell className="text-[10px] text-muted-foreground font-mono">{m.sub1_field || "—"}</TableCell>
-                      <TableCell className="text-[10px] text-muted-foreground font-mono">{m.sub2_field || "—"}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{m.amount_field || "—"}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{m.transaction_id_field || "—"}</TableCell>
+                      <TableCell className="text-[10px] text-muted-foreground font-mono">{m.sub1_field || "-"}</TableCell>
+                      <TableCell className="text-[10px] text-muted-foreground font-mono">{m.sub2_field || "-"}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{m.amount_field || "-"}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{m.transaction_id_field || "-"}</TableCell>
                       <TableCell>
                         <Badge variant={m.is_active ? "default" : "secondary"} className="text-[10px]">
                           {m.is_active ? "Ativo" : "Inativo"}

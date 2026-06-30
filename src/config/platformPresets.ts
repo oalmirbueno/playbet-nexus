@@ -1,10 +1,10 @@
 /**
- * Platform presets — robust, production-ready configuration per platform.
+ * Platform presets - robust, production-ready configuration per platform.
  *
  * Architecture:
  * 1. Each platform declares its NATIVE macros organized by category
  * 2. Internal field mappings translate native macros to internal meaning
- * 3. URL generation uses ONLY native macros — never invented tokens
+ * 3. URL generation uses ONLY native macros - never invented tokens
  * 4. Simple vs Advanced mode controls which macros appear in generated URLs
  * 5. Validation ensures URLs contain only supported macros
  */
@@ -251,20 +251,20 @@ export function buildPostbackUrlForEvent(
   // Always: event name (literal value, not a macro)
   parts.push(`event=${event.raw_event_name}`);
 
-  // sub1 = click_id — always present, uses platform native macro
+  // sub1 = click_id - always present, uses platform native macro
   parts.push(`sub1={sub1}`);
 
-  // sub2 = influencer — only if real value
+  // sub2 = influencer - only if real value
   if (influencerId && influencerId !== "none") {
     parts.push(`sub2=${influencerId}`);
   }
 
-  // sub3 = campanha — only if real value
+  // sub3 = campanha - only if real value
   if (campanhaId && campanhaId !== "none") {
     parts.push(`sub3=${campanhaId}`);
   }
 
-  // sub6 = tracking_code — only if resolved
+  // sub6 = tracking_code - only if resolved
   if (trackingCode && !trackingCode.includes("(") && trackingCode !== "none") {
     parts.push(`sub6=${trackingCode}`);
   }
@@ -275,7 +275,7 @@ export function buildPostbackUrlForEvent(
 }
 
 /**
- * Build GLOBAL postback URLs — one per event, no link-specific values.
+ * Build GLOBAL postback URLs - one per event, no link-specific values.
  * These are meant for the platform's account-level "Global Postback" settings.
  * Uses only native platform macros so the platform fills them automatically.
  */
@@ -286,7 +286,7 @@ export function buildGlobalPostbackUrls(preset: PlatformPreset): { event: Platfo
     // Event name as literal
     parts.push(`event=${evt.raw_event_name}`);
 
-    // All SubIDs as macros — platform fills them
+    // All SubIDs as macros - platform fills them
     parts.push(`sub1={sub1}`);
     parts.push(`sub2={sub2}`);
     parts.push(`sub3={sub3}`);
@@ -325,13 +325,13 @@ export function validatePostbackUrl(
   }
 
   if (url.includes("none")) {
-    errors.push("URL contém 'none' — parâmetro deveria ser omitido");
+    errors.push("URL contém 'none' - parâmetro deveria ser omitido");
   }
   if (url.includes("(")) {
     errors.push("URL contém placeholder provisório");
   }
   if (url.includes("%7B") || url.includes("%7D")) {
-    errors.push("URL contém macros URL-encoded — deveria ser legível");
+    errors.push("URL contém macros URL-encoded - deveria ser legível");
   }
 
   if (!trackingCode || trackingCode.includes("(")) {

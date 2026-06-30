@@ -53,15 +53,15 @@ export default function CampanhaDetalhe() {
           <h1 className="text-xl font-semibold flex items-center gap-3">{campanha.nome}
             <span className={campanha.status === "Ativa" ? "badge-success" : campanha.status === "Planejada" ? "badge-info" : "badge-neutral"}>{campanha.status}</span>
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{campanha.objetivo || "—"} · {campanha.inicio || "—"} - {campanha.fim || "—"}</p>
+          <p className="text-sm text-muted-foreground mt-0.5">{campanha.objetivo || "-"} · {campanha.inicio || "-"} - {campanha.fim || "-"}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="glass-card p-5 border-l-2 border-l-primary"><span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Jogo</span><p className="text-lg font-semibold mt-1">{campanha.jogo || "—"}</p></div>
-        <div className="glass-card p-5 border-l-2 border-l-info"><span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Plataforma</span><p className="text-lg font-semibold mt-1">{campanha.plataforma || "—"}</p></div>
+        <div className="glass-card p-5 border-l-2 border-l-primary"><span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Jogo</span><p className="text-lg font-semibold mt-1">{campanha.jogo || "-"}</p></div>
+        <div className="glass-card p-5 border-l-2 border-l-info"><span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Plataforma</span><p className="text-lg font-semibold mt-1">{campanha.plataforma || "-"}</p></div>
         <div className="glass-card p-5 border-l-2 border-l-success"><span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Conteúdos</span><p className="text-lg font-semibold mt-1">{campConteudos.length}</p></div>
-        <div className="glass-card p-5"><span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Resultado</span><p className="text-lg font-semibold mt-1">{campanha.resultado || "—"}</p></div>
+        <div className="glass-card p-5"><span className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Resultado</span><p className="text-lg font-semibold mt-1">{campanha.resultado || "-"}</p></div>
       </div>
 
       <div className="flex gap-1.5 overflow-x-auto invisible-scroll pb-1 border-b border-border">
@@ -76,12 +76,12 @@ export default function CampanhaDetalhe() {
         <div className="glass-card p-6 space-y-5">
           <h3 className="text-[15px] font-semibold">Informações</h3>
           <div className="grid grid-cols-2 gap-y-5 text-sm">
-            <div><span className="text-xs text-muted-foreground uppercase tracking-wide">Objetivo</span><p className="font-medium mt-0.5">{campanha.objetivo || "—"}</p></div>
-            <div><span className="text-xs text-muted-foreground uppercase tracking-wide">Jogo</span><p className="font-medium mt-0.5">{campanha.jogo || "—"}</p></div>
-            <div><span className="text-xs text-muted-foreground uppercase tracking-wide">Plataforma</span><p className="font-medium mt-0.5">{campanha.plataforma || "—"}</p></div>
-            <div><span className="text-xs text-muted-foreground uppercase tracking-wide">Influencer</span><p className="font-medium mt-0.5">{campanha.influencer || "—"}</p></div>
-            <div><span className="text-xs text-muted-foreground uppercase tracking-wide">Período</span><p className="font-medium mt-0.5">{campanha.inicio || "—"} - {campanha.fim || "—"}</p></div>
-            <div><span className="text-xs text-muted-foreground uppercase tracking-wide">Resultado</span><p className="font-semibold mt-0.5">{campanha.resultado || "—"}</p></div>
+            <div><span className="text-xs text-muted-foreground uppercase tracking-wide">Objetivo</span><p className="font-medium mt-0.5">{campanha.objetivo || "-"}</p></div>
+            <div><span className="text-xs text-muted-foreground uppercase tracking-wide">Jogo</span><p className="font-medium mt-0.5">{campanha.jogo || "-"}</p></div>
+            <div><span className="text-xs text-muted-foreground uppercase tracking-wide">Plataforma</span><p className="font-medium mt-0.5">{campanha.plataforma || "-"}</p></div>
+            <div><span className="text-xs text-muted-foreground uppercase tracking-wide">Influencer</span><p className="font-medium mt-0.5">{campanha.influencer || "-"}</p></div>
+            <div><span className="text-xs text-muted-foreground uppercase tracking-wide">Período</span><p className="font-medium mt-0.5">{campanha.inicio || "-"} - {campanha.fim || "-"}</p></div>
+            <div><span className="text-xs text-muted-foreground uppercase tracking-wide">Resultado</span><p className="font-semibold mt-0.5">{campanha.resultado || "-"}</p></div>
           </div>
         </div>
       )}
@@ -90,11 +90,11 @@ export default function CampanhaDetalhe() {
         <div className="glass-card p-6 space-y-5">
           <h3 className="text-[15px] font-semibold">Estrutura da Campanha</h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-y-5 text-sm">
-            <div><span className="text-xs text-muted-foreground uppercase tracking-wide">Plataforma</span><p className="font-medium mt-0.5">{campanha.plataforma || "—"}</p></div>
-            <div><span className="text-xs text-muted-foreground uppercase tracking-wide">Jogo</span><p className="font-medium mt-0.5">{campanha.jogo || "—"}</p></div>
-            <div><span className="text-xs text-muted-foreground uppercase tracking-wide">Influencer</span><p className="font-medium mt-0.5">{campanha.influencer || "—"}</p></div>
-            <div><span className="text-xs text-muted-foreground uppercase tracking-wide">Status</span><p className="font-medium mt-0.5">{campanha.status || "—"}</p></div>
-            <div><span className="text-xs text-muted-foreground uppercase tracking-wide">Criado em</span><p className="font-medium mt-0.5">{campanha.created_at ? new Date(campanha.created_at).toLocaleDateString("pt-BR") : "—"}</p></div>
+            <div><span className="text-xs text-muted-foreground uppercase tracking-wide">Plataforma</span><p className="font-medium mt-0.5">{campanha.plataforma || "-"}</p></div>
+            <div><span className="text-xs text-muted-foreground uppercase tracking-wide">Jogo</span><p className="font-medium mt-0.5">{campanha.jogo || "-"}</p></div>
+            <div><span className="text-xs text-muted-foreground uppercase tracking-wide">Influencer</span><p className="font-medium mt-0.5">{campanha.influencer || "-"}</p></div>
+            <div><span className="text-xs text-muted-foreground uppercase tracking-wide">Status</span><p className="font-medium mt-0.5">{campanha.status || "-"}</p></div>
+            <div><span className="text-xs text-muted-foreground uppercase tracking-wide">Criado em</span><p className="font-medium mt-0.5">{campanha.created_at ? new Date(campanha.created_at).toLocaleDateString("pt-BR") : "-"}</p></div>
           </div>
         </div>
       )}
@@ -105,7 +105,7 @@ export default function CampanhaDetalhe() {
             <p className="text-sm text-muted-foreground text-center py-12">Nenhum conteúdo vinculado a esta campanha.</p>
           ) : (
             <table className="data-table"><thead><tr><th>Tema</th><th>Tipo</th><th>Influencer</th><th>Status</th><th>Data</th></tr></thead>
-              <tbody>{campConteudos.map((c: any) => <tr key={c.id}><td className="font-medium">{c.tema}</td><td><span className="badge-neutral">{c.tipo || "—"}</span></td><td>{c.influencer || "—"}</td><td><span className={c.status === "Publicado" ? "badge-success" : c.status === "Agendado" ? "badge-info" : "badge-neutral"}>{c.status}</span></td><td className="text-sm text-muted-foreground">{c.data || "—"}</td></tr>)}</tbody>
+              <tbody>{campConteudos.map((c: any) => <tr key={c.id}><td className="font-medium">{c.tema}</td><td><span className="badge-neutral">{c.tipo || "-"}</span></td><td>{c.influencer || "-"}</td><td><span className={c.status === "Publicado" ? "badge-success" : c.status === "Agendado" ? "badge-info" : "badge-neutral"}>{c.status}</span></td><td className="text-sm text-muted-foreground">{c.data || "-"}</td></tr>)}</tbody>
             </table>
           )}
         </div>

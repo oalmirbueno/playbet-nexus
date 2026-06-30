@@ -215,7 +215,7 @@
   -ms-overflow-style: none;
 }
 
-/* Minimal overlay scrollbar — 3px hairline, fades in on hover/scroll */
+/* Minimal overlay scrollbar - 3px hairline, fades in on hover/scroll */
 .main-scroll {
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;

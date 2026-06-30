@@ -210,7 +210,7 @@ export default function InfluencerLanding() {
     if (!resolved?.affiliate_link || clicking) return;
     setClicking(true);
 
-    // Insert CTA click into legacy `clicks` table — DB trigger
+    // Insert CTA click into legacy `clicks` table - DB trigger
     // `sync_click_to_tracking_event` then creates the canonical
     // tracking_event with platform_id resolved from the tracking_link,
     // so the click counts in tracking_metrics for the right casa.

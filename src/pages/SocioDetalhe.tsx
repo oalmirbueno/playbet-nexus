@@ -56,7 +56,7 @@ export default function SocioDetalhe() {
         <div className="stat-card border-l-2 border-l-accent"><div className="flex items-center justify-between"><span className="text-[10px] text-muted-foreground uppercase">Ganhos Acumulados</span><TrendingUp size={14} className="text-muted-foreground" /></div><p className="text-xl font-bold">R$ {Number(socio.ganhos || 0).toLocaleString()}</p></div>
         <div className="stat-card border-l-2 border-l-success"><div className="flex items-center justify-between"><span className="text-[10px] text-muted-foreground uppercase">Saldo Disponível</span><Wallet size={14} className="text-muted-foreground" /></div><p className="text-xl font-bold text-success">R$ {Number(socio.disponivel || 0).toLocaleString()}</p></div>
         <div className="stat-card border-l-2 border-l-primary"><div className="flex items-center justify-between"><span className="text-[10px] text-muted-foreground uppercase">Total Sacado</span><DollarSign size={14} className="text-muted-foreground" /></div><p className="text-xl font-bold">R$ {sacado.toLocaleString()}</p></div>
-        <div className="stat-card border-l-2 border-l-info"><div className="flex items-center justify-between"><span className="text-[10px] text-muted-foreground uppercase">Último Saque</span><Clock size={14} className="text-muted-foreground" /></div><p className="text-sm font-bold">{socio.ultimo_saque || "—"}</p></div>
+        <div className="stat-card border-l-2 border-l-info"><div className="flex items-center justify-between"><span className="text-[10px] text-muted-foreground uppercase">Último Saque</span><Clock size={14} className="text-muted-foreground" /></div><p className="text-sm font-bold">{socio.ultimo_saque || "-"}</p></div>
       </div>
 
       <div className="flex gap-1 bg-secondary/50 p-1 rounded-xl w-fit flex-wrap">
@@ -74,7 +74,7 @@ export default function SocioDetalhe() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div><span className="text-[10px] text-muted-foreground uppercase">Participação</span><p className="font-bold text-lg">{socio.participacao}%</p></div>
               <div><span className="text-[10px] text-muted-foreground uppercase">Ganhos</span><p className="font-bold text-lg text-accent">R$ {Number(socio.ganhos || 0).toLocaleString()}</p></div>
-              <div><span className="text-[10px] text-muted-foreground uppercase">Último Saque</span><p className="font-medium">{socio.ultimo_saque || "—"}</p></div>
+              <div><span className="text-[10px] text-muted-foreground uppercase">Último Saque</span><p className="font-medium">{socio.ultimo_saque || "-"}</p></div>
               <div><span className="text-[10px] text-muted-foreground uppercase">Status</span><span className={socio.status === "Ativo" ? "badge-success" : "badge-neutral"}>{socio.status}</span></div>
             </div>
           </div>
@@ -101,8 +101,8 @@ export default function SocioDetalhe() {
                     <tr key={s.id}>
                       <td className="font-mono text-xs">{s.codigo}</td>
                       <td className="font-semibold">R$ {Number(s.valor || 0).toLocaleString()}</td>
-                      <td className="text-xs">{s.data || "—"}</td>
-                      <td className="font-mono text-xs">{s.conta || "—"}</td>
+                      <td className="text-xs">{s.data || "-"}</td>
+                      <td className="font-mono text-xs">{s.conta || "-"}</td>
                       <td><span className={s.status === "Aprovado" ? "badge-success" : s.status === "Pendente" ? "badge-warning" : "badge-danger"}>{s.status}</span></td>
                     </tr>
                   ))}

@@ -48,13 +48,13 @@ export default function LPInstances() {
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [filterLP, setFilterLP] = useState("Todos");
 
-  const getLPName = (id: string) => landingPages.find(l => l.id === id)?.name || "—";
+  const getLPName = (id: string) => landingPages.find(l => l.id === id)?.name || "-";
   const getLPDomain = (id: string) => landingPages.find(l => l.id === id)?.domain || "";
   const getLPPlatformId = (id: string) => landingPages.find(l => l.id === id)?.platform_id || null;
-  const getInfluencerName = (id: string) => influencers.find(i => i.id === id)?.name || "—";
+  const getInfluencerName = (id: string) => influencers.find(i => i.id === id)?.name || "-";
   const getPlatformName = (id: string) => platforms.find(p => p.id === id)?.name || "";
 
-  // Universal postback URL builder — uses the LP's linked platform preset, no hardcoded fallback.
+  // Universal postback URL builder - uses the LP's linked platform preset, no hardcoded fallback.
   const getPostbackUrls = (inst: LandingPageInstanceRow) => {
     const platformId = getLPPlatformId(inst.landing_page_id);
     if (!platformId) return null;
@@ -296,7 +296,7 @@ export default function LPInstances() {
                   <td className="font-mono text-xs text-muted-foreground">{getLPDomain(inst.landing_page_id) || <span className="text-destructive">sem domínio</span>}</td>
                   <td className="text-xs">{getInfluencerName(inst.influencer_id)}</td>
                   <td className="font-mono text-xs text-accent">{inst.slug}</td>
-                  <td className="font-mono text-xs text-accent max-w-[140px] truncate" title={inst.affiliate_link}>{inst.affiliate_link || <span className="text-destructive">—</span>}</td>
+                  <td className="font-mono text-xs text-accent max-w-[140px] truncate" title={inst.affiliate_link}>{inst.affiliate_link || <span className="text-destructive">-</span>}</td>
                   <td className="font-mono text-xs text-accent max-w-[200px] truncate" title={pubUrl}>{pubUrl}</td>
                   <td><span className={inst.is_active ? "badge-success" : "badge-danger"}>{inst.is_active ? "Ativo" : "Inativo"}</span></td>
                   <td>
@@ -322,12 +322,12 @@ export default function LPInstances() {
       {/* Preview Drawer */}
       <Dialog open={!!previewOpen} onOpenChange={() => setPreviewOpen(null)}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>Instância — {previewOpen?.slug}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Instância - {previewOpen?.slug}</DialogTitle></DialogHeader>
           {previewOpen && (
             <div className="space-y-4 py-2">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div><span className="text-xs text-muted-foreground">LP Base</span><p className="font-medium">{getLPName(previewOpen.landing_page_id)}</p></div>
-                <div><span className="text-xs text-muted-foreground">Domínio Base</span><p className="font-mono text-accent text-xs">{getLPDomain(previewOpen.landing_page_id) || "—"}</p></div>
+                <div><span className="text-xs text-muted-foreground">Domínio Base</span><p className="font-mono text-accent text-xs">{getLPDomain(previewOpen.landing_page_id) || "-"}</p></div>
                 <div><span className="text-xs text-muted-foreground">Influencer</span><p>{getInfluencerName(previewOpen.influencer_id)}</p></div>
                 <div><span className="text-xs text-muted-foreground">Slug</span><p className="font-mono text-accent">{previewOpen.slug}</p></div>
                 <div className="col-span-2"><span className="text-xs text-muted-foreground">Affiliate Link</span><p className="font-mono text-xs text-accent break-all">{previewOpen.affiliate_link}</p></div>

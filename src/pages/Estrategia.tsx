@@ -55,7 +55,7 @@ export default function Estrategia() {
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Estratégia</h1>
-          <p className="text-sm text-muted-foreground mt-1">Centro tático da operação — objetivos, testes, aprendizados e execução</p>
+          <p className="text-sm text-muted-foreground mt-1">Centro tático da operação - objetivos, testes, aprendizados e execução</p>
         </div>
         <div className="flex gap-2">
           <button className="btn-ghost text-sm" onClick={() => navigate("/conteudo")}>Conteúdos</button>

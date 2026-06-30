@@ -63,7 +63,7 @@ function buildQuery(table: string) {
     maybeSingle: async () => resolveSingle(),
     single: async () => resolveSingle(),
     insert: async () => ({ data: null, error: null }),
-    // landing_pages flow ends with await (no maybeSingle) — make the chain thenable
+    // landing_pages flow ends with await (no maybeSingle) - make the chain thenable
     then: (resolve: any) => resolve(resolveSingle()),
   };
   return api;
@@ -79,7 +79,7 @@ vi.mock("@/assets/logo.png", () => ({ default: "/logo.png" }));
 
 import InfluencerLanding from "./InfluencerLanding";
 
-describe("InfluencerLanding — Com LP end-to-end", () => {
+describe("InfluencerLanding - Com LP end-to-end", () => {
   beforeEach(() => {
     // Match the LP domain so STRATEGY 1 (domain-aware) fires.
     Object.defineProperty(window, "location", {

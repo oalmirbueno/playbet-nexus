@@ -198,7 +198,7 @@ export default function LpOpportunities() {
       setForm((f) => ({ ...f, tracking_link_id: "" }));
       return;
     }
-    // Use the affiliate/deep URL, NOT the public LP share URL — avoid loop.
+    // Use the affiliate/deep URL, NOT the public LP share URL - avoid loop.
     const dest =
       (tl as any).deep_link_url ||
       (tl as any).destination_url ||
@@ -417,10 +417,10 @@ export default function LpOpportunities() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
-                        {r.starts_at ? new Date(r.starts_at).toLocaleDateString("pt-BR") : "—"} →{" "}
-                        {r.ends_at ? new Date(r.ends_at).toLocaleDateString("pt-BR") : "—"}
+                        {r.starts_at ? new Date(r.starts_at).toLocaleDateString("pt-BR") : "-"} →{" "}
+                        {r.ends_at ? new Date(r.ends_at).toLocaleDateString("pt-BR") : "-"}
                       </TableCell>
-                      <TableCell className="text-xs">{lp?.name || lp?.slug || "—"}</TableCell>
+                      <TableCell className="text-xs">{lp?.name || lp?.slug || "-"}</TableCell>
                       <TableCell>
                         <Switch
                           checked={r.is_active}
@@ -474,7 +474,7 @@ export default function LpOpportunities() {
                   >
                     <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={NONE}>—</SelectItem>
+                      <SelectItem value={NONE}>-</SelectItem>
                       {lps.map((lp: any) => (
                         <SelectItem key={lp.id} value={lp.id}>{lp.name || lp.slug}</SelectItem>
                       ))}
@@ -489,7 +489,7 @@ export default function LpOpportunities() {
                   >
                     <SelectTrigger><SelectValue placeholder="Usar destino manual" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={NONE}>— manual —</SelectItem>
+                      <SelectItem value={NONE}>- manual -</SelectItem>
                       {trackingLinks.map((tl: any) => (
                         <SelectItem key={tl.id} value={tl.id}>
                           {tl.subid || tl.name || tl.id.slice(0, 8)}
@@ -509,7 +509,7 @@ export default function LpOpportunities() {
                   className="font-mono text-xs"
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  Use o deep link do afiliado — nunca a URL pública da LP (evita loop).
+                  Use o deep link do afiliado - nunca a URL pública da LP (evita loop).
                 </p>
               </div>
             </section>
@@ -611,9 +611,9 @@ export default function LpOpportunities() {
                     value={form.platform_id || NONE}
                     onValueChange={(v) => setForm({ ...form, platform_id: v === NONE ? "" : v })}
                   >
-                    <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="-" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={NONE}>—</SelectItem>
+                      <SelectItem value={NONE}>-</SelectItem>
                       {platforms.map((p: any) => (
                         <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                       ))}
@@ -626,9 +626,9 @@ export default function LpOpportunities() {
                     value={form.campanha_id || NONE}
                     onValueChange={(v) => setForm({ ...form, campanha_id: v === NONE ? "" : v })}
                   >
-                    <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="-" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={NONE}>—</SelectItem>
+                      <SelectItem value={NONE}>-</SelectItem>
                       {campanhas.map((c: any) => (
                         <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
                       ))}

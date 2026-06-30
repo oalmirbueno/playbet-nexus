@@ -112,7 +112,7 @@ export default function InfluencerDetalhe() {
 
   // Group clicks by day for chart
   const clicksByDay = clicks.reduce((acc: any, c: any) => {
-    const day = c.clicked_at ? new Date(c.clicked_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : "—";
+    const day = c.clicked_at ? new Date(c.clicked_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : "-";
     acc[day] = (acc[day] || 0) + 1;
     return acc;
   }, {});
@@ -167,11 +167,11 @@ export default function InfluencerDetalhe() {
               <h3 className="section-title">Informações</h3>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div><span className="text-xs text-muted-foreground">Slug</span><p className="font-mono text-accent">{influencer.slug}</p></div>
-                <div><span className="text-xs text-muted-foreground">Instagram</span><p>@{influencer.instagram || "—"}</p></div>
-                <div><span className="text-xs text-muted-foreground">Affiliate Link</span><p className="text-xs break-all">{influencer.affiliate_link || "—"}</p></div>
-                <div><span className="text-xs text-muted-foreground">Seguidores</span><p>{influencer.followers?.toLocaleString() || "—"}</p></div>
-                <div><span className="text-xs text-muted-foreground">Criado em</span><p className="text-xs">{influencer.created_at ? new Date(influencer.created_at).toLocaleDateString("pt-BR") : "—"}</p></div>
-                <div><span className="text-xs text-muted-foreground">Atualizado em</span><p className="text-xs">{influencer.updated_at ? new Date(influencer.updated_at).toLocaleDateString("pt-BR") : "—"}</p></div>
+                <div><span className="text-xs text-muted-foreground">Instagram</span><p>@{influencer.instagram || "-"}</p></div>
+                <div><span className="text-xs text-muted-foreground">Affiliate Link</span><p className="text-xs break-all">{influencer.affiliate_link || "-"}</p></div>
+                <div><span className="text-xs text-muted-foreground">Seguidores</span><p>{influencer.followers?.toLocaleString() || "-"}</p></div>
+                <div><span className="text-xs text-muted-foreground">Criado em</span><p className="text-xs">{influencer.created_at ? new Date(influencer.created_at).toLocaleDateString("pt-BR") : "-"}</p></div>
+                <div><span className="text-xs text-muted-foreground">Atualizado em</span><p className="text-xs">{influencer.updated_at ? new Date(influencer.updated_at).toLocaleDateString("pt-BR") : "-"}</p></div>
               </div>
             </div>
             <div className="glass-card p-5">
@@ -261,11 +261,11 @@ export default function InfluencerDetalhe() {
                             "badge-neutral"
                           }>{e.canonical_event_name}</span>
                         </td>
-                        <td className="font-mono text-xs">{e.original_amount != null ? Number(e.original_amount).toFixed(2) : "—"}</td>
-                        <td className="text-xs">{e.original_currency || e.currency || "—"}</td>
-                        <td className="font-mono text-xs font-semibold">{e.converted_amount_brl != null ? `R$ ${Number(e.converted_amount_brl).toFixed(2)}` : "—"}</td>
-                        <td className="font-mono text-[10px] text-muted-foreground">{e.transaction_id?.slice(0, 12) || "—"}</td>
-                        <td className="text-xs">{e.country || "—"}</td>
+                        <td className="font-mono text-xs">{e.original_amount != null ? Number(e.original_amount).toFixed(2) : "-"}</td>
+                        <td className="text-xs">{e.original_currency || e.currency || "-"}</td>
+                        <td className="font-mono text-xs font-semibold">{e.converted_amount_brl != null ? `R$ ${Number(e.converted_amount_brl).toFixed(2)}` : "-"}</td>
+                        <td className="font-mono text-[10px] text-muted-foreground">{e.transaction_id?.slice(0, 12) || "-"}</td>
+                        <td className="text-xs">{e.country || "-"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -302,7 +302,7 @@ export default function InfluencerDetalhe() {
                     <div><span className="text-xs text-muted-foreground">Slug</span><p className="font-mono text-accent text-xs">{inst.slug}</p></div>
                     <div><span className="text-xs text-muted-foreground">Affiliate Link</span><p className="text-xs break-all">{inst.affiliate_link}</p></div>
                     <div><span className="text-xs text-muted-foreground">Status</span><p><span className={inst.is_active ? "badge-success" : "badge-danger"}>{inst.is_active ? "Ativa" : "Inativa"}</span></p></div>
-                    <div><span className="text-xs text-muted-foreground">Criado</span><p className="text-xs">{inst.created_at ? new Date(inst.created_at).toLocaleDateString("pt-BR") : "—"}</p></div>
+                    <div><span className="text-xs text-muted-foreground">Criado</span><p className="text-xs">{inst.created_at ? new Date(inst.created_at).toLocaleDateString("pt-BR") : "-"}</p></div>
                   </div>
                 </div>
               ))}
@@ -322,7 +322,7 @@ export default function InfluencerDetalhe() {
                 <thead><tr><th>Nome</th><th>Objetivo</th><th>Jogo</th><th>Início</th><th>Fim</th><th>Status</th></tr></thead>
                 <tbody>{myCampanhas.map((c: any) => (
                   <tr key={c.id} className="cursor-pointer hover:bg-secondary/30" onClick={() => navigate(`/campanhas/${c.id}`)}>
-                    <td className="font-medium">{c.nome}</td><td className="text-xs">{c.objetivo || "—"}</td><td>{c.jogo || "—"}</td><td className="text-xs">{c.inicio || "—"}</td><td className="text-xs">{c.fim || "—"}</td>
+                    <td className="font-medium">{c.nome}</td><td className="text-xs">{c.objetivo || "-"}</td><td>{c.jogo || "-"}</td><td className="text-xs">{c.inicio || "-"}</td><td className="text-xs">{c.fim || "-"}</td>
                     <td><span className={c.status === "Ativa" ? "badge-success" : c.status === "Planejada" ? "badge-info" : "badge-neutral"}>{c.status}</span></td>
                   </tr>
                 ))}</tbody>
@@ -345,8 +345,8 @@ export default function InfluencerDetalhe() {
                   <tr key={s.id}>
                     <td className="font-mono text-xs">{s.codigo}</td>
                     <td className="font-semibold">R$ {Number(s.valor || 0).toLocaleString()}</td>
-                    <td className="text-xs">{s.data || "—"}</td>
-                    <td className="font-mono text-xs">{s.conta || "—"}</td>
+                    <td className="text-xs">{s.data || "-"}</td>
+                    <td className="font-mono text-xs">{s.conta || "-"}</td>
                     <td><span className={s.status === "Aprovado" ? "badge-success" : s.status === "Pendente" ? "badge-warning" : "badge-danger"}>{s.status}</span></td>
                   </tr>
                 ))}</tbody>
@@ -363,7 +363,7 @@ export default function InfluencerDetalhe() {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div className="stat-card border-l-2 border-l-accent"><span className="text-[10px] text-muted-foreground uppercase">Total Cliques</span><p className="text-lg font-bold">{totalCliques.toLocaleString()}</p></div>
             <div className="stat-card border-l-2 border-l-info"><span className="text-[10px] text-muted-foreground uppercase">Últimos 7 dias</span><p className="text-lg font-bold">{clicks.filter(c => { const d = new Date(c.clicked_at); const now = new Date(); return (now.getTime() - d.getTime()) < 7 * 86400000; }).length}</p></div>
-            <div className="stat-card border-l-2 border-l-success"><span className="text-[10px] text-muted-foreground uppercase">Fonte Principal</span><p className="text-sm font-bold">{clicks[0]?.source || "—"}</p></div>
+            <div className="stat-card border-l-2 border-l-success"><span className="text-[10px] text-muted-foreground uppercase">Fonte Principal</span><p className="text-sm font-bold">{clicks[0]?.source || "-"}</p></div>
           </div>
           {clickChartData.length > 0 && (
             <div className="glass-card p-5">
@@ -387,10 +387,10 @@ export default function InfluencerDetalhe() {
                   <thead><tr><th>Data/Hora</th><th>Referrer</th><th>Rota</th><th>Fonte</th></tr></thead>
                   <tbody>{clicks.slice(0, 10).map((c: any) => (
                     <tr key={c.id}>
-                      <td className="text-xs whitespace-nowrap">{c.clicked_at ? new Date(c.clicked_at).toLocaleString("pt-BR") : "—"}</td>
-                      <td className="text-xs text-accent">{c.referrer || "—"}</td>
-                      <td className="font-mono text-xs">{c.route || "—"}</td>
-                      <td className="text-xs">{c.source || "—"}</td>
+                      <td className="text-xs whitespace-nowrap">{c.clicked_at ? new Date(c.clicked_at).toLocaleString("pt-BR") : "-"}</td>
+                      <td className="text-xs text-accent">{c.referrer || "-"}</td>
+                      <td className="font-mono text-xs">{c.route || "-"}</td>
+                      <td className="text-xs">{c.source || "-"}</td>
                     </tr>
                   ))}</tbody>
                 </table>
@@ -410,7 +410,7 @@ export default function InfluencerDetalhe() {
               <table className="data-table">
                 <thead><tr><th>Data</th><th>Tipo</th><th>Tema</th><th>Jogo</th><th>Campanha</th><th>Status</th></tr></thead>
                 <tbody>{myConteudos.map((c: any) => (
-                  <tr key={c.id}><td className="text-xs">{c.data || "—"}</td><td><span className="badge-neutral">{c.tipo || "—"}</span></td><td>{c.tema}</td><td>{c.jogo || "—"}</td><td>{c.campanha || "—"}</td>
+                  <tr key={c.id}><td className="text-xs">{c.data || "-"}</td><td><span className="badge-neutral">{c.tipo || "-"}</span></td><td>{c.tema}</td><td>{c.jogo || "-"}</td><td>{c.campanha || "-"}</td>
                     <td><span className={c.status === "Publicado" ? "badge-success" : c.status === "Agendado" ? "badge-info" : c.status === "Produção" ? "badge-warning" : "badge-neutral"}>{c.status}</span></td></tr>
                 ))}</tbody>
               </table>

@@ -47,7 +47,7 @@ export default function AsaasPagamentos() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="page-header">Asaas / Pagamentos</h1>
-          <p className="page-subtitle">Central de pagamentos — envio, processamento e conciliação</p>
+          <p className="page-subtitle">Central de pagamentos - envio, processamento e conciliação</p>
         </div>
         <button className="btn-ghost text-xs" onClick={fetchStatus} disabled={loading}>
           {loading ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />} Atualizar
@@ -80,11 +80,11 @@ export default function AsaasPagamentos() {
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Conta</p>
-                  <p className="text-sm font-medium mt-0.5 truncate">{status.account.name ?? "—"}</p>
+                  <p className="text-sm font-medium mt-0.5 truncate">{status.account.name ?? "-"}</p>
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Wallet ID</p>
-                  <p className="text-xs font-mono mt-0.5 truncate">{status.account.walletId ?? "—"}</p>
+                  <p className="text-xs font-mono mt-0.5 truncate">{status.account.walletId ?? "-"}</p>
                 </div>
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Última verificação</p>

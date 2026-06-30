@@ -330,17 +330,17 @@ export default function Influencers() {
                                   <span className="font-medium hover:text-accent transition-colors">{inf.name}</span>
                                 </div>
                               </td>
-                              <td className="text-accent text-xs">{inf.instagram || "—"}</td>
+                              <td className="text-accent text-xs">{inf.instagram || "-"}</td>
                               <td className="text-xs">{(inf.followers || 0).toLocaleString()}</td>
                               <td className="text-xs">
                                 {(() => {
                                   const l = getLevel("creator", inf.career_level || 1);
-                                  return l ? <span className="badge-neutral text-[10px]">{l.level} · {l.label}</span> : "—";
+                                  return l ? <span className="badge-neutral text-[10px]">{l.level} · {l.label}</span> : "-";
                                 })()}
                               </td>
                               <td className="text-xs">{inf.commission_percent || 0}%</td>
                               <td className="font-mono text-xs text-accent">{inf.slug}</td>
-                              <td className="text-xs">{inf.affiliate_link ? <span className="text-success">✓</span> : <span className="text-muted-foreground">—</span>}</td>
+                              <td className="text-xs">{inf.affiliate_link ? <span className="text-success">✓</span> : <span className="text-muted-foreground">-</span>}</td>
                               <td><span className={inf.is_active ? "badge-success" : "badge-danger"}>{inf.is_active ? "Ativo" : "Inativo"}</span></td>
                               <td className="text-right">
                                 <div className="flex justify-end gap-0.5" onClick={(e) => e.stopPropagation()}>
@@ -430,7 +430,7 @@ export default function Influencers() {
                         <p className="text-[9px] text-muted-foreground uppercase tracking-wide">Ativos</p>
                       </div>
                       <div>
-                        <p className="text-base font-bold">{m.monthly_goal ? `R$ ${(m.monthly_goal / 1000).toFixed(0)}k` : "—"}</p>
+                        <p className="text-base font-bold">{m.monthly_goal ? `R$ ${(m.monthly_goal / 1000).toFixed(0)}k` : "-"}</p>
                         <p className="text-[9px] text-muted-foreground uppercase tracking-wide">Meta/mês</p>
                       </div>
                     </div>
@@ -472,7 +472,7 @@ export default function Influencers() {
                 >
                   <option value="">Sem time</option>
                   {managers.map((m: ManagerRow) => (
-                    <option key={m.id} value={m.id}>{m.team_name} — {m.name}</option>
+                    <option key={m.id} value={m.id}>{m.team_name} - {m.name}</option>
                   ))}
                 </select>
               </div>

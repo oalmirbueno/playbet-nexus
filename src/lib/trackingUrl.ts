@@ -1,5 +1,5 @@
 /**
- * Tracking URL helpers — single source of truth for what link the influencer
+ * Tracking URL helpers - single source of truth for what link the influencer
  * actually shares (the "link para divulgar").
  *
  * Rule:

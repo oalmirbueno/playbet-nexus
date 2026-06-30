@@ -1,4 +1,4 @@
-// Mock data layer — prepared for Supabase migration
+// Mock data layer - prepared for Supabase migration
 // Replace these with Supabase queries when integrating
 
 import type {
@@ -12,22 +12,22 @@ export const initialInfluencers: Influencer[] = [
   { id: 3, nome: "Carlos Silva", slug: "carlos", insta: "@carlos.bet", seg: "250K", tipo: "Standard", perc: 15, jogos: 3, links: 5, receita: 28500, saldo: 4200, ultimoSaque: "25/02/2026", status: "Ativo", affiliate_link: "https://betano.com?ref=carlos", landing_template: "Fortune Tiger LP", observacoes: "", is_active: true, created_at: "2026-01-10", updated_at: "2026-03-03" },
   { id: 4, nome: "Ana Souza", slug: "ana", insta: "@ana.plays", seg: "180K", tipo: "Standard", perc: 12, jogos: 3, links: 4, receita: 18200, saldo: 2800, ultimoSaque: "20/02/2026", status: "Ativo", affiliate_link: "https://bet365.com?ref=ana", landing_template: "Cadastro Geral", observacoes: "", is_active: true, created_at: "2026-01-20", updated_at: "2026-03-01" },
   { id: 5, nome: "Julia Costa", slug: "julia", insta: "@ju.games", seg: "95K", tipo: "Starter", perc: 10, jogos: 2, links: 2, receita: 8400, saldo: 1200, ultimoSaque: "15/02/2026", status: "Pausado", affiliate_link: "https://pixbet.com?ref=julia", landing_template: "Aviator Promo", observacoes: "Em pausa temporária", is_active: false, created_at: "2026-02-01", updated_at: "2026-02-28" },
-  { id: 6, nome: "Marcos Oliveira", slug: "marcos", insta: "@marcos.bet", seg: "520K", tipo: "Premium", perc: 22, jogos: 5, links: 9, receita: 0, saldo: 0, ultimoSaque: "—", status: "Novo", affiliate_link: "", landing_template: "", observacoes: "Recém cadastrado", is_active: true, created_at: "2026-03-05", updated_at: "2026-03-05" },
+  { id: 6, nome: "Marcos Oliveira", slug: "marcos", insta: "@marcos.bet", seg: "520K", tipo: "Premium", perc: 22, jogos: 5, links: 9, receita: 0, saldo: 0, ultimoSaque: "-", status: "Novo", affiliate_link: "", landing_template: "", observacoes: "Recém cadastrado", is_active: true, created_at: "2026-03-05", updated_at: "2026-03-05" },
 ];
 
 export const initialJogos: Jogo[] = [
   { id: 1, nome: "Fortune Tiger", cat: "Slot", status: "Ativo", lp: "Fortune Tiger LP", plats: "Bet365, Betano, Sportingbet", links: 12, cliques: 18400, ctr: "14.2%", cadastros: 1245, receita: 32500 },
   { id: 2, nome: "Aviator", cat: "Crash", status: "Ativo", lp: "Aviator Promo", plats: "Bet365, Pixbet", links: 8, cliques: 12300, ctr: "11.8%", cadastros: 890, receita: 28100 },
-  { id: 3, nome: "Gates of Olympus", cat: "Slot", status: "Ativo", lp: "—", plats: "Bet365, Betano, Sportingbet", links: 6, cliques: 8500, ctr: "9.4%", cadastros: 620, receita: 19800 },
+  { id: 3, nome: "Gates of Olympus", cat: "Slot", status: "Ativo", lp: "-", plats: "Bet365, Betano, Sportingbet", links: 6, cliques: 8500, ctr: "9.4%", cadastros: 620, receita: 19800 },
   { id: 4, nome: "Mines", cat: "Casual", status: "Ativo", lp: "Mines Special", plats: "Sportingbet, Betano", links: 5, cliques: 6200, ctr: "8.1%", cadastros: 445, receita: 15200 },
-  { id: 5, nome: "Spaceman", cat: "Crash", status: "Inativo", lp: "—", plats: "Pixbet", links: 2, cliques: 1800, ctr: "4.2%", cadastros: 120, receita: 3200 },
+  { id: 5, nome: "Spaceman", cat: "Crash", status: "Inativo", lp: "-", plats: "Pixbet", links: 2, cliques: 1800, ctr: "4.2%", cadastros: 120, receita: 3200 },
 ];
 
 export const initialPlataformas: Plataforma[] = [
   { id: 1, nome: "Bet365", tipo: "CPA + RevShare", revshare: "30%", cpa: "R$ 50", moeda: "BRL", pagamento: "Mensal", status: "Ativo", links: 15, jogos: 5 },
-  { id: 2, nome: "Betano", tipo: "Revenue Share", revshare: "25%", cpa: "—", moeda: "BRL", pagamento: "Quinzenal", status: "Ativo", links: 12, jogos: 4 },
-  { id: 3, nome: "Sportingbet", tipo: "CPA", revshare: "—", cpa: "R$ 45", moeda: "BRL", pagamento: "Mensal", status: "Ativo", links: 8, jogos: 3 },
-  { id: 4, nome: "Pixbet", tipo: "Revenue Share", revshare: "22%", cpa: "—", moeda: "BRL", pagamento: "Semanal", status: "Pendente", links: 5, jogos: 2 },
+  { id: 2, nome: "Betano", tipo: "Revenue Share", revshare: "25%", cpa: "-", moeda: "BRL", pagamento: "Quinzenal", status: "Ativo", links: 12, jogos: 4 },
+  { id: 3, nome: "Sportingbet", tipo: "CPA", revshare: "-", cpa: "R$ 45", moeda: "BRL", pagamento: "Mensal", status: "Ativo", links: 8, jogos: 3 },
+  { id: 4, nome: "Pixbet", tipo: "Revenue Share", revshare: "22%", cpa: "-", moeda: "BRL", pagamento: "Semanal", status: "Pendente", links: 5, jogos: 2 },
   { id: 5, nome: "KTO", tipo: "Hybrid", revshare: "20%", cpa: "R$ 35", moeda: "BRL", pagamento: "Mensal", status: "Ativo", links: 4, jogos: 3 },
 ];
 
@@ -42,20 +42,20 @@ export const initialLinks: LinkAfiliado[] = [
 export const initialLandingPages: LandingPage[] = [
   { id: 1, nome: "Fortune Tiger LP", rota: "/fortune-tiger", tipo: "Jogo", jogo: "Fortune Tiger", plats: "Bet365, Betano", cliques: 12450, ctr: "14.2%", saida: "32%", status: "Ativo" },
   { id: 2, nome: "Aviator Promo", rota: "/aviator-promo", tipo: "Promoção", jogo: "Aviator", plats: "Bet365, Pixbet", cliques: 8320, ctr: "11.8%", saida: "28%", status: "Ativo" },
-  { id: 3, nome: "Cadastro Geral", rota: "/cadastro", tipo: "Geral", jogo: "—", plats: "Todas", cliques: 15780, ctr: "9.6%", saida: "45%", status: "Ativo" },
+  { id: 3, nome: "Cadastro Geral", rota: "/cadastro", tipo: "Geral", jogo: "-", plats: "Todas", cliques: 15780, ctr: "9.6%", saida: "45%", status: "Ativo" },
   { id: 4, nome: "Mines Special", rota: "/mines-special", tipo: "Jogo", jogo: "Mines", plats: "Sportingbet", cliques: 5600, ctr: "2.8%", saida: "58%", status: "Revisão" },
 ];
 
 export const initialCampanhas: Campanha[] = [
   { id: 1, nome: "Março Turbo", objetivo: "Aumentar cadastros em 30%", jogo: "Fortune Tiger", plat: "Bet365", influencer: "Rafael M.", inicio: "01/03", fim: "31/03", status: "Ativa", resultado: "+18% cadastros" },
-  { id: 2, nome: "Aviator Week", objetivo: "Promover Aviator em todas plataformas", jogo: "Aviator", plat: "Todas", influencer: "Pedro L.", inicio: "10/03", fim: "17/03", status: "Planejada", resultado: "—" },
+  { id: 2, nome: "Aviator Week", objetivo: "Promover Aviator em todas plataformas", jogo: "Aviator", plat: "Todas", influencer: "Pedro L.", inicio: "10/03", fim: "17/03", status: "Planejada", resultado: "-" },
   { id: 3, nome: "Bônus Fev", objetivo: "Divulgar bônus de cadastro", jogo: "Vários", plat: "Betano", influencer: "Carlos S.", inicio: "01/02", fim: "28/02", status: "Finalizada", resultado: "+420 cadastros" },
   { id: 4, nome: "VIP Mines", objetivo: "Campanha exclusiva grupo VIP", jogo: "Mines", plat: "Sportingbet", influencer: "Ana S.", inicio: "15/02", fim: "01/03", status: "Finalizada", resultado: "+180 depósitos" },
 ];
 
 export const initialSaques: Saque[] = [
-  { id: "SAQ-001", nome: "Rafael Mendes", tipo: "Influencer", valor: 8500, origem: "Comissão afiliado", data: "05/03/2026", conta: "PIX •••4521", status: "Pendente", resp: "—" },
-  { id: "SAQ-002", nome: "Ricardo Almeida", tipo: "Sócio", valor: 12000, origem: "Divisão societária", data: "04/03/2026", conta: "PIX •••8832", status: "Pendente", resp: "—" },
+  { id: "SAQ-001", nome: "Rafael Mendes", tipo: "Influencer", valor: 8500, origem: "Comissão afiliado", data: "05/03/2026", conta: "PIX •••4521", status: "Pendente", resp: "-" },
+  { id: "SAQ-002", nome: "Ricardo Almeida", tipo: "Sócio", valor: 12000, origem: "Divisão societária", data: "04/03/2026", conta: "PIX •••8832", status: "Pendente", resp: "-" },
   { id: "SAQ-003", nome: "Ana Souza", tipo: "Influencer", valor: 2800, origem: "Comissão afiliado", data: "03/03/2026", conta: "PIX •••1199", status: "Aprovado", resp: "Admin" },
   { id: "SAQ-004", nome: "Fernanda Rocha", tipo: "Sócio", valor: 10500, origem: "Divisão societária", data: "02/03/2026", conta: "PIX •••7744", status: "Aprovado", resp: "Admin" },
   { id: "SAQ-005", nome: "Pedro Lima", tipo: "Influencer", valor: 6100, origem: "Comissão afiliado", data: "01/03/2026", conta: "PIX •••2266", status: "Recusado", resp: "Admin" },
@@ -71,7 +71,7 @@ export const initialSocios: Socio[] = [
 export const initialLPTemplates: LPTemplate[] = [
   { id: 1, nome: "Fortune Tiger LP", rotaBase: "/fortune-tiger", tipo: "Jogo", jogoVinculado: "Fortune Tiger", status: "Ativo", cliquesTotais: 12450, conversoesEstimadas: 1245 },
   { id: 2, nome: "Aviator Promo", rotaBase: "/aviator-promo", tipo: "Promoção", jogoVinculado: "Aviator", status: "Ativo", cliquesTotais: 8320, conversoesEstimadas: 890 },
-  { id: 3, nome: "Cadastro Geral", rotaBase: "/cadastro", tipo: "Geral", jogoVinculado: "—", status: "Ativo", cliquesTotais: 15780, conversoesEstimadas: 1580 },
+  { id: 3, nome: "Cadastro Geral", rotaBase: "/cadastro", tipo: "Geral", jogoVinculado: "-", status: "Ativo", cliquesTotais: 15780, conversoesEstimadas: 1580 },
   { id: 4, nome: "Mines Special", rotaBase: "/mines-special", tipo: "Jogo", jogoVinculado: "Mines", status: "Inativo", cliquesTotais: 5600, conversoesEstimadas: 445 },
 ];
 
@@ -85,13 +85,13 @@ export const initialInfluencerLPs: InfluencerLP[] = [
 
 export const initialConteudos: ConteudoItem[] = [
   { id: 1, tema: "Compilação top crashes", tipo: "Reels", formato: "Vertical 9:16", canal: "Instagram", jogo: "Aviator", influencer: "Pedro L.", campanha: "Aviator Week", lp: "Aviator Promo", status: "Ideia", prioridade: "Alta", data: "10/03", responsavel: "Equipe", cta: "Link na bio", objetivo: "Engajamento e cliques", observacoes: "" },
-  { id: 2, tema: "Link especial Gates of Olympus", tipo: "Post", formato: "Texto + imagem", canal: "WhatsApp", jogo: "Gates", influencer: "Carlos S.", campanha: "—", lp: "—", status: "Ideia", prioridade: "Média", data: "11/03", responsavel: "Carlos", observacoes: "" },
+  { id: 2, tema: "Link especial Gates of Olympus", tipo: "Post", formato: "Texto + imagem", canal: "WhatsApp", jogo: "Gates", influencer: "Carlos S.", campanha: "-", lp: "-", status: "Ideia", prioridade: "Média", data: "11/03", responsavel: "Carlos", observacoes: "" },
   { id: 3, tema: "Ganhos ao vivo Mines", tipo: "Reels", formato: "Vertical 9:16", canal: "TikTok", jogo: "Mines", influencer: "Rafael M.", campanha: "VIP Mines", lp: "Mines Special", status: "Roteiro", prioridade: "Alta", data: "08/03", responsavel: "Rafael", cta: "Cadastre-se agora", roteiro: "Abrir com print de ganho alto. Mostrar gameplay de 30s. CTA no final.", observacoes: "" },
-  { id: 4, tema: "Top 5 jogos da semana", tipo: "Vídeo", formato: "Horizontal 16:9", canal: "YouTube", jogo: "Vários", influencer: "Ana S.", campanha: "—", lp: "Cadastro Geral", status: "Produção", prioridade: "Média", data: "07/03", responsavel: "Ana", cta: "Link na descrição", observacoes: "" },
+  { id: 4, tema: "Top 5 jogos da semana", tipo: "Vídeo", formato: "Horizontal 16:9", canal: "YouTube", jogo: "Vários", influencer: "Ana S.", campanha: "-", lp: "Cadastro Geral", status: "Produção", prioridade: "Média", data: "07/03", responsavel: "Ana", cta: "Link na descrição", observacoes: "" },
   { id: 5, tema: "Bônus Bet365 cadastro", tipo: "Story", formato: "Vertical 9:16", canal: "Instagram", jogo: "Fortune Tiger", influencer: "Carlos S.", campanha: "Março Turbo", lp: "Fortune Tiger LP", status: "Agendado", prioridade: "Alta", data: "06/03", responsavel: "Carlos", cta: "Arrasta pra cima", observacoes: "" },
   { id: 6, tema: "Link exclusivo Aviator", tipo: "Post", formato: "Texto + link", canal: "Telegram", jogo: "Aviator", influencer: "Pedro L.", campanha: "Aviator Week", lp: "Aviator Promo", status: "Agendado", prioridade: "Alta", data: "09/03", responsavel: "Pedro", cta: "Clique e jogue", observacoes: "" },
   { id: 7, tema: "Fortune Tiger dicas", tipo: "Reels", formato: "Vertical 9:16", canal: "Instagram", jogo: "Fortune Tiger", influencer: "Rafael M.", campanha: "Março Turbo", lp: "Fortune Tiger LP", status: "Publicado", prioridade: "Alta", data: "04/03", dataPublicacao: "04/03/2026", responsavel: "Rafael", cta: "Bio link", observacoes: "" },
   { id: 8, tema: "Prova social depósitos", tipo: "Story", formato: "Vertical 9:16", canal: "Instagram", jogo: "Fortune Tiger", influencer: "Rafael M.", campanha: "Março Turbo", lp: "Fortune Tiger LP", status: "Produção", prioridade: "Média", data: "12/03", responsavel: "Equipe", cta: "Link na bio", observacoes: "" },
-  { id: 9, tema: "Live tirada de dúvidas", tipo: "Live", formato: "Vertical", canal: "Instagram", jogo: "Vários", influencer: "Ana S.", campanha: "—", lp: "Cadastro Geral", status: "Ideia", prioridade: "Baixa", data: "14/03", responsavel: "Ana", observacoes: "Confirmar horário" },
-  { id: 10, tema: "Teaser novo jogo Spaceman", tipo: "Reels", formato: "Vertical 9:16", canal: "TikTok", jogo: "Spaceman", influencer: "Pedro L.", campanha: "—", lp: "—", status: "Pausado", prioridade: "Baixa", data: "15/03", responsavel: "Pedro", observacoes: "Jogo inativo, aguardar reativação" },
+  { id: 9, tema: "Live tirada de dúvidas", tipo: "Live", formato: "Vertical", canal: "Instagram", jogo: "Vários", influencer: "Ana S.", campanha: "-", lp: "Cadastro Geral", status: "Ideia", prioridade: "Baixa", data: "14/03", responsavel: "Ana", observacoes: "Confirmar horário" },
+  { id: 10, tema: "Teaser novo jogo Spaceman", tipo: "Reels", formato: "Vertical 9:16", canal: "TikTok", jogo: "Spaceman", influencer: "Pedro L.", campanha: "-", lp: "-", status: "Pausado", prioridade: "Baixa", data: "15/03", responsavel: "Pedro", observacoes: "Jogo inativo, aguardar reativação" },
 ];

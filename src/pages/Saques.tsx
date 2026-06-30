@@ -58,7 +58,7 @@ export default function Saques() {
     if (action === "pay") { newStatus = "Pago via Asaas"; msg = "Marcado como pago"; }
     try {
       await update({ id: saque.id, updates: { status: newStatus, responsavel: "Admin" } });
-      toast({ title: msg, description: `${saque.nome} — ${Number(saque.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` });
+      toast({ title: msg, description: `${saque.nome} - ${Number(saque.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}` });
     } catch (e: any) {
       toast({ title: "Erro", description: e.message, variant: "destructive" });
     }
@@ -165,7 +165,7 @@ export default function Saques() {
 
       <Dialog open={!!detailOpen} onOpenChange={() => setDetailOpen(null)}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Detalhe — {detailOpen?.codigo}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Detalhe - {detailOpen?.codigo}</DialogTitle></DialogHeader>
           {detailOpen && (
             <div className="space-y-4 py-2 text-sm">
               <div className="grid grid-cols-2 gap-3">
@@ -173,10 +173,10 @@ export default function Saques() {
                 <div><span className="text-xs text-muted-foreground">Tipo</span><p><span className={detailOpen.tipo === "Influencer" ? "badge-info" : "badge-primary"}>{detailOpen.tipo}</span></p></div>
                 <div><span className="text-xs text-muted-foreground">Valor</span><p className="font-bold text-lg">{Number(detailOpen.valor).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</p></div>
                 <div><span className="text-xs text-muted-foreground">Status</span><p><span className={statusBadge(detailOpen.status || "")}>{detailOpen.status}</span></p></div>
-                <div><span className="text-xs text-muted-foreground">Origem</span><p>{detailOpen.origem || "—"}</p></div>
-                <div><span className="text-xs text-muted-foreground">Conta</span><p className="font-mono text-xs">{detailOpen.conta || "—"}</p></div>
-                <div><span className="text-xs text-muted-foreground">Responsável</span><p>{detailOpen.responsavel || "—"}</p></div>
-                <div><span className="text-xs text-muted-foreground">Data</span><p>{detailOpen.data || "—"}</p></div>
+                <div><span className="text-xs text-muted-foreground">Origem</span><p>{detailOpen.origem || "-"}</p></div>
+                <div><span className="text-xs text-muted-foreground">Conta</span><p className="font-mono text-xs">{detailOpen.conta || "-"}</p></div>
+                <div><span className="text-xs text-muted-foreground">Responsável</span><p>{detailOpen.responsavel || "-"}</p></div>
+                <div><span className="text-xs text-muted-foreground">Data</span><p>{detailOpen.data || "-"}</p></div>
               </div>
             </div>
           )}
@@ -191,7 +191,7 @@ export default function Saques() {
           <DialogHeader><DialogTitle>
             {confirmAction?.action === "approve" ? "Aprovar Saque" : confirmAction?.action === "reject" ? "Recusar Saque" : confirmAction?.action === "process" ? "Processar Saque" : "Marcar como Pago"}
           </DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Confirmar ação para <strong>{confirmAction?.saque.nome}</strong> — {Number(confirmAction?.saque.valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}?</p>
+          <p className="text-sm text-muted-foreground">Confirmar ação para <strong>{confirmAction?.saque.nome}</strong> - {Number(confirmAction?.saque.valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}?</p>
           <DialogFooter>
             <button className="btn-ghost" onClick={() => setConfirmAction(null)}>Cancelar</button>
             <button className={`btn-primary ${confirmAction?.action === "reject" ? "bg-destructive hover:bg-destructive/90" : ""}`} onClick={handleAction}>Confirmar</button>

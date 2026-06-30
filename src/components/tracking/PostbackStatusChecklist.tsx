@@ -23,7 +23,7 @@ interface ValidationInfo {
   lastReceived?: string;
 }
 
-/** Persisted config state per event — stored in localStorage */
+/** Persisted config state per event - stored in localStorage */
 function getConfigState(platformSlug: string): Record<string, boolean> {
   try {
     const raw = localStorage.getItem(`postback_config_${platformSlug}`);
@@ -193,7 +193,7 @@ export default function PostbackStatusChecklist() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Clipboard size={14} className="text-primary" />
-            <CardTitle className="text-sm">Postbacks — {preset.label}</CardTitle>
+            <CardTitle className="text-sm">Postbacks - {preset.label}</CardTitle>
             <Badge variant="outline" className="text-[10px]">
               {configuredCount}/{preset.events.length} configurados
             </Badge>

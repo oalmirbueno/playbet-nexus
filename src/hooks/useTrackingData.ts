@@ -9,7 +9,7 @@ import type {
 } from "@/services/trackingService";
 import { useToast } from "@/hooks/use-toast";
 
-/** Filter out demo rows — always show only real data */
+/** Filter out demo rows - always show only real data */
 function filterReal<T extends { is_demo: boolean }>(rows: T[]): T[] {
   return rows.filter(r => !r.is_demo);
 }

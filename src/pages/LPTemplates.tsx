@@ -85,7 +85,7 @@ export default function LPTemplates() {
     <div className="space-y-6">
       <Breadcrumbs items={[{ label: "Gestão de Ativos", path: "/lp-templates" }, { label: "Templates de LP" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div><h1 className="page-header">Templates de LP</h1><p className="page-subtitle">Central de templates — base para distribuição por influenciador</p></div>
+        <div><h1 className="page-header">Templates de LP</h1><p className="page-subtitle">Central de templates - base para distribuição por influenciador</p></div>
         <div className="flex gap-2">
           <ExportDropdown data={exportableData} filename="templates-lp-playbet" />
           <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Criar Template</button>
@@ -121,8 +121,8 @@ export default function LPTemplates() {
             {filtered.map(t => (
               <tr key={t.id}>
                 <td className="font-medium">{t.name}</td>
-                <td><span className="badge-neutral">{t.type || "—"}</span></td>
-                <td>{t.main_game || "—"}</td>
+                <td><span className="badge-neutral">{t.type || "-"}</span></td>
+                <td>{t.main_game || "-"}</td>
                 <td><span className={t.is_active ? "badge-success" : "badge-danger"}>{t.is_active ? "Ativo" : "Inativo"}</span></td>
                 <td>
                   <div className="flex gap-0.5">
@@ -142,12 +142,12 @@ export default function LPTemplates() {
       {/* Detail Modal */}
       <Dialog open={!!detailOpen} onOpenChange={() => setDetailOpen(null)}>
         <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Template — {detailOpen?.name}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Template - {detailOpen?.name}</DialogTitle></DialogHeader>
           {detailOpen && (
             <div className="space-y-4 py-2">
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
-                <div className="p-2 bg-secondary/50 rounded text-center"><span className="text-[10px] text-muted-foreground">Tipo</span><p className="font-medium">{detailOpen.type || "—"}</p></div>
-                <div className="p-2 bg-secondary/50 rounded text-center"><span className="text-[10px] text-muted-foreground">Jogo</span><p className="font-medium">{detailOpen.main_game || "—"}</p></div>
+                <div className="p-2 bg-secondary/50 rounded text-center"><span className="text-[10px] text-muted-foreground">Tipo</span><p className="font-medium">{detailOpen.type || "-"}</p></div>
+                <div className="p-2 bg-secondary/50 rounded text-center"><span className="text-[10px] text-muted-foreground">Jogo</span><p className="font-medium">{detailOpen.main_game || "-"}</p></div>
                 <div className="p-2 bg-secondary/50 rounded text-center"><span className="text-[10px] text-muted-foreground">Status</span><p className="font-medium">{detailOpen.is_active ? "Ativo" : "Inativo"}</p></div>
               </div>
             </div>

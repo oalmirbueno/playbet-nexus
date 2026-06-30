@@ -15,7 +15,7 @@ const PLAYBET_HOSTS = [
   "painelcentral.playbet.app.br",
 ];
 
-describe("trackingUrl — Sem LP", () => {
+describe("trackingUrl - Sem LP", () => {
   it("produces the affiliate URL directly with sub1/sub2/sub3", () => {
     const url = resolveShareUrl({
       lpDomain: null,

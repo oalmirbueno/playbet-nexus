@@ -23,7 +23,7 @@ export default function LinkEngine() {
   });
 
   const openCreate = () => {
-    setEditing({ id: 0, influencerId: 0, influencerNome: "", slug: "", templateId: 0, templateNome: "", affiliateLink: "", urlPublica: "", cliques: 0, status: "Ativo", ultimaAtividade: "—" });
+    setEditing({ id: 0, influencerId: 0, influencerNome: "", slug: "", templateId: 0, templateNome: "", affiliateLink: "", urlPublica: "", cliques: 0, status: "Ativo", ultimaAtividade: "-" });
     setModalOpen(true);
   };
 
@@ -59,7 +59,7 @@ export default function LinkEngine() {
     <div className="space-y-6">
       <Breadcrumbs items={[{ label: "Gestão de Ativos", path: "/link-engine" }, { label: "Engine de Links" }]} />
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div><h1 className="page-header">Engine de Links</h1><p className="page-subtitle">Distribuição centralizada de LPs por influenciador — gestão de vínculos e rastreio</p></div>
+        <div><h1 className="page-header">Engine de Links</h1><p className="page-subtitle">Distribuição centralizada de LPs por influenciador - gestão de vínculos e rastreio</p></div>
         <div className="flex gap-2">
           {data.length > 0 && <ExportDropdown data={data.map(({ id, influencerNome, slug, templateNome, urlPublica, status }) => ({ id, influencerNome, slug, templateNome, urlPublica, status }))} filename="engine-links-playbet" />}
           <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Criar Vínculo</button>

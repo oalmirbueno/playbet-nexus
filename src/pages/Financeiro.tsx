@@ -37,7 +37,7 @@ export default function Financeiro() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Financeiro</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Caixa real, revenue atribuído, ranking de geração e distribuição automática — uma fonte única de verdade.
+            Caixa real, revenue atribuído, ranking de geração e distribuição automática - uma fonte única de verdade.
           </p>
         </div>
         <PeriodFilter

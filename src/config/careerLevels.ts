@@ -1,4 +1,4 @@
-// PlayBet — Modelo oficial v3 (08/05/2026)
+// PlayBet - Modelo oficial v3 (08/05/2026)
 // Fonte: docs/PLAYBET_MODELO_OFICIAL.md
 
 export type CareerKind = "creator" | "manager";

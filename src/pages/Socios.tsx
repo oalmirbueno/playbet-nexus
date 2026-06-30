@@ -45,7 +45,7 @@ export default function Socios() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Sócios</h1>
-          <p className="text-sm text-muted-foreground mt-1">Gestão societária — participação, ganhos e distribuição</p>
+          <p className="text-sm text-muted-foreground mt-1">Gestão societária - participação, ganhos e distribuição</p>
         </div>
         <div className="flex gap-2">
           {data.length > 0 && <ExportDropdown data={data.map(({ id, nome, participacao, ganhos, disponivel, status }: any) => ({ id, nome, participacao, ganhos, disponivel, status }))} filename="socios-playbet" />}

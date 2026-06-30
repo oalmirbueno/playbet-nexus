@@ -1,4 +1,4 @@
-// PlayBet — Cálculo de distribuição oficial (v3 · 08/05/2026)
+// PlayBet - Cálculo de distribuição oficial (v3 · 08/05/2026)
 // Fonte: docs/PLAYBET_MODELO_OFICIAL.md
 
 export interface DistributionInput {

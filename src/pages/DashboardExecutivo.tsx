@@ -1,4 +1,4 @@
-// DashboardExecutivo — KPI grid always visible (zeros when empty)
+// DashboardExecutivo - KPI grid always visible (zeros when empty)
 import { useMemo } from "react";
 import { DollarSign, Users, Wallet, Target, MousePointerClick, Megaphone, ArrowRight, Landmark, TrendingUp, BarChart3, UserCheck, Radio } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -59,7 +59,7 @@ export default function DashboardExecutivo() {
     };
   }, [totalPagosAsaas, consolidated, socios, mediaComissaoInfluencer]);
 
-  // KPIs sempre visíveis — começam em zero e enchem conforme tracking + Asaas chegam
+  // KPIs sempre visíveis - começam em zero e enchem conforme tracking + Asaas chegam
   const kpis = [
     { label: "Caixa Asaas", value: formatBRL(totalPagosAsaas), sub: "Pago no período", icon: Landmark, path: "/financeiro" },
     { label: "Revenue Real", value: formatBRL(consolidated.revenueBrl || 0), sub: "Postbacks validados", icon: DollarSign, path: "/tracking" },
@@ -84,7 +84,7 @@ export default function DashboardExecutivo() {
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-1.5">
-            Base zerada — os números aumentam à medida que cliques, depósitos e o caixa do Asaas chegam.
+            Base zerada - os números aumentam à medida que cliques, depósitos e o caixa do Asaas chegam.
           </p>
         </div>
         <button

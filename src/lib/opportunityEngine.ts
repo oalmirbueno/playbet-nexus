@@ -1,5 +1,5 @@
 /**
- * Motor de Oportunidades — geração de até 3 sugestões por evento Sports
+ * Motor de Oportunidades - geração de até 3 sugestões por evento Sports
  * e cálculo de score consolidado.
  *
  * Linguagem permitida: "score", "confiança", "mercado simples", "odd em destaque",
@@ -46,7 +46,7 @@ export function suggestThreeOptions({ event, signals = [] }: SuggestInput): Sugg
   out.push({
     title: `${home} vence`,
     market_type: "resultado_final",
-    market_name: "Resultado final — mandante",
+    market_name: "Resultado final - mandante",
     badge: "Mercado simples",
     recommendation_reason: "Mercado simples, leitura direta do confronto.",
     recommendation_score: 0,
@@ -118,7 +118,7 @@ export interface ScoreInput {
 }
 
 /**
- * Score consolidado 0-100. Não é promessa de acerto — é qualidade da curadoria.
+ * Score consolidado 0-100. Não é promessa de acerto - é qualidade da curadoria.
  * Critérios: mercado simples, odd preenchida, casa definida, link oficial válido,
  * evento próximo, sinal recebido, estatística preenchida, coerência odd↔mercado.
  */
@@ -167,7 +167,7 @@ function coherentOddForMarket(label: string, marketType?: string | null): boolea
   return num >= 1.1 && num <= 15;
 }
 
-/** Converte sinal em rascunho de oportunidade — não publica, é só payload. */
+/** Converte sinal em rascunho de oportunidade - não publica, é só payload. */
 export function signalToOpportunityDraft(
   signal: LpSignalRow,
   event?: Pick<LpEventRow, "home_team" | "away_team" | "starts_at"> | null,
@@ -189,7 +189,7 @@ export function signalToOpportunityDraft(
     signal_source: signal.source_name ?? signal.source_channel,
     signal_confidence: signal.confidence,
     badge: "Curadoria PlayBet",
-    is_active: false, // rascunho — nunca publica automático
+    is_active: false, // rascunho - nunca publica automático
     sort_order: 0,
   };
 }
