@@ -143,13 +143,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           to={item.path}
                           onClick={() => setSidebarOpen(false)}
                           title={sidebarCollapsed ? item.label : undefined}
-                          className={`group flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-[9px]"} rounded-md text-[13px] transition-all duration-150 ${
+                          className={`group relative flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-[9px]"} rounded-lg text-[13px] transition-all duration-200 ${
                             active
-                              ? "bg-primary/12 text-foreground font-medium"
-                              : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground font-normal"
+                              ? "text-foreground font-medium bg-gradient-to-r from-primary/15 via-primary/8 to-transparent shadow-[inset_0_1px_0_hsl(var(--primary)/0.12)]"
+                              : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground font-normal"
                           }`}
                         >
-                          <item.icon size={sidebarCollapsed ? 16 : 14} strokeWidth={active ? 2 : 1.5} className={`shrink-0 ${active ? "text-primary" : ""}`} />
+                          {active && (
+                            <span className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-r-full bg-gradient-to-b from-primary-glow to-primary shadow-[0_0_8px_hsl(var(--primary)/0.55)]" />
+                          )}
+                          <item.icon size={sidebarCollapsed ? 16 : 14} strokeWidth={active ? 2.25 : 1.6} className={`shrink-0 transition-colors ${active ? "text-primary" : "group-hover:text-foreground/90"}`} />
                           {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
                         </Link>
                       );
@@ -160,6 +163,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             );
           })}
         </nav>
+
+
 
         {/* Collapse toggle (desktop only) */}
         <div className="hidden md:flex px-3 py-2 border-t border-sidebar-border shrink-0">
