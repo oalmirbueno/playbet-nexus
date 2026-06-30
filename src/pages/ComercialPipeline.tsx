@@ -458,74 +458,89 @@ function CardDetailSheet({ card, squads, managers, onClose, onUpdated }: {
 
   return (
     <Sheet open={!!card} onOpenChange={v => !v && onClose()}>
-      <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="font-display">{card.name}</SheetTitle>
-          <SheetDescription>{card.handle ?? "—"} · {card.niche ?? "sem nicho"}</SheetDescription>
+          <SheetDescription>{card.handle ?? "—"} · {card.niche ?? "sem nicho"} · etapa atual: <span className="text-foreground">{card.stage}</span></SheetDescription>
         </SheetHeader>
 
-        <div className="mt-6 space-y-6">
-          <div className="rounded-lg border border-border/60 bg-card/40 p-4">
-            <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-              <span>Progresso do checklist (obrigatórios)</span>
-              <span className="font-medium text-foreground">{checkedRequired} / {totalRequired} · {pct}%</span>
-            </div>
-            <Progress value={pct} className="h-1.5" />
-          </div>
+        <Tabs defaultValue={card.stage === "cadastro" || card.stage === "analise" ? "cadastro" : "checklist"} className="mt-6">
+          <TabsList className="grid grid-cols-2 w-full">
+            <TabsTrigger value="checklist">Checklist & squad</TabsTrigger>
+            <TabsTrigger value="cadastro">Cadastro completo</TabsTrigger>
+          </TabsList>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs">Squad</Label>
-              <Select value={squadId} onValueChange={setSquadId}>
-                <SelectTrigger><SelectValue placeholder="Sem squad" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Sem squad</SelectItem>
-                  {squads.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+          <TabsContent value="checklist" className="space-y-6 mt-6">
+            <div className="rounded-lg border border-border/60 bg-card/40 p-4">
+              <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                <span>Progresso do checklist (obrigatórios)</span>
+                <span className="font-medium text-foreground">{checkedRequired} / {totalRequired} · {pct}%</span>
+              </div>
+              <Progress value={pct} className="h-1.5" />
             </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs">Gerente atribuído</Label>
-              <Input
-                disabled
-                value={managers.find(m => m.id === card.manager_id)?.name ?? "Atribuído ao mover para Aprovado"}
-              />
-            </div>
-          </div>
 
-          {Object.entries(groups).map(([group, list]) => (
-            <div key={group} className="space-y-2">
-              <h3 className="text-xs font-display font-semibold uppercase tracking-wider text-muted-foreground">
-                {group}
-              </h3>
-              <div className="space-y-1.5 rounded-lg border border-border/60 bg-card/40 p-3">
-                {list.map(item => (
-                  <label key={item.id} className="flex items-start gap-2.5 py-1 cursor-pointer hover:bg-secondary/40 rounded px-1.5 -mx-1.5">
-                    <Checkbox
-                      checked={!!answers[item.id]?.checked}
-                      onCheckedChange={v => toggleItem(item, !!v)}
-                      className="mt-0.5"
-                    />
-                    <span className="text-sm flex-1">
-                      {item.label}
-                      {item.required && <span className="text-destructive ml-1">*</span>}
-                    </span>
-                  </label>
-                ))}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs">Squad</Label>
+                <Select value={squadId} onValueChange={setSquadId}>
+                  <SelectTrigger><SelectValue placeholder="Sem squad" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem squad</SelectItem>
+                    {squads.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">Gerente atribuído</Label>
+                <Input
+                  disabled
+                  value={managers.find(m => m.id === card.manager_id)?.name ?? "Atribuído ao mover para Aprovado"}
+                />
               </div>
             </div>
-          ))}
 
-          <div className="space-y-1.5">
-            <Label className="text-xs">Notas</Label>
-            <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={4} />
-          </div>
-        </div>
+            {Object.entries(groups).map(([group, list]) => (
+              <div key={group} className="space-y-2">
+                <h3 className="text-xs font-display font-semibold uppercase tracking-wider text-muted-foreground">
+                  {group}
+                </h3>
+                <div className="space-y-1.5 rounded-lg border border-border/60 bg-card/40 p-3">
+                  {list.map(item => (
+                    <label key={item.id} className="flex items-start gap-2.5 py-1 cursor-pointer hover:bg-secondary/40 rounded px-1.5 -mx-1.5">
+                      <Checkbox
+                        checked={!!answers[item.id]?.checked}
+                        onCheckedChange={v => toggleItem(item, !!v)}
+                        className="mt-0.5"
+                      />
+                      <span className="text-sm flex-1">
+                        {item.label}
+                        {item.required && <span className="text-destructive ml-1">*</span>}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
 
-        <SheetFooter className="mt-6">
-          <Button variant="ghost" onClick={onClose}>Fechar</Button>
-          <Button onClick={saveMeta}>Salvar</Button>
-        </SheetFooter>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Notas</Label>
+              <Textarea value={notes} onChange={e => setNotes(e.target.value)} rows={4} />
+            </div>
+
+            <SheetFooter>
+              <Button variant="ghost" onClick={onClose}>Fechar</Button>
+              <Button onClick={saveMeta}>Salvar</Button>
+            </SheetFooter>
+          </TabsContent>
+
+          <TabsContent value="cadastro" className="mt-6">
+            <CandidateRegistrationForm
+              cardId={card.id}
+              initial={card as any}
+              onSaved={() => { onUpdated(); }}
+            />
+          </TabsContent>
+        </Tabs>
       </SheetContent>
     </Sheet>
   );
