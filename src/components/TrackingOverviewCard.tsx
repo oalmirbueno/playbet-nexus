@@ -81,7 +81,7 @@ export default function TrackingOverviewCard() {
           </div>
           <div>
             <p className="text-[10px] text-muted-foreground uppercase">Última atividade</p>
-            <p className="text-xs font-medium mt-1">{lastEvent || "—"}</p>
+            <p className="text-xs font-medium mt-1">{lastEvent || "-"}</p>
           </div>
         </div>
 

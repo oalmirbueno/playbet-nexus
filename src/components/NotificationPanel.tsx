@@ -59,7 +59,7 @@ export default function NotificationPanel() {
         notifications.push({
           id: `saque-alto-${s.id}`,
           title: `Saque alto: ${s.nome}`,
-          description: `${formatBRL(Number(s.valor))} via ${s.tipo} — requer atenção`,
+          description: `${formatBRL(Number(s.valor))} via ${s.tipo} - requer atenção`,
           icon: AlertTriangle,
           variant: "danger",
           path: "/saques",
@@ -83,7 +83,7 @@ export default function NotificationPanel() {
     notifications.push({
       id: `campanha-fim-${c.id}`,
       title: `Campanha "${c.nome}" encerra em breve`,
-      description: `${diff === 0 ? "Encerra hoje" : `Faltam ${diff} dia${diff > 1 ? "s" : ""}`} — ${c.status || "Ativa"}`,
+      description: `${diff === 0 ? "Encerra hoje" : `Faltam ${diff} dia${diff > 1 ? "s" : ""}`} - ${c.status || "Ativa"}`,
       icon: Megaphone,
       variant: diff <= 2 ? "danger" : "info",
       path: "/campanhas",
@@ -102,7 +102,7 @@ export default function NotificationPanel() {
     notifications.push({
       id: `campanha-expirada-${c.id}`,
       title: `Campanha "${c.nome}" expirou`,
-      description: `Data fim: ${c.fim} — status ainda "${c.status}"`,
+      description: `Data fim: ${c.fim} - status ainda "${c.status}"`,
       icon: Clock,
       variant: "danger",
       path: "/campanhas",

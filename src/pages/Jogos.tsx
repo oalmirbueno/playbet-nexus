@@ -13,7 +13,7 @@ const getTrend = (status: string | null) => {
   if (status === "stable") return { label: "Estável", color: "text-accent", icon: Minus };
   if (status === "falling") return { label: "Em Queda", color: "text-warning", icon: TrendingDown };
   if (status === "critical") return { label: "Crítico", color: "text-destructive", icon: TrendingDown };
-  return { label: "—", color: "text-muted-foreground", icon: Minus };
+  return { label: "-", color: "text-muted-foreground", icon: Minus };
 };
 
 type EditingState = {
@@ -167,7 +167,7 @@ export default function Jogos() {
                       <span className="font-medium hover:text-accent transition-colors">{j.name}</span>
                     </div>
                   </td>
-                  <td><span className="badge-neutral">{j.category || "—"}</span></td>
+                  <td><span className="badge-neutral">{j.category || "-"}</span></td>
                   <td><span className={`flex items-center gap-1 text-xs font-medium ${trend.color}`}><trend.icon size={12} />{trend.label}</span></td>
                   <td><span className={j.is_active ? "badge-success" : "badge-danger"}>{j.is_active ? "Ativo" : "Inativo"}</span></td>
                   <td>

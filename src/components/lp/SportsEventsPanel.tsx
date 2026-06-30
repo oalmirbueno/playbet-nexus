@@ -122,7 +122,7 @@ export function SportsEventsPanel({ platforms, landingPages, onCreateOpportunity
           destination_url: "", // será definido na revisão
           starts_at: ev.starts_at,
           sort_order: 10 - i,
-          is_active: false, // rascunho — revisão obrigatória
+          is_active: false, // rascunho - revisão obrigatória
           signal_id: opt.signal_id ?? null,
           signal_source: opt.signal_source ?? null,
           signal_confidence: opt.signal_confidence ?? null,
@@ -133,7 +133,7 @@ export function SportsEventsPanel({ platforms, landingPages, onCreateOpportunity
           event_image_url: ev.event_image_url,
           odd_label: opt.odd_label ?? null,
         };
-        // pula linha que viraria publicada por engano — rascunho não precisa de destino,
+        // pula linha que viraria publicada por engano - rascunho não precisa de destino,
         // mas se houver URL vinda de sinal, registra
         try {
           await onCreateOpportunity(payload);
@@ -269,7 +269,7 @@ export function SportsEventsPanel({ platforms, landingPages, onCreateOpportunity
                         setTargetLpByEvent((m) => ({ ...m, [ev.id]: v }))
                       }
                     >
-                      <SelectTrigger className="h-9"><SelectValue placeholder="—" /></SelectTrigger>
+                      <SelectTrigger className="h-9"><SelectValue placeholder="-" /></SelectTrigger>
                       <SelectContent>
                         {landingPages.map((lp) => (
                           <SelectItem key={lp.id} value={lp.id}>
@@ -290,7 +290,7 @@ export function SportsEventsPanel({ platforms, landingPages, onCreateOpportunity
                         setTargetPlatformByEvent((m) => ({ ...m, [ev.id]: v }))
                       }
                     >
-                      <SelectTrigger className="h-9"><SelectValue placeholder="—" /></SelectTrigger>
+                      <SelectTrigger className="h-9"><SelectValue placeholder="-" /></SelectTrigger>
                       <SelectContent>
                         {platforms.map((p) => (
                           <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
@@ -327,7 +327,7 @@ export function SportsEventsPanel({ platforms, landingPages, onCreateOpportunity
 
         <div className="px-5 py-3 border-t border-border/60 bg-secondary/15">
           <p className="text-[11px] text-muted-foreground leading-relaxed">
-            Score e badges são <strong>curadoria</strong>, não promessa de acerto. Cards nascem <strong>inativos</strong> —
+            Score e badges são <strong>curadoria</strong>, não promessa de acerto. Cards nascem <strong>inativos</strong> -
             ajuste destino, odd e revise antes de publicar.
           </p>
         </div>

@@ -41,9 +41,9 @@ export default function LandingPagesPage() {
   const [filterTipo, setFilterTipo] = useState("Todos");
   const [filterStatus, setFilterStatus] = useState("Todos");
 
-  const getGameName = (id: string | null) => games.find(g => g.id === id)?.name || "—";
-  const getPlatformName = (id: string | null) => platforms.find(p => p.id === id)?.name || "—";
-  const getTemplateName = (id: string | null) => templates.find(t => t.id === id)?.name || "—";
+  const getGameName = (id: string | null) => games.find(g => g.id === id)?.name || "-";
+  const getPlatformName = (id: string | null) => platforms.find(p => p.id === id)?.name || "-";
+  const getTemplateName = (id: string | null) => templates.find(t => t.id === id)?.name || "-";
 
   const filtered = data.filter(p => {
     if (search && !p.name.toLowerCase().includes(search.toLowerCase()) && !p.route.toLowerCase().includes(search.toLowerCase())) return false;
@@ -180,7 +180,7 @@ export default function LandingPagesPage() {
                 <td className="font-mono text-xs text-accent">{p.domain || <span className="text-destructive text-xs">sem domínio</span>}</td>
                 <td className="font-mono text-xs text-accent">{p.slug}</td>
                 <td className="font-mono text-xs text-muted-foreground">{p.route}</td>
-                <td><span className="badge-neutral">{p.type || "—"}</span></td>
+                <td><span className="badge-neutral">{p.type || "-"}</span></td>
                 <td className="text-xs">{getTemplateName(p.template_id)}</td>
                 <td>
                   <button onClick={() => navigate("/lp-instances")} className="text-xs text-accent hover:underline flex items-center gap-1">
@@ -209,12 +209,12 @@ export default function LandingPagesPage() {
       {/* Preview Modal */}
       <Dialog open={!!previewOpen} onOpenChange={() => setPreviewOpen(null)}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>Preview — {previewOpen?.name}</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Preview - {previewOpen?.name}</DialogTitle></DialogHeader>
           {previewOpen && (
             <div className="space-y-4 py-2">
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div><span className="text-xs text-muted-foreground">URL / Domínio</span><p className="font-mono text-accent">{previewOpen.domain || `playbet.app.br${previewOpen.route}`}</p></div>
-                <div><span className="text-xs text-muted-foreground">Tipo</span><p><span className="badge-neutral">{previewOpen.type || "—"}</span></p></div>
+                <div><span className="text-xs text-muted-foreground">Tipo</span><p><span className="badge-neutral">{previewOpen.type || "-"}</span></p></div>
                 <div><span className="text-xs text-muted-foreground">Jogo</span><p>{getGameName(previewOpen.game_id)}</p></div>
                 <div><span className="text-xs text-muted-foreground">Plataforma</span><p>{getPlatformName(previewOpen.platform_id)}</p></div>
                 <div><span className="text-xs text-muted-foreground">Template</span><p>{getTemplateName(previewOpen.template_id)}</p></div>

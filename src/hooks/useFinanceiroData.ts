@@ -1,4 +1,4 @@
-// Unified financial data hook — caixa Asaas + revenue tracking + rankings + saques
+// Unified financial data hook - caixa Asaas + revenue tracking + rankings + saques
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -90,7 +90,7 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
     });
   }, [saques, range.start, range.end]);
 
-  // CAIXA REAL Asaas — sum of paid/confirmed saques in period (movimento de saída,
+  // CAIXA REAL Asaas - sum of paid/confirmed saques in period (movimento de saída,
   // serve como espelho conservador do realizado até integrarmos saldo Asaas via balance API)
   const caixaRealizado = useMemo(() => {
     const paidStatuses = new Set(["Pago", "Pago via Asaas", "Confirmado"]);
@@ -99,7 +99,7 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
       .reduce((acc: number, s: any) => acc + Number(s.valor || 0), 0);
   }, [saquesInPeriod]);
 
-  // REVENUE TRACKING — sum of converted_amount (BRL) from metrics in period
+  // REVENUE TRACKING - sum of converted_amount (BRL) from metrics in period
   const revenueTracking = useMemo(() => {
     return (metricsQuery.data ?? []).reduce(
       (acc: number, m: any) => acc + Number(m.converted_amount ?? m.revenue ?? 0),
@@ -172,7 +172,7 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
     [baseInfluencerRows],
   );
 
-  // RANKING GERENTES (agregando influencers pelo manager_id — inclui ambas categorias)
+  // RANKING GERENTES (agregando influencers pelo manager_id - inclui ambas categorias)
   const rankingGerentes = useMemo<RankingRow[]>(() => {
     const buckets = new Map<string, { ftd: number; deposits: number; revenue: number }>();
     for (const row of baseInfluencerRows) {

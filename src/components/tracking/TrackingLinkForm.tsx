@@ -110,7 +110,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
     setForm(initialEditing);
   }, [initialEditing]);
 
-  // Single source of truth for the mode — persisted on the row as use_lp.
+  // Single source of truth for the mode - persisted on the row as use_lp.
   const useLp = form.use_lp;
   const setUseLp = (v: boolean) => setForm(p => ({ ...p, use_lp: v }));
 
@@ -130,7 +130,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
     return landingPages.filter((lp: any) => lpIds.has(lp.id));
   }, [lpInstances, landingPages, form.influencer_id]);
 
-  // LPs the influencer doesn't have yet — offered as "create new for"
+  // LPs the influencer doesn't have yet - offered as "create new for"
   const lpsWithoutInstance = useMemo(() => {
     if (!form.influencer_id) return [] as any[];
     const lpIds = new Set(lpsForInfluencer.map((lp: any) => lp.id));
@@ -218,7 +218,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
     return buildPublicLpUrl(selectedLP?.domain, selectedInstance?.slug, sub2Value, sub3Value);
   }, [useLp, selectedLP, selectedInstance, sub2Value, sub3Value]);
 
-  // The deep affiliate URL with attribution params — used by the LP CTA, not shared directly.
+  // The deep affiliate URL with attribution params - used by the LP CTA, not shared directly.
   const trackedAffiliateUrl = useMemo(
     () => buildTrackedUrl(form.base_url, form.click_id_param_name, sub1Value, sub2Value, sub3Value),
     [form.base_url, form.click_id_param_name, sub1Value, sub2Value, sub3Value],
@@ -332,7 +332,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                 <CheckCircle2 size={11} className="text-primary shrink-0" />
                 <span className="text-muted-foreground">CTA da LP:</span>
                 <code className="font-mono truncate" title={selectedInstance.affiliate_link}>
-                  {selectedInstance.affiliate_link || <em className="not-italic text-muted-foreground">vazio — preencha abaixo</em>}
+                  {selectedInstance.affiliate_link || <em className="not-italic text-muted-foreground">vazio - preencha abaixo</em>}
                 </code>
               </div>
             )}
@@ -424,19 +424,19 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                 <div className="rounded border border-border/60 bg-background/40 p-2">
                   <div className="text-[9px] uppercase text-primary font-semibold">{form.click_id_param_name} · atribuição</div>
                   <div className="font-mono text-[10px] mt-0.5 truncate text-foreground" title={sub1Value}>
-                    {sub1Value || <span className="text-muted-foreground">—</span>}
+                    {sub1Value || <span className="text-muted-foreground">-</span>}
                   </div>
                 </div>
                 <div className="rounded border border-border/60 bg-background/40 p-2">
                   <div className="text-[9px] uppercase text-muted-foreground font-semibold">sub2 · influencer</div>
                   <div className="font-mono text-[10px] mt-0.5 truncate" title={sub2Value}>
-                    {sub2Value ? <span className="text-foreground">{sub2Value.slice(0, 8)}…</span> : <span className="text-muted-foreground">—</span>}
+                    {sub2Value ? <span className="text-foreground">{sub2Value.slice(0, 8)}…</span> : <span className="text-muted-foreground">-</span>}
                   </div>
                 </div>
                 <div className="rounded border border-border/60 bg-background/40 p-2">
                   <div className="text-[9px] uppercase text-muted-foreground font-semibold">sub3 · campanha</div>
                   <div className="font-mono text-[10px] mt-0.5 truncate" title={sub3Value}>
-                    {sub3Value ? <span className="text-foreground">{sub3Value.slice(0, 8)}…</span> : <span className="text-muted-foreground">—</span>}
+                    {sub3Value ? <span className="text-foreground">{sub3Value.slice(0, 8)}…</span> : <span className="text-muted-foreground">-</span>}
                   </div>
                 </div>
               </div>
@@ -450,7 +450,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
             </div>
           )}
 
-          {/* Share link — LP URL (Com LP) or affiliate URL direto (Sem LP) */}
+          {/* Share link - LP URL (Com LP) or affiliate URL direto (Sem LP) */}
           {finalUrl && (
             <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3 space-y-1.5">
               <div className="flex items-center gap-2">
@@ -473,7 +473,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
             <div className="space-y-1.5">
               <Step n={5} label="Campanha (opcional)" />
               <Select value={form.campanha_id} onValueChange={v => set("campanha_id", v)}>
-                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="-" /></SelectTrigger>
                 <SelectContent>
                   {(campanhas as any[]).map((c: any) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
                 </SelectContent>

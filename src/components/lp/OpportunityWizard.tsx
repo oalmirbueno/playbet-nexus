@@ -29,7 +29,7 @@ interface Props {
   campanhas: Array<{ id: string; nome?: string | null; slug?: string | null }>;
   onCreate: (payload: Partial<LpOpportunityRow>) => Promise<LpOpportunityRow | void>;
   defaultLandingPageId?: string;
-  /** Active highlights per LP id (sort_order >= 20) — used to alert when > 3. */
+  /** Active highlights per LP id (sort_order >= 20) - used to alert when > 3. */
   highlightsCountByLp?: Map<string, number>;
 }
 
@@ -68,7 +68,7 @@ const SOURCE_LABELS = [
   "Print oficial", "Banner da casa", "Imagem do jogo", "Print da odd", "Mídia própria",
 ];
 
-// Copy proibida — bloqueia publicação para qualquer campo textual.
+// Copy proibida - bloqueia publicação para qualquer campo textual.
 const FORBIDDEN_RX = /\b(mais\s+chance(s)?\s+de\s+ganhar|ganho\s+certo|lucro|garantido|garantia\s+de\s+ganho)\b/i;
 
 function toIso(local: string): string | null {
@@ -316,7 +316,7 @@ export function OpportunityWizard({
     if (!raw.trim()) return "Cole o link, shareCode ou ID da aposta.";
     if (!detected || !finalUrl) {
       if (detected && isSelfLandingLoop(detected.destination_url))
-        return "Link aponta para a própria LP — gera loop. Use o deep link da casa.";
+        return "Link aponta para a própria LP - gera loop. Use o deep link da casa.";
       return "Link inválido ou vazio.";
     }
     if (active && !landingPageId) return "Selecione a landing page para publicar.";
@@ -389,7 +389,7 @@ export function OpportunityWizard({
 
         {/* SCROLLABLE BODY */}
         <div className="flex-1 overflow-y-auto main-scroll px-6 py-6 space-y-7">
-          {/* MODE TABS — segmented */}
+          {/* MODE TABS - segmented */}
           <Tabs value={mode} onValueChange={(v) => { setMode(v as Mode); setModeTouched(true); }}>
             <TabsList className="grid grid-cols-4 w-full h-auto p-1 bg-secondary/60 rounded-lg">
               {MODES.map((m) => (
@@ -418,7 +418,7 @@ export function OpportunityWizard({
             />
             {loop && (
               <p className="text-xs text-destructive flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3" /> Link aponta para a própria landing — bloqueado por segurança.
+                <AlertTriangle className="w-3 h-3" /> Link aponta para a própria landing - bloqueado por segurança.
               </p>
             )}
             {publicNoTracking && (
@@ -462,7 +462,7 @@ export function OpportunityWizard({
                 <Select value={landingPageId || "__"} onValueChange={(v) => setLandingPageId(v === "__" ? "" : v)}>
                   <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__">—</SelectItem>
+                    <SelectItem value="__">-</SelectItem>
                     {landingPages.map((lp) => (
                       <SelectItem key={lp.id} value={lp.id}>{lp.name || lp.slug}</SelectItem>
                     ))}
@@ -517,7 +517,7 @@ export function OpportunityWizard({
                   <Select value={gameType || "__"} onValueChange={(v) => setGameType(v === "__" ? "" : v)}>
                     <SelectTrigger><SelectValue placeholder="Slot, crash, roleta…" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__">—</SelectItem>
+                      <SelectItem value="__">-</SelectItem>
                       {CASINO_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                     </SelectContent>
                   </Select>
@@ -604,9 +604,9 @@ export function OpportunityWizard({
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Rótulo da fonte</Label>
                 <Select value={sourceLabel || "__"} onValueChange={(v) => setSourceLabel(v === "__" ? "" : v)}>
-                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="-" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__">—</SelectItem>
+                    <SelectItem value="__">-</SelectItem>
                     {SOURCE_LABELS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -667,9 +667,9 @@ export function OpportunityWizard({
               <div className="space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Campanha</Label>
                 <Select value={campaignId || "__"} onValueChange={(v) => setCampaignId(v === "__" ? "" : v)}>
-                  <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="-" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__">—</SelectItem>
+                    <SelectItem value="__">-</SelectItem>
                     {campanhas.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
                   </SelectContent>
                 </Select>
@@ -705,7 +705,7 @@ export function OpportunityWizard({
             <CollapsibleContent className="pt-3 space-y-2 text-[11px] text-muted-foreground">
               <div>
                 <span className="uppercase tracking-wide font-semibold">URL final</span>
-                <div className="font-mono break-all p-2 rounded bg-muted mt-1">{finalUrl || "—"}</div>
+                <div className="font-mono break-all p-2 rounded bg-muted mt-1">{finalUrl || "-"}</div>
               </div>
               {detected && (
                 <div className="font-mono break-all">

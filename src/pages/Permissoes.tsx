@@ -62,7 +62,7 @@ export default function Permissoes() {
   const perfilNames = initialPerfis.map(p => p.nome);
 
   const openCreate = () => {
-    setEditing({ id: 0, nome: "", email: "", perfil: "Visualização", status: "Ativo", ultimoAcesso: "—", modulosPermitidos: [] });
+    setEditing({ id: 0, nome: "", email: "", perfil: "Visualização", status: "Ativo", ultimoAcesso: "-", modulosPermitidos: [] });
     setModalOpen(true);
   };
 
@@ -87,7 +87,7 @@ export default function Permissoes() {
         ...editing as Usuario,
         id: Date.now(),
         modulosPermitidos: modulos,
-        ultimoAcesso: "—",
+        ultimoAcesso: "-",
       };
       setUsuarios(prev => [...prev, newUser]);
       toast.success(`Usuário ${editing.nome} criado`);
@@ -113,7 +113,7 @@ export default function Permissoes() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Permissões</h1>
-          <p className="text-sm text-muted-foreground mt-1">Gestão de perfis, usuários e acessos — matriz de permissões completa</p>
+          <p className="text-sm text-muted-foreground mt-1">Gestão de perfis, usuários e acessos - matriz de permissões completa</p>
         </div>
         <button className="btn-primary text-xs" onClick={openCreate}><UserPlus size={13} />Adicionar Usuário</button>
       </div>
@@ -188,7 +188,7 @@ export default function Permissoes() {
       {tab === "matriz" && (
         <div className="glass-card overflow-x-auto invisible-scroll">
           <div className="px-6 py-4 border-b border-border">
-            <h3 className="text-sm font-semibold">Matriz de Permissões — Módulos × Perfis</h3>
+            <h3 className="text-sm font-semibold">Matriz de Permissões - Módulos × Perfis</h3>
           </div>
           <table className="data-table">
             <thead>

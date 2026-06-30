@@ -57,14 +57,14 @@ export default function JogoDetalhe() {
             <span className="badge-neutral">{jogo.category || "Sem categoria"}</span>
             <span className={jogo.is_active ? "badge-success" : "badge-neutral"}>{jogo.is_active ? "Ativo" : "Inativo"}</span>
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Trend: {jogo.trend_status || "—"}</p>
+          <p className="text-sm text-muted-foreground mt-1">Trend: {jogo.trend_status || "-"}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         <div className="glass-card p-5 border-l-2 border-l-accent"><span className="text-xs text-muted-foreground uppercase tracking-wider">Campanhas</span><p className="text-lg font-bold mt-1">{jogoCampanhas.length}</p></div>
         <div className="glass-card p-5 border-l-2 border-l-info"><span className="text-xs text-muted-foreground uppercase tracking-wider">Conteúdos</span><p className="text-lg font-bold mt-1">{jogoConteudos.length}</p></div>
-        <div className="glass-card p-5 border-l-2 border-l-success"><span className="text-xs text-muted-foreground uppercase tracking-wider">Trend</span><p className="text-lg font-bold mt-1">{jogo.trend_status || "—"}</p></div>
+        <div className="glass-card p-5 border-l-2 border-l-success"><span className="text-xs text-muted-foreground uppercase tracking-wider">Trend</span><p className="text-lg font-bold mt-1">{jogo.trend_status || "-"}</p></div>
       </div>
 
       <div className="flex gap-1 overflow-x-auto pb-1">
@@ -79,10 +79,10 @@ export default function JogoDetalhe() {
         <div className="glass-card p-5 space-y-3">
           <h3 className="section-title">Informações</h3>
           <div className="grid grid-cols-2 gap-y-3 text-xs">
-            <div><span className="text-muted-foreground">Categoria</span><p className="font-medium">{jogo.category || "—"}</p></div>
-            <div><span className="text-muted-foreground">Trend Status</span><p className="font-medium">{jogo.trend_status || "—"}</p></div>
-            <div><span className="text-muted-foreground">Criado em</span><p className="font-medium">{jogo.created_at ? new Date(jogo.created_at).toLocaleDateString("pt-BR") : "—"}</p></div>
-            <div><span className="text-muted-foreground">Atualizado em</span><p className="font-medium">{jogo.updated_at ? new Date(jogo.updated_at).toLocaleDateString("pt-BR") : "—"}</p></div>
+            <div><span className="text-muted-foreground">Categoria</span><p className="font-medium">{jogo.category || "-"}</p></div>
+            <div><span className="text-muted-foreground">Trend Status</span><p className="font-medium">{jogo.trend_status || "-"}</p></div>
+            <div><span className="text-muted-foreground">Criado em</span><p className="font-medium">{jogo.created_at ? new Date(jogo.created_at).toLocaleDateString("pt-BR") : "-"}</p></div>
+            <div><span className="text-muted-foreground">Atualizado em</span><p className="font-medium">{jogo.updated_at ? new Date(jogo.updated_at).toLocaleDateString("pt-BR") : "-"}</p></div>
           </div>
         </div>
       )}
@@ -93,7 +93,7 @@ export default function JogoDetalhe() {
             <p className="text-sm text-muted-foreground text-center py-12">Nenhuma campanha vinculada a este jogo.</p>
           ) : (
             <table className="data-table"><thead><tr><th>Nome</th><th>Influencer</th><th>Período</th><th>Status</th></tr></thead>
-              <tbody>{jogoCampanhas.map((c: any) => <tr key={c.id} className="cursor-pointer hover:bg-secondary/30" onClick={() => navigate(`/campanhas/${c.id}`)}><td className="font-medium">{c.nome}</td><td>{c.influencer || "—"}</td><td className="text-xs">{c.inicio || "—"} - {c.fim || "—"}</td><td><span className={c.status === "Ativa" ? "badge-success" : c.status === "Planejada" ? "badge-info" : "badge-neutral"}>{c.status}</span></td></tr>)}</tbody>
+              <tbody>{jogoCampanhas.map((c: any) => <tr key={c.id} className="cursor-pointer hover:bg-secondary/30" onClick={() => navigate(`/campanhas/${c.id}`)}><td className="font-medium">{c.nome}</td><td>{c.influencer || "-"}</td><td className="text-xs">{c.inicio || "-"} - {c.fim || "-"}</td><td><span className={c.status === "Ativa" ? "badge-success" : c.status === "Planejada" ? "badge-info" : "badge-neutral"}>{c.status}</span></td></tr>)}</tbody>
             </table>
           )}
         </div>
@@ -105,7 +105,7 @@ export default function JogoDetalhe() {
             <p className="text-sm text-muted-foreground text-center py-12">Nenhum conteúdo vinculado a este jogo.</p>
           ) : (
             <table className="data-table"><thead><tr><th>Tema</th><th>Tipo</th><th>Influencer</th><th>Status</th><th>Data</th></tr></thead>
-              <tbody>{jogoConteudos.map((c: any) => <tr key={c.id}><td className="font-medium">{c.tema}</td><td><span className="badge-neutral">{c.tipo || "—"}</span></td><td>{c.influencer || "—"}</td><td><span className={c.status === "Publicado" ? "badge-success" : c.status === "Agendado" ? "badge-info" : "badge-warning"}>{c.status}</span></td><td className="text-xs">{c.data || "—"}</td></tr>)}</tbody>
+              <tbody>{jogoConteudos.map((c: any) => <tr key={c.id}><td className="font-medium">{c.tema}</td><td><span className="badge-neutral">{c.tipo || "-"}</span></td><td>{c.influencer || "-"}</td><td><span className={c.status === "Publicado" ? "badge-success" : c.status === "Agendado" ? "badge-info" : "badge-warning"}>{c.status}</span></td><td className="text-xs">{c.data || "-"}</td></tr>)}</tbody>
             </table>
           )}
         </div>

@@ -27,7 +27,7 @@ export default function Conversoes() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Conversões</h1>
-          <p className="text-sm text-muted-foreground mt-1">Centro de leitura operacional — funil e drill-down por registro</p>
+          <p className="text-sm text-muted-foreground mt-1">Centro de leitura operacional - funil e drill-down por registro</p>
         </div>
         <button onClick={() => navigate("/analytics")} className="btn-ghost text-xs gap-1.5"><BarChart3 size={13} />Analytics</button>
       </div>

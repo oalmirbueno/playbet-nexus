@@ -46,7 +46,7 @@ export default function LinksAfiliados() {
   const grouped = useMemo(() => {
     const map = new Map<string, LinkAfiliado[]>();
     for (const l of filtered) {
-      const key = (groupBy === "influencer" ? l.influencer : groupBy === "jogo" ? l.jogo : l.plat) || "—";
+      const key = (groupBy === "influencer" ? l.influencer : groupBy === "jogo" ? l.jogo : l.plat) || "-";
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(l);
     }
@@ -54,7 +54,7 @@ export default function LinksAfiliados() {
   }, [filtered, groupBy]);
 
   const openCreate = () => {
-    setEditing({ id: 0, nome: "", jogo: "", plat: "", influencer: "", uso: "", source: "playbet", medium: "", campaign: "", subid: "", status: "Ativo", ultimoClique: "—", cliques: 0 });
+    setEditing({ id: 0, nome: "", jogo: "", plat: "", influencer: "", uso: "", source: "playbet", medium: "", campaign: "", subid: "", status: "Ativo", ultimoClique: "-", cliques: 0 });
     setModalOpen(true);
   };
   const openEdit = (l: LinkAfiliado) => { setEditing({ ...l }); setModalOpen(true); };
@@ -199,8 +199,8 @@ export default function LinksAfiliados() {
                       {items.map(l => (
                         <tr key={l.id}>
                           <td className="font-medium text-xs">{l.nome}</td>
-                          <td className="text-xs text-muted-foreground">{l.jogo || "—"}</td>
-                          <td className="text-xs text-muted-foreground">{l.plat || "—"}</td>
+                          <td className="text-xs text-muted-foreground">{l.jogo || "-"}</td>
+                          <td className="text-xs text-muted-foreground">{l.plat || "-"}</td>
                           <td className="font-mono text-[10px] text-muted-foreground">
                             <div>{l.source}/{l.medium}</div>
                             {l.subid && <div className="text-accent">{l.subid}</div>}

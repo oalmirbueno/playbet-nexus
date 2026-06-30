@@ -32,11 +32,11 @@ export default function GlobalSearch({ open, onOpenChange }: { open: boolean; on
     const results: SearchResult[] = [];
     influencers.forEach((i: any) => results.push({ id: i.id, title: i.name, subtitle: `@${i.instagram || i.slug} · ${i.is_active ? "Ativo" : "Inativo"}`, category: "Influencers", icon: Users, path: `/influencers/${i.id}` }));
     games.forEach((g: any) => results.push({ id: g.id, title: g.name, subtitle: `${g.category || "Sem categoria"} · ${g.is_active ? "Ativo" : "Inativo"}`, category: "Jogos", icon: Gamepad2, path: `/jogos/${g.id}` }));
-    platforms.forEach((p: any) => results.push({ id: p.id, title: p.name, subtitle: `${p.commission_type || "—"} · ${p.is_active ? "Ativa" : "Inativa"}`, category: "Plataformas", icon: Monitor, path: `/plataformas/${p.id}` }));
-    campanhas.forEach((c: any) => results.push({ id: c.id, title: c.nome, subtitle: `${c.status || "—"} · ${c.jogo || ""}`, category: "Campanhas", icon: Megaphone, path: `/campanhas/${c.id}` }));
-    saques.forEach((s: any) => results.push({ id: s.id, title: `${s.nome} — R$ ${Number(s.valor || 0).toLocaleString()}`, subtitle: `${s.tipo} · ${s.status}`, category: "Saques", icon: Wallet, path: "/saques" }));
+    platforms.forEach((p: any) => results.push({ id: p.id, title: p.name, subtitle: `${p.commission_type || "-"} · ${p.is_active ? "Ativa" : "Inativa"}`, category: "Plataformas", icon: Monitor, path: `/plataformas/${p.id}` }));
+    campanhas.forEach((c: any) => results.push({ id: c.id, title: c.nome, subtitle: `${c.status || "-"} · ${c.jogo || ""}`, category: "Campanhas", icon: Megaphone, path: `/campanhas/${c.id}` }));
+    saques.forEach((s: any) => results.push({ id: s.id, title: `${s.nome} - R$ ${Number(s.valor || 0).toLocaleString()}`, subtitle: `${s.tipo} · ${s.status}`, category: "Saques", icon: Wallet, path: "/saques" }));
     socios.forEach((s: any) => results.push({ id: s.id, title: s.nome, subtitle: `${s.participacao}% · ${s.status}`, category: "Sócios", icon: UserCheck, path: `/socios/${s.id}` }));
-    conteudos.forEach((c: any) => results.push({ id: c.id, title: c.tema, subtitle: `${c.tipo || "—"} · ${c.status || "—"}`, category: "Conteúdo", icon: PenTool, path: "/conteudo" }));
+    conteudos.forEach((c: any) => results.push({ id: c.id, title: c.tema, subtitle: `${c.tipo || "-"} · ${c.status || "-"}`, category: "Conteúdo", icon: PenTool, path: "/conteudo" }));
     landingPages.forEach((l: any) => results.push({ id: l.id, title: l.name, subtitle: `${l.route} · ${l.is_active ? "Ativa" : "Inativa"}`, category: "Landing Pages", icon: FileText, path: "/landing-pages" }));
     return results;
   }, [influencers, games, platforms, campanhas, saques, socios, conteudos, landingPages]);

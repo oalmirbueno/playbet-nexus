@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { resolveShareUrl, buildPublicLpUrl, buildTrackedAffiliateUrl } from "./trackingUrl";
 
-describe("trackingUrl — Com LP", () => {
+describe("trackingUrl - Com LP", () => {
   it("buildPublicLpUrl returns LP URL with sub2 and sub3", () => {
     const url = buildPublicLpUrl(
       "https://oportunidades.playbet.app.br",

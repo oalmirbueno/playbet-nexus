@@ -82,8 +82,8 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
 
   const primaryLink = hasInstanceLink ? instanceAffiliateLink : (link.base_url || "");
 
-  // Public LP URL (the link the influencer actually shares — passes through the LP)
-  // Public LP URL (the link the influencer actually shares — passes through the LP)
+  // Public LP URL (the link the influencer actually shares - passes through the LP)
+  // Public LP URL (the link the influencer actually shares - passes through the LP)
   const publicLpUrl: string = buildPublicLpUrl(lp?.domain, instance?.slug, link.influencer_id || "", link.campanha_id || "");
   const trackedAffiliateUrl: string = buildTrackedAffiliateUrl(
     primaryLink,
@@ -121,25 +121,25 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
 
         {trackingRole === "socio" && (
           <div className="text-xs bg-primary/10 text-primary rounded-md px-3 py-2">
-            ℹ️ Vínculo de <strong>sócio(a)</strong> — tracking ativo, mas sem débito/comissão de influenciador na regra financeira.
+            ℹ️ Vínculo de <strong>sócio(a)</strong> - tracking ativo, mas sem débito/comissão de influenciador na regra financeira.
           </div>
         )}
 
         {/* Operational bindings */}
         <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm border rounded-lg p-3 bg-muted/30">
-          <div><span className="text-muted-foreground text-xs">Plataforma:</span> <span className="font-medium text-xs">{platform?.name || "—"}</span></div>
-          <div><span className="text-muted-foreground text-xs">Conta:</span> <span className="font-medium text-xs">{account?.nome_conta || "—"}</span></div>
-          <div><span className="text-muted-foreground text-xs">Influencer / Parceiro:</span> <span className="font-medium text-xs">{influencer?.name || "—"}</span></div>
+          <div><span className="text-muted-foreground text-xs">Plataforma:</span> <span className="font-medium text-xs">{platform?.name || "-"}</span></div>
+          <div><span className="text-muted-foreground text-xs">Conta:</span> <span className="font-medium text-xs">{account?.nome_conta || "-"}</span></div>
+          <div><span className="text-muted-foreground text-xs">Influencer / Parceiro:</span> <span className="font-medium text-xs">{influencer?.name || "-"}</span></div>
           <div><span className="text-muted-foreground text-xs">Papel:</span> <Badge className={`text-[9px] ml-1 ${roleInfo.color}`}>{roleInfo.label}</Badge></div>
-          <div><span className="text-muted-foreground text-xs">Landing Page:</span> <span className="font-medium text-xs">{lp?.name || "—"}</span></div>
-          <div><span className="text-muted-foreground text-xs">Slug / Instância:</span> <span className="font-mono font-medium text-xs">{instance ? `/${instance.slug}` : "—"}</span></div>
+          <div><span className="text-muted-foreground text-xs">Landing Page:</span> <span className="font-medium text-xs">{lp?.name || "-"}</span></div>
+          <div><span className="text-muted-foreground text-xs">Slug / Instância:</span> <span className="font-mono font-medium text-xs">{instance ? `/${instance.slug}` : "-"}</span></div>
           <div><span className="text-muted-foreground text-xs">Click ID Param:</span> <span className="font-mono font-medium text-xs">{link.click_id_param_name || "sub1"}</span></div>
           <div><span className="text-muted-foreground text-xs">Status:</span> <Badge variant={link.status === "active" ? "default" : "secondary"} className="text-[10px] ml-1">{link.status || "active"}</Badge></div>
         </div>
 
         {/* Copy blocks */}
         <div className="space-y-3">
-          {/* PRIMARY — what the influencer actually shares */}
+          {/* PRIMARY - what the influencer actually shares */}
           {publicLpUrl ? (
             <CopyBlock
               label={`Link para divulgar (passa pela LP /${instance?.slug})`}
@@ -152,7 +152,7 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
               label="Link para divulgar (direto para o afiliado)"
               value={trackedAffiliateUrl}
               primary
-              help="Sem LP vinculada — este link aponta direto para o afiliado já com sub1/sub2/sub3."
+              help="Sem LP vinculada - este link aponta direto para o afiliado já com sub1/sub2/sub3."
             />
           )}
 
@@ -162,7 +162,7 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
               label="Link do afiliado (acionado pelo botão da LP)"
               value={trackedAffiliateUrl}
               help="Destino final do botão da landing page. Já carrega sub1/sub2/sub3 para fechar o loop de atribuição."
-              warn={hasDivergence ? "Link bruto difere do link salvo na LP — verifique a instância." : undefined}
+              warn={hasDivergence ? "Link bruto difere do link salvo na LP - verifique a instância." : undefined}
             />
           )}
 

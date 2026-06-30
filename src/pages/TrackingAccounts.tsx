@@ -50,7 +50,7 @@ export default function TrackingAccounts() {
     (a.manager_name || "").toLowerCase().includes(search.toLowerCase())
   );
 
-  const getPlatformName = (id: string) => (platforms as any[]).find((p: any) => p.id === id)?.name || "—";
+  const getPlatformName = (id: string) => (platforms as any[]).find((p: any) => p.id === id)?.name || "-";
 
   const openCreate = () => { setEditing(emptyForm); setModalOpen(true); };
   const openEdit = (a: PlatformAccountRow) => {
@@ -171,16 +171,16 @@ export default function TrackingAccounts() {
                           {a.account_external_id && <span className="text-[10px] font-mono text-muted-foreground">{a.account_external_id}</span>}
                         </TableCell>
                         <TableCell>{getPlatformName(a.platform_id)}</TableCell>
-                        <TableCell className="text-xs">{a.modelo_comissao || "—"}</TableCell>
+                        <TableCell className="text-xs">{a.modelo_comissao || "-"}</TableCell>
                         <TableCell className="text-xs font-medium">
                           {a.modelo_comissao === "RevShare" && a.revshare_percent ? `${a.revshare_percent}%` : ""}
                           {a.modelo_comissao === "CPA" && a.cpa_value ? `R$ ${a.cpa_value}` : ""}
                           {a.modelo_comissao === "Hybrid" ? `${a.revshare_percent || 0}% + R$${a.cpa_value || 0}` : ""}
-                          {!a.modelo_comissao ? "—" : ""}
+                          {!a.modelo_comissao ? "-" : ""}
                         </TableCell>
                         <TableCell>{a.moeda}</TableCell>
                         <TableCell>
-                          <div className="text-xs">{a.manager_name || "—"}</div>
+                          <div className="text-xs">{a.manager_name || "-"}</div>
                           {a.manager_email && <div className="text-[10px] text-muted-foreground">{a.manager_email}</div>}
                         </TableCell>
                         <TableCell>

@@ -144,7 +144,7 @@ export default function TrackingDashboard() {
       const id = m.platform_id;
       if (!id) return;
       const p = (platforms as any[]).find((x: any) => x.id === id);
-      const entry = map.get(id) ?? { id, nome: p?.name || "—", visitas: 0, receita: 0, cadastros: 0 };
+      const entry = map.get(id) ?? { id, nome: p?.name || "-", visitas: 0, receita: 0, cadastros: 0 };
       entry.visitas += m.cliques || 0;
       entry.cadastros += m.registros || 0;
       entry.receita += m.revenue || 0;
@@ -171,7 +171,7 @@ export default function TrackingDashboard() {
       return `${topInfluencers[0].nome} está liderando as conversões neste período. Vale priorizar conteúdo com esse perfil.`;
     }
     if (topCasas[0] && topCasas[0].receita > 0) {
-      return `${topCasas[0].nome} é a casa com melhor performance no momento — concentre tráfego nela.`;
+      return `${topCasas[0].nome} é a casa com melhor performance no momento - concentre tráfego nela.`;
     }
     return "Seus links estão ativos. Assim que as primeiras conversões caírem, os insights aparecem aqui.";
   }, [topInfluencers, topCasas]);
@@ -190,7 +190,7 @@ export default function TrackingDashboard() {
             {range.label} · atualizado{" "}
             {lastSync
               ? lastSync.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
-              : "—"}
+              : "-"}
           </p>
         </div>
 
@@ -252,14 +252,14 @@ export default function TrackingDashboard() {
           icon={<UserPlus size={16} />}
           label="Cadastros"
           value={fmtNum(kpiCadastros)}
-          hint={kpiVisitas ? `${pctStr(kpiCadastros, kpiVisitas)} de conversão` : "—"}
+          hint={kpiVisitas ? `${pctStr(kpiCadastros, kpiVisitas)} de conversão` : "-"}
         />
         <KpiCard
           variant="warning"
           icon={<Wallet size={16} />}
           label="1º Depósito"
           value={fmtNum(kpiFtd)}
-          hint={kpiCadastros ? `${pctStr(kpiFtd, kpiCadastros)} dos cadastros` : "—"}
+          hint={kpiCadastros ? `${pctStr(kpiFtd, kpiCadastros)} dos cadastros` : "-"}
           trendUp={kpiCadastros ? kpiFtd / Math.max(kpiCadastros, 1) > 0.2 : null}
         />
         <KpiCard
@@ -335,7 +335,7 @@ export default function TrackingDashboard() {
               <StatusRow label="Eventos no período" value={fmtNum(consolidated.eventCount)} />
               <StatusRow
                 label="Última atividade"
-                value={lastSync ? lastSync.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—"}
+                value={lastSync ? lastSync.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "-"}
               />
             </dl>
           </div>

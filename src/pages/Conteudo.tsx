@@ -65,7 +65,7 @@ export default function Conteudo() {
       <div className="flex items-start justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Conteúdos</h1>
-          <p className="text-sm text-muted-foreground mt-1">Central editorial — produção, gestão e execução de marketing</p>
+          <p className="text-sm text-muted-foreground mt-1">Central editorial - produção, gestão e execução de marketing</p>
         </div>
         <div className="flex gap-2 items-center">
           {data.length > 0 && <ExportDropdown data={data.map(({ id, tema, tipo, canal, jogo, influencer, status, data: d }: any) => ({ id, tema, tipo, canal, jogo, influencer, status, data: d }))} filename="conteudos-playbet" />}
@@ -145,7 +145,7 @@ export default function Conteudo() {
                     <tr key={item.id}>
                       <td className="font-medium">{item.tema}</td>
                       <td><span className="badge-neutral">{item.tipo}</span></td>
-                      <td className="text-muted-foreground">{item.canal || "—"}</td>
+                      <td className="text-muted-foreground">{item.canal || "-"}</td>
                       <td>{item.influencer}</td>
                       <td className="text-muted-foreground">{item.jogo}</td>
                       <td><span className="badge-neutral">{item.status}</span></td>

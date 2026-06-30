@@ -99,7 +99,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
 
   // Resolve / preview the LP instance for (influencer × LP × affiliate_link).
   // Each distinct affiliate URL gets its OWN instance so the LP CTA points to
-  // the right house — never overwrite a sibling instance's affiliate_link.
+  // the right house - never overwrite a sibling instance's affiliate_link.
   const resolvedInstance = useMemo(() => {
     if (!landingPageId || !influencerId) return null;
     const raw = rawLink.trim();
@@ -173,7 +173,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
           return;
         }
       }
-      // NOTE: never mutate an existing instance's affiliate_link here — sibling
+      // NOTE: never mutate an existing instance's affiliate_link here - sibling
       // tracking links may share the same (influencer × LP) but point to a
       // different house. Distinct affiliate URLs always get distinct instances.
 
@@ -303,7 +303,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
                   {detectedPlatform ? (
                     <span className="text-[10px] flex items-center gap-1 text-emerald-500"><Sparkles size={10} /> Detectado: <strong className="text-foreground">{detectedPlatform.name}</strong></span>
                   ) : (
-                    <span className="text-[10px] text-amber-500">Plataforma não reconhecida — selecione ou cadastre.</span>
+                    <span className="text-[10px] text-amber-500">Plataforma não reconhecida - selecione ou cadastre.</span>
                   )}
                   <button onClick={() => setNewPlatform({ ...newPlatform, open: true })} className="text-[10px] text-primary hover:underline flex items-center gap-1"><Plus size={10} /> Nova plataforma</button>
                 </div>
@@ -374,7 +374,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
                 <div className="grid grid-cols-3 gap-2 pb-2 border-b border-primary/15">
                   <div>
                     <p className="text-[9px] font-semibold text-primary uppercase tracking-wider">SubID</p>
-                    <code className="block text-[10px] font-mono text-foreground break-all">{subid || "—"}</code>
+                    <code className="block text-[10px] font-mono text-foreground break-all">{subid || "-"}</code>
                   </div>
                   <div>
                     <p className="text-[9px] font-semibold text-primary uppercase tracking-wider">Tracking</p>
@@ -385,7 +385,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
                     <code className="block text-[10px] font-mono text-foreground">
                       {(selectedInfluencer as any)?.commission_percent != null
                         ? `${(selectedInfluencer as any).commission_percent}%`
-                        : "—"}
+                        : "-"}
                     </code>
                   </div>
                 </div>

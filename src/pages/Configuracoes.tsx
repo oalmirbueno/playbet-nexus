@@ -90,7 +90,7 @@ export default function Configuracoes() {
       {tab === "integracoes" && (
         <div className="space-y-4 animate-fade-in">
           {[
-            { nome: "Asaas", desc: "API de pagamentos — PIX, TED, boleto", status: "Pendente" },
+            { nome: "Asaas", desc: "API de pagamentos - PIX, TED, boleto", status: "Pendente" },
             { nome: "Google Analytics", desc: "Rastreamento de eventos e conversões", status: "Ativo" },
             { nome: "Facebook Pixel", desc: "Pixel de conversão para campanhas", status: "Ativo" },
             { nome: "Telegram Bot", desc: "Notificações automáticas", status: "Pendente" },

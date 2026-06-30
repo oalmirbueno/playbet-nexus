@@ -191,7 +191,7 @@ export function SignalRoomPanel({ platforms, onCreateOpportunity }: Props) {
               </Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Cole o sinal recebido. Vira rascunho de oportunidade — nunca publica sem revisão.
+              Cole o sinal recebido. Vira rascunho de oportunidade - nunca publica sem revisão.
             </p>
           </div>
           <Badge className="hidden sm:inline-flex items-center gap-1 bg-secondary/60 text-foreground border border-border/60">
@@ -208,7 +208,7 @@ export function SignalRoomPanel({ platforms, onCreateOpportunity }: Props) {
               rows={3}
               value={draft.raw_text}
               onChange={(e) => setDraft({ ...draft, raw_text: e.target.value })}
-              placeholder="Ex.: Alemanha x Paraguai — Mais de 1.5 gols @1.55 (sala VIP)"
+              placeholder="Ex.: Alemanha x Paraguai - Mais de 1.5 gols @1.55 (sala VIP)"
               className="resize-none"
               maxLength={2000}
             />
@@ -258,9 +258,9 @@ export function SignalRoomPanel({ platforms, onCreateOpportunity }: Props) {
                 value={draft.event_id || NONE}
                 onValueChange={(v) => setDraft({ ...draft, event_id: v === NONE ? "" : v })}
               >
-                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="-" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NONE}>—</SelectItem>
+                  <SelectItem value={NONE}>-</SelectItem>
                   {(events || []).map((e) => (
                     <SelectItem key={e.id} value={e.id}>
                       {e.home_team} × {e.away_team}
@@ -275,9 +275,9 @@ export function SignalRoomPanel({ platforms, onCreateOpportunity }: Props) {
                 value={draft.platform_id || NONE}
                 onValueChange={(v) => setDraft({ ...draft, platform_id: v === NONE ? "" : v })}
               >
-                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="-" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NONE}>—</SelectItem>
+                  <SelectItem value={NONE}>-</SelectItem>
                   {platforms.map((p) => (
                     <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                   ))}
@@ -291,9 +291,9 @@ export function SignalRoomPanel({ platforms, onCreateOpportunity }: Props) {
                 value={draft.market_type || NONE}
                 onValueChange={(v) => setDraft({ ...draft, market_type: v === NONE ? "" : v })}
               >
-                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="-" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value={NONE}>—</SelectItem>
+                  <SelectItem value={NONE}>-</SelectItem>
                   {MARKETS.map((m) => (
                     <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
                   ))}
@@ -419,7 +419,7 @@ export function SignalRoomPanel({ platforms, onCreateOpportunity }: Props) {
 
         <div className="px-5 py-3 border-t border-border/60 bg-secondary/15">
           <p className="text-[11px] text-muted-foreground leading-relaxed">
-            Sinais não são promessa de acerto. Cards nascem <strong>inativos</strong> para curadoria PlayBet —
+            Sinais não são promessa de acerto. Cards nascem <strong>inativos</strong> para curadoria PlayBet -
             ajuste destino, valide a odd e revise antes de publicar.
           </p>
         </div>

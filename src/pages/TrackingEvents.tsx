@@ -57,12 +57,12 @@ export default function TrackingEvents() {
   }, [events, searchText]);
 
   const getPlatformName = (id: string | null) => {
-    if (!id) return "—";
+    if (!id) return "-";
     return (platforms as any[]).find((p: any) => p.id === id)?.name || id.slice(0, 8);
   };
 
   const getAccountName = (id: string | null) => {
-    if (!id) return "—";
+    if (!id) return "-";
     return accounts.find(a => a.id === id)?.nome_conta || id.slice(0, 8);
   };
 
@@ -203,10 +203,10 @@ export default function TrackingEvents() {
                       <TableCell className="text-xs">{getAccountName(ev.platform_account_id)}</TableCell>
                       <TableCell className="font-mono text-xs">{ev.raw_event_name}</TableCell>
                       <TableCell><Badge variant="secondary" className="text-[10px]">{ev.canonical_event_name}</Badge></TableCell>
-                      <TableCell className="font-mono text-[10px] text-muted-foreground max-w-[100px] truncate">{ev.transaction_id || "—"}</TableCell>
-                      <TableCell className="font-mono text-[10px] text-muted-foreground max-w-[100px] truncate">{ev.click_id || "—"}</TableCell>
-                      <TableCell className="text-right">{ev.amount ? fmt(ev.amount) : "—"}</TableCell>
-                      <TableCell className="text-xs">{ev.currency || "—"}</TableCell>
+                      <TableCell className="font-mono text-[10px] text-muted-foreground max-w-[100px] truncate">{ev.transaction_id || "-"}</TableCell>
+                      <TableCell className="font-mono text-[10px] text-muted-foreground max-w-[100px] truncate">{ev.click_id || "-"}</TableCell>
+                      <TableCell className="text-right">{ev.amount ? fmt(ev.amount) : "-"}</TableCell>
+                      <TableCell className="text-xs">{ev.currency || "-"}</TableCell>
                       <TableCell><Badge variant="outline" className="text-[10px]">{ev.source_type}</Badge></TableCell>
                       <TableCell>
                         {ev.is_duplicate && <Badge variant="destructive" className="text-[10px]">Dup</Badge>}
@@ -247,7 +247,7 @@ export default function TrackingEvents() {
                 <div><span className="text-muted-foreground">Raw:</span> <span className="font-mono">{selectedEvent.raw_event_name}</span></div>
                 <div className="flex items-center gap-1">
                   <span className="text-muted-foreground">Click ID:</span>
-                  <span className="font-mono text-xs">{selectedEvent.click_id || "—"}</span>
+                  <span className="font-mono text-xs">{selectedEvent.click_id || "-"}</span>
                   {selectedEvent.click_id && (
                     <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => copyField(selectedEvent.click_id!, "Click ID")}>
                       {copiedField === "Click ID" ? <Check size={10} className="text-green-500" /> : <Copy size={10} />}
@@ -256,18 +256,18 @@ export default function TrackingEvents() {
                 </div>
                 <div className="flex items-center gap-1">
                   <span className="text-muted-foreground">Transaction:</span>
-                  <span className="font-mono text-xs">{selectedEvent.transaction_id || "—"}</span>
+                  <span className="font-mono text-xs">{selectedEvent.transaction_id || "-"}</span>
                   {selectedEvent.transaction_id && (
                     <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => copyField(selectedEvent.transaction_id!, "Transaction ID")}>
                       {copiedField === "Transaction ID" ? <Check size={10} className="text-green-500" /> : <Copy size={10} />}
                     </Button>
                   )}
                 </div>
-                <div><span className="text-muted-foreground">Valor:</span> {selectedEvent.amount ? fmt(selectedEvent.amount) : "—"}</div>
-                <div><span className="text-muted-foreground">Comissão:</span> {selectedEvent.commission_amount ? fmt(selectedEvent.commission_amount) : "—"}</div>
-                <div><span className="text-muted-foreground">Moeda:</span> {selectedEvent.currency || "—"}</div>
-                <div><span className="text-muted-foreground">País:</span> {selectedEvent.country || "—"}</div>
-                <div><span className="text-muted-foreground">User ID:</span> <span className="font-mono text-xs">{selectedEvent.platform_user_id || "—"}</span></div>
+                <div><span className="text-muted-foreground">Valor:</span> {selectedEvent.amount ? fmt(selectedEvent.amount) : "-"}</div>
+                <div><span className="text-muted-foreground">Comissão:</span> {selectedEvent.commission_amount ? fmt(selectedEvent.commission_amount) : "-"}</div>
+                <div><span className="text-muted-foreground">Moeda:</span> {selectedEvent.currency || "-"}</div>
+                <div><span className="text-muted-foreground">País:</span> {selectedEvent.country || "-"}</div>
+                <div><span className="text-muted-foreground">User ID:</span> <span className="font-mono text-xs">{selectedEvent.platform_user_id || "-"}</span></div>
                 <div><span className="text-muted-foreground">Plataforma:</span> {getPlatformName(selectedEvent.platform_id)}</div>
                 <div><span className="text-muted-foreground">Conta:</span> {getAccountName(selectedEvent.platform_account_id)}</div>
                 <div><span className="text-muted-foreground">Origem:</span> {selectedEvent.source_type}</div>

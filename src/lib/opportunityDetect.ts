@@ -4,7 +4,7 @@
  *
  * Regras de ouro:
  *  - Nunca sobrescrever parâmetros do afiliado/deep link (aff, btag, clickid, subid, shareCode, aposta…).
- *  - Nunca sobrescrever utm_* já presentes na URL — só adiciona se faltar.
+ *  - Nunca sobrescrever utm_* já presentes na URL - só adiciona se faltar.
  *  - Bloquear destino quando aponta para a própria landing pública.
  */
 

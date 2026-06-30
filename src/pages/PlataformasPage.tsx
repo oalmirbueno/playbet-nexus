@@ -178,7 +178,7 @@ export default function PlataformasPage() {
               const comissao = [
                 p.revshare ? `${p.revshare}% RS` : null,
                 p.cpa ? `R$ ${p.cpa} CPA` : null,
-              ].filter(Boolean).join(" + ") || "—";
+              ].filter(Boolean).join(" + ") || "-";
               return (
                 <tr key={p.id}>
                   <td>
@@ -192,8 +192,8 @@ export default function PlataformasPage() {
                   </td>
                   <td className="text-xs">{comissao}</td>
                   <td className="text-xs">{p.currency || "BRL"}</td>
-                  <td className="text-xs">{p.payout_method || "—"}</td>
-                  <td className="text-xs">{p.affiliate_manager || "—"}</td>
+                  <td className="text-xs">{p.payout_method || "-"}</td>
+                  <td className="text-xs">{p.affiliate_manager || "-"}</td>
                   <td><span className={p.is_active ? "badge-success" : "badge-danger"}>{p.is_active ? "Ativo" : "Inativo"}</span></td>
                   <td onClick={e => e.stopPropagation()}>
                     <DropdownMenu>

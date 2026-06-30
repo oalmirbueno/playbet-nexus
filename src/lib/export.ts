@@ -1,6 +1,6 @@
 /**
  * Utility for exporting data as CSV or JSON files.
- * Prepared for future Supabase integration — data source can be swapped.
+ * Prepared for future Supabase integration - data source can be swapped.
  */
 
 export function exportToCSV<T extends Record<string, unknown>>(data: T[], filename: string) {

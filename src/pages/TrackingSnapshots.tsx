@@ -20,7 +20,7 @@ export default function TrackingSnapshots() {
   const [selected, setSelected] = useState<TrackingSnapshotRow | null>(null);
 
   const getPlatformName = (id: string | null) => {
-    if (!id) return "—";
+    if (!id) return "-";
     return (platforms as any[]).find((p: any) => p.id === id)?.name || id.slice(0, 8);
   };
 
@@ -68,14 +68,14 @@ export default function TrackingSnapshots() {
                 {data.map(s => (
                   <TableRow key={s.id}>
                     <TableCell>{new Date(s.data_snapshot).toLocaleDateString("pt-BR")}</TableCell>
-                    <TableCell className="text-muted-foreground">{s.hora_snapshot || "—"}</TableCell>
+                    <TableCell className="text-muted-foreground">{s.hora_snapshot || "-"}</TableCell>
                     <TableCell>{getPlatformName(s.platform_id)}</TableCell>
                     <TableCell><Badge variant="secondary" className="text-[10px]">{s.snapshot_type || "manual"}</Badge></TableCell>
                     <TableCell className="text-right">{s.cliques}</TableCell>
                     <TableCell className="text-right">{s.registros}</TableCell>
                     <TableCell className="text-right">{s.ftd}</TableCell>
                     <TableCell className="text-right font-medium">{fmt(s.revenue)}</TableCell>
-                    <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">{s.notes || "—"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">{s.notes || "-"}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setSelected(s)}>
                         <Eye size={13} />

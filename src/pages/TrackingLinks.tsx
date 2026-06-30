@@ -55,7 +55,7 @@ export default function TrackingLinks() {
     (l.notes || "").toLowerCase().includes(search.toLowerCase())
   );
 
-  const getName = (list: any[], id: string | null, field = "name") => list.find(i => i.id === id)?.[field] || "—";
+  const getName = (list: any[], id: string | null, field = "name") => list.find(i => i.id === id)?.[field] || "-";
 
   const openCreate = () => setQuickOpen(true);
   const openEdit = (l: TrackingLinkRow) => { setEditing(formFromRow(l)); setModalOpen(true); };
@@ -231,7 +231,7 @@ export default function TrackingLinks() {
                           </TableCell>
                           <TableCell className="text-xs">
                             <div className="leading-tight">
-                              <div>{account?.nome_conta || "—"}</div>
+                              <div>{account?.nome_conta || "-"}</div>
                               {platform && <div className="text-[10px] text-muted-foreground">{platform.name}</div>}
                             </div>
                           </TableCell>

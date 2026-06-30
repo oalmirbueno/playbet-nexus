@@ -111,7 +111,7 @@ export default function DeveloperSettings() {
       if (error) throw error;
       const result = data as any;
       setGeneratedKey(result.key);
-      toast({ title: "API Key gerada!", description: "Copie a chave agora — ela não será exibida novamente." });
+      toast({ title: "API Key gerada!", description: "Copie a chave agora - ela não será exibida novamente." });
       await fetchApiKeys();
     } catch (e: any) {
       toast({ title: "Erro ao gerar chave", description: e.message, variant: "destructive" });
@@ -268,7 +268,7 @@ export default function DeveloperSettings() {
                         <CheckCircle2 size={14} className="text-success" />
                         <p className="text-xs font-semibold text-success">Chave gerada com sucesso!</p>
                       </div>
-                      <p className="text-[10px] text-warning">⚠️ Copie agora — esta chave NÃO será exibida novamente.</p>
+                      <p className="text-[10px] text-warning">⚠️ Copie agora - esta chave NÃO será exibida novamente.</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <code className="flex-1 text-xs font-mono bg-secondary/50 px-3 py-2 rounded border border-border-subtle break-all">
@@ -714,7 +714,7 @@ export default function DeveloperSettings() {
       {tab === "docs" && (
         <div className="space-y-4 animate-fade-in">
           <div className="glass-card p-5">
-            <h3 className="section-title flex items-center gap-2"><BookOpen size={14} /> Quick Start — API Gateway</h3>
+            <h3 className="section-title flex items-center gap-2"><BookOpen size={14} /> Quick Start - API Gateway</h3>
             <div className="mt-3 space-y-4">
               <div>
                 <p className="text-xs font-semibold mb-1">1. Base URL do Gateway</p>
@@ -731,7 +731,7 @@ export default function DeveloperSettings() {
                 <pre className="bg-secondary/50 p-3 rounded-lg text-[11px] font-mono border border-border-subtle whitespace-pre-wrap">{`X-API-Key: pb_live_xxxxxxxxxxxxxxxxxxxxxxxx`}</pre>
               </div>
               <div>
-                <p className="text-xs font-semibold mb-1">3. Exemplo — Listar Influencers</p>
+                <p className="text-xs font-semibold mb-1">3. Exemplo - Listar Influencers</p>
                 <pre className="bg-secondary/50 p-3 rounded-lg text-[11px] font-mono border border-border-subtle whitespace-pre-wrap">{`curl -X GET '${GATEWAY_URL}/influencers' \\
   -H "X-API-Key: pb_live_sua_chave_aqui"`}</pre>
               </div>
@@ -742,8 +742,8 @@ export default function DeveloperSettings() {
             <h3 className="section-title flex items-center gap-2"><Shield size={14} /> Segurança</h3>
             <div className="space-y-2 mt-3">
               {[
-                "O Gateway usa service_role internamente — a API Key controla o acesso externo.",
-                "Chaves são armazenadas com hash SHA-256 — nunca em texto puro.",
+                "O Gateway usa service_role internamente - a API Key controla o acesso externo.",
+                "Chaves são armazenadas com hash SHA-256 - nunca em texto puro.",
                 "Você pode desativar chaves a qualquer momento na aba OpenClaw / API.",
                 "Cada uso de chave registra o timestamp de último acesso.",
                 "Apenas tabelas da whitelist são acessíveis via Gateway.",
@@ -768,7 +768,7 @@ export default function DeveloperSettings() {
                 { filter: "/{id}", desc: "Buscar por ID", ex: "/influencers/uuid-aqui" },
               ].map((f) => (
                 <div key={f.filter} className="glass-card-elevated p-2.5 rounded-lg">
-                  <p className="text-xs"><span className="font-mono text-primary font-bold">{f.filter}</span> — {f.desc}</p>
+                  <p className="text-xs"><span className="font-mono text-primary font-bold">{f.filter}</span> - {f.desc}</p>
                   <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{f.ex}</p>
                 </div>
               ))}
@@ -777,7 +777,7 @@ export default function DeveloperSettings() {
         </div>
       )}
 
-      {/* ═══════ DIALOG — Integration ═══════ */}
+      {/* ═══════ DIALOG - Integration ═══════ */}
       <Dialog open={!!editInt} onOpenChange={(o) => !o && setEditInt(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -810,7 +810,7 @@ export default function DeveloperSettings() {
         </DialogContent>
       </Dialog>
 
-      {/* ═══════ DIALOG — Endpoint ═══════ */}
+      {/* ═══════ DIALOG - Endpoint ═══════ */}
       <Dialog open={!!editEp} onOpenChange={(o) => !o && setEditEp(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>

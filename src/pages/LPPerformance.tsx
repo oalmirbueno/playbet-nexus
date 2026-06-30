@@ -23,7 +23,7 @@ export default function LPPerformance() {
   const { data: clicks = [] } = useQuery({ queryKey: ["clicks-all"], queryFn: () => clickService.getAll() });
   const [view, setView] = useState<"lps" | "instances">("lps");
 
-  const getInfluencerName = (id: string) => influencers.find(i => i.id === id)?.name || "—";
+  const getInfluencerName = (id: string) => influencers.find(i => i.id === id)?.name || "-";
 
   // LP-level stats
   const lpStats = landingPages.map(lp => {
@@ -39,8 +39,8 @@ export default function LPPerformance() {
       totalInstances: lpInstances.length,
       activeInstances: lpInstances.filter(i => i.is_active).length,
       totalClicks: lpClicks.length,
-      topInfluencer: topInstance ? getInfluencerName(topInstance.inst.influencer_id) : "—",
-      topUrl: topInstance ? buildPublicUrl(lp.domain, topInstance.inst.slug) : "—",
+      topInfluencer: topInstance ? getInfluencerName(topInstance.inst.influencer_id) : "-",
+      topUrl: topInstance ? buildPublicUrl(lp.domain, topInstance.inst.slug) : "-",
     };
   }).sort((a, b) => b.totalClicks - a.totalClicks);
 
@@ -50,7 +50,7 @@ export default function LPPerformance() {
     const instClicks = clicks.filter(c => c.landing_page_id === inst.landing_page_id && c.influencer_id === inst.influencer_id).length;
     return {
       inst,
-      lpName: lp?.name || "—",
+      lpName: lp?.name || "-",
       domain: lp?.domain || "",
       influencer: getInfluencerName(inst.influencer_id),
       clicks: instClicks,
@@ -83,7 +83,7 @@ export default function LPPerformance() {
         <div className="stat-card border-l-2 border-l-primary"><span className="text-[10px] text-muted-foreground uppercase">Total Cliques</span><p className="text-xl font-bold">{totalClicks.toLocaleString()}</p></div>
         <div className="stat-card border-l-2 border-l-success"><span className="text-[10px] text-muted-foreground uppercase">LPs Ativas</span><p className="text-xl font-bold">{activeLPs}</p></div>
         <div className="stat-card border-l-2 border-l-info"><span className="text-[10px] text-muted-foreground uppercase">Instâncias Ativas</span><p className="text-xl font-bold">{activeInstances}</p></div>
-        <div className="stat-card border-l-2 border-l-accent"><span className="text-[10px] text-muted-foreground uppercase">Top LP</span><p className="text-sm font-bold truncate">{lpStats[0]?.lp.name || "—"}</p></div>
+        <div className="stat-card border-l-2 border-l-accent"><span className="text-[10px] text-muted-foreground uppercase">Top LP</span><p className="text-sm font-bold truncate">{lpStats[0]?.lp.name || "-"}</p></div>
       </div>
 
       {/* Quick nav */}
@@ -117,7 +117,7 @@ export default function LPPerformance() {
                 <tr key={s.lp.id}>
                   <td className="font-bold text-accent">{i + 1}</td>
                   <td className="font-medium text-xs">{s.lp.name}</td>
-                  <td className="font-mono text-xs text-muted-foreground">{s.lp.domain || "—"}</td>
+                  <td className="font-mono text-xs text-muted-foreground">{s.lp.domain || "-"}</td>
                   <td>{s.activeInstances}/{s.totalInstances}</td>
                   <td className="font-bold">{s.totalClicks.toLocaleString()}</td>
                   <td className="text-xs">{s.topInfluencer}</td>

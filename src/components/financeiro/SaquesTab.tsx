@@ -59,19 +59,19 @@ export default function SaquesTab({ saques }: Props) {
             </thead>
             <tbody>
               {saques.map((s: any) => {
-                const cfg = STATUS_STYLES[s.status] ?? { tone: "bg-muted text-muted-foreground border-border", icon: Clock, label: s.status ?? "—" };
+                const cfg = STATUS_STYLES[s.status] ?? { tone: "bg-muted text-muted-foreground border-border", icon: Clock, label: s.status ?? "-" };
                 const Icon = cfg.icon;
                 return (
                   <tr key={s.id} className="border-t border-border/50 hover:bg-secondary/20 transition-colors">
-                    <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{s.codigo ?? "—"}</td>
+                    <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{s.codigo ?? "-"}</td>
                     <td className="px-3 py-3">
                       <div className="font-medium">{s.nome}</div>
-                      <div className="text-[11px] text-muted-foreground">{s.responsavel ?? s.origem ?? "—"}</div>
+                      <div className="text-[11px] text-muted-foreground">{s.responsavel ?? s.origem ?? "-"}</div>
                     </td>
-                    <td className="px-3 py-3 text-muted-foreground text-xs">{s.tipo ?? "—"}</td>
+                    <td className="px-3 py-3 text-muted-foreground text-xs">{s.tipo ?? "-"}</td>
                     <td className="px-3 py-3 text-right tabular-nums font-semibold">{fmt(Number(s.valor || 0))}</td>
                     <td className="px-3 py-3 text-muted-foreground text-xs tabular-nums">
-                      {s.data ? new Date(s.data).toLocaleDateString("pt-BR") : "—"}
+                      {s.data ? new Date(s.data).toLocaleDateString("pt-BR") : "-"}
                     </td>
                     <td className="px-5 py-3">
                       <Badge variant="outline" className={`text-[10px] gap-1 ${cfg.tone}`}>

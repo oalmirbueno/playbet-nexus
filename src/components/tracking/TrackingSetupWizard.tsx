@@ -204,7 +204,7 @@ export default function TrackingSetupWizard({
                     const lp = landingPages.find((l: any) => l.id === inst.landing_page_id);
                     return (
                       <SelectItem key={inst.id} value={inst.id}>
-                        /{inst.slug} — {inf?.name || "?"} {lp ? `(${lp.name})` : ""}
+                        /{inst.slug} - {inf?.name || "?"} {lp ? `(${lp.name})` : ""}
                       </SelectItem>
                     );
                   })}
@@ -221,8 +221,8 @@ export default function TrackingSetupWizard({
                     <p className="text-xs font-semibold text-primary">Dados preenchidos automaticamente</p>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div><span className="text-muted-foreground">Influencer:</span> <span className="font-medium">{influencer?.name || "—"}</span></div>
-                    <div><span className="text-muted-foreground">Landing Page:</span> <span className="font-medium">{landingPage?.name || "—"}</span></div>
+                    <div><span className="text-muted-foreground">Influencer:</span> <span className="font-medium">{influencer?.name || "-"}</span></div>
+                    <div><span className="text-muted-foreground">Landing Page:</span> <span className="font-medium">{landingPage?.name || "-"}</span></div>
                     <div><span className="text-muted-foreground">Slug:</span> <span className="font-mono font-medium">/{selectedInstance.slug}</span></div>
                     <div><span className="text-muted-foreground">Link em uso:</span> <span className="font-medium text-primary">{affiliateLink ? "✓ Sim" : "✗ Não"}</span></div>
                   </div>
@@ -247,13 +247,13 @@ export default function TrackingSetupWizard({
                 <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {TRACKING_ROLES.map(r => (
-                    <SelectItem key={r.value} value={r.value}>{r.label} — {r.desc}</SelectItem>
+                    <SelectItem key={r.value} value={r.value}>{r.label} - {r.desc}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               {trackingRole === "socio" && (
                 <p className="text-[10px] text-primary mt-1 bg-primary/10 rounded px-2 py-1">
-                  ℹ️ Sócio(a) — tracking ativo, sem débito padrão de influenciador.
+                  ℹ️ Sócio(a) - tracking ativo, sem débito padrão de influenciador.
                 </p>
               )}
             </div>
@@ -277,12 +277,12 @@ export default function TrackingSetupWizard({
               <CardContent className="p-3 space-y-2">
                 <p className="text-xs font-semibold">Resumo do Setup</p>
                 <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div><span className="text-muted-foreground">Plataforma:</span> <span className="font-medium">{selectedPlatform?.name || "—"}</span></div>
-                  <div><span className="text-muted-foreground">Conta:</span> <span className="font-medium">{selectedAccount?.nome_conta || "—"}</span></div>
-                  <div><span className="text-muted-foreground">Influencer:</span> <span className="font-medium">{influencer?.name || "—"}</span></div>
+                  <div><span className="text-muted-foreground">Plataforma:</span> <span className="font-medium">{selectedPlatform?.name || "-"}</span></div>
+                  <div><span className="text-muted-foreground">Conta:</span> <span className="font-medium">{selectedAccount?.nome_conta || "-"}</span></div>
+                  <div><span className="text-muted-foreground">Influencer:</span> <span className="font-medium">{influencer?.name || "-"}</span></div>
                   <div><span className="text-muted-foreground">Papel:</span> <Badge variant="outline" className="text-[9px] ml-1">{TRACKING_ROLES.find(r => r.value === trackingRole)?.label}</Badge></div>
-                  <div><span className="text-muted-foreground">LP:</span> <span className="font-medium">{landingPage?.name || "—"}</span></div>
-                  <div><span className="text-muted-foreground">Slug:</span> <span className="font-mono font-medium">/{selectedInstance?.slug || "—"}</span></div>
+                  <div><span className="text-muted-foreground">LP:</span> <span className="font-medium">{landingPage?.name || "-"}</span></div>
+                  <div><span className="text-muted-foreground">Slug:</span> <span className="font-mono font-medium">/{selectedInstance?.slug || "-"}</span></div>
                 </div>
               </CardContent>
             </Card>

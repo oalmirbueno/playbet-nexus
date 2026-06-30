@@ -46,11 +46,11 @@ export default function UtmsSubids() {
   const [filterMedium, setFilterMedium] = useState("Todos");
   const [search, setSearch] = useState("");
 
-  const getInfluencerName = (id: string | null) => influencers.find(i => i.id === id)?.name || "—";
-  const getLPName = (id: string | null) => landingPages.find(l => l.id === id)?.name || "—";
-  const getGameName = (id: string | null) => games.find(g => g.id === id)?.name || "—";
-  const getPlatformName = (id: string | null) => platforms.find(p => p.id === id)?.name || "—";
-  const getTemplateName = (id: string | null) => templates.find(t => t.id === id)?.name || "—";
+  const getInfluencerName = (id: string | null) => influencers.find(i => i.id === id)?.name || "-";
+  const getLPName = (id: string | null) => landingPages.find(l => l.id === id)?.name || "-";
+  const getGameName = (id: string | null) => games.find(g => g.id === id)?.name || "-";
+  const getPlatformName = (id: string | null) => platforms.find(p => p.id === id)?.name || "-";
+  const getTemplateName = (id: string | null) => templates.find(t => t.id === id)?.name || "-";
 
   const filtered = data.filter(u => {
     if (filterSource !== "Todos" && u.utm_source !== filterSource) return false;
@@ -144,7 +144,7 @@ export default function UtmsSubids() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">UTMs / SubIDs</h1>
-          <p className="text-sm text-muted-foreground mt-1">Centro de rastreio — parâmetros, validação e performance de cada link</p>
+          <p className="text-sm text-muted-foreground mt-1">Centro de rastreio - parâmetros, validação e performance de cada link</p>
         </div>
         <div className="flex items-center gap-2">
           <button className="btn-primary text-xs" onClick={openCreate}><Plus size={13} />Criar UTM</button>
@@ -184,11 +184,11 @@ export default function UtmsSubids() {
               <tr><td colSpan={11} className="text-center text-muted-foreground py-8">Nenhum UTM encontrado</td></tr>
             ) : filtered.map(u => (
               <tr key={u.id}>
-                <td className="font-mono text-[11px]">{u.utm_source || "—"}</td>
-                <td className="font-mono text-[11px]">{u.utm_medium || "—"}</td>
-                <td className="font-mono text-[11px] text-primary">{u.utm_campaign || "—"}</td>
-                <td className="font-mono text-[11px]">{u.utm_content || "—"}</td>
-                <td className="font-mono text-[11px] font-medium">{u.subid || "—"}</td>
+                <td className="font-mono text-[11px]">{u.utm_source || "-"}</td>
+                <td className="font-mono text-[11px]">{u.utm_medium || "-"}</td>
+                <td className="font-mono text-[11px] text-primary">{u.utm_campaign || "-"}</td>
+                <td className="font-mono text-[11px]">{u.utm_content || "-"}</td>
+                <td className="font-mono text-[11px] font-medium">{u.subid || "-"}</td>
                 <td className="text-xs">{getInfluencerName(u.influencer_id)}</td>
                 <td className="text-xs">{getLPName(u.landing_page_id)}</td>
                 <td className="text-xs">{getGameName(u.game_id)}</td>
@@ -297,7 +297,7 @@ export default function UtmsSubids() {
       <Dialog open={!!detail} onOpenChange={() => setDetail(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Detalhe UTM — {detail?.subid || detail?.id}</DialogTitle>
+            <DialogTitle>Detalhe UTM - {detail?.subid || detail?.id}</DialogTitle>
           </DialogHeader>
           {detail && (
             <div className="space-y-6">
@@ -310,11 +310,11 @@ export default function UtmsSubids() {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {[
-                  { l: "Source", v: detail.utm_source || "—" },
-                  { l: "Medium", v: detail.utm_medium || "—" },
-                  { l: "Campaign", v: detail.utm_campaign || "—" },
-                  { l: "Content", v: detail.utm_content || "—" },
-                  { l: "SubID", v: detail.subid || "—" },
+                  { l: "Source", v: detail.utm_source || "-" },
+                  { l: "Medium", v: detail.utm_medium || "-" },
+                  { l: "Campaign", v: detail.utm_campaign || "-" },
+                  { l: "Content", v: detail.utm_content || "-" },
+                  { l: "SubID", v: detail.subid || "-" },
                   { l: "Influencer", v: getInfluencerName(detail.influencer_id) },
                   { l: "Landing Page", v: getLPName(detail.landing_page_id) },
                   { l: "Jogo", v: getGameName(detail.game_id) },

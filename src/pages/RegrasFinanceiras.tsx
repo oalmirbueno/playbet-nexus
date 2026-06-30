@@ -26,8 +26,8 @@ const initialRegras: Regra[] = [
 ];
 
 const alerts = [
-  { msg: "Regra 'Bloqueio por Divergência' em revisão — sem responsável definido", type: "warning" },
-  { msg: "Taxa operacional alterada recentemente (8% → 10%) — verificar impacto", type: "warning" },
+  { msg: "Regra 'Bloqueio por Divergência' em revisão - sem responsável definido", type: "warning" },
+  { msg: "Taxa operacional alterada recentemente (8% → 10%) - verificar impacto", type: "warning" },
   { msg: "Comissão de Pedro L. alterada fora do fluxo padrão de aprovação", type: "danger" },
 ];
 
@@ -67,7 +67,7 @@ export default function RegrasFinanceiras() {
       setData(prev => prev.map(r => r.id === editing.id ? {
         ...r, ...editing,
         ultimaAlteracao: now,
-        historico: [{ data: now, acao: `Editado — valor: ${editing.valor}`, por: "Admin" }, ...r.historico],
+        historico: [{ data: now, acao: `Editado - valor: ${editing.valor}`, por: "Admin" }, ...r.historico],
       } as Regra : r));
       toast.success(`Regra "${editing.nome}" atualizada`);
     } else {
@@ -91,7 +91,7 @@ export default function RegrasFinanceiras() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Regras Financeiras</h1>
-          <p className="text-sm text-muted-foreground mt-1">Motor de regras — comissões, saques, conciliação e parâmetros operacionais</p>
+          <p className="text-sm text-muted-foreground mt-1">Motor de regras - comissões, saques, conciliação e parâmetros operacionais</p>
         </div>
         <div className="flex items-center gap-2">
           <button className="btn-primary text-xs" onClick={openCreate}><Plus size={13} />Criar Regra</button>
@@ -100,10 +100,10 @@ export default function RegrasFinanceiras() {
         </div>
       </div>
 
-      {/* Fluxo de Cálculo — Modelo Oficial PlayBet v3 */}
+      {/* Fluxo de Cálculo - Modelo Oficial PlayBet v3 */}
       <div className="glass-card p-6">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="text-sm font-semibold">Fluxo de Distribuição — Modelo Oficial v3</h3>
+          <h3 className="text-sm font-semibold">Fluxo de Distribuição - Modelo Oficial v3</h3>
           <span className="text-[10px] text-muted-foreground">Sempre sobre receita validada · nunca sobre clique/depósito</span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -113,7 +113,7 @@ export default function RegrasFinanceiras() {
             { label: "− Gerente", desc: "3–8%" },
             { label: "− Imposto/provisão", desc: "10–20% (15%)" },
             { label: "− Custos diretos", desc: "Real" },
-            { label: "= Subtotal", desc: "—" },
+            { label: "= Subtotal", desc: "-" },
             { label: "− Reserva PlayBet", desc: "10% do subtotal" },
             { label: "÷ 3 Sócios", desc: "Saldo final" },
           ].map((item, i) => (
@@ -151,7 +151,7 @@ export default function RegrasFinanceiras() {
               ))}
             </div>
             <p className="text-[10px] text-muted-foreground mt-3">
-              Ninguém vira sócio — o topo da trilha é parceiro premium / embaixador / líder de carteira.
+              Ninguém vira sócio - o topo da trilha é parceiro premium / embaixador / líder de carteira.
             </p>
           </div>
         ))}
