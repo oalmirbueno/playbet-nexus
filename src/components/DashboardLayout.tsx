@@ -8,7 +8,7 @@ import {
   Users, UserCheck, ShieldCheck, Gamepad2, Monitor, Link2, FileText, GitBranch,
   Calendar, PenTool, Lightbulb, Megaphone, BarChart3, ArrowRightLeft, Tag, ClipboardList,
   Settings, Scale, Lock, Plug, Menu, X, Bell, Search, ChevronDown, PanelLeftClose, PanelLeft,
-  Command, LogOut, Code2, Sparkles,
+  Command, LogOut, Code2, Sparkles, Briefcase, KanbanSquare, CheckSquare,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 
@@ -22,6 +22,14 @@ const sections: MenuSection[] = [
       { label: "Dashboard", icon: LayoutDashboard, path: "/" },
       { label: "Tracking", icon: BarChart3, path: "/tracking" },
       { label: "Pessoas", icon: Users, path: "/pessoas" },
+    ],
+  },
+  {
+    title: "COMERCIAL",
+    items: [
+      { label: "Pipeline", icon: KanbanSquare, path: "/comercial" },
+      { label: "Squads & Gerentes", icon: Briefcase, path: "/comercial/squads" },
+      { label: "Qualificação", icon: CheckSquare, path: "/comercial/qualificacao" },
     ],
   },
   {
