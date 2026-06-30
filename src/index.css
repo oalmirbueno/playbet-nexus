@@ -1,49 +1,54 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    --background: 0 0% 5.5%;
-    --foreground: 0 0% 93%;
-    --card: 0 0% 7.5%;
-    --card-foreground: 0 0% 93%;
-    --card-elevated: 0 0% 9.5%;
-    --popover: 0 0% 8%;
-    --popover-foreground: 0 0% 93%;
-    --primary: 220 72% 26%;
-    --primary-foreground: 0 0% 100%;
-    --primary-glow: 220 65% 34%;
-    --secondary: 0 0% 10%;
-    --secondary-foreground: 0 0% 88%;
-    --muted: 0 0% 12%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 43 55% 48%;
-    --accent-foreground: 0 0% 5%;
-    --destructive: 0 55% 45%;
+    /* Midnight Indigo: deep navy base with electric indigo accents */
+    --background: 240 32% 6%;
+    --foreground: 240 8% 94%;
+    --card: 240 28% 9%;
+    --card-foreground: 240 8% 94%;
+    --card-elevated: 240 26% 12%;
+    --popover: 240 30% 8%;
+    --popover-foreground: 240 8% 94%;
+    --primary: 244 75% 60%;
+    --primary-foreground: 240 30% 98%;
+    --primary-glow: 248 85% 70%;
+    --secondary: 240 22% 12%;
+    --secondary-foreground: 240 8% 88%;
+    --muted: 240 20% 14%;
+    --muted-foreground: 240 8% 56%;
+    --accent: 244 75% 60%;
+    --accent-foreground: 240 30% 98%;
+    --destructive: 0 65% 58%;
     --destructive-foreground: 0 0% 100%;
-    --success: 152 45% 36%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 60% 46%;
-    --warning-foreground: 0 0% 5%;
-    --info: 205 55% 42%;
-    --info-foreground: 0 0% 100%;
-    --border: 0 0% 12.5%;
-    --border-subtle: 0 0% 10%;
-    --input: 0 0% 12.5%;
-    --ring: 220 72% 26%;
-    --radius: 0.5rem;
-    --sidebar-background: 0 0% 6%;
-    --sidebar-foreground: 0 0% 44%;
-    --sidebar-primary: 220 72% 26%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 10%;
-    --sidebar-accent-foreground: 0 0% 82%;
-    --sidebar-border: 0 0% 11%;
-    --sidebar-ring: 220 72% 26%;
-    --sidebar-section: 0 0% 34%;
+    --success: 158 60% 48%;
+    --success-foreground: 240 30% 8%;
+    --warning: 38 92% 58%;
+    --warning-foreground: 240 30% 8%;
+    --info: 210 90% 62%;
+    --info-foreground: 240 30% 98%;
+    --border: 240 22% 15%;
+    --border-subtle: 240 22% 12%;
+    --input: 240 22% 15%;
+    --ring: 244 75% 60%;
+    --radius: 0.625rem;
+    --sidebar-background: 240 38% 5%;
+    --sidebar-foreground: 240 10% 56%;
+    --sidebar-primary: 244 75% 60%;
+    --sidebar-primary-foreground: 240 30% 98%;
+    --sidebar-accent: 240 25% 11%;
+    --sidebar-accent-foreground: 240 10% 92%;
+    --sidebar-border: 240 25% 12%;
+    --sidebar-ring: 244 75% 60%;
+    --sidebar-section: 240 12% 42%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(244 75% 60%), hsl(262 75% 64%));
+    --gradient-surface: linear-gradient(180deg, hsl(240 30% 8%), hsl(240 32% 6%));
+    --shadow-elegant: 0 10px 40px -12px hsl(244 75% 30% / 0.45);
+    --shadow-glow: 0 0 32px hsl(248 85% 65% / 0.22);
+    --shadow-card: 0 1px 0 hsl(240 30% 100% / 0.04) inset, 0 8px 24px -12px hsl(240 50% 2% / 0.6);
   }
 }
 
@@ -51,12 +56,21 @@
   * { @apply border-border; }
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Manrope', system-ui, -apple-system, sans-serif;
     font-size: 13.5px;
     line-height: 1.65;
-    letter-spacing: -0.006em;
+    letter-spacing: -0.008em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, hsl(244 75% 30% / 0.18), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 100% 100%, hsl(262 70% 35% / 0.10), transparent 60%);
+    background-attachment: fixed;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Sora', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.022em;
+    font-weight: 600;
   }
 }
 
