@@ -163,39 +163,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             );
           })}
         </nav>
-
-
-
-        {/* Collapse toggle (desktop only) */}
-        <div className="hidden md:flex px-3 py-2 border-t border-sidebar-border shrink-0">
-          <button
-            onClick={() => setSidebarCollapsed((c) => !c)}
-            className={`flex items-center ${sidebarCollapsed ? "justify-center w-full" : "gap-2 w-full"} px-2 py-1.5 rounded text-muted-foreground/40 hover:text-muted-foreground transition-colors text-[11px]`}
-            title={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
-          >
-            {sidebarCollapsed ? <PanelLeft size={13} /> : <PanelLeftClose size={13} />}
-            {!sidebarCollapsed && <span>Recolher</span>}
-          </button>
-        </div>
-
         {/* User */}
         {!sidebarCollapsed && (
-          <div className="px-3 py-3.5 border-t border-sidebar-border shrink-0">
-            <div className="flex items-center gap-3 px-2.5 py-2 rounded-md hover:bg-sidebar-accent transition-colors cursor-pointer">
-              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[11px] font-semibold">A</div>
+          <div className="px-3 py-3 border-t border-sidebar-border/60 shrink-0">
+            <div className="flex items-center gap-3 px-2.5 py-2 rounded-lg hover:bg-sidebar-accent/60 transition-colors cursor-pointer">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center text-primary-foreground text-[12px] font-semibold shadow-[0_4px_12px_-2px_hsl(var(--primary)/0.4)]">A</div>
               <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-medium text-foreground/85 truncate">Admin PlayBet</p>
+                <p className="text-[12px] font-medium text-foreground/90 truncate">Admin PlayBet</p>
                 <p className="text-[10.5px] text-muted-foreground truncate">Gestor Principal</p>
               </div>
             </div>
           </div>
         )}
         {sidebarCollapsed && (
-          <div className="px-2 py-3 border-t border-sidebar-border shrink-0 flex justify-center">
-            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[11px] font-semibold cursor-pointer" title="Admin PlayBet">A</div>
+          <div className="px-2 py-3 border-t border-sidebar-border/60 shrink-0 flex justify-center">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center text-primary-foreground text-[12px] font-semibold shadow-[0_4px_12px_-2px_hsl(var(--primary)/0.4)] cursor-pointer" title="Admin PlayBet">A</div>
           </div>
         )}
       </aside>
+
 
       {/* ── Main ─────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
