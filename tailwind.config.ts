@@ -7,7 +7,19 @@ export default {
   theme: {
     container: { center: true, padding: "2rem", screens: { "2xl": "1400px" } },
     extend: {
-      fontFamily: { sans: ["Inter", "system-ui", "-apple-system", "sans-serif"] },
+      fontFamily: {
+        sans: ["Manrope", "system-ui", "-apple-system", "sans-serif"],
+        display: ["Sora", "system-ui", "-apple-system", "sans-serif"],
+      },
+      boxShadow: {
+        elegant: "var(--shadow-elegant)",
+        glow: "var(--shadow-glow)",
+        card: "var(--shadow-card)",
+      },
+      backgroundImage: {
+        "gradient-primary": "var(--gradient-primary)",
+        "gradient-surface": "var(--gradient-surface)",
+      },
       fontSize: {
         xs: ["0.75rem", { lineHeight: "1.5" }],
         sm: ["0.8125rem", { lineHeight: "1.5" }],
