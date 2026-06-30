@@ -185,31 +185,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* ── Main ─────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        <header className="h-[52px] border-b border-border flex items-center px-6 gap-4 bg-background sticky top-0 z-30 shrink-0">
+        <header className="h-[56px] border-b border-border/60 flex items-center px-6 gap-4 bg-background/70 backdrop-blur-xl sticky top-0 z-30 shrink-0">
           <button className="md:hidden text-muted-foreground hover:text-foreground transition-colors" onClick={() => setSidebarOpen(true)}>
             <Menu size={17} />
           </button>
-          <div className="hidden md:flex items-center gap-2.5 bg-secondary/50 border border-border rounded-md px-3.5 py-[7px] flex-1 max-w-sm cursor-pointer" onClick={() => setSearchOpen(true)}>
+          <div className="hidden md:flex items-center gap-2.5 bg-secondary/40 hover:bg-secondary/60 border border-border/60 hover:border-primary/30 rounded-lg px-3.5 py-[7px] flex-1 max-w-sm cursor-pointer transition-all duration-200" onClick={() => setSearchOpen(true)}>
             <Search size={13} className="text-muted-foreground shrink-0" />
             <span className="text-[13px] text-muted-foreground flex-1">Buscar módulo, influencer, jogo...</span>
-            <kbd className="hidden lg:inline-flex items-center gap-0.5 text-[10px] text-muted-foreground bg-background border border-border rounded px-1.5 py-0.5 font-mono">
+            <kbd className="hidden lg:inline-flex items-center gap-0.5 text-[10px] text-muted-foreground bg-background/80 border border-border rounded px-1.5 py-0.5 font-mono">
               <Command size={9} />K
             </kbd>
           </div>
-          <div className="ml-auto flex items-center gap-2.5">
+          <div className="ml-auto flex items-center gap-2">
             <NotificationPanel />
-            <div className="h-4 w-px bg-border" />
-            <div className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-secondary/30 transition-colors cursor-pointer">
-              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[11px] font-semibold">
+            <div className="h-5 w-px bg-border/60 mx-1" />
+            <div className="flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-secondary/40 transition-colors cursor-pointer">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center text-primary-foreground text-[11px] font-semibold shadow-[0_2px_8px_-2px_hsl(var(--primary)/0.5)]">
                 {user?.email?.charAt(0).toUpperCase() || "U"}
               </div>
-              <span className="text-[13px] font-medium hidden sm:block text-foreground/75">{role || "user"}</span>
+              <span className="text-[12.5px] font-medium hidden sm:block text-foreground/80 capitalize">{role || "user"}</span>
             </div>
-            <button onClick={signOut} className="p-2 rounded-md hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive" title="Sair">
-              <LogOut size={15} />
+            <button onClick={signOut} className="p-2 rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive" title="Sair">
+              <LogOut size={14} />
             </button>
           </div>
         </header>
+
         <main className="flex-1 p-6 lg:p-8 overflow-y-auto invisible-scroll main-scroll animate-fade-in">{children}</main>
       </div>
 
