@@ -88,18 +88,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* ── Sidebar ──────────────────────────── */}
       <aside
-        className={`fixed z-50 inset-y-0 left-0 bg-sidebar flex flex-col transition-all duration-300 ease-out md:translate-x-0 md:static md:shrink-0 border-r border-sidebar-border ${
+        className={`group/sidebar fixed z-50 inset-y-0 left-0 flex flex-col transition-[width,transform] duration-300 ease-out md:translate-x-0 md:static md:shrink-0 border-r border-sidebar-border/70 backdrop-blur-xl ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } ${sidebarCollapsed ? "w-[64px]" : "w-[260px]"}`}
+        } ${sidebarCollapsed ? "w-[68px]" : "w-[248px]"}`}
+        style={{
+          background:
+            "linear-gradient(180deg, hsl(240 40% 6% / 0.96) 0%, hsl(240 38% 4% / 0.98) 100%)",
+        }}
       >
+        {/* Floating collapse pill (desktop) */}
+        <button
+          onClick={() => setSidebarCollapsed((c) => !c)}
+          className="hidden md:flex absolute -right-3 top-[24px] z-50 h-6 w-6 items-center justify-center rounded-full border border-sidebar-border bg-card text-muted-foreground hover:text-primary hover:border-primary/50 hover:shadow-[0_0_0_4px_hsl(var(--primary)/0.14)] transition-all duration-200"
+          title={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
+          aria-label={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
+        >
+          {sidebarCollapsed ? <PanelLeft size={12} /> : <PanelLeftClose size={12} />}
+        </button>
+
         {/* Logo */}
-        <div className={`flex items-center ${sidebarCollapsed ? "justify-center px-2" : "justify-between px-5"} h-[60px] border-b border-sidebar-border shrink-0`}>
-          {!sidebarCollapsed && <img src={logo} alt="PlayBet" className="h-24 opacity-90" />}
-          {sidebarCollapsed && <img src={logo} alt="PlayBet" className="h-12 w-12 object-contain opacity-90" />}
+        <div className={`flex items-center ${sidebarCollapsed ? "justify-center px-2" : "justify-between px-5"} h-[64px] border-b border-sidebar-border/60 shrink-0`}>
+          {!sidebarCollapsed && <img src={logo} alt="PlayBet" className="h-20 opacity-95" />}
+          {sidebarCollapsed && <img src={logo} alt="PlayBet" className="h-10 w-10 object-contain opacity-95" />}
           <button className="md:hidden text-sidebar-foreground hover:text-foreground transition-colors" onClick={() => setSidebarOpen(false)}>
             <X size={16} />
           </button>
         </div>
+
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto invisible-scroll sidebar-scroll py-1.5">
@@ -128,13 +143,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           to={item.path}
                           onClick={() => setSidebarOpen(false)}
                           title={sidebarCollapsed ? item.label : undefined}
-                          className={`group flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-[9px]"} rounded-md text-[13px] transition-all duration-150 ${
+                          className={`group relative flex items-center ${sidebarCollapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-[9px]"} rounded-lg text-[13px] transition-all duration-200 ${
                             active
-                              ? "bg-primary/12 text-foreground font-medium"
-                              : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground font-normal"
+                              ? "text-foreground font-medium bg-gradient-to-r from-primary/15 via-primary/8 to-transparent shadow-[inset_0_1px_0_hsl(var(--primary)/0.12)]"
+                              : "text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground font-normal"
                           }`}
                         >
-                          <item.icon size={sidebarCollapsed ? 16 : 14} strokeWidth={active ? 2 : 1.5} className={`shrink-0 ${active ? "text-primary" : ""}`} />
+                          {active && (
+                            <span className="absolute left-0 top-1.5 bottom-1.5 w-[2px] rounded-r-full bg-gradient-to-b from-primary-glow to-primary shadow-[0_0_8px_hsl(var(--primary)/0.55)]" />
+                          )}
+                          <item.icon size={sidebarCollapsed ? 16 : 14} strokeWidth={active ? 2.25 : 1.6} className={`shrink-0 transition-colors ${active ? "text-primary" : "group-hover:text-foreground/90"}`} />
                           {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
                         </Link>
                       );
@@ -145,65 +163,54 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             );
           })}
         </nav>
-
-        {/* Collapse toggle (desktop only) */}
-        <div className="hidden md:flex px-3 py-2 border-t border-sidebar-border shrink-0">
-          <button
-            onClick={() => setSidebarCollapsed((c) => !c)}
-            className={`flex items-center ${sidebarCollapsed ? "justify-center w-full" : "gap-2 w-full"} px-2 py-1.5 rounded text-muted-foreground/40 hover:text-muted-foreground transition-colors text-[11px]`}
-            title={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
-          >
-            {sidebarCollapsed ? <PanelLeft size={13} /> : <PanelLeftClose size={13} />}
-            {!sidebarCollapsed && <span>Recolher</span>}
-          </button>
-        </div>
-
         {/* User */}
         {!sidebarCollapsed && (
-          <div className="px-3 py-3.5 border-t border-sidebar-border shrink-0">
-            <div className="flex items-center gap-3 px-2.5 py-2 rounded-md hover:bg-sidebar-accent transition-colors cursor-pointer">
-              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[11px] font-semibold">A</div>
+          <div className="px-3 py-3 border-t border-sidebar-border/60 shrink-0">
+            <div className="flex items-center gap-3 px-2.5 py-2 rounded-lg hover:bg-sidebar-accent/60 transition-colors cursor-pointer">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center text-primary-foreground text-[12px] font-semibold shadow-[0_4px_12px_-2px_hsl(var(--primary)/0.4)]">A</div>
               <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-medium text-foreground/85 truncate">Admin PlayBet</p>
+                <p className="text-[12px] font-medium text-foreground/90 truncate">Admin PlayBet</p>
                 <p className="text-[10.5px] text-muted-foreground truncate">Gestor Principal</p>
               </div>
             </div>
           </div>
         )}
         {sidebarCollapsed && (
-          <div className="px-2 py-3 border-t border-sidebar-border shrink-0 flex justify-center">
-            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[11px] font-semibold cursor-pointer" title="Admin PlayBet">A</div>
+          <div className="px-2 py-3 border-t border-sidebar-border/60 shrink-0 flex justify-center">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center text-primary-foreground text-[12px] font-semibold shadow-[0_4px_12px_-2px_hsl(var(--primary)/0.4)] cursor-pointer" title="Admin PlayBet">A</div>
           </div>
         )}
       </aside>
 
+
       {/* ── Main ─────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
-        <header className="h-[52px] border-b border-border flex items-center px-6 gap-4 bg-background sticky top-0 z-30 shrink-0">
+        <header className="h-[56px] border-b border-border/60 flex items-center px-6 gap-4 bg-background/70 backdrop-blur-xl sticky top-0 z-30 shrink-0">
           <button className="md:hidden text-muted-foreground hover:text-foreground transition-colors" onClick={() => setSidebarOpen(true)}>
             <Menu size={17} />
           </button>
-          <div className="hidden md:flex items-center gap-2.5 bg-secondary/50 border border-border rounded-md px-3.5 py-[7px] flex-1 max-w-sm cursor-pointer" onClick={() => setSearchOpen(true)}>
+          <div className="hidden md:flex items-center gap-2.5 bg-secondary/40 hover:bg-secondary/60 border border-border/60 hover:border-primary/30 rounded-lg px-3.5 py-[7px] flex-1 max-w-sm cursor-pointer transition-all duration-200" onClick={() => setSearchOpen(true)}>
             <Search size={13} className="text-muted-foreground shrink-0" />
             <span className="text-[13px] text-muted-foreground flex-1">Buscar módulo, influencer, jogo...</span>
-            <kbd className="hidden lg:inline-flex items-center gap-0.5 text-[10px] text-muted-foreground bg-background border border-border rounded px-1.5 py-0.5 font-mono">
+            <kbd className="hidden lg:inline-flex items-center gap-0.5 text-[10px] text-muted-foreground bg-background/80 border border-border rounded px-1.5 py-0.5 font-mono">
               <Command size={9} />K
             </kbd>
           </div>
-          <div className="ml-auto flex items-center gap-2.5">
+          <div className="ml-auto flex items-center gap-2">
             <NotificationPanel />
-            <div className="h-4 w-px bg-border" />
-            <div className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-secondary/30 transition-colors cursor-pointer">
-              <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-primary text-[11px] font-semibold">
+            <div className="h-5 w-px bg-border/60 mx-1" />
+            <div className="flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-secondary/40 transition-colors cursor-pointer">
+              <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center text-primary-foreground text-[11px] font-semibold shadow-[0_2px_8px_-2px_hsl(var(--primary)/0.5)]">
                 {user?.email?.charAt(0).toUpperCase() || "U"}
               </div>
-              <span className="text-[13px] font-medium hidden sm:block text-foreground/75">{role || "user"}</span>
+              <span className="text-[12.5px] font-medium hidden sm:block text-foreground/80 capitalize">{role || "user"}</span>
             </div>
-            <button onClick={signOut} className="p-2 rounded-md hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive" title="Sair">
-              <LogOut size={15} />
+            <button onClick={signOut} className="p-2 rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive" title="Sair">
+              <LogOut size={14} />
             </button>
           </div>
         </header>
+
         <main className="flex-1 p-6 lg:p-8 overflow-y-auto invisible-scroll main-scroll animate-fade-in">{children}</main>
       </div>
 
