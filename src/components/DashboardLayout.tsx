@@ -88,18 +88,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* ── Sidebar ──────────────────────────── */}
       <aside
-        className={`fixed z-50 inset-y-0 left-0 bg-sidebar flex flex-col transition-all duration-300 ease-out md:translate-x-0 md:static md:shrink-0 border-r border-sidebar-border ${
+        className={`group/sidebar fixed z-50 inset-y-0 left-0 flex flex-col transition-[width,transform] duration-300 ease-out md:translate-x-0 md:static md:shrink-0 border-r border-sidebar-border/70 backdrop-blur-xl ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } ${sidebarCollapsed ? "w-[64px]" : "w-[260px]"}`}
+        } ${sidebarCollapsed ? "w-[68px]" : "w-[248px]"}`}
+        style={{
+          background:
+            "linear-gradient(180deg, hsl(240 40% 6% / 0.96) 0%, hsl(240 38% 4% / 0.98) 100%)",
+        }}
       >
+        {/* Floating collapse pill (desktop) */}
+        <button
+          onClick={() => setSidebarCollapsed((c) => !c)}
+          className="hidden md:flex absolute -right-3 top-[24px] z-50 h-6 w-6 items-center justify-center rounded-full border border-sidebar-border bg-card text-muted-foreground hover:text-primary hover:border-primary/50 hover:shadow-[0_0_0_4px_hsl(var(--primary)/0.14)] transition-all duration-200"
+          title={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
+          aria-label={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
+        >
+          {sidebarCollapsed ? <PanelLeft size={12} /> : <PanelLeftClose size={12} />}
+        </button>
+
         {/* Logo */}
-        <div className={`flex items-center ${sidebarCollapsed ? "justify-center px-2" : "justify-between px-5"} h-[60px] border-b border-sidebar-border shrink-0`}>
-          {!sidebarCollapsed && <img src={logo} alt="PlayBet" className="h-24 opacity-90" />}
-          {sidebarCollapsed && <img src={logo} alt="PlayBet" className="h-12 w-12 object-contain opacity-90" />}
+        <div className={`flex items-center ${sidebarCollapsed ? "justify-center px-2" : "justify-between px-5"} h-[64px] border-b border-sidebar-border/60 shrink-0`}>
+          {!sidebarCollapsed && <img src={logo} alt="PlayBet" className="h-20 opacity-95" />}
+          {sidebarCollapsed && <img src={logo} alt="PlayBet" className="h-10 w-10 object-contain opacity-95" />}
           <button className="md:hidden text-sidebar-foreground hover:text-foreground transition-colors" onClick={() => setSidebarOpen(false)}>
             <X size={16} />
           </button>
         </div>
+
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto invisible-scroll sidebar-scroll py-1.5">
