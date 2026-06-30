@@ -122,6 +122,9 @@ function ProtectedRoutes() {
         <Route path="/tracking/snapshots" element={<TrackingSnapshots />} />
         <Route path="/tracking/links" element={<TrackingLinks />} />
         <Route path="/tracking/reconciliacao" element={<Reconciliacao />} />
+        <Route path="/comercial" element={<ComercialPipeline />} />
+        <Route path="/comercial/squads" element={<ComercialSquads />} />
+        <Route path="/comercial/qualificacao" element={<ComercialQualificacao />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </DashboardLayout>
