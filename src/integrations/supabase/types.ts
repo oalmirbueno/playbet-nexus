@@ -311,6 +311,315 @@ export type Database = {
           },
         ]
       }
+      commercial_card_checklist: {
+        Row: {
+          card_id: string
+          checked: boolean
+          checked_at: string | null
+          checked_by: string | null
+          created_at: string
+          id: string
+          item_id: string
+          updated_at: string
+          value_number: number | null
+          value_text: string | null
+        }
+        Insert: {
+          card_id: string
+          checked?: boolean
+          checked_at?: string | null
+          checked_by?: string | null
+          created_at?: string
+          id?: string
+          item_id: string
+          updated_at?: string
+          value_number?: number | null
+          value_text?: string | null
+        }
+        Update: {
+          card_id?: string
+          checked?: boolean
+          checked_at?: string | null
+          checked_by?: string | null
+          created_at?: string
+          id?: string
+          item_id?: string
+          updated_at?: string
+          value_number?: number | null
+          value_text?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_card_checklist_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_pipeline_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_card_checklist_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_checklist_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commercial_card_history: {
+        Row: {
+          actor_user_id: string | null
+          card_id: string
+          created_at: string
+          from_stage: Database["public"]["Enums"]["commercial_stage"] | null
+          id: string
+          payload: Json | null
+          reason: string | null
+          to_stage: Database["public"]["Enums"]["commercial_stage"]
+        }
+        Insert: {
+          actor_user_id?: string | null
+          card_id: string
+          created_at?: string
+          from_stage?: Database["public"]["Enums"]["commercial_stage"] | null
+          id?: string
+          payload?: Json | null
+          reason?: string | null
+          to_stage: Database["public"]["Enums"]["commercial_stage"]
+        }
+        Update: {
+          actor_user_id?: string | null
+          card_id?: string
+          created_at?: string
+          from_stage?: Database["public"]["Enums"]["commercial_stage"] | null
+          id?: string
+          payload?: Json | null
+          reason?: string | null
+          to_stage?: Database["public"]["Enums"]["commercial_stage"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_card_history_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_pipeline_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commercial_checklist_items: {
+        Row: {
+          created_at: string
+          field_type: Database["public"]["Enums"]["commercial_checklist_field_type"]
+          group_label: string
+          id: string
+          label: string
+          options: Json | null
+          position: number
+          required: boolean
+          template_id: string
+        }
+        Insert: {
+          created_at?: string
+          field_type?: Database["public"]["Enums"]["commercial_checklist_field_type"]
+          group_label: string
+          id?: string
+          label: string
+          options?: Json | null
+          position?: number
+          required?: boolean
+          template_id: string
+        }
+        Update: {
+          created_at?: string
+          field_type?: Database["public"]["Enums"]["commercial_checklist_field_type"]
+          group_label?: string
+          id?: string
+          label?: string
+          options?: Json | null
+          position?: number
+          required?: boolean
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_checklist_items_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_checklist_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      commercial_checklist_templates: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          min_required_pct: number
+          name: string
+          notes: string | null
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          min_required_pct?: number
+          name: string
+          notes?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          min_required_pct?: number
+          name?: string
+          notes?: string | null
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
+      commercial_pipeline_cards: {
+        Row: {
+          approved_at: string | null
+          checklist_progress: number
+          city: string | null
+          completed_at: string | null
+          content_info: Json | null
+          created_at: string
+          created_by: string | null
+          document: string | null
+          documents: Json | null
+          email: string | null
+          financial_info: Json | null
+          handle: string | null
+          id: string
+          influencer_id: string | null
+          is_active: boolean
+          manager_id: string | null
+          name: string
+          niche: string | null
+          notes: string | null
+          owner_user_id: string | null
+          phone: string | null
+          position: number
+          primary_channel: string | null
+          responded_at: string | null
+          social_profiles: Json | null
+          source: string | null
+          squad_id: string | null
+          stage: Database["public"]["Enums"]["commercial_stage"]
+          stage_moved_at: string
+          tags: string[] | null
+          template_id: string | null
+          uf: string | null
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          checklist_progress?: number
+          city?: string | null
+          completed_at?: string | null
+          content_info?: Json | null
+          created_at?: string
+          created_by?: string | null
+          document?: string | null
+          documents?: Json | null
+          email?: string | null
+          financial_info?: Json | null
+          handle?: string | null
+          id?: string
+          influencer_id?: string | null
+          is_active?: boolean
+          manager_id?: string | null
+          name: string
+          niche?: string | null
+          notes?: string | null
+          owner_user_id?: string | null
+          phone?: string | null
+          position?: number
+          primary_channel?: string | null
+          responded_at?: string | null
+          social_profiles?: Json | null
+          source?: string | null
+          squad_id?: string | null
+          stage?: Database["public"]["Enums"]["commercial_stage"]
+          stage_moved_at?: string
+          tags?: string[] | null
+          template_id?: string | null
+          uf?: string | null
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          checklist_progress?: number
+          city?: string | null
+          completed_at?: string | null
+          content_info?: Json | null
+          created_at?: string
+          created_by?: string | null
+          document?: string | null
+          documents?: Json | null
+          email?: string | null
+          financial_info?: Json | null
+          handle?: string | null
+          id?: string
+          influencer_id?: string | null
+          is_active?: boolean
+          manager_id?: string | null
+          name?: string
+          niche?: string | null
+          notes?: string | null
+          owner_user_id?: string | null
+          phone?: string | null
+          position?: number
+          primary_channel?: string | null
+          responded_at?: string | null
+          social_profiles?: Json | null
+          source?: string | null
+          squad_id?: string | null
+          stage?: Database["public"]["Enums"]["commercial_stage"]
+          stage_moved_at?: string
+          tags?: string[] | null
+          template_id?: string | null
+          uf?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "commercial_pipeline_cards_influencer_id_fkey"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_pipeline_cards_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_pipeline_cards_squad_id_fkey"
+            columns: ["squad_id"]
+            isOneToOne: false
+            referencedRelation: "squads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commercial_pipeline_cards_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "commercial_checklist_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conteudo: {
         Row: {
           campanha: string | null
@@ -2190,6 +2499,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      pick_manager_for_squad: { Args: { _squad_id: string }; Returns: string }
       validate_api_key: { Args: { _key: string }; Returns: boolean }
     }
     Enums: {
@@ -2200,6 +2510,21 @@ export type Database = {
         | "operacao"
         | "conteudo"
         | "visualizacao"
+      commercial_checklist_field_type:
+        | "boolean"
+        | "text"
+        | "number"
+        | "link"
+        | "file"
+        | "select"
+      commercial_stage:
+        | "em_contato"
+        | "respondeu"
+        | "checklist"
+        | "cadastro"
+        | "analise"
+        | "aprovado"
+        | "concluido"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2334,6 +2659,23 @@ export const Constants = {
         "operacao",
         "conteudo",
         "visualizacao",
+      ],
+      commercial_checklist_field_type: [
+        "boolean",
+        "text",
+        "number",
+        "link",
+        "file",
+        "select",
+      ],
+      commercial_stage: [
+        "em_contato",
+        "respondeu",
+        "checklist",
+        "cadastro",
+        "analise",
+        "aprovado",
+        "concluido",
       ],
     },
   },
