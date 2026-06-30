@@ -140,22 +140,22 @@
     @apply inline-flex items-center px-2 py-0.5 rounded text-[10.5px] font-medium tracking-wide;
   }
   .badge-success {
-    @apply badge bg-success/10 text-[hsl(152,45%,50%)];
+    @apply badge bg-success/12 text-[hsl(158,65%,55%)];
   }
   .badge-warning {
-    @apply badge bg-warning/10 text-[hsl(38,55%,58%)];
+    @apply badge bg-warning/12 text-[hsl(38,92%,62%)];
   }
   .badge-danger {
-    @apply badge bg-destructive/10 text-[hsl(0,50%,58%)];
+    @apply badge bg-destructive/12 text-[hsl(0,70%,65%)];
   }
   .badge-info {
-    @apply badge bg-info/10 text-[hsl(205,55%,56%)];
+    @apply badge bg-info/12 text-[hsl(210,90%,68%)];
   }
   .badge-neutral {
     @apply badge bg-muted text-muted-foreground;
   }
   .badge-primary {
-    @apply badge bg-primary/10 text-[hsl(220,55%,52%)];
+    @apply badge bg-primary/15 text-[hsl(248,85%,75%)];
   }
   .badge-accent {
     @apply badge bg-accent/10 text-[hsl(43,45%,54%)];
