@@ -124,7 +124,13 @@ function NewManagerDialog({ open, onOpenChange, squads, onCreated }: { open: boo
   const [squadId, setSquadId] = useState("none");
   async function save() {
     if (!name.trim()) return toast({ title: "Nome obrigatório", variant: "destructive" });
-    const { error } = await supabase.from("managers").insert({ name: name.trim(), squad_id: squadId === "none" ? null : squadId });
+    const slug = name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + Math.random().toString(36).slice(2, 6);
+    const { error } = await supabase.from("managers").insert({
+      name: name.trim(),
+      slug,
+      team_name: name.trim(),
+      squad_id: squadId === "none" ? null : squadId,
+    });
     if (error) return toast({ title: "Erro", description: error.message, variant: "destructive" });
     setName(""); setSquadId("none"); onOpenChange(false); onCreated();
     toast({ title: "Gerente criado" });
