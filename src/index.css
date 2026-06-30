@@ -112,7 +112,7 @@
     @apply w-full text-sm;
   }
   .data-table thead th {
-    @apply text-left text-muted-foreground font-medium text-[11px] uppercase tracking-[0.08em] px-5 py-4 border-b border-border bg-secondary/15;
+    @apply text-left text-muted-foreground font-medium text-[11px] uppercase tracking-[0.08em] px-5 py-4 border-b border-border bg-secondary/20;
   }
   .data-table tbody td {
     @apply px-5 py-5 border-b border-border-subtle text-sm text-foreground/85;
@@ -207,7 +207,7 @@
     @apply flex-1 min-w-[300px] glass-card p-6 rounded-lg;
   }
   .kanban-item {
-    @apply glass-card-elevated p-5 rounded-lg mb-3 cursor-pointer hover:border-primary/15 transition-colors;
+    @apply glass-card-elevated p-5 rounded-lg mb-3 cursor-pointer hover:border-primary/20 transition-colors;
   }
 
   /* ── Sidebar ───────────────────────────────── */
