@@ -64,7 +64,7 @@ export default function Financeiro() {
       )}
 
       <Tabs value={activeTab} onValueChange={(v) => setParam("tab", v)}>
-        <TabsList className="grid grid-cols-5 w-full md:w-auto md:inline-grid">
+        <TabsList className="flex md:grid md:grid-cols-5 md:w-auto md:inline-grid w-full justify-start">
           <TabsTrigger value="distribuicao">Distribuição</TabsTrigger>
           <TabsTrigger value="influencers">
             Influencers
