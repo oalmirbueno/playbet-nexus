@@ -5,6 +5,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import DashboardLayout from "@/components/DashboardLayout";
+import InfluencerPortalLayout from "@/components/InfluencerPortalLayout";
+import ManagerLayout from "@/components/ManagerLayout";
 import Login from "./pages/Login";
 import DashboardExecutivo from "./pages/DashboardExecutivo";
 import DashboardOperacional from "./pages/DashboardOperacional";
@@ -57,22 +59,20 @@ import InfluencerLanding from "./pages/InfluencerLanding";
 import ComercialPipeline from "./pages/ComercialPipeline";
 import ComercialSquads from "./pages/ComercialSquads";
 import ComercialQualificacao from "./pages/ComercialQualificacao";
+import PortalHome from "./pages/portal/PortalHome";
+import PortalLinks from "./pages/portal/PortalLinks";
+import PortalFinanceiro from "./pages/portal/PortalFinanceiro";
+import PortalSaques from "./pages/portal/PortalSaques";
+import PortalPerfil from "./pages/portal/PortalPerfil";
+import GerenteHome from "./pages/gerente/GerenteHome";
+import GerenteRanking from "./pages/gerente/GerenteRanking";
+import GerenteInfluenciadores from "./pages/gerente/GerenteInfluenciadores";
+import GerentePipeline from "./pages/gerente/GerentePipeline";
+import GerentePerfil from "./pages/gerente/GerentePerfil";
 
 const queryClient = new QueryClient();
 
-function ProtectedRoutes() {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="animate-pulse text-muted-foreground text-sm">Carregando painel...</div>
-      </div>
-    );
-  }
-
-  if (!user) return <Navigate to="/login" replace />;
-
+function AdminRoutes() {
   return (
     <DashboardLayout>
       <Routes>
@@ -131,12 +131,55 @@ function ProtectedRoutes() {
   );
 }
 
-/**
- * The painel and the public LPs share this same SPA. We split routing by host:
- *  · Painel hosts → admin app (auth, dashboards, etc.)
- *  · Any other host (LP custom domain) → public landing pages, where the path
- *    `/:slug` resolves the influencer instance.
- */
+function PortalRoutes() {
+  return (
+    <InfluencerPortalLayout>
+      <Routes>
+        <Route path="/portal" element={<PortalHome />} />
+        <Route path="/portal/links" element={<PortalLinks />} />
+        <Route path="/portal/financeiro" element={<PortalFinanceiro />} />
+        <Route path="/portal/saques" element={<PortalSaques />} />
+        <Route path="/portal/perfil" element={<PortalPerfil />} />
+        <Route path="*" element={<Navigate to="/portal" replace />} />
+      </Routes>
+    </InfluencerPortalLayout>
+  );
+}
+
+function ManagerRoutes() {
+  return (
+    <ManagerLayout>
+      <Routes>
+        <Route path="/gerente" element={<GerenteHome />} />
+        <Route path="/gerente/ranking" element={<GerenteRanking />} />
+        <Route path="/gerente/influenciadores" element={<GerenteInfluenciadores />} />
+        <Route path="/gerente/pipeline" element={<GerentePipeline />} />
+        <Route path="/gerente/perfil" element={<GerentePerfil />} />
+        <Route path="/influencers/:id" element={<InfluencerDetalhe />} />
+        <Route path="*" element={<Navigate to="/gerente" replace />} />
+      </Routes>
+    </ManagerLayout>
+  );
+}
+
+function ProtectedRoutes() {
+  const { user, loading, effectiveRole } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="animate-pulse text-muted-foreground text-sm">Carregando painel...</div>
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/login" replace />;
+
+  if (effectiveRole === "influencer") return <PortalRoutes />;
+  if (effectiveRole === "gerente") return <ManagerRoutes />;
+  return <AdminRoutes />;
+}
+
 const PAINEL_HOSTS = ["painelcentral.playbet.app.br", "localhost", "127.0.0.1"];
 const PAINEL_HOST_SUFFIXES = [".lovable.app", ".lovableproject.com", ".lovable.dev"];
 
