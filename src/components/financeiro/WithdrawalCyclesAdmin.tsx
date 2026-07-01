@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Coins, Plus, CalendarClock, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Coins, Plus, CalendarClock, Loader2, CheckCircle2, XCircle, UserX } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -26,6 +27,8 @@ interface CycleRow {
   reference: string | null;
   notes: string | null;
   created_at: string;
+  notified_landed_at: string | null;
+  notified_available_at: string | null;
 }
 
 export function WithdrawalCyclesAdmin() {
@@ -104,14 +107,31 @@ export function WithdrawalCyclesAdmin() {
                 <th className="px-4 py-2 text-left">Chegou</th>
                 <th className="px-4 py-2 text-left">Libera</th>
                 <th className="px-4 py-2 text-left">Status</th>
+                <th className="px-4 py-2 text-left">Notificação</th>
                 <th className="px-4 py-2 text-left">Ref.</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
+              {rows.map((r) => {
+                const pending = !r.notified_landed_at || (r.status === "available" && !r.notified_available_at);
+                return (
                 <tr key={r.id} className="border-t border-border/40 hover:bg-secondary/20">
                   <td className="px-4 py-2">
-                    <div className="font-medium truncate">{nameById[r.target_id] ?? r.target_id.slice(0, 8)}</div>
+                    <div className="font-medium truncate flex items-center gap-1.5">
+                      {nameById[r.target_id] ?? r.target_id.slice(0, 8)}
+                      {pending && (
+                        <TooltipProvider delayDuration={100}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <UserX className="h-3 w-3 text-amber-500" />
+                            </TooltipTrigger>
+                            <TooltipContent className="text-xs max-w-[220px]">
+                              Usuário ainda sem cadastro na plataforma. A notificação será enviada automaticamente assim que o acesso for provisionado.
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
                     <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
                       {r.target_type === "manager" ? "Gerente" : "Influenciador"}
                     </div>
@@ -124,11 +144,12 @@ export function WithdrawalCyclesAdmin() {
                     {formatDistanceToNow(new Date(r.available_at), { addSuffix: true, locale: ptBR })}
                   </td>
                   <td className="px-4 py-2"><StatusPill status={r.status} /></td>
+                  <td className="px-4 py-2"><NotificationPill row={r} /></td>
                   <td className="px-4 py-2 text-[11px] font-mono text-muted-foreground truncate max-w-[180px]">
                     {r.reference ?? "—"}
                   </td>
                 </tr>
-              ))}
+              );})}
             </tbody>
           </table>
         </div>
@@ -157,6 +178,23 @@ function StatusPill({ status }: { status: string }) {
   return (
     <span className={`inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border ${c.cls}`}>
       <Icon size={10} /> {c.label}
+    </span>
+  );
+}
+
+function NotificationPill({ row }: { row: CycleRow }) {
+  const needLanded = !row.notified_landed_at;
+  const needAvailable = row.status === "available" && !row.notified_available_at;
+  if (needLanded || needAvailable) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">
+        <UserX size={10} /> Aguardando cadastro
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
+      <CheckCircle2 size={10} /> Enviada
     </span>
   );
 }
