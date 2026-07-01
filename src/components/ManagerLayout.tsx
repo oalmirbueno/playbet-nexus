@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import PreviewBanner from "@/components/PreviewBanner";
 import LiveSyncBadge from "@/components/LiveSyncBadge";
 import { useManagerSync } from "@/hooks/useManagerSync";
+import { PortalNotificationBell } from "@/components/PortalNotificationBell";
 import logo from "@/assets/logo.png";
 
 const items = [
