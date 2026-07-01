@@ -16,7 +16,11 @@ interface EnrichedLink {
   influencer_name: string;
   influencer_slug: string;
   platform_name?: string;
+  platform_id?: string | null;
   lp_name?: string;
+  game_name?: string | null;
+  game_icon_url?: string | null;
+  hype_reason?: string | null;
   metrics: { clicks: number; regs: number; ftd: number; revenue: number };
   raw: any;
 }
