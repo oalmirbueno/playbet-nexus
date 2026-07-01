@@ -30,7 +30,7 @@ await renderMedia({
   composition,
   serveUrl: bundled,
   codec: "h264",
-  outputLocation: "/mnt/documents/tutorial-comercial-playbet.mp4",
+  outputLocation: "/mnt/documents/tutorial-comercial-playbet-v2.mp4",
   puppeteerInstance: browser,
   muted: true,
   concurrency: 1,
