@@ -286,7 +286,7 @@ function EditUserDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const { setPreviewAs } = useAuth();
+  const { setPreviewTarget } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState<"perfil" | "acessos" | "senha">("perfil");
   const [role, setRole] = useState<AppRole>(user.role ?? "visualizacao");
@@ -366,10 +366,21 @@ function EditUserDialog({
   };
 
   const previewThisUser = () => {
-    if (role === "influencer") { setPreviewAs("influencer"); navigate("/portal"); }
-    else if (role === "gerente") { setPreviewAs("gerente"); navigate("/gerente"); }
-    else { toast({ title: "Preview disponível para influenciador e gerente" }); }
+    if (role !== "influencer" && role !== "gerente") {
+      toast({ title: "Preview disponível apenas para influenciador e gerente" });
+      return;
+    }
+    setPreviewTarget({
+      role,
+      userId: user.id,
+      influencerId: role === "influencer" ? (influencerId || user.influencer_id) : null,
+      managerId: role === "gerente" ? (managerId || user.manager_id) : null,
+      name: fullName || user.full_name,
+      email: user.email,
+    });
+    navigate(role === "influencer" ? "/portal" : "/gerente");
   };
+
 
   return (
     <Modal onClose={onClose} title="Editar usuário" subtitle={user.email ?? undefined}>
