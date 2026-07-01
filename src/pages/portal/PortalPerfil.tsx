@@ -53,9 +53,9 @@ export default function PortalPerfil() {
         <div className="glass-card p-5 space-y-2">
           <h3 className="section-title">Vínculo comercial</h3>
           <div className="grid grid-cols-2 gap-3 text-[13px]">
-            <div><p className="text-[11px] text-muted-foreground">Handle</p><p className="font-medium">@{inf.slug ?? inf.username ?? "—"}</p></div>
-            <div><p className="text-[11px] text-muted-foreground">Nicho</p><p className="font-medium">{inf.niche ?? "—"}</p></div>
-            <div><p className="text-[11px] text-muted-foreground">Chave PIX</p><p className="font-medium">{inf.pix_key ?? "—"}</p></div>
+            <div><p className="text-[11px] text-muted-foreground">Handle</p><p className="font-medium">@{inf.slug ?? "—"}</p></div>
+            <div><p className="text-[11px] text-muted-foreground">Instagram</p><p className="font-medium">{inf.instagram ?? "—"}</p></div>
+            <div><p className="text-[11px] text-muted-foreground">Categoria</p><p className="font-medium">{inf.category ?? "—"}</p></div>
             <div><p className="text-[11px] text-muted-foreground">Comissão</p><p className="font-medium">{inf.commission_percent ? `${inf.commission_percent}%` : "—"}</p></div>
           </div>
         </div>
