@@ -69,6 +69,8 @@ import GerenteRanking from "./pages/gerente/GerenteRanking";
 import GerenteInfluenciadores from "./pages/gerente/GerenteInfluenciadores";
 import GerenteLinks from "./pages/gerente/GerenteLinks";
 import GerenteOportunidades from "./pages/gerente/GerenteOportunidades";
+import GerenteFinanceiro from "./pages/gerente/GerenteFinanceiro";
+import GerenteSaques from "./pages/gerente/GerenteSaques";
 import GerentePerfil from "./pages/gerente/GerentePerfil";
 
 const queryClient = new QueryClient();
