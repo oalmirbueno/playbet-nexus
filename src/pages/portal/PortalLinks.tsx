@@ -20,6 +20,7 @@ interface EnrichedLink {
   game_icon_url?: string | null;
   link_category?: string | null;
   hype_reason?: string | null;
+  hype_priority?: number | null;
   metrics: { clicks: number; regs: number; ftd: number; revenue: number };
 }
 
