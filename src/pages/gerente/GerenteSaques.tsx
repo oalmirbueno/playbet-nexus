@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { useManagerSync } from "@/hooks/useManagerSync";
 import { Wallet, Plus, Check, Clock, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -10,6 +10,7 @@ interface SaqueRow { id: string; codigo: string; valor: number; status: string |
 
 export default function GerenteSaques() {
   const { user } = useAuth();
+  const scope = usePreviewScope();
   const { revision } = useManagerSync();
   const [rows, setRows] = useState<SaqueRow[]>([]);
   const [mgr, setMgr] = useState<any>(null);

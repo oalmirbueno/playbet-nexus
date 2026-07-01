@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { useManagerSync } from "@/hooks/useManagerSync";
 import { Search, Users } from "lucide-react";
 
@@ -13,6 +13,7 @@ type Row = {
 
 export default function GerenteInfluenciadores() {
   const { user } = useAuth();
+  const scope = usePreviewScope();
   const { revision } = useManagerSync();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);

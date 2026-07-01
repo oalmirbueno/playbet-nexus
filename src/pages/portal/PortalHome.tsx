@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { MousePointerClick, UserPlus, Wallet, TrendingUp, Percent, Users, ArrowUpRight, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -8,6 +8,7 @@ interface DayRow { data_ref: string; cliques: number; registros: number; ftd: nu
 
 export default function PortalHome() {
   const { user } = useAuth();
+  const scope = usePreviewScope();
   const [name, setName] = useState("");
   const [inf, setInf] = useState<any>(null);
   const [manager, setManager] = useState<any>(null);

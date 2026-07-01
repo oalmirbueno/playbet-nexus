@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { Wallet, TrendingUp, Percent, ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -8,6 +8,7 @@ interface DayRow { data_ref: string; cliques: number; registros: number; ftd: nu
 
 export default function PortalFinanceiro() {
   const { user } = useAuth();
+  const scope = usePreviewScope();
   const [rows, setRows] = useState<DayRow[]>([]);
   const [inf, setInf] = useState<any>(null);
   const [paidTotal, setPaidTotal] = useState(0);

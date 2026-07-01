@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { useManagerSync } from "@/hooks/useManagerSync";
 import { Users, Target, TrendingUp, Wallet, Trophy, Link2, Sparkles, ArrowRight } from "lucide-react";
 
 export default function GerenteHome() {
   const { user } = useAuth();
+  const scope = usePreviewScope();
   const { revision } = useManagerSync();
   const [squad, setSquad] = useState<any>(null);
   const [kpi, setKpi] = useState({ influencers: 0, activeInfluencers: 0, clicks: 0, ftd: 0, revenue: 0, links: 0 });

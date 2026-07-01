@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { useManagerSync } from "@/hooks/useManagerSync";
 import { Copy, ExternalLink, Link2, Search, Power, PowerOff, ShieldAlert } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -23,6 +23,7 @@ interface EnrichedLink {
 
 export default function GerenteLinks() {
   const { user } = useAuth();
+  const scope = usePreviewScope();
   const { revision } = useManagerSync();
   const [links, setLinks] = useState<EnrichedLink[]>([]);
   const [loading, setLoading] = useState(true);
