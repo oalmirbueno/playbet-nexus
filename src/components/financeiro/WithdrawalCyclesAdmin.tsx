@@ -263,7 +263,7 @@ export function WithdrawalCyclesAdmin() {
 
       {loading && rows.length === 0 ? (
         <div className="p-6 text-sm text-muted-foreground">Carregando…</div>
-      ) : totalCount === 0 && filter === "all" ? (
+      ) : totalCount === 0 && filter === "all" && !search ? (
         <div className="p-10 text-center">
           <CalendarClock className="mx-auto mb-2 text-muted-foreground" size={22} />
           <p className="text-sm font-medium">Nenhum ciclo registrado ainda</p>
@@ -273,9 +273,9 @@ export function WithdrawalCyclesAdmin() {
         </div>
       ) : rows.length === 0 ? (
         <div className="p-10 text-center">
-          <UserX className="mx-auto mb-2 text-muted-foreground" size={22} />
-          <p className="text-sm font-medium">Nenhum ciclo neste filtro</p>
-          <p className="text-xs text-muted-foreground mt-1">Ajuste o filtro acima para ver outros ciclos.</p>
+          {search ? <Search className="mx-auto mb-2 text-muted-foreground" size={22} /> : <UserX className="mx-auto mb-2 text-muted-foreground" size={22} />}
+          <p className="text-sm font-medium">{search ? `Nenhum resultado para "${search}"` : "Nenhum ciclo neste filtro"}</p>
+          <p className="text-xs text-muted-foreground mt-1">{search ? "Tente outro nome ou referência." : "Ajuste o filtro acima para ver outros ciclos."}</p>
         </div>
       ) : (
         <div className={`overflow-x-auto max-h-[420px] ${loading ? "opacity-60" : ""}`}>
