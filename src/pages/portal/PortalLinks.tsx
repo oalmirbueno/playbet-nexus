@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { Copy, Link2, ExternalLink, Sparkles, MousePointerClick, TrendingUp, Wallet } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { resolveShareUrl } from "@/lib/trackingUrl";
@@ -19,13 +19,16 @@ interface EnrichedLink {
 
 export default function PortalLinks() {
   const { user } = useAuth();
+  const scope = usePreviewScope();
   const [links, setLinks] = useState<EnrichedLink[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const { data: prof } = await supabase.from("profiles").select("influencer_id").eq("id", user!.id).maybeSingle();
+      const prof = scope.active
+        ? { full_name: scope.target?.name ?? "", influencer_id: scope.influencerId, manager_id: scope.managerId } as any
+        : (await supabase.from("profiles").select("influencer_id").eq("id", user!.id).maybeSingle()).data;
       const infId = prof?.influencer_id;
       if (!infId) { setLoading(false); return; }
 

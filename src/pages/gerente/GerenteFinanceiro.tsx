@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { useManagerSync } from "@/hooks/useManagerSync";
 import { Wallet, TrendingUp, Users, ArrowRight, Percent, Info } from "lucide-react";
 
@@ -9,6 +9,7 @@ type InfBreakdown = { id: string; name: string; slug: string; revenue: number; f
 
 export default function GerenteFinanceiro() {
   const { user } = useAuth();
+  const scope = usePreviewScope();
   const { revision } = useManagerSync();
   const [loading, setLoading] = useState(true);
   const [mgr, setMgr] = useState<any>(null);
@@ -19,7 +20,9 @@ export default function GerenteFinanceiro() {
 
   useEffect(() => {
     (async () => {
-      const { data: prof } = await supabase.from("profiles").select("manager_id").eq("id", user!.id).maybeSingle();
+      const prof = scope.active
+        ? { full_name: scope.target?.name ?? "", influencer_id: scope.influencerId, manager_id: scope.managerId } as any
+        : (await supabase.from("profiles").select("manager_id").eq("id", user!.id).maybeSingle()).data;
       if (!prof?.manager_id) { setLoading(false); return; }
       const { data: m } = await supabase.from("managers").select("*, squad:squads(name, color)").eq("id", prof.manager_id).maybeSingle();
       setMgr(m);

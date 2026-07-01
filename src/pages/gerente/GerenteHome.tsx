@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { useManagerSync } from "@/hooks/useManagerSync";
 import { Users, Target, TrendingUp, Wallet, Trophy, Link2, Sparkles, ArrowRight } from "lucide-react";
 
 export default function GerenteHome() {
   const { user } = useAuth();
+  const scope = usePreviewScope();
   const { revision } = useManagerSync();
   const [squad, setSquad] = useState<any>(null);
   const [kpi, setKpi] = useState({ influencers: 0, activeInfluencers: 0, clicks: 0, ftd: 0, revenue: 0, links: 0 });
@@ -15,7 +16,9 @@ export default function GerenteHome() {
 
   useEffect(() => {
     (async () => {
-      const { data: prof } = await supabase.from("profiles").select("manager_id, full_name").eq("id", user!.id).maybeSingle();
+      const prof = scope.active
+        ? { full_name: scope.target?.name ?? "", influencer_id: scope.influencerId, manager_id: scope.managerId } as any
+        : (await supabase.from("profiles").select("manager_id, full_name").eq("id", user!.id).maybeSingle()).data;
       if (!prof?.manager_id) { setLoading(false); return; }
       const { data: m } = await supabase.from("managers").select("*, squad:squads(*)").eq("id", prof.manager_id).maybeSingle();
       setSquad(m);

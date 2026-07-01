@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { useManagerSync } from "@/hooks/useManagerSync";
 import { Wallet, Plus, Check, Clock, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
@@ -10,6 +10,7 @@ interface SaqueRow { id: string; codigo: string; valor: number; status: string |
 
 export default function GerenteSaques() {
   const { user } = useAuth();
+  const scope = usePreviewScope();
   const { revision } = useManagerSync();
   const [rows, setRows] = useState<SaqueRow[]>([]);
   const [mgr, setMgr] = useState<any>(null);
@@ -19,7 +20,9 @@ export default function GerenteSaques() {
   const [available, setAvailable] = useState(0);
 
   const load = async () => {
-    const { data: prof } = await supabase.from("profiles").select("manager_id").eq("id", user!.id).maybeSingle();
+    const prof = scope.active
+        ? { full_name: scope.target?.name ?? "", influencer_id: scope.influencerId, manager_id: scope.managerId } as any
+        : (await supabase.from("profiles").select("manager_id").eq("id", user!.id).maybeSingle()).data;
     const mid = prof?.manager_id;
     if (!mid) { setLoading(false); return; }
 

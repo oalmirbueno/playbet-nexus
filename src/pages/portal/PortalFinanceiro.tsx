@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { Wallet, TrendingUp, Percent, ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -8,6 +8,7 @@ interface DayRow { data_ref: string; cliques: number; registros: number; ftd: nu
 
 export default function PortalFinanceiro() {
   const { user } = useAuth();
+  const scope = usePreviewScope();
   const [rows, setRows] = useState<DayRow[]>([]);
   const [inf, setInf] = useState<any>(null);
   const [paidTotal, setPaidTotal] = useState(0);
@@ -16,7 +17,9 @@ export default function PortalFinanceiro() {
 
   useEffect(() => {
     (async () => {
-      const { data: prof } = await supabase.from("profiles").select("influencer_id").eq("id", user!.id).maybeSingle();
+      const prof = scope.active
+        ? { full_name: scope.target?.name ?? "", influencer_id: scope.influencerId, manager_id: scope.managerId } as any
+        : (await supabase.from("profiles").select("influencer_id").eq("id", user!.id).maybeSingle()).data;
       const infId = prof?.influencer_id;
       if (!infId) { setLoading(false); return; }
 

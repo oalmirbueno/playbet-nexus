@@ -41,7 +41,7 @@ const roleBadge = (role: AppRole | null) => {
 };
 
 export default function UsersAccessSection() {
-  const { isAdmin, setPreviewAs } = useAuth();
+  const { isAdmin, setPreviewAs, setPreviewTarget } = useAuth();
   const navigate = useNavigate();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,9 +70,27 @@ export default function UsersAccessSection() {
   useEffect(() => { load(); }, []);
 
   const previewAs = (kind: "influencer" | "gerente") => {
+    setPreviewTarget(null);
     setPreviewAs(kind);
     navigate(kind === "influencer" ? "/portal" : "/gerente");
   };
+
+  const viewAsUser = (r: Row) => {
+    if (r.role !== "influencer" && r.role !== "gerente") {
+      toast({ title: "Preview disponível apenas para influenciador e gerente" });
+      return;
+    }
+    setPreviewTarget({
+      role: r.role,
+      userId: r.id,
+      influencerId: r.influencer_id,
+      managerId: r.manager_id,
+      name: r.full_name,
+      email: r.email,
+    });
+    navigate(r.role === "influencer" ? "/portal" : "/gerente");
+  };
+
 
   const filtered = rows.filter((r) =>
     !q || (r.email ?? "").toLowerCase().includes(q.toLowerCase()) || (r.full_name ?? "").toLowerCase().includes(q.toLowerCase())
@@ -169,9 +187,20 @@ export default function UsersAccessSection() {
                         : <span className="text-[11px] text-emerald-400 inline-flex items-center gap-1"><Check size={11} /> Ativo</span>}
                     </td>
                     <td className="py-2.5 text-right">
-                      <button onClick={() => setEditing(r)} className="btn-ghost text-xs inline-flex items-center gap-1">
-                        <Pencil size={11} /> Editar
-                      </button>
+                      <div className="inline-flex items-center gap-1">
+                        {(r.role === "influencer" || r.role === "gerente") && (r.influencer_id || r.manager_id) && (
+                          <button
+                            onClick={() => viewAsUser(r)}
+                            title={`Ver painel de ${r.full_name || r.email}`}
+                            className="btn-ghost text-xs inline-flex items-center gap-1"
+                          >
+                            <Eye size={11} /> Ver
+                          </button>
+                        )}
+                        <button onClick={() => setEditing(r)} className="btn-ghost text-xs inline-flex items-center gap-1">
+                          <Pencil size={11} /> Editar
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -257,7 +286,7 @@ function EditUserDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const { setPreviewAs } = useAuth();
+  const { setPreviewTarget } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState<"perfil" | "acessos" | "senha">("perfil");
   const [role, setRole] = useState<AppRole>(user.role ?? "visualizacao");
@@ -337,10 +366,21 @@ function EditUserDialog({
   };
 
   const previewThisUser = () => {
-    if (role === "influencer") { setPreviewAs("influencer"); navigate("/portal"); }
-    else if (role === "gerente") { setPreviewAs("gerente"); navigate("/gerente"); }
-    else { toast({ title: "Preview disponível para influenciador e gerente" }); }
+    if (role !== "influencer" && role !== "gerente") {
+      toast({ title: "Preview disponível apenas para influenciador e gerente" });
+      return;
+    }
+    setPreviewTarget({
+      role,
+      userId: user.id,
+      influencerId: role === "influencer" ? (influencerId || user.influencer_id) : null,
+      managerId: role === "gerente" ? (managerId || user.manager_id) : null,
+      name: fullName || user.full_name,
+      email: user.email,
+    });
+    navigate(role === "influencer" ? "/portal" : "/gerente");
   };
+
 
   return (
     <Modal onClose={onClose} title="Editar usuário" subtitle={user.email ?? undefined}>
