@@ -41,7 +41,7 @@ const roleBadge = (role: AppRole | null) => {
 };
 
 export default function UsersAccessSection() {
-  const { isAdmin, setPreviewAs } = useAuth();
+  const { isAdmin, setPreviewAs, setPreviewTarget } = useAuth();
   const navigate = useNavigate();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
@@ -70,9 +70,27 @@ export default function UsersAccessSection() {
   useEffect(() => { load(); }, []);
 
   const previewAs = (kind: "influencer" | "gerente") => {
+    setPreviewTarget(null);
     setPreviewAs(kind);
     navigate(kind === "influencer" ? "/portal" : "/gerente");
   };
+
+  const viewAsUser = (r: Row) => {
+    if (r.role !== "influencer" && r.role !== "gerente") {
+      toast({ title: "Preview disponível apenas para influenciador e gerente" });
+      return;
+    }
+    setPreviewTarget({
+      role: r.role,
+      userId: r.id,
+      influencerId: r.influencer_id,
+      managerId: r.manager_id,
+      name: r.full_name,
+      email: r.email,
+    });
+    navigate(r.role === "influencer" ? "/portal" : "/gerente");
+  };
+
 
   const filtered = rows.filter((r) =>
     !q || (r.email ?? "").toLowerCase().includes(q.toLowerCase()) || (r.full_name ?? "").toLowerCase().includes(q.toLowerCase())
