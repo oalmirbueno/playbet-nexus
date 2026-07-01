@@ -1,9 +1,9 @@
 // Edge function: hyped-games-refresh
-// 1) Descobre os 5 jogos mais em alta por plataforma (Lovable AI)
-// 2) Busca UMA IMAGEM REAL para cada jogo via Firecrawl (nada de IA generativa)
-// 3) Upsert em public.platform_hyped_games
-//
-// POST /hyped-games-refresh { platform_id?: string }
+// Modes:
+//   { }                              → full refresh (AI + Firecrawl + upsert)
+//   { platform_id }                  → same, filtered a 1 plataforma
+//   { dry_run: true, platform_id? }  → devolve preview com candidatos, SEM gravar
+//   { confirm: true, selections: [{ platform_id, games: [{ game_name, game_slug, category, hype_reason, priority, icon_url }] }] } → grava só o que o usuário aprovou
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
@@ -68,48 +68,75 @@ async function fetchHypedGames(platformName: string): Promise<HypedGame[]> {
   })).filter((g: HypedGame) => g.game_name && g.game_slug);
 }
 
-// ── 2. Firecrawl: real image lookup ────────────────────────────────────────
+// ── 2. Firecrawl: real image candidates ────────────────────────────────────
 const IMG_EXT = /\.(png|jpe?g|webp|gif|svg)(\?|$)/i;
 const NOISY_HOSTS = /(gravatar|googleusercontent\/a\/|w3\.org|schema\.org|fonts\.g|favicon)/i;
 
-async function firecrawlImageLookup(gameName: string, providerHint: string | undefined, platformName: string): Promise<string | null> {
-  if (!FIRECRAWL_KEY) return null;
+interface ImgCandidate { url: string; score: number; matches_slug: boolean; }
+
+async function firecrawlImageCandidates(gameName: string, providerHint: string | undefined, limit = 6): Promise<ImgCandidate[]> {
+  if (!FIRECRAWL_KEY) return [];
   const q = [gameName, providerHint || "", "slot logo icon"].filter(Boolean).join(" ");
 
-  // Firecrawl v2 /search with scrapeOptions.formats=['links'] returns page links per result;
-  // we then filter for real image URLs.
   const res = await fetch("https://api.firecrawl.dev/v2/search", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${FIRECRAWL_KEY}` },
     body: JSON.stringify({
       query: q,
-      limit: 3,
+      limit: 4,
       scrapeOptions: { formats: ["links"], onlyMainContent: true },
     }),
   });
-  if (!res.ok) return null;
+  if (!res.ok) return [];
 
   const j = await res.json().catch(() => null);
   const results: any[] = j?.data ?? j?.web ?? [];
   const needle = slugify(gameName).replace(/-/g, "");
-  const candidates: string[] = [];
+  const seen = new Set<string>();
+  const out: ImgCandidate[] = [];
 
   for (const r of results) {
     const links: string[] = Array.isArray(r?.links) ? r.links : Array.isArray(r?.data?.links) ? r.data.links : [];
     for (const url of links) {
-      if (typeof url !== "string") continue;
-      if (!IMG_EXT.test(url)) continue;
-      if (NOISY_HOSTS.test(url)) continue;
-      candidates.push(url);
+      if (typeof url !== "string" || seen.has(url)) continue;
+      if (!IMG_EXT.test(url) || NOISY_HOSTS.test(url)) continue;
+      seen.add(url);
+      const matches_slug = slugify(url).replace(/-/g, "").includes(needle);
+      out.push({ url, matches_slug, score: matches_slug ? 2 : 1 });
     }
   }
 
-  // Prefer images whose URL contains the game slug (real match), then fall back to first.
-  const scored = candidates
-    .map((u) => ({ u, score: slugify(u).replace(/-/g, "").includes(needle) ? 2 : 1 }))
-    .sort((a, b) => b.score - a.score);
+  return out.sort((a, b) => b.score - a.score).slice(0, limit);
+}
 
-  return scored[0]?.u ?? null;
+// ── Persistence helper ─────────────────────────────────────────────────────
+async function upsertPlatform(
+  supabase: ReturnType<typeof createClient>,
+  platformId: string,
+  rows: Array<{ game_name: string; game_slug: string; category: string; hype_reason: string; priority: number; icon_url: string | null }>,
+) {
+  await supabase
+    .from("platform_hyped_games")
+    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .eq("platform_id", platformId);
+
+  if (!rows.length) return 0;
+  const payload = rows.map((g) => ({
+    platform_id: platformId,
+    game_name: g.game_name,
+    game_slug: g.game_slug,
+    category: g.category,
+    hype_reason: g.hype_reason,
+    priority: g.priority,
+    icon_url: g.icon_url,
+    is_active: true,
+    refreshed_at: new Date().toISOString(),
+  }));
+  const { error } = await supabase
+    .from("platform_hyped_games")
+    .upsert(payload, { onConflict: "platform_id,game_slug" });
+  if (error) throw error;
+  return payload.length;
 }
 
 // ── 3. Handler ─────────────────────────────────────────────────────────────
@@ -118,10 +145,37 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
-    let platformId: string | undefined;
-    if (req.method === "POST") {
-      try { const b = await req.json(); platformId = b?.platform_id; } catch { /* no body */ }
+    let body: any = {};
+    if (req.method === "POST") { try { body = await req.json(); } catch { /* no body */ } }
+
+    // ── CONFIRM MODE ────────────────────────────────────────────────────
+    if (body?.confirm && Array.isArray(body?.selections)) {
+      const results: any[] = [];
+      let totalUpdated = 0;
+      for (const sel of body.selections) {
+        try {
+          const rows = (sel.games ?? []).map((g: any) => ({
+            game_name: String(g.game_name || "").trim(),
+            game_slug: slugify(g.game_slug || g.game_name || ""),
+            category: String(g.category || "other").toLowerCase(),
+            hype_reason: String(g.hype_reason || "").slice(0, 140),
+            priority: Math.min(5, Math.max(1, Number(g.priority ?? 5))),
+            icon_url: g.icon_url ? String(g.icon_url) : null,
+          })).filter((r: any) => r.game_name && r.game_slug);
+          const n = await upsertPlatform(supabase, sel.platform_id, rows);
+          totalUpdated += n > 0 ? 1 : 0;
+          results.push({ platform_id: sel.platform_id, refreshed: n });
+        } catch (e: any) {
+          results.push({ platform_id: sel.platform_id, error: e?.message ?? String(e) });
+        }
+      }
+      return new Response(JSON.stringify({ ok: true, mode: "confirm", updated: totalUpdated, results }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
+
+    const platformId: string | undefined = body?.platform_id;
+    const dryRun: boolean = !!body?.dry_run;
 
     const q = supabase.from("platforms").select("id, name, icon_base_url, is_active").eq("is_active", true);
     const { data: platforms, error } = platformId ? await q.eq("id", platformId) : await q;
@@ -133,6 +187,7 @@ Deno.serve(async (req) => {
     }
 
     const results: any[] = [];
+    const preview: any[] = [];
     let totalUpdated = 0;
 
     for (const p of platforms) {
@@ -140,40 +195,39 @@ Deno.serve(async (req) => {
         const games = await fetchHypedGames(p.name);
         if (!games.length) { results.push({ platform: p.name, refreshed: 0 }); continue; }
 
-        // Real image per game (best effort, in parallel)
-        const withImages = await Promise.all(games.map(async (g) => ({
-          ...g,
-          icon_url: await firecrawlImageLookup(g.game_name, g.provider_hint, p.name).catch(() => null),
-        })));
-
-        // Deactivate previous set
-        await supabase
-          .from("platform_hyped_games")
-          .update({ is_active: false, updated_at: new Date().toISOString() })
-          .eq("platform_id", p.id);
-
-        const rows = withImages.map((g) => ({
-          platform_id: p.id,
-          game_name: g.game_name,
-          game_slug: g.game_slug,
-          category: g.category,
-          hype_reason: g.hype_reason,
-          priority: g.priority,
-          icon_url: g.icon_url,
-          is_active: true,
-          refreshed_at: new Date().toISOString(),
+        const withCandidates = await Promise.all(games.map(async (g) => {
+          const candidates = await firecrawlImageCandidates(g.game_name, g.provider_hint).catch(() => []);
+          return { ...g, candidates, icon_url: candidates[0]?.url ?? null };
         }));
 
-        const { error: upErr } = await supabase
-          .from("platform_hyped_games")
-          .upsert(rows, { onConflict: "platform_id,game_slug" });
-        if (upErr) throw upErr;
+        if (dryRun) {
+          preview.push({
+            platform_id: p.id,
+            platform_name: p.name,
+            games: withCandidates.map((g) => ({
+              game_name: g.game_name,
+              game_slug: g.game_slug,
+              category: g.category,
+              hype_reason: g.hype_reason,
+              priority: g.priority,
+              provider_hint: g.provider_hint ?? null,
+              suggested_url: g.icon_url,
+              candidates: g.candidates,
+            })),
+          });
+          continue;
+        }
 
-        totalUpdated += 1;
+        const rows = withCandidates.map((g) => ({
+          game_name: g.game_name, game_slug: g.game_slug, category: g.category,
+          hype_reason: g.hype_reason, priority: g.priority, icon_url: g.icon_url,
+        }));
+        const n = await upsertPlatform(supabase, p.id, rows);
+        totalUpdated += n > 0 ? 1 : 0;
         results.push({
           platform: p.name,
-          refreshed: rows.length,
-          with_real_image: rows.filter(r => r.icon_url).length,
+          refreshed: n,
+          with_real_image: rows.filter((r) => r.icon_url).length,
         });
       } catch (e: any) {
         results.push({ platform: p.name, error: e?.message ?? String(e) });
@@ -182,9 +236,11 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({
       ok: true,
+      mode: dryRun ? "dry_run" : "apply",
       updated: totalUpdated,
       firecrawl: !!FIRECRAWL_KEY,
-      results,
+      preview: dryRun ? preview : undefined,
+      results: dryRun ? undefined : results,
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
     return new Response(JSON.stringify({ ok: false, error: e?.message ?? String(e) }), {
