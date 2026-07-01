@@ -89,6 +89,12 @@ export function formFromRow(l: TrackingLinkRow): FormState {
     notes: l.notes || "",
     // Prefer the explicit stored mode; fall back to inference for legacy rows.
     use_lp: typeof stored === "boolean" ? stored : !!(l.landing_page_instance_id || l.landing_page_id),
+    game_slug: (l as any).game_slug || "",
+    game_name: (l as any).game_name || "",
+    game_icon_url: (l as any).game_icon_url || "",
+    link_category: (l as any).link_category || "",
+    hype_reason: (l as any).hype_reason || "",
+    parent_link_id: (l as any).parent_link_id ?? null,
   };
 }
 
