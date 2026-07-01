@@ -1,115 +1,57 @@
-## Novo módulo: Comercial
+# Portais Influenciador e Gerente + Gestão de Usuários (Admin)
 
-Nova seção **COMERCIAL** no sidebar com 3 telas:
-- **Pipeline** (Kanban) – fluxo de captação
-- **Squads & Gerentes** – cadastro e regra de distribuição
-- **Qualificação** – modelo de checklist e requisitos
+Mesma app, mesmo login. Cada papel vê uma coisa diferente por RLS + layout. Admin ganha gestão completa de usuários e preview dos portais.
 
-Acesso: qualquer admin (admin_master, socio). Gerentes só veem cards do próprio squad. Influencer só vê o portal final.
+## Papéis
 
----
+**Influenciador** (`influencer`) — entra em `/portal`
+- Só os dados dele: KPIs, links de afiliado, financeiro, saques, perfil
 
-## 1. Pipeline Kanban
+**Gerente** (`gerente`) — entra em `/gerente`
+- Só o squad dele: ranking, influenciadores do squad, pipeline comercial do squad
 
-Colunas fixas, na ordem:
+**Admin / Sócio** — continua vendo tudo; ganha novos controles em Configurações.
+
+## Novidade: Configurações → Sistema · Admin → "Usuários & Acessos"
+
+- **Lista** de usuários (profiles) com papel, vínculo, status, último login
+- **Convidar** por e-mail com papel + vínculo opcional (influencer ou manager existente)
+- **Editar** papel/vínculo, desativar
+- **Preview como…** botões `Ver como Influenciador` / `Ver como Gerente` — abre o portal correspondente com banner "Você está visualizando como X — sair", sem trocar sessão (admin já tem acesso full no back)
+
+## Técnico
 
 ```text
-Em contato → Respondeu → Checklist → Cadastro → Análise → Aprovado → Concluído
+AuthContext.role
+  ├─ admin_master / socio  → DashboardLayout + preview de /portal e /gerente
+  ├─ gerente               → ManagerLayout + /gerente/*
+  └─ influencer            → InfluencerPortalLayout + /portal/*
 ```
 
-Card = um candidato a influencer. Drag-and-drop entre colunas. Ao soltar, o sistema dispara a ação da coluna de destino:
+- Enum `app_role` ganha `influencer` e `gerente`
+- `profiles.influencer_id` e `profiles.manager_id` (FKs nullable)
+- RLS por papel em `tracking_metrics`, `tracking_events`, `saques`, `commercial_pipeline_cards`, `influencers`, `tracking_links` (via `has_role` + join no profile)
 
-| Coluna     | O que acontece ao chegar                                                                                                                       |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| Em contato | Estado inicial, criado pelo admin com nome + handle + canal de origem                                                                          |
-| Respondeu  | Marca data da 1ª resposta. Libera próximos passos                                                                                              |
-| Checklist  | **Anexa automaticamente o template ativo de qualificação**. Admin marca itens como OK direto no card                                           |
-| Cadastro   | Abre formulário completo: dados básicos, redes, conteúdo/nicho, comercial/financeiro, documentos                                               |
-| Análise    | Card vira somente-leitura para gerentes; admin decide aprovar / reprovar                                                                       |
-| Aprovado   | Escolha o **Squad** → sistema escolhe o **Gerente** por round-robin (menor nº de influencers ativos no squad). Dispara mensagem template de boas-vindas |
-| Concluído  | Cria o registro definitivo em `influencers`, vincula gerente, gera link de afiliado base e libera o **Portal do Influencer**                   |
+## Telas
 
-Regressões (arrastar para coluna anterior) são permitidas com motivo.
+**Portal Influenciador (mobile-first)**: `/portal` · `/portal/links` · `/portal/financeiro` · `/portal/saques` · `/portal/perfil`
 
-Cada card mostra: avatar/iniciais, nome, handle principal, % do checklist preenchido, dias na coluna atual, gerente atribuído (quando houver), tags de nicho.
+**Portal Gerente**: `/gerente` · `/gerente/ranking` · `/gerente/influenciadores` · `/gerente/pipeline` · `/gerente/perfil`
 
-Filtros do topo: busca, squad, gerente, nicho, origem, "parados há +N dias".
+**Admin**: Configurações → Usuários & Acessos (tabela + convidar + editar + preview-as)
 
----
+## Ordem de execução
 
-## 2. Checklist de qualificação
+1. Migração: enum + colunas profiles + RLS
+2. Layouts InfluencerPortalLayout e ManagerLayout
+3. Roteamento por papel + banner de preview
+4. 5 telas do Portal Influenciador
+5. 5 telas do Portal Gerente
+6. Seção Usuários & Acessos em Configurações
 
-Template versionado, editável em **Comercial > Qualificação**. Grupos:
+## Fora desta rodada
+- Página institucional "Novidades / Como funciona"
+- Sala de sinais no portal
+- Notificações push/e-mail
 
-- **Dados básicos** – nome, CPF/CNPJ, e-mail, WhatsApp, cidade/UF
-- **Redes e audiência** – Instagram, TikTok, YouTube, Telegram, X, Kwai (handle + seguidores + engajamento + nicho)
-- **Conteúdo e nicho** – nicho principal, tipo de conteúdo, frequência, links de exemplo
-- **Comercial e financeiro** – modelo (CPA/RevShare/Híbrido), histórico, conta Asaas/PIX, contrato
-
-Cada item: label, obrigatório sim/não, tipo (texto, número, boolean, link, arquivo). Admin marca direto no card; barra de progresso fica visível.
-
-Requisito mínimo configurável (ex.: "≥80% dos obrigatórios" para liberar Análise).
-
----
-
-## 3. Squads & Gerentes
-
-- Squad: nome, cor, descrição, lista de gerentes.
-- Gerente NÃO entra no squad como membro fixo do quadro; ele é distribuível dentro do squad.
-- Distribuição padrão: round-robin balanceado pelo nº de influencers ativos. Botão "reatribuir manualmente" sempre disponível.
-
----
-
-## 4. Portal do Influencer + Gerente
-
-Após "Concluído", abre tela nova (mesmo sistema, layout enxuto) acessível por:
-- Influencer aprovado (login próprio, role `influencer`)
-- Gerente responsável (role `gerente`)
-
-Mostra:
-- Link de afiliado dele
-- Métricas trackeadas: cliques, registros, FTD, depósitos, revenue, comissão
-- Histórico do pipeline (read-only)
-- Materiais e links rápidos
-
-Reaproveita o tracking existente (`tracking_links`, `tracking_metrics`).
-
----
-
-## Detalhes técnicos
-
-### Banco (migration)
-- `commercial_pipeline_cards` – stage, candidate fields, squad_id, manager_id, checklist_progress, position, moved_at, source, notes
-- `commercial_checklist_templates` + `commercial_checklist_items` (versionados)
-- `commercial_card_checklist` – respostas por card
-- `commercial_card_history` – auditoria de movimentações
-- `squads` (já existe) ganha relação com gerentes; criar `squad_managers` se preciso
-- Trigger ao mover para "Aprovado": grava squad/manager via round-robin
-- Trigger ao mover para "Concluído": cria `influencers` row + tracking link base
-- RLS: admin vê tudo; gerente vê só cards do seu squad/atribuídos; influencer só o próprio (após concluído)
-- GRANTs explícitos em todas as tabelas novas
-
-### Frontend
-- Rotas: `/comercial`, `/comercial/squads`, `/comercial/qualificacao`, `/portal/:slug` (influencer+gerente)
-- Item de menu **COMERCIAL** no sidebar com 3 sub-itens
-- Kanban com dnd-kit (já leve, sem dependências pesadas)
-- Card detail em Sheet lateral
-- Reuso de componentes: Card, Badge, Sheet, Form (zod), toasts
-
-### Roles
-- `comercial` (novo, opcional) ou liberado para `admin_master`/`socio`
-- `gerente` (novo) – escopo squad
-- `influencer` (novo) – escopo próprio
-- Atualizar `has_role`/policies
-
----
-
-## Como vamos entregar
-
-Para não virar um bloco gigante de uma vez, proponho 3 entregas seguidas:
-
-1. **Estrutura**: migration (tabelas, RLS, triggers de distribuição), item de menu, telas vazias com layout.
-2. **Pipeline + Checklist**: Kanban funcional, drag-and-drop, template de checklist, formulário de cadastro, automações de coluna.
-3. **Portal Influencer/Gerente**: rota nova, integração com tracking, mensagem de boas-vindas, refinamentos.
-
-Posso começar pela entrega 1 (banco + esqueleto visual) assim que você aprovar?
+Aprova pra rodar?
