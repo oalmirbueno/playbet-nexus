@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Clock, XCircle, ArrowUpRight, Wallet } from "lucide-react";
+import { WithdrawalCyclesAdmin } from "@/components/financeiro/WithdrawalCyclesAdmin";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
