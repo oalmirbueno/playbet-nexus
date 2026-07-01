@@ -1,15 +1,19 @@
-// Asaas webhook receiver — updates saques.status based on payment / transfer events
+// Asaas webhook receiver — updates saques.status + reconcilia valores automaticamente
+// Evita divergência entre valor solicitado (tracking) e valor efetivamente pago (Asaas).
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, asaas-access-token",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, asaas-access-token",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// Mapa canonical status -> status interno do saque
 const STATUS_MAP: Record<string, string> = {
+  // Cobranças (payments) — pouco usadas em saque, mas mantidas por segurança
   PAYMENT_CREATED: "Pendente",
-  PAYMENT_AWAITING_RISK_ANALYSIS: "Pendente",
+  PAYMENT_AWAITING_RISK_ANALYSIS: "Em análise",
   PAYMENT_APPROVED_BY_RISK_ANALYSIS: "Pendente",
   PAYMENT_CONFIRMED: "Confirmado",
   PAYMENT_RECEIVED: "Pago",
@@ -17,13 +21,18 @@ const STATUS_MAP: Record<string, string> = {
   PAYMENT_REFUNDED: "Estornado",
   PAYMENT_DELETED: "Cancelado",
   PAYMENT_REFUND_IN_PROGRESS: "Estornando",
+  // Transferências PIX (saques)
   TRANSFER_CREATED: "Pendente",
   TRANSFER_PENDING: "Pendente",
   TRANSFER_IN_BANK_PROCESSING: "Processando",
+  TRANSFER_BLOCKED: "Bloqueado",
   TRANSFER_DONE: "Pago",
   TRANSFER_FAILED: "Falhou",
   TRANSFER_CANCELLED: "Cancelado",
 };
+
+const PAID_EVENTS = new Set(["TRANSFER_DONE", "PAYMENT_RECEIVED", "PAYMENT_CONFIRMED"]);
+const CENTS_TOLERANCE = 0.01; // 1 centavo
 
 function timingSafeEqual(a: string, b: string): boolean {
   const enc = new TextEncoder();
@@ -33,6 +42,12 @@ function timingSafeEqual(a: string, b: string): boolean {
   let diff = 0;
   for (let i = 0; i < ab.length; i++) diff |= ab[i] ^ bb[i];
   return diff === 0;
+}
+
+function num(v: unknown): number | null {
+  if (v === null || v === undefined) return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
 }
 
 Deno.serve(async (req) => {
@@ -66,12 +81,19 @@ Deno.serve(async (req) => {
     const asaasId = entity?.id ?? null;
     const externalRef = entity?.externalReference ?? null;
 
+    // Valores retornados pelo Asaas
+    const gross = num(entity?.value);
+    const net = num(entity?.netValue);
+    const fee = gross !== null && net !== null ? +(gross - net).toFixed(2) : null;
+    const paidDateStr =
+      entity?.effectiveDate ?? entity?.dateCreated ?? entity?.confirmedDate ?? null;
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    // Idempotency: if Asaas resends the same event_id, skip
+    // Idempotência: se Asaas reenviar o mesmo event_id, ignora
     if (eventId) {
       const { data: existing } = await supabase
         .from("asaas_webhook_events")
@@ -85,7 +107,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Log raw event up-front so nothing is lost even if processing fails
+    // Log bruto ANTES de processar — nada é perdido em caso de erro
     const { data: logRow } = await supabase
       .from("asaas_webhook_events")
       .insert({
@@ -105,24 +127,63 @@ Deno.serve(async (req) => {
     }
 
     const newStatus = STATUS_MAP[event] ?? "Pendente";
+
+    // Localiza o saque ANTES do update para conseguir comparar valores
+    let saqueQuery = supabase.from("saques").select("id, valor, asaas_payment_id, codigo").limit(1);
+    if (externalRef) {
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(externalRef);
+      saqueQuery = isUuid
+        ? saqueQuery.eq("id", externalRef)
+        : saqueQuery.eq("codigo", externalRef);
+    } else {
+      saqueQuery = saqueQuery.eq("asaas_payment_id", asaasId);
+    }
+    const { data: found } = await saqueQuery;
+    const saque = found?.[0] ?? null;
+
+    // Reconciliação de valor: compara valor solicitado × valor bruto do Asaas
+    let divergence = false;
+    let divergenceReason: string | null = null;
+    if (saque && gross !== null && saque.valor !== null) {
+      const requested = Number(saque.valor);
+      if (Math.abs(requested - gross) > CENTS_TOLERANCE) {
+        divergence = true;
+        divergenceReason = `Valor solicitado R$ ${requested.toFixed(2)} ≠ valor Asaas R$ ${gross.toFixed(2)}`;
+      }
+    }
+
     const updates: Record<string, unknown> = {
       asaas_status: event,
       status: newStatus,
       asaas_payment_id: asaasId,
       asaas_synced_at: new Date().toISOString(),
     };
+    if (gross !== null) updates.asaas_gross_value = gross;
+    if (net !== null) updates.asaas_net_value = net;
+    if (fee !== null) updates.asaas_fee = fee;
+    if (PAID_EVENTS.has(event) && paidDateStr) updates.paid_at = paidDateStr;
+    if (PAID_EVENTS.has(event) && !paidDateStr) updates.paid_at = new Date().toISOString();
+    if (divergence) {
+      updates.value_divergence = true;
+      updates.divergence_reason = divergenceReason;
+    } else if (saque) {
+      // Limpa divergência anterior se um evento novo corrigir
+      updates.value_divergence = false;
+      updates.divergence_reason = null;
+    }
 
-    // Match by externalReference (uuid or codigo) first, then asaas_payment_id
     let matchedSaqueId: string | null = null;
     try {
-      let query = supabase.from("saques").update(updates).select("id");
-      if (externalRef) {
+      let updQuery = supabase.from("saques").update(updates).select("id");
+      if (saque) {
+        updQuery = updQuery.eq("id", saque.id);
+      } else if (externalRef) {
         const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(externalRef);
-        query = isUuid ? query.eq("id", externalRef) : query.eq("codigo", externalRef);
+        updQuery = isUuid ? updQuery.eq("id", externalRef) : updQuery.eq("codigo", externalRef);
       } else {
-        query = query.eq("asaas_payment_id", asaasId);
+        updQuery = updQuery.eq("asaas_payment_id", asaasId);
       }
-      const { data: updated, error } = await query;
+      const { data: updated, error } = await updQuery;
       if (error) throw error;
       matchedSaqueId = updated?.[0]?.id ?? null;
 
@@ -132,6 +193,7 @@ Deno.serve(async (req) => {
           processed: true,
           processed_at: new Date().toISOString(),
           saque_id: matchedSaqueId,
+          processing_error: divergence ? divergenceReason : null,
         })
         .eq("id", logRow!.id);
     } catch (err) {
@@ -143,7 +205,17 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ ok: true, event, status: newStatus, saque_id: matchedSaqueId }),
+      JSON.stringify({
+        ok: true,
+        event,
+        status: newStatus,
+        saque_id: matchedSaqueId,
+        divergence,
+        divergence_reason: divergenceReason,
+        gross,
+        net,
+        fee,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
