@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ExportDropdown from "@/components/ExportDropdown";
 import { supabase } from "@/integrations/supabase/client";
+import HypedGamesPreviewDialog, { type HypedPreviewPlatform } from "@/components/tracking/HypedGamesPreviewDialog";
 
 type EditingState = {
   id?: string;
