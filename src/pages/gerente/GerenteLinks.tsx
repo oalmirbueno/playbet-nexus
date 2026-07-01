@@ -68,7 +68,7 @@ export default function GerenteLinks() {
     const [{ data: instances }, { data: lps }, { data: accs }] = await Promise.all([
       lpiIds.length ? supabase.from("landing_page_instances").select("id, slug, landing_page_id").in("id", lpiIds) : Promise.resolve({ data: [] as any[] }),
       lpIds.length ? supabase.from("landing_pages").select("id, name, domain").in("id", lpIds) : Promise.resolve({ data: [] as any[] }),
-      paIds.length ? supabase.from("platform_accounts").select("id, nome_conta, platforms(name)").in("id", paIds) : Promise.resolve({ data: [] as any[] }),
+      paIds.length ? supabase.from("platform_accounts").select("id, nome_conta, platform_id, platforms(name)").in("id", paIds) : Promise.resolve({ data: [] as any[] }),
     ]);
     const instMap = new Map((instances ?? []).map((i: any) => [i.id, i]));
     const lpMap = new Map((lps ?? []).map((l: any) => [l.id, l]));
