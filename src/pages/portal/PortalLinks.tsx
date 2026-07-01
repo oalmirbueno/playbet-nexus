@@ -125,6 +125,31 @@ export default function PortalLinks() {
     revenue: a.revenue + l.metrics.revenue,
   }), { clicks: 0, regs: 0, ftd: 0, revenue: 0 }), [links]);
 
+  // Platforms the influencer has links on → fetch hyped games for each
+  const platformIds = useMemo(
+    () => Array.from(new Set(links.map(l => l.platform_id).filter(Boolean) as string[])),
+    [links],
+  );
+
+  const { data: hypedByPlatform = {} } = useQuery({
+    queryKey: ["portal_hyped_by_platform", platformIds.join(",")],
+    enabled: platformIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("platform_hyped_games")
+        .select("id, platform_id, game_name, game_slug, icon_url, hype_reason, priority, platforms(name)")
+        .in("platform_id", platformIds)
+        .eq("is_active", true)
+        .order("priority", { ascending: true });
+      const grouped: Record<string, any[]> = {};
+      (data ?? []).forEach((g: any) => {
+        if (!grouped[g.platform_id]) grouped[g.platform_id] = [];
+        grouped[g.platform_id].push(g);
+      });
+      return grouped;
+    },
+  });
+
   const copy = (url: string) => {
     navigator.clipboard.writeText(url);
     toast({ title: "Link copiado", description: url });
