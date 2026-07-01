@@ -168,6 +168,12 @@ export function WithdrawalCyclesAdmin() {
             Ao registrar, o influenciador ou gerente é notificado automaticamente.
           </p>
         </div>
+      ) : visibleRows.length === 0 ? (
+        <div className="p-10 text-center">
+          <UserX className="mx-auto mb-2 text-muted-foreground" size={22} />
+          <p className="text-sm font-medium">Nenhum ciclo neste filtro</p>
+          <p className="text-xs text-muted-foreground mt-1">Ajuste o filtro acima para ver outros ciclos.</p>
+        </div>
       ) : (
         <div className="overflow-x-auto max-h-[420px]">
           <table className="w-full text-[13px]">
@@ -183,7 +189,7 @@ export function WithdrawalCyclesAdmin() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => {
+              {visibleRows.map((r) => {
                 const pending = !r.notified_landed_at || (r.status === "available" && !r.notified_available_at);
                 return (
                 <tr key={r.id} className="border-t border-border/40 hover:bg-secondary/20">
