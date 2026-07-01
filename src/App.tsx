@@ -67,7 +67,8 @@ import PortalPerfil from "./pages/portal/PortalPerfil";
 import GerenteHome from "./pages/gerente/GerenteHome";
 import GerenteRanking from "./pages/gerente/GerenteRanking";
 import GerenteInfluenciadores from "./pages/gerente/GerenteInfluenciadores";
-import GerentePipeline from "./pages/gerente/GerentePipeline";
+import GerenteLinks from "./pages/gerente/GerenteLinks";
+import GerenteOportunidades from "./pages/gerente/GerenteOportunidades";
 import GerentePerfil from "./pages/gerente/GerentePerfil";
 
 const queryClient = new QueryClient();
