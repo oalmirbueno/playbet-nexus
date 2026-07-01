@@ -128,6 +128,71 @@ Deno.serve(async (req) => {
 
     const newStatus = STATUS_MAP[event] ?? "Pendente";
 
+    // ============================================================
+    // ENTRADA DE DINHEIRO → cria withdrawal_cycle automaticamente
+    // ------------------------------------------------------------
+    // Convenção de externalReference para créditos:
+    //   cycle:influencer:<uuid>[:<nota>]
+    //   cycle:manager:<uuid>[:<nota>]
+    // Só processa quando é payload de "payment" (não transfer)
+    // e o evento indica dinheiro efetivamente recebido.
+    // ============================================================
+    const isPaymentEntity = !!payload?.payment;
+    const isIncomingPaid = event === "PAYMENT_RECEIVED" || event === "PAYMENT_CONFIRMED";
+    let cycleCreated: { id: string; target_type: string; target_id: string } | null = null;
+
+    if (isPaymentEntity && isIncomingPaid && externalRef && externalRef.startsWith("cycle:")) {
+      const parts = externalRef.split(":");
+      const targetType = parts[1];
+      const targetId = parts[2];
+      const noteExtra = parts.slice(3).join(":") || null;
+      const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const amount = net ?? gross;
+
+      if (
+        (targetType === "influencer" || targetType === "manager") &&
+        uuidRe.test(targetId ?? "") &&
+        amount !== null &&
+        amount > 0
+      ) {
+        // Idempotência: se já existe ciclo para este payment, não duplica
+        const { data: existingCycle } = await supabase
+          .from("withdrawal_cycles")
+          .select("id, target_type, target_id")
+          .eq("reference", asaasId)
+          .maybeSingle();
+
+        if (existingCycle) {
+          cycleCreated = existingCycle as typeof cycleCreated;
+        } else {
+          const landedAt = paidDateStr ?? new Date().toISOString();
+          const { data: cycleRow, error: cycleErr } = await supabase
+            .from("withdrawal_cycles")
+            .insert({
+              target_type: targetType,
+              target_id: targetId,
+              amount,
+              landed_at: landedAt,
+              status: "landed",
+              source: "asaas_webhook",
+              reference: asaasId,
+              notes: noteExtra,
+            })
+            .select("id, target_type, target_id")
+            .single();
+          if (cycleErr) {
+            console.error("asaas-webhook: falha ao criar withdrawal_cycle", cycleErr);
+            await supabase
+              .from("asaas_webhook_events")
+              .update({ processing_error: `cycle_insert_failed: ${cycleErr.message}` })
+              .eq("id", logRow!.id);
+          } else {
+            cycleCreated = cycleRow as typeof cycleCreated;
+          }
+        }
+      }
+    }
+
     // Localiza o saque ANTES do update para conseguir comparar valores
     let saqueQuery = supabase.from("saques").select("id, valor, asaas_payment_id, codigo").limit(1);
     if (externalRef) {
@@ -140,6 +205,26 @@ Deno.serve(async (req) => {
     }
     const { data: found } = await saqueQuery;
     const saque = found?.[0] ?? null;
+
+    // Se não é update de saque (é entrada de crédito), pula fluxo de saque e finaliza
+    if (!saque && cycleCreated) {
+      await supabase
+        .from("asaas_webhook_events")
+        .update({
+          processed: true,
+          processed_at: new Date().toISOString(),
+        })
+        .eq("id", logRow!.id);
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          event,
+          cycle_created: cycleCreated,
+          amount: net ?? gross,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
 
     // Reconciliação de valor: compara valor solicitado × valor bruto do Asaas
     let divergence = false;
