@@ -76,20 +76,28 @@ export default function UsersAccessSection() {
   };
 
   const viewAsUser = (r: Row) => {
-    if (r.role !== "influencer" && r.role !== "gerente") {
-      toast({ title: "Preview disponível apenas para influenciador e gerente" });
+    if (r.role === "influencer" || r.role === "gerente") {
+      setPreviewTarget({
+        role: r.role,
+        userId: r.id,
+        influencerId: r.influencer_id,
+        managerId: r.manager_id,
+        name: r.full_name,
+        email: r.email,
+      });
+      navigate(r.role === "influencer" ? "/portal" : "/gerente");
       return;
     }
-    setPreviewTarget({
-      role: r.role,
-      userId: r.id,
-      influencerId: r.influencer_id,
-      managerId: r.manager_id,
-      name: r.full_name,
-      email: r.email,
+    // Admins/sócios/operacionais não têm portal dedicado — abre o painel principal
+    // como referência, com banner identificando o usuário observado.
+    setPreviewTarget(null);
+    toast({
+      title: `Sem portal dedicado para ${ROLE_OPTIONS.find((o) => o.value === r.role)?.label ?? "este papel"}`,
+      description: "Sócios, admins e equipe interna usam o painel principal — abrindo agora.",
     });
-    navigate(r.role === "influencer" ? "/portal" : "/gerente");
+    navigate("/");
   };
+
 
 
   const filtered = rows.filter((r) =>
@@ -161,10 +169,21 @@ export default function UsersAccessSection() {
                 const allowedCount = (r.allowed_modules ?? []).length;
                 const deniedCount = (r.denied_modules ?? []).length;
                 return (
-                  <tr key={r.id} className="border-t border-border/40">
+                  <tr key={r.id} className="border-t border-border/40 hover:bg-secondary/20 transition-colors">
                     <td className="py-2.5">
-                      <div className="font-medium">{r.full_name || "—"}</div>
-                      <div className="text-[11px] text-muted-foreground">{r.email}</div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => viewAsUser(r)}
+                          title={`Ver painel como ${r.full_name || r.email}`}
+                          className="shrink-0 inline-flex items-center justify-center h-8 w-8 rounded-md border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                        >
+                          <Eye size={13} />
+                        </button>
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">{r.full_name || "—"}</div>
+                          <div className="text-[11px] text-muted-foreground truncate">{r.email}</div>
+                        </div>
+                      </div>
                     </td>
                     <td className="py-2.5">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-md border text-[11px] ${roleBadge(r.role)}`}>
@@ -188,15 +207,13 @@ export default function UsersAccessSection() {
                     </td>
                     <td className="py-2.5 text-right">
                       <div className="inline-flex items-center gap-1">
-                        {(r.role === "influencer" || r.role === "gerente") && (r.influencer_id || r.manager_id) && (
-                          <button
-                            onClick={() => viewAsUser(r)}
-                            title={`Ver painel de ${r.full_name || r.email}`}
-                            className="btn-ghost text-xs inline-flex items-center gap-1"
-                          >
-                            <Eye size={11} /> Ver
-                          </button>
-                        )}
+                        <button
+                          onClick={() => viewAsUser(r)}
+                          title={`Ver painel como ${r.full_name || r.email}`}
+                          className="btn-ghost text-xs inline-flex items-center gap-1"
+                        >
+                          <Eye size={11} /> Ver
+                        </button>
                         <button onClick={() => setEditing(r)} className="btn-ghost text-xs inline-flex items-center gap-1">
                           <Pencil size={11} /> Editar
                         </button>
