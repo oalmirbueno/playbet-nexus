@@ -1565,9 +1565,11 @@ export type Database = {
       }
       profiles: {
         Row: {
+          allowed_modules: string[]
           avatar_url: string | null
           city: string | null
           created_at: string | null
+          denied_modules: string[]
           email: string | null
           full_name: string | null
           id: string
@@ -1575,15 +1577,18 @@ export type Database = {
           is_active: boolean | null
           last_sign_in_at: string | null
           manager_id: string | null
+          notes: string | null
           phone: string | null
           pix_key: string | null
           pix_key_type: string | null
           updated_at: string | null
         }
         Insert: {
+          allowed_modules?: string[]
           avatar_url?: string | null
           city?: string | null
           created_at?: string | null
+          denied_modules?: string[]
           email?: string | null
           full_name?: string | null
           id: string
@@ -1591,15 +1596,18 @@ export type Database = {
           is_active?: boolean | null
           last_sign_in_at?: string | null
           manager_id?: string | null
+          notes?: string | null
           phone?: string | null
           pix_key?: string | null
           pix_key_type?: string | null
           updated_at?: string | null
         }
         Update: {
+          allowed_modules?: string[]
           avatar_url?: string | null
           city?: string | null
           created_at?: string | null
+          denied_modules?: string[]
           email?: string | null
           full_name?: string | null
           id?: string
@@ -1607,6 +1615,7 @@ export type Database = {
           is_active?: boolean | null
           last_sign_in_at?: string | null
           manager_id?: string | null
+          notes?: string | null
           phone?: string | null
           pix_key?: string | null
           pix_key_type?: string | null
