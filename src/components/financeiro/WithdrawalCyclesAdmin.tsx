@@ -210,9 +210,9 @@ export function WithdrawalCyclesAdmin() {
 
 
 
-      {loading ? (
+      {loading && rows.length === 0 ? (
         <div className="p-6 text-sm text-muted-foreground">Carregando…</div>
-      ) : rows.length === 0 ? (
+      ) : totalCount === 0 && filter === "all" ? (
         <div className="p-10 text-center">
           <CalendarClock className="mx-auto mb-2 text-muted-foreground" size={22} />
           <p className="text-sm font-medium">Nenhum ciclo registrado ainda</p>
@@ -220,14 +220,14 @@ export function WithdrawalCyclesAdmin() {
             Ao registrar, o influenciador ou gerente é notificado automaticamente.
           </p>
         </div>
-      ) : visibleRows.length === 0 ? (
+      ) : rows.length === 0 ? (
         <div className="p-10 text-center">
           <UserX className="mx-auto mb-2 text-muted-foreground" size={22} />
           <p className="text-sm font-medium">Nenhum ciclo neste filtro</p>
           <p className="text-xs text-muted-foreground mt-1">Ajuste o filtro acima para ver outros ciclos.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto max-h-[420px]">
+        <div className={`overflow-x-auto max-h-[420px] ${loading ? "opacity-60" : ""}`}>
           <table className="w-full text-[13px]">
             <thead className="bg-secondary/40 text-[10px] uppercase tracking-wider text-muted-foreground sticky top-0 backdrop-blur">
               <tr>
@@ -241,7 +241,7 @@ export function WithdrawalCyclesAdmin() {
               </tr>
             </thead>
             <tbody>
-              {visibleRows.map((r) => {
+              {rows.map((r) => {
                 const pending = !r.notified_landed_at || (r.status === "available" && !r.notified_available_at);
                 return (
                 <tr key={r.id} className="border-t border-border/40 hover:bg-secondary/20">
@@ -284,12 +284,41 @@ export function WithdrawalCyclesAdmin() {
         </div>
       )}
 
+      {totalCount > 0 && (
+        <div className="px-5 py-2.5 border-t border-border/40 flex flex-wrap items-center justify-between gap-3 bg-secondary/10 text-[11px] text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <span>Mostrando <span className="tabular-nums text-foreground font-medium">{rangeStart}–{rangeEnd}</span> de <span className="tabular-nums text-foreground font-medium">{totalCount}</span></span>
+            {loading && <Loader2 className="h-3 w-3 animate-spin" />}
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              <span className="uppercase tracking-wider text-[10px]">Por página</span>
+              <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
+                <SelectTrigger className="h-7 w-[70px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {[10, 25, 50, 100].map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button size="icon" variant="ghost" className="h-7 w-7" disabled={page <= 1 || loading} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </Button>
+              <span className="tabular-nums px-2">{page} / {totalPages}</span>
+              <Button size="icon" variant="ghost" className="h-7 w-7" disabled={page >= totalPages || loading} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <NewCycleDialog
         open={open}
         onOpenChange={setOpen}
         influencers={influencers}
         managers={managers}
-        onCreated={load}
+        onCreated={refreshAll}
       />
     </div>
   );
