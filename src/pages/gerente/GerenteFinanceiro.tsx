@@ -105,7 +105,7 @@ export default function GerenteFinanceiro() {
 
       {/* KPI row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Kpi label="Receita do squad (total)" value={brl(squadRevenue)} icon={<Users size={13} />} />
+        <Kpi label="Receita do squad (total)" value={brl(squadRevenue)} />
         <Kpi label="Ganhos brutos totais" value={brl(grossEarnings)} highlight />
         <Kpi label="Já pago" value={brl(paid)} />
         <Kpi label="Pendente" value={brl(Math.max(0, requested - paid))} />
