@@ -158,12 +158,12 @@ export default function PlataformasPage() {
             className="btn-ghost flex items-center gap-1.5"
             onClick={refreshHypedGames}
             disabled={refreshing}
-            title="Atualiza os jogos hypados de todas as plataformas via IA"
+            title="Busca candidatos de jogos e imagens para revisão antes de gravar"
           >
             {refreshing
               ? <RefreshCw size={14} className="animate-spin" />
               : <Sparkles size={14} />}
-            {refreshing ? "Atualizando jogos..." : "Atualizar jogos"}
+            {refreshing ? "Buscando prévia..." : "Atualizar jogos"}
           </button>
           <ExportDropdown data={exportableData} filename="plataformas-playbet" />
           <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Adicionar</button>
