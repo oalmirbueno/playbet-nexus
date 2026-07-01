@@ -380,6 +380,14 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
               </Select>
             </div>
 
+            {/* DUPLICATE GUARD */}
+            {duplicate && (
+              <div className="bg-destructive/10 border border-destructive/25 rounded-md px-3 py-2.5 text-[11px] text-destructive">
+                <strong>Link duplicado.</strong> Já existe um tracking link ativo para este influencer nessa conta{landingPageId ? " e LP" : ""}
+                {" "}(código <code className="font-mono">{(duplicate as any).tracking_code}</code>). Edite o existente ou escolha outra combinação.
+              </div>
+            )}
+
             {/* PREVIEW */}
             {canSave && (
               <div className="space-y-2 bg-primary/10 border border-primary/20 rounded-md px-3 py-2.5">
