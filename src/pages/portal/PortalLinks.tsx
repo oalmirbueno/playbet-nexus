@@ -43,7 +43,8 @@ export default function PortalLinks() {
           .from("tracking_links")
           .select(`
             id, tracking_code, created_at, status, base_url, final_url, short_url,
-            click_id_param_name, landing_page_instance_id, landing_page_id, platform_account_id
+            click_id_param_name, landing_page_instance_id, landing_page_id, platform_account_id,
+            game_name, game_icon_url, link_category, hype_reason
           `)
           .eq("influencer_id", infId)
           .eq("is_demo", false)
