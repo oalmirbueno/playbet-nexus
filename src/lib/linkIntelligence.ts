@@ -77,8 +77,12 @@ export function scorePlatforms(hostname: string, platforms: PlatformLike[]) {
     let best = 0;
     let matched = "";
 
-    // domain_patterns is the primary signal (explicit admin list)
-    for (const pat of p.domain_patterns ?? []) {
+    // domain_patterns + domains are the primary signals (explicit admin lists)
+    const patterns = [
+      ...(p.domain_patterns ?? []),
+      ...(p.domains ?? []),
+    ];
+    for (const pat of patterns) {
       const clean = pat.replace(/^https?:\/\//, "").replace(/\/+$/, "").toLowerCase();
       if (!clean) continue;
       if (host === clean) { best = Math.max(best, 100); matched = clean; }
