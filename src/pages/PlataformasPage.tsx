@@ -38,6 +38,29 @@ export default function PlataformasPage() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [filterTipo, setFilterTipo] = useState("Todos");
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshStatus, setRefreshStatus] = useState<null | { ok: boolean; message: string; details?: any; at: string }>(null);
+
+  const refreshHypedGames = async () => {
+    setRefreshing(true);
+    setRefreshStatus({ ok: true, message: "Executando…", at: new Date().toLocaleTimeString("pt-BR") });
+    try {
+      const { data: resp, error } = await supabase.functions.invoke("hyped-games-refresh", { body: {} });
+      if (error) throw error;
+      const updated = resp?.updated ?? resp?.count ?? resp?.platforms_updated;
+      const msg = updated != null
+        ? `Jogos hypados atualizados (${updated} plataforma${updated === 1 ? "" : "s"}).`
+        : "Jogos hypados atualizados.";
+      setRefreshStatus({ ok: true, message: msg, details: resp, at: new Date().toLocaleTimeString("pt-BR") });
+      toast({ title: "Atualização concluída", description: msg });
+    } catch (e: any) {
+      const msg = e?.message || "Falha ao atualizar jogos hypados.";
+      setRefreshStatus({ ok: false, message: msg, at: new Date().toLocaleTimeString("pt-BR") });
+      toast({ title: "Erro", description: msg, variant: "destructive" });
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const filtered = data.filter(p => {
     if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
