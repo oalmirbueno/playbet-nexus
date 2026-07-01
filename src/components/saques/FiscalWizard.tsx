@@ -66,7 +66,7 @@ export function FiscalWizard({ open, onOpenChange, userId, onComplete }: Props) 
       const { data } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
       if (data) {
         setP({
-          document_type: data.document_type ?? null,
+          document_type: (data.document_type ?? null) as FiscalProfile["document_type"],
           document_number: data.document_number ?? null,
           legal_name: data.legal_name ?? data.full_name ?? null,
           trade_name: data.trade_name ?? null,
