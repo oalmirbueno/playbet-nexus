@@ -391,7 +391,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
                 <div className="flex items-center justify-between mb-1">
                   <Label className="text-xs font-medium">4. Plataforma</Label>
                   <div className="flex items-center gap-2">
-                    {detectedPlatform && <span className="text-[9px] text-emerald-500 flex items-center gap-0.5"><Sparkles size={9} /> auto</span>}
+                    {detectedPlatform && <span className="text-[9px] text-success flex items-center gap-0.5"><Sparkles size={9} /> auto</span>}
                     <button
                       type="button"
                       onClick={() => setNewPlatform({ ...newPlatform, open: true })}
