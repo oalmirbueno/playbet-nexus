@@ -1622,6 +1622,9 @@ export type Database = {
       }
       saques: {
         Row: {
+          asaas_fee: number | null
+          asaas_gross_value: number | null
+          asaas_net_value: number | null
           asaas_payment_id: string | null
           asaas_status: string | null
           asaas_synced_at: string | null
@@ -1629,11 +1632,13 @@ export type Database = {
           conta: string | null
           created_at: string | null
           data: string | null
+          divergence_reason: string | null
           id: string
           influencer_id: string | null
           is_demo: boolean
           nome: string
           origem: string | null
+          paid_at: string | null
           pix_key: string | null
           pix_key_type: string | null
           responsavel: string | null
@@ -1641,8 +1646,12 @@ export type Database = {
           tipo: string
           updated_at: string | null
           valor: number
+          value_divergence: boolean
         }
         Insert: {
+          asaas_fee?: number | null
+          asaas_gross_value?: number | null
+          asaas_net_value?: number | null
           asaas_payment_id?: string | null
           asaas_status?: string | null
           asaas_synced_at?: string | null
@@ -1650,11 +1659,13 @@ export type Database = {
           conta?: string | null
           created_at?: string | null
           data?: string | null
+          divergence_reason?: string | null
           id?: string
           influencer_id?: string | null
           is_demo?: boolean
           nome: string
           origem?: string | null
+          paid_at?: string | null
           pix_key?: string | null
           pix_key_type?: string | null
           responsavel?: string | null
@@ -1662,8 +1673,12 @@ export type Database = {
           tipo?: string
           updated_at?: string | null
           valor?: number
+          value_divergence?: boolean
         }
         Update: {
+          asaas_fee?: number | null
+          asaas_gross_value?: number | null
+          asaas_net_value?: number | null
           asaas_payment_id?: string | null
           asaas_status?: string | null
           asaas_synced_at?: string | null
@@ -1671,11 +1686,13 @@ export type Database = {
           conta?: string | null
           created_at?: string | null
           data?: string | null
+          divergence_reason?: string | null
           id?: string
           influencer_id?: string | null
           is_demo?: boolean
           nome?: string
           origem?: string | null
+          paid_at?: string | null
           pix_key?: string | null
           pix_key_type?: string | null
           responsavel?: string | null
@@ -1683,6 +1700,7 @@ export type Database = {
           tipo?: string
           updated_at?: string | null
           valor?: number
+          value_divergence?: boolean
         }
         Relationships: [
           {
