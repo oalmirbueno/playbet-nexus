@@ -14,6 +14,15 @@ export type AppRole =
 
 export type PreviewAs = "influencer" | "gerente" | null;
 
+export interface PreviewTarget {
+  role: "influencer" | "gerente";
+  userId?: string;
+  influencerId?: string | null;
+  managerId?: string | null;
+  name?: string | null;
+  email?: string | null;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -26,11 +35,14 @@ interface AuthContextType {
   isAdmin: boolean;
   previewAs: PreviewAs;
   setPreviewAs: (v: PreviewAs) => void;
+  previewTarget: PreviewTarget | null;
+  setPreviewTarget: (t: PreviewTarget | null) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const PREVIEW_KEY = "playbet.previewAs";
+const PREVIEW_TARGET_KEY = "playbet.previewTarget";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -42,12 +54,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const v = window.localStorage.getItem(PREVIEW_KEY);
     return v === "influencer" || v === "gerente" ? v : null;
   });
+  const [previewTarget, setPreviewTargetState] = useState<PreviewTarget | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = window.localStorage.getItem(PREVIEW_TARGET_KEY);
+      return raw ? (JSON.parse(raw) as PreviewTarget) : null;
+    } catch { return null; }
+  });
 
   const setPreviewAs = (v: PreviewAs) => {
     setPreviewAsState(v);
     if (typeof window !== "undefined") {
       if (v) window.localStorage.setItem(PREVIEW_KEY, v);
-      else window.localStorage.removeItem(PREVIEW_KEY);
+      else {
+        window.localStorage.removeItem(PREVIEW_KEY);
+        window.localStorage.removeItem(PREVIEW_TARGET_KEY);
+      }
+    }
+    if (!v) setPreviewTargetState(null);
+  };
+
+  const setPreviewTarget = (t: PreviewTarget | null) => {
+    setPreviewTargetState(t);
+    if (typeof window !== "undefined") {
+      if (t) {
+        window.localStorage.setItem(PREVIEW_TARGET_KEY, JSON.stringify(t));
+        window.localStorage.setItem(PREVIEW_KEY, t.role);
+        setPreviewAsState(t.role);
+      } else {
+        window.localStorage.removeItem(PREVIEW_TARGET_KEY);
+      }
     }
   };
 
@@ -118,6 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user, session, role, effectiveRole, loading,
         signIn, signUp, signOut, isAdmin,
         previewAs, setPreviewAs,
+        previewTarget, setPreviewTarget,
       }}
     >
       {children}
@@ -129,4 +166,20 @@ export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) throw new Error("useAuth must be used within AuthProvider");
   return context;
+}
+
+/**
+ * Returns effective influencer/manager id for the current view.
+ * When admin is previewing a specific user, returns that user's ids;
+ * otherwise returns null and callers should fall back to fetching their own profile.
+ */
+export function usePreviewScope() {
+  const { isAdmin, previewTarget } = useAuth();
+  const active = isAdmin && !!previewTarget;
+  return {
+    active,
+    influencerId: active ? previewTarget?.influencerId ?? null : null,
+    managerId: active ? previewTarget?.managerId ?? null : null,
+    target: previewTarget,
+  };
 }
