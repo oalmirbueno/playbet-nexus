@@ -2510,6 +2510,8 @@ export type Database = {
         | "operacao"
         | "conteudo"
         | "visualizacao"
+        | "gerente"
+        | "influencer"
       commercial_checklist_field_type:
         | "boolean"
         | "text"
@@ -2659,6 +2661,8 @@ export const Constants = {
         "operacao",
         "conteudo",
         "visualizacao",
+        "gerente",
+        "influencer",
       ],
       commercial_checklist_field_type: [
         "boolean",
