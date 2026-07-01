@@ -20,6 +20,7 @@ interface EnrichedLink {
   game_icon_url?: string | null;
   link_category?: string | null;
   hype_reason?: string | null;
+  hype_priority?: number | null;
   metrics: { clicks: number; regs: number; ftd: number; revenue: number };
 }
 
@@ -44,10 +45,11 @@ export default function PortalLinks() {
           .select(`
             id, tracking_code, created_at, status, base_url, final_url, short_url,
             click_id_param_name, landing_page_instance_id, landing_page_id, platform_account_id,
-            game_name, game_icon_url, link_category, hype_reason
+            game_name, game_icon_url, link_category, hype_reason, hype_priority
           `)
           .eq("influencer_id", infId)
           .eq("is_demo", false)
+          .order("hype_priority", { ascending: true, nullsFirst: false })
           .order("created_at", { ascending: false }),
         supabase
           .from("tracking_metrics")
@@ -109,6 +111,7 @@ export default function PortalLinks() {
           game_icon_url: l.game_icon_url,
           link_category: l.link_category,
           hype_reason: l.hype_reason,
+          hype_priority: l.hype_priority,
           metrics: metricsByAcc.get(l.platform_account_id || "_") ?? { clicks: 0, regs: 0, ftd: 0, revenue: 0 },
         };
       });
@@ -249,6 +252,7 @@ export default function PortalLinks() {
                     {l.game_name && (
                       <span className="text-[10px] uppercase tracking-[0.16em] px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/25 inline-flex items-center gap-1">
                         <Flame size={10} /> {l.game_name}
+                        {l.hype_priority ? <span className="ml-1 px-1 rounded bg-orange-500/20 text-[9px] font-bold">#{l.hype_priority}</span> : null}
                       </span>
                     )}
                     <span className={`text-[10px] uppercase tracking-[0.16em] px-2 py-0.5 rounded-full border ${l.status === "active" || !l.status ? "bg-success/10 text-success border-success/20" : "bg-muted/40 text-muted-foreground border-border/40"}`}>
