@@ -1561,7 +1561,10 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          influencer_id: string | null
           is_active: boolean | null
+          last_sign_in_at: string | null
+          manager_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -1570,7 +1573,10 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          influencer_id?: string | null
           is_active?: boolean | null
+          last_sign_in_at?: string | null
+          manager_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -1579,10 +1585,28 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          influencer_id?: string | null
           is_active?: boolean | null
+          last_sign_in_at?: string | null
+          manager_id?: string | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_influencer_id_fkey"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profiles_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       saques: {
         Row: {
@@ -2490,6 +2514,9 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_influencer_id: { Args: never; Returns: string }
+      current_manager_id: { Args: never; Returns: string }
+      current_manager_squad_id: { Args: never; Returns: string }
       generate_api_key: { Args: { _name?: string }; Returns: Json }
       has_role: {
         Args: {
