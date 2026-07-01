@@ -106,7 +106,11 @@ export default function GerenteLinks() {
         influencer_name: inf?.name ?? "—",
         influencer_slug: inf?.slug ?? "",
         platform_name: acc?.platforms?.name || acc?.nome_conta,
+        platform_id: acc?.platform_id ?? null,
         lp_name: lp?.name,
+        game_name: l.game_name,
+        game_icon_url: l.game_icon_url,
+        hype_reason: l.hype_reason,
         metrics: metricsAgg.get(metricsKey(l.influencer_id, l.platform_account_id)) ?? { clicks: 0, regs: 0, ftd: 0, revenue: 0 },
         raw: l,
       };
