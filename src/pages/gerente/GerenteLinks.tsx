@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { useManagerSync } from "@/hooks/useManagerSync";
-import { Copy, ExternalLink, Link2, Search, Power, PowerOff, ShieldAlert } from "lucide-react";
+import { Copy, ExternalLink, Link2, Search, Power, PowerOff, ShieldAlert, Flame, Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { resolveShareUrl } from "@/lib/trackingUrl";
 
@@ -16,7 +16,11 @@ interface EnrichedLink {
   influencer_name: string;
   influencer_slug: string;
   platform_name?: string;
+  platform_id?: string | null;
   lp_name?: string;
+  game_name?: string | null;
+  game_icon_url?: string | null;
+  hype_reason?: string | null;
   metrics: { clicks: number; regs: number; ftd: number; revenue: number };
   raw: any;
 }
@@ -50,7 +54,7 @@ export default function GerenteLinks() {
 
     const [{ data: rawLinks }, { data: metrics }] = await Promise.all([
       supabase.from("tracking_links")
-        .select("id, tracking_code, status, created_at, base_url, final_url, short_url, click_id_param_name, landing_page_instance_id, landing_page_id, platform_account_id, influencer_id")
+        .select("id, tracking_code, status, created_at, base_url, final_url, short_url, click_id_param_name, landing_page_instance_id, landing_page_id, platform_account_id, influencer_id, game_name, game_icon_url, link_category, hype_reason")
         .in("influencer_id", infIds).eq("is_demo", false).order("created_at", { ascending: false }),
       supabase.from("tracking_metrics")
         .select("platform_account_id, influencer_id, cliques, registros, ftd, revenue")
@@ -64,7 +68,7 @@ export default function GerenteLinks() {
     const [{ data: instances }, { data: lps }, { data: accs }] = await Promise.all([
       lpiIds.length ? supabase.from("landing_page_instances").select("id, slug, landing_page_id").in("id", lpiIds) : Promise.resolve({ data: [] as any[] }),
       lpIds.length ? supabase.from("landing_pages").select("id, name, domain").in("id", lpIds) : Promise.resolve({ data: [] as any[] }),
-      paIds.length ? supabase.from("platform_accounts").select("id, nome_conta, platforms(name)").in("id", paIds) : Promise.resolve({ data: [] as any[] }),
+      paIds.length ? supabase.from("platform_accounts").select("id, nome_conta, platform_id, platforms(name)").in("id", paIds) : Promise.resolve({ data: [] as any[] }),
     ]);
     const instMap = new Map((instances ?? []).map((i: any) => [i.id, i]));
     const lpMap = new Map((lps ?? []).map((l: any) => [l.id, l]));
@@ -102,7 +106,11 @@ export default function GerenteLinks() {
         influencer_name: inf?.name ?? "—",
         influencer_slug: inf?.slug ?? "",
         platform_name: acc?.platforms?.name || acc?.nome_conta,
+        platform_id: acc?.platform_id ?? null,
         lp_name: lp?.name,
+        game_name: l.game_name,
+        game_icon_url: l.game_icon_url,
+        hype_reason: l.hype_reason,
         metrics: metricsAgg.get(metricsKey(l.influencer_id, l.platform_account_id)) ?? { clicks: 0, regs: 0, ftd: 0, revenue: 0 },
         raw: l,
       };
@@ -210,11 +218,19 @@ export default function GerenteLinks() {
                     {l.lp_name && (
                       <span className="text-[10px] uppercase tracking-[0.16em] px-2 py-0.5 rounded-full bg-secondary/60 text-muted-foreground border border-border/40">LP · {l.lp_name}</span>
                     )}
+                    {l.game_name && (
+                      <span className="text-[10px] uppercase tracking-[0.16em] px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/25 inline-flex items-center gap-1">
+                        <Flame size={10} /> {l.game_name}
+                      </span>
+                    )}
                     <span className={`text-[10px] uppercase tracking-[0.16em] px-2 py-0.5 rounded-full border ${l.status === "paused" ? "bg-muted/40 text-muted-foreground border-border/40" : "bg-success/10 text-success border-success/20"}`}>
                       {l.status === "paused" ? "pausado" : "ativo"}
                     </span>
                   </div>
                   <p className="text-[12px] font-mono truncate text-foreground/90" title={l.share_url}>{l.share_url}</p>
+                  {l.hype_reason && (
+                    <p className="text-[11px] text-orange-400/90 mt-1 italic">💡 {l.hype_reason}</p>
+                  )}
                   <p className="text-[11px] text-muted-foreground mt-1">
                     Código <span className="font-mono">{l.tracking_code}</span> · criado em {new Date(l.created_at).toLocaleDateString("pt-BR")}
                   </p>

@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.tracking-puller-smartico]
 verify_jwt = false
+
+[functions.hyped-games-refresh]
+verify_jwt = false

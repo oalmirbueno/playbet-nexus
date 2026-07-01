@@ -4,11 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CheckCircle2, ArrowRight, Loader2, Plus } from "lucide-react";
+import { CheckCircle2, ArrowRight, Loader2, Plus, Sparkles, Wand2, Flame } from "lucide-react";
 import type { TrackingLinkRow } from "@/services/trackingService";
 import { landingPageInstanceService } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { detectFromUrl, CATEGORY_LABELS, type LinkCategory } from "@/lib/linkIntelligence";
 
 interface Props {
   open: boolean;
@@ -38,6 +40,13 @@ export interface FormState {
   tracking_role: string;
   notes: string;
   use_lp: boolean;
+  // Inteligência de link
+  game_slug: string;
+  game_name: string;
+  game_icon_url: string;
+  link_category: string;
+  hype_reason: string;
+  parent_link_id?: string | null;
 }
 
 export const emptyForm: FormState = {
@@ -54,6 +63,12 @@ export const emptyForm: FormState = {
   tracking_role: "influencer",
   notes: "",
   use_lp: true,
+  game_slug: "",
+  game_name: "",
+  game_icon_url: "",
+  link_category: "",
+  hype_reason: "",
+  parent_link_id: null,
 };
 
 export function formFromRow(l: TrackingLinkRow): FormState {
@@ -74,6 +89,12 @@ export function formFromRow(l: TrackingLinkRow): FormState {
     notes: l.notes || "",
     // Prefer the explicit stored mode; fall back to inference for legacy rows.
     use_lp: typeof stored === "boolean" ? stored : !!(l.landing_page_instance_id || l.landing_page_id),
+    game_slug: (l as any).game_slug || "",
+    game_name: (l as any).game_name || "",
+    game_icon_url: (l as any).game_icon_url || "",
+    link_category: (l as any).link_category || "",
+    hype_reason: (l as any).hype_reason || "",
+    parent_link_id: (l as any).parent_link_id ?? null,
   };
 }
 
@@ -118,6 +139,69 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
 
   const qc = useQueryClient();
   const [creatingInstance, setCreatingInstance] = useState(false);
+
+  // ── Link intelligence: auto-detect platform/category/game from pasted URL ──
+  const detection = useMemo(
+    () => detectFromUrl(form.base_url, platforms as any[]),
+    [form.base_url, platforms],
+  );
+
+  const detectedPlatformId = detection.platformCandidates[0]?.platformId ?? null;
+  const detectedPlatformName = detectedPlatformId
+    ? (platforms as any[]).find((p: any) => p.id === detectedPlatformId)?.name ?? null
+    : null;
+
+  // Auto-fill platform account when we detect a platform and no account is chosen yet
+  useEffect(() => {
+    if (!detectedPlatformId || form.platform_account_id) return;
+    const acc = (accounts as any[]).find((a: any) => a.platform_id === detectedPlatformId && a.is_active !== false);
+    if (acc) setForm(p => ({ ...p, platform_account_id: acc.id }));
+  }, [detectedPlatformId, form.platform_account_id, accounts]);
+
+  // Auto-fill category / game from URL heuristics, without stomping user overrides
+  useEffect(() => {
+    setForm(p => {
+      const next = { ...p };
+      let changed = false;
+      if (!p.link_category && detection.category) { next.link_category = detection.category; changed = true; }
+      if (!p.game_slug && detection.gameSlug) { next.game_slug = detection.gameSlug; changed = true; }
+      if (!p.game_name && detection.gameName) { next.game_name = detection.gameName; changed = true; }
+      return changed ? next : p;
+    });
+  }, [detection.category, detection.gameSlug, detection.gameName]);
+
+  // Resolve the "current" platform id (detected or from selected account)
+  const currentAccount = (accounts as any[]).find((a: any) => a.id === form.platform_account_id);
+  const currentPlatformId = currentAccount?.platform_id ?? detectedPlatformId ?? null;
+
+  // Fetch hyped games for this platform
+  const { data: hypedGames = [] } = useQuery({
+    queryKey: ["platform_hyped_games", currentPlatformId],
+    enabled: !!currentPlatformId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("platform_hyped_games")
+        .select("id, game_name, game_slug, icon_url, category, priority, hype_reason")
+        .eq("platform_id", currentPlatformId as string)
+        .eq("is_active", true)
+        .order("priority", { ascending: true })
+        .limit(5);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const applyHypedGame = (g: any) => {
+    setForm(p => ({
+      ...p,
+      game_slug: g.game_slug,
+      game_name: g.game_name,
+      game_icon_url: g.icon_url || "",
+      link_category: g.category || p.link_category,
+      hype_reason: g.hype_reason || p.hype_reason,
+    }));
+    toast({ title: `Aplicado: ${g.game_name}`, description: g.hype_reason || "Jogo em alta selecionado." });
+  };
 
   // LPs where this influencer already has an instance (resolved + ready)
   const lpsForInfluencer = useMemo(() => {
@@ -393,6 +477,109 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                 onChange={e => set("base_url", e.target.value)}
                 placeholder="Cole o link bruto da plataforma"
               />
+
+              {/* Detecção inteligente */}
+              {form.base_url && (
+                <div className="rounded-md border border-primary/20 bg-background/40 p-2.5 space-y-2">
+                  <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground flex-wrap">
+                    <Wand2 size={11} className="text-primary" />
+                    <span className="uppercase tracking-wider font-semibold text-primary/90">Detectado</span>
+                    {detectedPlatformName ? (
+                      <span className="text-foreground">{detectedPlatformName}</span>
+                    ) : (
+                      <span className="text-amber-500">plataforma não reconhecida — selecione manualmente abaixo</span>
+                    )}
+                    {form.link_category && (
+                      <span className="px-1.5 py-0.5 rounded bg-secondary/60 text-foreground text-[9px]">
+                        {CATEGORY_LABELS[form.link_category as LinkCategory] ?? form.link_category}
+                      </span>
+                    )}
+                    {form.game_name && (
+                      <span className="px-1.5 py-0.5 rounded bg-primary/15 text-primary text-[9px]">
+                        {form.game_name}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Tipo</Label>
+                      <Select value={form.link_category || "none"} onValueChange={v => set("link_category", v === "none" ? "" : v)}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Auto" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Auto</SelectItem>
+                          {(Object.keys(CATEGORY_LABELS) as LinkCategory[]).map(k => (
+                            <SelectItem key={k} value={k}>{CATEGORY_LABELS[k]}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Jogo / evento</Label>
+                      <Input
+                        className="h-8 text-xs"
+                        value={form.game_name}
+                        onChange={e => setForm(p => ({ ...p, game_name: e.target.value, game_slug: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-") }))}
+                        placeholder="Fortune Tiger, Aviator…"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Motivo do hype</Label>
+                    <Input
+                      className="h-8 text-xs"
+                      value={form.hype_reason}
+                      onChange={e => set("hype_reason", e.target.value)}
+                      placeholder="Ex: Fortune Tiger está pagando muito essa semana"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Jogos hypados da casa */}
+              {currentPlatformId && hypedGames.length > 0 && (
+                <div className="rounded-md border border-orange-500/25 bg-orange-500/5 p-2.5 space-y-2">
+                  <div className="flex items-center gap-1.5 text-[10px] flex-wrap">
+                    <Flame size={11} className="text-orange-400" />
+                    <span className="uppercase tracking-wider font-semibold text-orange-400">Top 5 jogos em alta</span>
+                    <span className="text-muted-foreground">nesta casa · clique para aplicar</span>
+                  </div>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {hypedGames.map((g: any) => {
+                      const selected = form.game_slug === g.game_slug;
+                      return (
+                        <button
+                          key={g.id}
+                          type="button"
+                          onClick={() => applyHypedGame(g)}
+                          className={`group flex flex-col items-center gap-1 rounded-md border p-1.5 text-center transition ${
+                            selected
+                              ? "border-orange-500/60 bg-orange-500/10"
+                              : "border-border/50 bg-background/40 hover:border-orange-500/40 hover:bg-orange-500/5"
+                          }`}
+                          title={g.hype_reason || g.game_name}
+                        >
+                          <div className="relative">
+                            {g.icon_url ? (
+                              <img src={g.icon_url} alt={g.game_name} className="w-8 h-8 rounded object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                            ) : (
+                              <div className="w-8 h-8 rounded bg-secondary/60 flex items-center justify-center">
+                                <Sparkles size={12} className="text-muted-foreground" />
+                              </div>
+                            )}
+                            <span className="absolute -top-1 -left-1 text-[8px] font-bold bg-orange-500 text-black rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                              {g.priority}
+                            </span>
+                          </div>
+                          <span className="text-[9px] font-medium truncate w-full leading-tight">{g.game_name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
 
               <div className="space-y-1.5">
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">

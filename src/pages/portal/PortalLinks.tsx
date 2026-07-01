@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
-import { Copy, Link2, ExternalLink, Sparkles, MousePointerClick, TrendingUp, Wallet } from "lucide-react";
+import { Copy, Link2, ExternalLink, Sparkles, MousePointerClick, TrendingUp, Wallet, Flame } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { resolveShareUrl } from "@/lib/trackingUrl";
+import { useQuery } from "@tanstack/react-query";
 
 interface EnrichedLink {
   id: string;
@@ -12,8 +13,13 @@ interface EnrichedLink {
   status: string | null;
   share_url: string;
   platform_name?: string;
+  platform_id?: string | null;
   lp_name?: string;
   lp_domain?: string | null;
+  game_name?: string | null;
+  game_icon_url?: string | null;
+  link_category?: string | null;
+  hype_reason?: string | null;
   metrics: { clicks: number; regs: number; ftd: number; revenue: number };
 }
 
@@ -37,7 +43,8 @@ export default function PortalLinks() {
           .from("tracking_links")
           .select(`
             id, tracking_code, created_at, status, base_url, final_url, short_url,
-            click_id_param_name, landing_page_instance_id, landing_page_id, platform_account_id
+            click_id_param_name, landing_page_instance_id, landing_page_id, platform_account_id,
+            game_name, game_icon_url, link_category, hype_reason
           `)
           .eq("influencer_id", infId)
           .eq("is_demo", false)
@@ -95,8 +102,13 @@ export default function PortalLinks() {
           status: l.status,
           share_url: share || l.short_url || l.final_url || l.base_url || "",
           platform_name: acc?.platforms?.name || acc?.nome_conta,
+          platform_id: acc?.platform_id ?? null,
           lp_name: lp?.name,
           lp_domain: lp?.domain,
+          game_name: l.game_name,
+          game_icon_url: l.game_icon_url,
+          link_category: l.link_category,
+          hype_reason: l.hype_reason,
           metrics: metricsByAcc.get(l.platform_account_id || "_") ?? { clicks: 0, regs: 0, ftd: 0, revenue: 0 },
         };
       });
@@ -112,6 +124,31 @@ export default function PortalLinks() {
     ftd: a.ftd + l.metrics.ftd,
     revenue: a.revenue + l.metrics.revenue,
   }), { clicks: 0, regs: 0, ftd: 0, revenue: 0 }), [links]);
+
+  // Platforms the influencer has links on → fetch hyped games for each
+  const platformIds = useMemo(
+    () => Array.from(new Set(links.map(l => l.platform_id).filter(Boolean) as string[])),
+    [links],
+  );
+
+  const { data: hypedByPlatform = {} } = useQuery({
+    queryKey: ["portal_hyped_by_platform", platformIds.join(",")],
+    enabled: platformIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("platform_hyped_games")
+        .select("id, platform_id, game_name, game_slug, icon_url, hype_reason, priority, platforms(name)")
+        .in("platform_id", platformIds)
+        .eq("is_active", true)
+        .order("priority", { ascending: true });
+      const grouped: Record<string, any[]> = {};
+      (data ?? []).forEach((g: any) => {
+        if (!grouped[g.platform_id]) grouped[g.platform_id] = [];
+        grouped[g.platform_id].push(g);
+      });
+      return grouped;
+    },
+  });
 
   const copy = (url: string) => {
     navigator.clipboard.writeText(url);
@@ -143,6 +180,45 @@ export default function PortalLinks() {
         ))}
       </div>
 
+      {/* Jogos em alta por casa */}
+      {Object.keys(hypedByPlatform).length > 0 && (
+        <div className="glass-card p-4 md:p-5 space-y-3 border-orange-500/20">
+          <div className="flex items-center gap-2">
+            <Flame size={14} className="text-orange-400" />
+            <h2 className="text-sm font-semibold">Jogos em alta pra bombar</h2>
+            <span className="text-[11px] text-muted-foreground">· priorize esses ao divulgar</span>
+          </div>
+          <div className="space-y-3">
+            {Object.entries(hypedByPlatform).map(([pid, games]: any) => (
+              <div key={pid} className="space-y-1.5">
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                  {games[0]?.platforms?.name || "Casa"}
+                </div>
+                <div className="grid grid-cols-5 gap-2">
+                  {games.slice(0, 5).map((g: any) => (
+                    <div key={g.id} className="flex flex-col items-center gap-1 rounded-md border border-border/40 bg-background/40 p-2 text-center" title={g.hype_reason || g.game_name}>
+                      <div className="relative">
+                        {g.icon_url ? (
+                          <img src={g.icon_url} alt={g.game_name} className="w-9 h-9 rounded object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                        ) : (
+                          <div className="w-9 h-9 rounded bg-secondary/60 flex items-center justify-center">
+                            <Sparkles size={13} className="text-muted-foreground" />
+                          </div>
+                        )}
+                        <span className="absolute -top-1 -left-1 text-[8px] font-bold bg-orange-500 text-black rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                          {g.priority}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-medium leading-tight line-clamp-2">{g.game_name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="glass-card p-6 text-sm text-muted-foreground">Carregando…</div>
       ) : links.length === 0 ? (
@@ -170,11 +246,19 @@ export default function PortalLinks() {
                         LP · {l.lp_name}
                       </span>
                     )}
+                    {l.game_name && (
+                      <span className="text-[10px] uppercase tracking-[0.16em] px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/25 inline-flex items-center gap-1">
+                        <Flame size={10} /> {l.game_name}
+                      </span>
+                    )}
                     <span className={`text-[10px] uppercase tracking-[0.16em] px-2 py-0.5 rounded-full border ${l.status === "active" || !l.status ? "bg-success/10 text-success border-success/20" : "bg-muted/40 text-muted-foreground border-border/40"}`}>
                       {l.status ?? "ativo"}
                     </span>
                   </div>
                   <p className="text-[13px] font-mono truncate text-foreground/90" title={l.share_url}>{l.share_url}</p>
+                  {l.hype_reason && (
+                    <p className="text-[11px] text-orange-400/90 mt-1 italic">💡 {l.hype_reason}</p>
+                  )}
                   <p className="text-[11px] text-muted-foreground mt-1">
                     Código <span className="font-mono">{l.tracking_code}</span> · criado em {new Date(l.created_at).toLocaleDateString("pt-BR")}
                   </p>
