@@ -114,6 +114,7 @@ export default function GerenteLinks() {
         game_name: l.game_name,
         game_icon_url: l.game_icon_url,
         hype_reason: l.hype_reason,
+        hype_priority: l.hype_priority,
         metrics: metricsAgg.get(metricsKey(l.influencer_id, l.platform_account_id)) ?? { clicks: 0, regs: 0, ftd: 0, revenue: 0 },
         raw: l,
       };
