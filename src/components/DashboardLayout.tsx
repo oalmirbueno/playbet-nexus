@@ -196,7 +196,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* ── Main ─────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         <PreviewBanner />
-        <header className="h-[56px] border-b border-border/60 flex items-center px-6 gap-4 bg-background/70 backdrop-blur-xl sticky top-0 z-30 shrink-0">
+        <header className="h-[56px] border-b border-border/60 flex items-center px-4 md:px-6 gap-3 md:gap-4 bg-background/70 backdrop-blur-xl sticky top-0 z-30 shrink-0">
 
           <button className="md:hidden text-muted-foreground hover:text-foreground transition-colors" onClick={() => setSidebarOpen(true)}>
             <Menu size={17} />
