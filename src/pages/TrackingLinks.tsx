@@ -22,13 +22,14 @@ import {
 } from "@/hooks/useSupabaseQuery";
 import {
   Plus, Pencil, Trash2, Link2, Copy, Check, ExternalLink, AlertTriangle,
-  Sparkles, Upload, Users, ChevronDown, ChevronRight, Search,
+  Sparkles, Upload, Users, ChevronDown, ChevronRight, Search, Flame,
   LayoutGrid, Rows3, ShieldCheck, ShieldAlert, ArrowUpRight, Filter,
 } from "lucide-react";
 import { findPresetByName, type PlatformPreset } from "@/config/platformPresets";
 import type { TrackingLinkRow } from "@/services/trackingService";
 import { useToast } from "@/hooks/use-toast";
 import { resolveShareUrl } from "@/lib/trackingUrl";
+import GameArtwork from "@/components/tracking/GameArtwork";
 
 const ROLE_LABELS: Record<string, string> = {
   influencer: "Influencer",
@@ -76,17 +77,9 @@ export default function TrackingLinks() {
 
   const isIncomplete = (l: TrackingLinkRow) => !l.platform_account_id || !l.influencer_id || !(l.base_url || l.final_url);
 
-  // Detect duplicates: same (influencer, platform_account, LP)
-  const dupKeys = useMemo(() => {
-    const map = new Map<string, number>();
-    data.forEach(l => {
-      const k = `${l.influencer_id}|${l.platform_account_id}|${l.landing_page_id ?? "_"}`;
-      map.set(k, (map.get(k) ?? 0) + 1);
-    });
-    return map;
-  }, [data]);
-  const isDuplicate = (l: TrackingLinkRow) =>
-    (dupKeys.get(`${l.influencer_id}|${l.platform_account_id}|${l.landing_page_id ?? "_"}`) ?? 0) > 1;
+  // Multiple active links for the same influencer/account/LP are intentional:
+  // each game, odds push or campaign variation needs its own tracking code.
+  const isDuplicate = (_l: TrackingLinkRow) => false;
 
   // Global filtered list
   const filtered = useMemo(() => {
@@ -419,6 +412,11 @@ export default function TrackingLinks() {
                                 {acc && <span className="text-[10px] text-muted-foreground">· {acc.nome_conta}</span>}
                                 {lp && <Badge variant="outline" className="text-[9px] h-4 border-primary/30 text-primary">LP · {lp.name}</Badge>}
                                 {inst && <span className="text-[10px] font-mono text-muted-foreground">/{inst.slug}</span>}
+                                {(l as any).game_name && (
+                                  <Badge variant="outline" className="text-[9px] h-4 border-warning/40 text-warning gap-0.5">
+                                    <Flame size={9} /> {(l as any).game_name}
+                                  </Badge>
+                                )}
                                 <Badge variant={l.status === "active" || !l.status ? "default" : "secondary"} className="text-[9px] h-4">
                                   {l.status ?? "active"}
                                 </Badge>
@@ -433,7 +431,15 @@ export default function TrackingLinks() {
                                   </Badge>
                                 )}
                               </div>
-                              <p className="text-[11px] font-mono text-muted-foreground truncate" title={url}>{url}</p>
+                              <div className="flex items-center gap-2 min-w-0">
+                                {(l as any).game_name && (
+                                  <GameArtwork slug={(l as any).game_slug} name={(l as any).game_name} iconUrl={(l as any).game_icon_url} size="sm" />
+                                )}
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-[11px] font-mono text-muted-foreground truncate" title={url}>{url}</p>
+                                  {(l as any).hype_reason && <p className="text-[10px] text-warning truncate">{(l as any).hype_reason}</p>}
+                                </div>
+                              </div>
                             </div>
                             <div className="flex items-center gap-0.5 shrink-0">
                               <Button variant="ghost" size="icon" className="h-7 w-7" title="Copiar link" onClick={() => copyLink(l)}>

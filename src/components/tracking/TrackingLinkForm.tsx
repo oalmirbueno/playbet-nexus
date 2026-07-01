@@ -10,7 +10,8 @@ import { landingPageInstanceService } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { detectFromUrl, CATEGORY_LABELS, type LinkCategory } from "@/lib/linkIntelligence";
+import { detectFromUrl, CATEGORY_LABELS, inferAttributionParam, type LinkCategory } from "@/lib/linkIntelligence";
+import GameArtwork from "@/components/tracking/GameArtwork";
 
 interface Props {
   open: boolean;
@@ -173,6 +174,17 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
   // Resolve the "current" platform id (detected or from selected account)
   const currentAccount = (accounts as any[]).find((a: any) => a.id === form.platform_account_id);
   const currentPlatformId = currentAccount?.platform_id ?? detectedPlatformId ?? null;
+  const currentPlatformName = currentPlatformId
+    ? (platforms as any[]).find((p: any) => p.id === currentPlatformId)?.name ?? detectedPlatformName
+    : detectedPlatformName;
+
+  useEffect(() => {
+    if (!form.base_url) return;
+    const nextParam = inferAttributionParam(form.base_url, currentPlatformName);
+    if (nextParam && form.click_id_param_name !== nextParam) {
+      setForm(p => ({ ...p, click_id_param_name: nextParam }));
+    }
+  }, [form.base_url, currentPlatformName, form.click_id_param_name]);
 
   // Fetch hyped games for this platform
   const { data: hypedGames = [] } = useQuery({
@@ -484,10 +496,10 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                   <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground flex-wrap">
                     <Wand2 size={11} className="text-primary" />
                     <span className="uppercase tracking-wider font-semibold text-primary/90">Detectado</span>
-                    {detectedPlatformName ? (
-                      <span className="text-foreground">{detectedPlatformName}</span>
+                    {detectedPlatformName || platformName ? (
+                      <span className="text-foreground">{detectedPlatformName || platformName}</span>
                     ) : (
-                      <span className="text-amber-500">plataforma não reconhecida — selecione manualmente abaixo</span>
+                      <span className="text-warning">selecione a casa; a inteligência aplica jogo/categoria mesmo sem domínio conhecido</span>
                     )}
                     {form.link_category && (
                       <span className="px-1.5 py-0.5 rounded bg-secondary/60 text-foreground text-[9px]">
@@ -561,13 +573,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                           title={g.hype_reason || g.game_name}
                         >
                           <div className="relative">
-                            {g.icon_url ? (
-                              <img src={g.icon_url} alt={g.game_name} className="w-8 h-8 rounded object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
-                            ) : (
-                              <div className="w-8 h-8 rounded bg-secondary/60 flex items-center justify-center">
-                                <Sparkles size={12} className="text-muted-foreground" />
-                              </div>
-                            )}
+                            <GameArtwork slug={g.game_slug} name={g.game_name} iconUrl={g.icon_url} size="sm" />
                             <span className="absolute -top-1 -left-1 text-[8px] font-bold bg-orange-500 text-black rounded-full w-3.5 h-3.5 flex items-center justify-center">
                               {g.priority}
                             </span>

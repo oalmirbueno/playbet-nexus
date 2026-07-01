@@ -8,9 +8,12 @@ import { useInfluencers, useLandingPages, useLandingPageInstances, usePlatforms,
 import { usePlatformAccounts, useTrackingLinks } from "@/hooks/useTrackingData";
 import { landingPageInstanceService } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
-import { Link2, CheckCircle2, Plus, Sparkles, Copy } from "lucide-react";
-import { detectPlatformByUrl, appendSubId } from "@/lib/platformDetect";
+import { Link2, CheckCircle2, Plus, Sparkles, Copy, Flame, Wand2 } from "lucide-react";
 import { buildPublicLpUrl, buildTrackedAffiliateUrl } from "@/lib/trackingUrl";
+import { detectFromUrl, CATEGORY_LABELS, inferAttributionParam, type LinkCategory } from "@/lib/linkIntelligence";
+import GameArtwork from "@/components/tracking/GameArtwork";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
   open: boolean;
@@ -40,6 +43,12 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   const [platformId, setPlatformId] = useState("");
   const [rawLink, setRawLink] = useState("");
   const [subid, setSubid] = useState("");
+  const [clickIdParam, setClickIdParam] = useState("sub1");
+  const [gameSlug, setGameSlug] = useState("");
+  const [gameName, setGameName] = useState("");
+  const [gameIconUrl, setGameIconUrl] = useState("");
+  const [linkCategory, setLinkCategory] = useState("");
+  const [hypeReason, setHypeReason] = useState("");
   const [campanhaId, setCampanhaId] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -56,6 +65,12 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       setPlatformId("");
       setRawLink("");
       setSubid("");
+      setClickIdParam("sub1");
+      setGameSlug("");
+      setGameName("");
+      setGameIconUrl("");
+      setLinkCategory("");
+      setHypeReason("");
       setCampanhaId("");
     }
   }, [open, defaultInfluencerId, defaultLandingPageId]);
@@ -74,20 +89,22 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
     setSubid(`${base}-${unique}`);
   }, [selectedInfluencer, open]);
 
-  // 🧠 Universal platform auto-detection from pasted URL
-  const detectedPlatform = useMemo(() => {
-    if (!rawLink) return null;
-    return detectPlatformByUrl(rawLink, platforms as any[]);
-  }, [rawLink, platforms]);
+  // 🧠 Universal platform + game auto-detection from pasted URL
+  const detection = useMemo(() => detectFromUrl(rawLink, platforms as any[]), [rawLink, platforms]);
+  const detectedPlatformId = detection.platformCandidates[0]?.platformId ?? "";
+  const detectedPlatform = useMemo(
+    () => detectedPlatformId ? (platforms as any[]).find((p: any) => p.id === detectedPlatformId) : null,
+    [detectedPlatformId, platforms],
+  );
 
   // Sync detected platform → platformId, then auto-pick first matching account
   useEffect(() => {
-    if (detectedPlatform) {
+    if (detectedPlatform?.id) {
       setPlatformId(detectedPlatform.id);
-      const match = accounts.find((a: any) => a.platform_id === detectedPlatform.id);
+      const match = accounts.find((a: any) => a.platform_id === detectedPlatform.id && a.is_active !== false);
       if (match) setAccountId(match.id);
     }
-  }, [detectedPlatform]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [detectedPlatform?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const platformAccounts = useMemo(
     () => platformId ? accounts.filter((a: any) => a.platform_id === platformId) : accounts,
@@ -95,14 +112,59 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   );
 
   const selectedAccount = useMemo(() => accounts.find((a: any) => a.id === accountId), [accounts, accountId]);
+  const currentPlatformId = selectedAccount?.platform_id || platformId || detectedPlatform?.id || "";
+  const currentPlatform = useMemo(
+    () => currentPlatformId ? (platforms as any[]).find((p: any) => p.id === currentPlatformId) : null,
+    [platforms, currentPlatformId],
+  );
   const selectedLP = useMemo(() => (landingPages as any[]).find((l: any) => l.id === landingPageId), [landingPages, landingPageId]);
+
+  useEffect(() => {
+    if (!rawLink) return;
+    setClickIdParam(inferAttributionParam(rawLink, currentPlatform?.name || detectedPlatform?.name));
+  }, [rawLink, currentPlatform?.name, detectedPlatform?.name]);
+
+  useEffect(() => {
+    if (detection.category) setLinkCategory(detection.category);
+    if (detection.gameSlug) setGameSlug(detection.gameSlug);
+    if (detection.gameName) setGameName(detection.gameName);
+  }, [detection.category, detection.gameSlug, detection.gameName]);
+
+  const { data: hypedGames = [] } = useQuery({
+    queryKey: ["quick_platform_hyped_games", currentPlatformId],
+    enabled: !!currentPlatformId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("platform_hyped_games")
+        .select("id, game_name, game_slug, icon_url, category, priority, hype_reason")
+        .eq("platform_id", currentPlatformId)
+        .eq("is_active", true)
+        .order("priority", { ascending: true })
+        .limit(5);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const applyHypedGame = (g: any) => {
+    setGameSlug(g.game_slug || "");
+    setGameName(g.game_name || "");
+    setGameIconUrl(g.icon_url || "");
+    setLinkCategory(g.category || linkCategory);
+    setHypeReason(g.hype_reason || hypeReason);
+  };
+
+  const trackedAffiliateUrl = useMemo(
+    () => buildTrackedAffiliateUrl(rawLink, clickIdParam, subid, influencerId || "", campanhaId || ""),
+    [rawLink, clickIdParam, subid, influencerId, campanhaId],
+  );
 
   // Resolve / preview the LP instance for (influencer × LP × affiliate_link).
   // Each distinct affiliate URL gets its OWN instance so the LP CTA points to
   // the right house - never overwrite a sibling instance's affiliate_link.
   const resolvedInstance = useMemo(() => {
     if (!landingPageId || !influencerId) return null;
-    const raw = rawLink.trim();
+    const raw = trackedAffiliateUrl.trim();
     if (!raw) return null;
     return (
       lpInstances.find(
@@ -112,34 +174,37 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
           (i.affiliate_link || "").trim() === raw,
       ) || null
     );
-  }, [lpInstances, landingPageId, influencerId, rawLink]);
+  }, [lpInstances, landingPageId, influencerId, trackedAffiliateUrl]);
+
+  const plannedInstanceSlug = useMemo(() => {
+    if (!landingPageId || !influencerId) return "";
+    if (resolvedInstance?.slug) return resolvedInstance.slug;
+    const baseSlug = ((selectedInfluencer as any)?.slug || (selectedInfluencer as any)?.name || "ref")
+      .toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/^-|-$/g, "") || "ref";
+    const taken = new Set(
+      lpInstances.filter((i: any) => i.landing_page_id === landingPageId).map((i: any) => i.slug),
+    );
+    let slug = baseSlug;
+    let n = 2;
+    while (taken.has(slug)) { slug = `${baseSlug}-${n++}`; }
+    return slug;
+  }, [landingPageId, influencerId, resolvedInstance, selectedInfluencer, lpInstances]);
 
   // The link the influencer shares:
   //  · With LP → public LP URL (visitors hit the LP, click CTA, then get the affiliate)
   //  · Without LP → affiliate URL directly with sub1/sub2/sub3
   const finalUrl = useMemo(() => {
     if (landingPageId && selectedLP?.domain) {
-      const slug = resolvedInstance?.slug || (selectedInfluencer as any)?.slug || "";
+      const slug = plannedInstanceSlug || (selectedInfluencer as any)?.slug || "";
       const lp = buildPublicLpUrl(selectedLP.domain, slug, influencerId || "", campanhaId || "");
       if (lp) return lp;
     }
-    return buildTrackedAffiliateUrl(rawLink, "sub1", subid, influencerId || "", campanhaId || "");
-  }, [landingPageId, selectedLP, resolvedInstance, selectedInfluencer, influencerId, campanhaId, rawLink, subid]);
+    return trackedAffiliateUrl;
+  }, [landingPageId, selectedLP, plannedInstanceSlug, selectedInfluencer, influencerId, campanhaId, trackedAffiliateUrl]);
 
   const trackingCode = useMemo(() => subid || `link-${Date.now().toString(36)}`, [subid]);
 
-  // Duplicate guard: same influencer × account × LP already has a link
-  const { data: existingLinks } = useTrackingLinks();
-  const duplicate = useMemo(() => {
-    if (!influencerId || !accountId) return null;
-    return existingLinks.find((l: any) =>
-      l.influencer_id === influencerId &&
-      l.platform_account_id === accountId &&
-      (l.landing_page_id ?? null) === (landingPageId || null)
-    ) || null;
-  }, [existingLinks, influencerId, accountId, landingPageId]);
-
-  const canSave = influencerId && rawLink.trim() && (accountId || detectedPlatform) && !duplicate;
+  const canSave = influencerId && rawLink.trim() && (accountId || currentPlatformId);
 
 
   const handleSave = async () => {
@@ -151,10 +216,10 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       setSaving(true);
       let finalAccountId = accountId;
 
-      if (!finalAccountId && detectedPlatform) {
+      if (!finalAccountId && currentPlatformId) {
         const created: any = await createAccount({
-          platform_id: detectedPlatform.id,
-          nome_conta: `${detectedPlatform.name} · Principal`,
+          platform_id: currentPlatformId,
+          nome_conta: `${currentPlatform?.name || detectedPlatform?.name || "Plataforma"} · Principal`,
           is_demo: false,
         } as any);
         finalAccountId = created?.id;
@@ -163,20 +228,13 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       // ── Resolve or create the LP instance so the link routes through the LP ──
       let instanceId: string | null = resolvedInstance?.id || null;
       if (landingPageId && !instanceId) {
-        const baseSlug = ((selectedInfluencer as any)?.slug || (selectedInfluencer as any)?.name || "ref")
-          .toLowerCase().replace(/[^a-z0-9-]/g, "-");
-        const taken = new Set(
-          lpInstances.filter((i: any) => i.landing_page_id === landingPageId).map((i: any) => i.slug),
-        );
-        let slug = baseSlug;
-        let n = 2;
-        while (taken.has(slug)) { slug = `${baseSlug}-${n++}`; }
+        const slug = plannedInstanceSlug;
         try {
           const created: any = await landingPageInstanceService.create({
             landing_page_id: landingPageId,
             influencer_id: influencerId,
             slug,
-            affiliate_link: rawLink.trim(),
+            affiliate_link: trackedAffiliateUrl,
             is_active: true,
           } as any);
           instanceId = created?.id || null;
@@ -201,8 +259,13 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
         base_url: rawLink.trim(),
         final_url: finalUrl,
         tracking_code: trackingCode,
-        click_id_param_name: "sub1",
+        click_id_param_name: clickIdParam,
         use_lp: useLp,
+        game_slug: gameSlug || null,
+        game_name: gameName || null,
+        game_icon_url: gameIconUrl || null,
+        link_category: linkCategory || null,
+        hype_reason: hypeReason || null,
         commission_percent: (selectedInfluencer as any)?.commission_percent ?? null,
         status: "active",
       } as any);
@@ -312,10 +375,10 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
               />
               {rawLink && (
                 <div className="mt-1.5 flex items-center justify-between gap-2">
-                  {detectedPlatform ? (
-                    <span className="text-[10px] flex items-center gap-1 text-emerald-500"><Sparkles size={10} /> Detectado: <strong className="text-foreground">{detectedPlatform.name}</strong></span>
+                  {detectedPlatform || currentPlatform ? (
+                    <span className="text-[10px] flex items-center gap-1 text-success"><Sparkles size={10} /> Detectado: <strong className="text-foreground">{detectedPlatform?.name || currentPlatform?.name}</strong></span>
                   ) : (
-                    <span className="text-[10px] text-amber-500">Plataforma não reconhecida - selecione ou cadastre.</span>
+                    <span className="text-[10px] text-warning">Cole o link e selecione a casa; a inteligência aplica contexto mesmo sem domínio conhecido.</span>
                   )}
                   <button onClick={() => setNewPlatform({ ...newPlatform, open: true })} className="text-[10px] text-primary hover:underline flex items-center gap-1"><Plus size={10} /> Nova plataforma</button>
                 </div>
@@ -328,7 +391,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
                 <div className="flex items-center justify-between mb-1">
                   <Label className="text-xs font-medium">4. Plataforma</Label>
                   <div className="flex items-center gap-2">
-                    {detectedPlatform && <span className="text-[9px] text-emerald-500 flex items-center gap-0.5"><Sparkles size={9} /> auto</span>}
+                    {detectedPlatform && <span className="text-[9px] text-success flex items-center gap-0.5"><Sparkles size={9} /> auto</span>}
                     <button
                       type="button"
                       onClick={() => setNewPlatform({ ...newPlatform, open: true })}
@@ -356,16 +419,106 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
               </div>
             </div>
 
+            {(rawLink || currentPlatformId) && (
+              <div className="rounded-md border border-primary/20 bg-primary/5 p-2.5 space-y-2">
+                <div className="flex items-center gap-1.5 text-[10px] flex-wrap">
+                  <Wand2 size={11} className="text-primary" />
+                  <span className="uppercase tracking-wider font-semibold text-primary/90">Contexto inteligente</span>
+                  {(linkCategory || detection.category) && (
+                    <span className="px-1.5 py-0.5 rounded bg-secondary/60 text-foreground text-[9px]">
+                      {CATEGORY_LABELS[(linkCategory || detection.category) as LinkCategory] ?? linkCategory}
+                    </span>
+                  )}
+                  {gameName && (
+                    <span className="px-1.5 py-0.5 rounded bg-warning/10 text-warning border border-warning/25 text-[9px]">
+                      {gameName}
+                    </span>
+                  )}
+                </div>
+
+                {hypedGames.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                      <Flame size={11} className="text-warning" />
+                      <span className="font-semibold text-warning uppercase tracking-wider">Top 5 da casa</span>
+                    </div>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {hypedGames.map((g: any) => {
+                        const selected = gameSlug === g.game_slug;
+                        return (
+                          <button
+                            key={g.id}
+                            type="button"
+                            onClick={() => applyHypedGame(g)}
+                            className={`min-w-0 rounded-md border p-1.5 text-center transition ${selected ? "border-warning/60 bg-warning/10" : "border-border/50 bg-background/50 hover:border-warning/40"}`}
+                            title={g.hype_reason || g.game_name}
+                          >
+                            <div className="flex justify-center mb-1 relative">
+                              <GameArtwork slug={g.game_slug} name={g.game_name} iconUrl={g.icon_url} size="sm" />
+                              <span className="absolute -top-1 left-1/2 -translate-x-5 text-[8px] font-bold bg-warning text-warning-foreground rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                                {g.priority}
+                              </span>
+                            </div>
+                            <span className="block text-[9px] font-medium leading-tight truncate">{g.game_name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Tipo</Label>
+                    <Select value={linkCategory || "none"} onValueChange={(v) => setLinkCategory(v === "none" ? "" : v)}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Auto</SelectItem>
+                        {(Object.keys(CATEGORY_LABELS) as LinkCategory[]).map(k => <SelectItem key={k} value={k}>{CATEGORY_LABELS[k]}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Jogo / odds / estratégia</Label>
+                    <Input
+                      className="h-8 text-xs"
+                      value={gameName}
+                      onChange={(e) => {
+                        const name = e.target.value;
+                        setGameName(name);
+                        setGameSlug(name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
+                      }}
+                      placeholder="Fortune Tiger, odds do dia…"
+                    />
+                  </div>
+                </div>
+                <Input className="h-8 text-xs" value={hypeReason} onChange={(e) => setHypeReason(e.target.value)} placeholder="Motivo do hype para influenciador/gerente" />
+              </div>
+            )}
+
             {/* 5. SUBID */}
             <div>
-              <Label className="text-xs font-medium">5. SubID único (auto)</Label>
-              <Input
-                className="h-9 text-xs font-mono mt-1"
-                value={subid}
-                onChange={(e) => setSubid(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ""))}
-                placeholder="influencer-xxxxx"
-              />
-              <p className="text-[10px] text-muted-foreground mt-1">Gerado automaticamente por link · anexado como <code>?sub1=</code>.</p>
+              <Label className="text-xs font-medium">5. Atribuição única por link</Label>
+              <div className="grid grid-cols-[110px_1fr] gap-2 mt-1">
+                <Select value={clickIdParam} onValueChange={setClickIdParam}>
+                  <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="afp">AFP</SelectItem>
+                    <SelectItem value="sub1">sub1</SelectItem>
+                    <SelectItem value="click_id">click_id</SelectItem>
+                    <SelectItem value="clickid">clickid</SelectItem>
+                    <SelectItem value="aff_sub">aff_sub</SelectItem>
+                    <SelectItem value="s1">s1</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  className="h-9 text-xs font-mono"
+                  value={subid}
+                  onChange={(e) => setSubid(e.target.value.replace(/[^a-zA-Z0-9-_]/g, ""))}
+                  placeholder="influencer-xxxxx"
+                />
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">Gerado automaticamente por link · permite repetir influencer, LP e conta sem bloquear.</p>
             </div>
 
             {/* 6. CAMPANHA opcional */}
@@ -380,14 +533,6 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
               </Select>
             </div>
 
-            {/* DUPLICATE GUARD */}
-            {duplicate && (
-              <div className="bg-destructive/10 border border-destructive/25 rounded-md px-3 py-2.5 text-[11px] text-destructive">
-                <strong>Link duplicado.</strong> Já existe um tracking link ativo para este influencer nessa conta{landingPageId ? " e LP" : ""}
-                {" "}(código <code className="font-mono">{(duplicate as any).tracking_code}</code>). Edite o existente ou escolha outra combinação.
-              </div>
-            )}
-
             {/* PREVIEW */}
             {canSave && (
               <div className="space-y-2 bg-primary/10 border border-primary/20 rounded-md px-3 py-2.5">
@@ -397,16 +542,12 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
                     <code className="block text-[10px] font-mono text-foreground break-all">{subid || "-"}</code>
                   </div>
                   <div>
-                    <p className="text-[9px] font-semibold text-primary uppercase tracking-wider">Tracking</p>
-                    <code className="block text-[10px] font-mono text-foreground break-all">{trackingCode}</code>
+                    <p className="text-[9px] font-semibold text-primary uppercase tracking-wider">Parâmetro</p>
+                    <code className="block text-[10px] font-mono text-foreground break-all">{clickIdParam}</code>
                   </div>
                   <div>
-                    <p className="text-[9px] font-semibold text-primary uppercase tracking-wider">Comissão</p>
-                    <code className="block text-[10px] font-mono text-foreground">
-                      {(selectedInfluencer as any)?.commission_percent != null
-                        ? `${(selectedInfluencer as any).commission_percent}%`
-                        : "-"}
-                    </code>
+                    <p className="text-[9px] font-semibold text-primary uppercase tracking-wider">Contexto</p>
+                    <code className="block text-[10px] font-mono text-foreground truncate">{gameName || CATEGORY_LABELS[linkCategory as LinkCategory] || "auto"}</code>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
