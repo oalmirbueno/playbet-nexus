@@ -40,6 +40,13 @@ export interface FormState {
   tracking_role: string;
   notes: string;
   use_lp: boolean;
+  // Inteligência de link
+  game_slug: string;
+  game_name: string;
+  game_icon_url: string;
+  link_category: string;
+  hype_reason: string;
+  parent_link_id?: string | null;
 }
 
 export const emptyForm: FormState = {
@@ -56,6 +63,12 @@ export const emptyForm: FormState = {
   tracking_role: "influencer",
   notes: "",
   use_lp: true,
+  game_slug: "",
+  game_name: "",
+  game_icon_url: "",
+  link_category: "",
+  hype_reason: "",
+  parent_link_id: null,
 };
 
 export function formFromRow(l: TrackingLinkRow): FormState {
