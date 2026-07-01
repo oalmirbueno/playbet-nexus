@@ -55,8 +55,10 @@ export default function GerenteLinks() {
 
     const [{ data: rawLinks }, { data: metrics }] = await Promise.all([
       supabase.from("tracking_links")
-        .select("id, tracking_code, status, created_at, base_url, final_url, short_url, click_id_param_name, landing_page_instance_id, landing_page_id, platform_account_id, influencer_id, game_name, game_icon_url, link_category, hype_reason")
-        .in("influencer_id", infIds).eq("is_demo", false).order("created_at", { ascending: false }),
+        .select("id, tracking_code, status, created_at, base_url, final_url, short_url, click_id_param_name, landing_page_instance_id, landing_page_id, platform_account_id, influencer_id, game_name, game_icon_url, link_category, hype_reason, hype_priority")
+        .in("influencer_id", infIds).eq("is_demo", false)
+        .order("hype_priority", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: false }),
       supabase.from("tracking_metrics")
         .select("platform_account_id, influencer_id, cliques, registros, ftd, revenue")
         .in("influencer_id", infIds).eq("is_demo", false),
