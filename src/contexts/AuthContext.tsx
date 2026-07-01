@@ -2,39 +2,67 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
-export type AppRole = "admin_master" | "socio" | "financeiro" | "operacao" | "conteudo" | "visualizacao";
+export type AppRole =
+  | "admin_master"
+  | "socio"
+  | "financeiro"
+  | "operacao"
+  | "conteudo"
+  | "visualizacao"
+  | "gerente"
+  | "influencer";
+
+export type PreviewAs = "influencer" | "gerente" | null;
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   role: AppRole | null;
+  effectiveRole: AppRole | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
+  previewAs: PreviewAs;
+  setPreviewAs: (v: PreviewAs) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+const PREVIEW_KEY = "playbet.previewAs";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const [previewAs, setPreviewAsState] = useState<PreviewAs>(() => {
+    if (typeof window === "undefined") return null;
+    const v = window.localStorage.getItem(PREVIEW_KEY);
+    return v === "influencer" || v === "gerente" ? v : null;
+  });
+
+  const setPreviewAs = (v: PreviewAs) => {
+    setPreviewAsState(v);
+    if (typeof window !== "undefined") {
+      if (v) window.localStorage.setItem(PREVIEW_KEY, v);
+      else window.localStorage.removeItem(PREVIEW_KEY);
+    }
+  };
 
   const fetchRole = async (userId: string) => {
     const { data } = await supabase
       .from("user_roles")
       .select("role")
       .eq("user_id", userId)
-      .single();
+      .maybeSingle();
     if (data) setRole(data.role as AppRole);
   };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
@@ -49,9 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchRole(session.user.id);
-      }
+      if (session?.user) fetchRole(session.user.id);
       setLoading(false);
     });
 
@@ -80,12 +106,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setRole(null);
+    setPreviewAs(null);
   };
 
   const isAdmin = role === "admin_master" || role === "socio";
+  const effectiveRole: AppRole | null = isAdmin && previewAs ? previewAs : role;
 
   return (
-    <AuthContext.Provider value={{ user, session, role, loading, signIn, signUp, signOut, isAdmin }}>
+    <AuthContext.Provider
+      value={{
+        user, session, role, effectiveRole, loading,
+        signIn, signUp, signOut, isAdmin,
+        previewAs, setPreviewAs,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
