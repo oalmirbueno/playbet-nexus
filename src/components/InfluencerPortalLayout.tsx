@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, Link2, Wallet, DollarSign, User, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import PreviewBanner from "@/components/PreviewBanner";
+import { PortalNotificationBell } from "@/components/PortalNotificationBell";
 import logo from "@/assets/logo.png";
 
 const items = [
