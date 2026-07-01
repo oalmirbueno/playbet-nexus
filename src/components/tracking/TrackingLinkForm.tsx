@@ -140,6 +140,69 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
   const qc = useQueryClient();
   const [creatingInstance, setCreatingInstance] = useState(false);
 
+  // ── Link intelligence: auto-detect platform/category/game from pasted URL ──
+  const detection = useMemo(
+    () => detectFromUrl(form.base_url, platforms as any[]),
+    [form.base_url, platforms],
+  );
+
+  const detectedPlatformId = detection.platformCandidates[0]?.platformId ?? null;
+  const detectedPlatformName = detectedPlatformId
+    ? (platforms as any[]).find((p: any) => p.id === detectedPlatformId)?.name ?? null
+    : null;
+
+  // Auto-fill platform account when we detect a platform and no account is chosen yet
+  useEffect(() => {
+    if (!detectedPlatformId || form.platform_account_id) return;
+    const acc = (accounts as any[]).find((a: any) => a.platform_id === detectedPlatformId && a.is_active !== false);
+    if (acc) setForm(p => ({ ...p, platform_account_id: acc.id }));
+  }, [detectedPlatformId, form.platform_account_id, accounts]);
+
+  // Auto-fill category / game from URL heuristics, without stomping user overrides
+  useEffect(() => {
+    setForm(p => {
+      const next = { ...p };
+      let changed = false;
+      if (!p.link_category && detection.category) { next.link_category = detection.category; changed = true; }
+      if (!p.game_slug && detection.gameSlug) { next.game_slug = detection.gameSlug; changed = true; }
+      if (!p.game_name && detection.gameName) { next.game_name = detection.gameName; changed = true; }
+      return changed ? next : p;
+    });
+  }, [detection.category, detection.gameSlug, detection.gameName]);
+
+  // Resolve the "current" platform id (detected or from selected account)
+  const currentAccount = (accounts as any[]).find((a: any) => a.id === form.platform_account_id);
+  const currentPlatformId = currentAccount?.platform_id ?? detectedPlatformId ?? null;
+
+  // Fetch hyped games for this platform
+  const { data: hypedGames = [] } = useQuery({
+    queryKey: ["platform_hyped_games", currentPlatformId],
+    enabled: !!currentPlatformId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("platform_hyped_games")
+        .select("id, game_name, game_slug, icon_url, category, priority, hype_reason")
+        .eq("platform_id", currentPlatformId as string)
+        .eq("is_active", true)
+        .order("priority", { ascending: true })
+        .limit(5);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const applyHypedGame = (g: any) => {
+    setForm(p => ({
+      ...p,
+      game_slug: g.game_slug,
+      game_name: g.game_name,
+      game_icon_url: g.icon_url || "",
+      link_category: g.category || p.link_category,
+      hype_reason: g.hype_reason || p.hype_reason,
+    }));
+    toast({ title: `Aplicado: ${g.game_name}`, description: g.hype_reason || "Jogo em alta selecionado." });
+  };
+
   // LPs where this influencer already has an instance (resolved + ready)
   const lpsForInfluencer = useMemo(() => {
     if (!form.influencer_id) return [] as any[];
