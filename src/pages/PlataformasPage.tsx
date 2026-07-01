@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Edit, Eye, XCircle, CheckCircle, Copy, Search, Globe, Link2, MoreHorizontal } from "lucide-react";
+import { Plus, Edit, Eye, XCircle, CheckCircle, Copy, Search, Globe, Link2, MoreHorizontal, RefreshCw, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -8,6 +8,7 @@ import type { PlatformRow } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ExportDropdown from "@/components/ExportDropdown";
+import { supabase } from "@/integrations/supabase/client";
 
 type EditingState = {
   id?: string;
@@ -37,6 +38,29 @@ export default function PlataformasPage() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [filterTipo, setFilterTipo] = useState("Todos");
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshStatus, setRefreshStatus] = useState<null | { ok: boolean; message: string; details?: any; at: string }>(null);
+
+  const refreshHypedGames = async () => {
+    setRefreshing(true);
+    setRefreshStatus({ ok: true, message: "Executando…", at: new Date().toLocaleTimeString("pt-BR") });
+    try {
+      const { data: resp, error } = await supabase.functions.invoke("hyped-games-refresh", { body: {} });
+      if (error) throw error;
+      const updated = resp?.updated ?? resp?.count ?? resp?.platforms_updated;
+      const msg = updated != null
+        ? `Jogos hypados atualizados (${updated} plataforma${updated === 1 ? "" : "s"}).`
+        : "Jogos hypados atualizados.";
+      setRefreshStatus({ ok: true, message: msg, details: resp, at: new Date().toLocaleTimeString("pt-BR") });
+      toast({ title: "Atualização concluída", description: msg });
+    } catch (e: any) {
+      const msg = e?.message || "Falha ao atualizar jogos hypados.";
+      setRefreshStatus({ ok: false, message: msg, at: new Date().toLocaleTimeString("pt-BR") });
+      toast({ title: "Erro", description: msg, variant: "destructive" });
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const filtered = data.filter(p => {
     if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
@@ -126,11 +150,35 @@ export default function PlataformasPage() {
           <h1 className="page-header">Plataformas</h1>
           <p className="page-subtitle">Parceiros, modelos de comissão e status operacional</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center flex-wrap">
+          <button
+            className="btn-ghost flex items-center gap-1.5"
+            onClick={refreshHypedGames}
+            disabled={refreshing}
+            title="Atualiza os jogos hypados de todas as plataformas via IA"
+          >
+            {refreshing
+              ? <RefreshCw size={14} className="animate-spin" />
+              : <Sparkles size={14} />}
+            {refreshing ? "Atualizando jogos..." : "Atualizar jogos"}
+          </button>
           <ExportDropdown data={exportableData} filename="plataformas-playbet" />
           <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Adicionar</button>
         </div>
       </div>
+
+      {refreshStatus && (
+        <div className={`glass-card p-3 text-xs flex items-center gap-2 ${refreshStatus.ok ? "text-foreground" : "text-destructive"}`}>
+          {refreshing
+            ? <RefreshCw size={13} className="animate-spin text-accent" />
+            : refreshStatus.ok
+              ? <CheckCircle size={13} className="text-success" />
+              : <XCircle size={13} className="text-destructive" />}
+          <span className="font-medium">Jogos hypados:</span>
+          <span className="text-muted-foreground">{refreshStatus.message}</span>
+          <span className="ml-auto text-[10px] text-muted-foreground/70">{refreshStatus.at}</span>
+        </div>
+      )}
 
       {/* KPIs compactos */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
