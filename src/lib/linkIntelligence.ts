@@ -27,6 +27,7 @@ export interface PlatformLike {
   id: string;
   name: string;
   domain_patterns?: string[] | null;
+  domains?: string[] | null;
   website_url?: string | null;
 }
 
