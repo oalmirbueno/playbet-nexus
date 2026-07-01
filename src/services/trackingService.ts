@@ -106,6 +106,12 @@ export interface TrackingLinkRow {
   is_demo: boolean;
   use_lp?: boolean | null;
   tracking_role?: string | null;
+  game_slug?: string | null;
+  game_name?: string | null;
+  game_icon_url?: string | null;
+  link_category?: string | null;
+  hype_reason?: string | null;
+  parent_link_id?: string | null;
   created_at: string | null;
   updated_at: string | null;
 }
