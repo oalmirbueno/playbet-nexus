@@ -1554,6 +1554,62 @@ export type Database = {
           },
         ]
       }
+      platform_hyped_games: {
+        Row: {
+          category: string | null
+          created_at: string
+          game_name: string
+          game_slug: string
+          hype_reason: string | null
+          hype_score: number | null
+          icon_url: string | null
+          id: string
+          is_active: boolean
+          platform_id: string
+          priority: number
+          refreshed_at: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          game_name: string
+          game_slug: string
+          hype_reason?: string | null
+          hype_score?: number | null
+          icon_url?: string | null
+          id?: string
+          is_active?: boolean
+          platform_id: string
+          priority?: number
+          refreshed_at?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          game_name?: string
+          game_slug?: string
+          hype_reason?: string | null
+          hype_score?: number | null
+          icon_url?: string | null
+          id?: string
+          is_active?: boolean
+          platform_id?: string
+          priority?: number
+          refreshed_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_hyped_games_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "platforms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platforms: {
         Row: {
           affiliate_manager: string | null
@@ -1561,8 +1617,10 @@ export type Database = {
           cpa: number | null
           created_at: string | null
           currency: string | null
+          domain_patterns: string[] | null
           domains: string[]
           hybrid: boolean | null
+          icon_base_url: string | null
           id: string
           is_active: boolean | null
           is_demo: boolean
@@ -1580,8 +1638,10 @@ export type Database = {
           cpa?: number | null
           created_at?: string | null
           currency?: string | null
+          domain_patterns?: string[] | null
           domains?: string[]
           hybrid?: boolean | null
+          icon_base_url?: string | null
           id?: string
           is_active?: boolean | null
           is_demo?: boolean
@@ -1599,8 +1659,10 @@ export type Database = {
           cpa?: number | null
           created_at?: string | null
           currency?: string | null
+          domain_patterns?: string[] | null
           domains?: string[]
           hybrid?: boolean | null
+          icon_base_url?: string | null
           id?: string
           is_active?: boolean | null
           is_demo?: boolean
@@ -2142,12 +2204,18 @@ export type Database = {
           conteudo_id: string | null
           created_at: string | null
           final_url: string | null
+          game_icon_url: string | null
+          game_name: string | null
+          game_slug: string | null
+          hype_reason: string | null
           id: string
           influencer_id: string | null
           is_demo: boolean
           landing_page_id: string | null
           landing_page_instance_id: string | null
+          link_category: string | null
           notes: string | null
+          parent_link_id: string | null
           platform_account_id: string | null
           short_url: string | null
           status: string | null
@@ -2165,12 +2233,18 @@ export type Database = {
           conteudo_id?: string | null
           created_at?: string | null
           final_url?: string | null
+          game_icon_url?: string | null
+          game_name?: string | null
+          game_slug?: string | null
+          hype_reason?: string | null
           id?: string
           influencer_id?: string | null
           is_demo?: boolean
           landing_page_id?: string | null
           landing_page_instance_id?: string | null
+          link_category?: string | null
           notes?: string | null
+          parent_link_id?: string | null
           platform_account_id?: string | null
           short_url?: string | null
           status?: string | null
@@ -2188,12 +2262,18 @@ export type Database = {
           conteudo_id?: string | null
           created_at?: string | null
           final_url?: string | null
+          game_icon_url?: string | null
+          game_name?: string | null
+          game_slug?: string | null
+          hype_reason?: string | null
           id?: string
           influencer_id?: string | null
           is_demo?: boolean
           landing_page_id?: string | null
           landing_page_instance_id?: string | null
+          link_category?: string | null
           notes?: string | null
+          parent_link_id?: string | null
           platform_account_id?: string | null
           short_url?: string | null
           status?: string | null
@@ -2237,6 +2317,13 @@ export type Database = {
             columns: ["landing_page_instance_id"]
             isOneToOne: false
             referencedRelation: "landing_page_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_links_parent_link_id_fkey"
+            columns: ["parent_link_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_links"
             referencedColumns: ["id"]
           },
           {
