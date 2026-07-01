@@ -169,9 +169,20 @@ export default function UsersAccessSection() {
                         : <span className="text-[11px] text-emerald-400 inline-flex items-center gap-1"><Check size={11} /> Ativo</span>}
                     </td>
                     <td className="py-2.5 text-right">
-                      <button onClick={() => setEditing(r)} className="btn-ghost text-xs inline-flex items-center gap-1">
-                        <Pencil size={11} /> Editar
-                      </button>
+                      <div className="inline-flex items-center gap-1">
+                        {(r.role === "influencer" || r.role === "gerente") && (r.influencer_id || r.manager_id) && (
+                          <button
+                            onClick={() => viewAsUser(r)}
+                            title={`Ver painel de ${r.full_name || r.email}`}
+                            className="btn-ghost text-xs inline-flex items-center gap-1"
+                          >
+                            <Eye size={11} /> Ver
+                          </button>
+                        )}
+                        <button onClick={() => setEditing(r)} className="btn-ghost text-xs inline-flex items-center gap-1">
+                          <Pencil size={11} /> Editar
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
