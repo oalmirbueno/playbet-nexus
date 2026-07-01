@@ -624,6 +624,18 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                     <Flame size={11} className="text-orange-400" />
                     <span className="uppercase tracking-wider font-semibold text-orange-400">Top 5 jogos em alta</span>
                     <span className="text-muted-foreground">nesta casa · clique para aplicar</span>
+                    {!form.id && (
+                      <button
+                        type="button"
+                        onClick={applyAllHypedBatch}
+                        disabled={batchApplying}
+                        className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded border border-orange-500/40 bg-orange-500/10 text-orange-300 hover:bg-orange-500/20 text-[10px] font-semibold disabled:opacity-60"
+                        title="Cria 1 link para cada jogo do Top 5, preenchendo prioridade e motivo do hype"
+                      >
+                        {batchApplying ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+                        {batchApplying ? "Criando…" : `Aplicar todos em lote (${hypedGames.length})`}
+                      </button>
+                    )}
                   </div>
                   <div className="grid grid-cols-5 gap-1.5">
                     {hypedGames.map((g: any) => {
