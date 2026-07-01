@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import PreviewBanner from "@/components/PreviewBanner";
 import LiveSyncBadge from "@/components/LiveSyncBadge";
 import { useManagerSync } from "@/hooks/useManagerSync";
+import { PortalNotificationBell } from "@/components/PortalNotificationBell";
 import logo from "@/assets/logo.png";
 
 const items = [
@@ -32,6 +33,7 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
         </div>
         <div className="flex items-center gap-2">
           <LiveSyncBadge lastSyncedAt={lastSyncedAt} />
+          <PortalNotificationBell />
           <div className="hidden sm:flex items-center gap-2 px-2 py-1 rounded-lg bg-secondary/40">
             <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center text-primary-foreground text-[10px] font-semibold">
               {user?.email?.charAt(0).toUpperCase() || "G"}

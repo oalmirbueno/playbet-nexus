@@ -2,6 +2,7 @@ import { Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, Link2, Wallet, DollarSign, User, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import PreviewBanner from "@/components/PreviewBanner";
+import { PortalNotificationBell } from "@/components/PortalNotificationBell";
 import logo from "@/assets/logo.png";
 
 const items = [
@@ -26,7 +27,8 @@ export default function InfluencerPortalLayout({ children }: { children: React.R
           <img src={logo} alt="PlayBet" className="h-8 w-auto opacity-95" />
           <span className="hidden sm:inline text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Portal Influenciador</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
+          <PortalNotificationBell />
           <div className="hidden sm:flex items-center gap-2 px-2 py-1 rounded-lg bg-secondary/40">
             <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center text-primary-foreground text-[10px] font-semibold">
               {user?.email?.charAt(0).toUpperCase() || "I"}

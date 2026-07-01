@@ -1,6 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Clock, XCircle, ArrowUpRight, Wallet } from "lucide-react";
+import { WithdrawalCyclesAdmin } from "@/components/financeiro/WithdrawalCyclesAdmin";
 
 const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -22,17 +23,25 @@ const STATUS_STYLES: Record<string, { tone: string; icon: any; label: string }> 
 };
 
 export default function SaquesTab({ saques }: Props) {
-  if (saques.length === 0) {
-    return (
-      <Card>
-        <CardContent className="py-16 text-center space-y-2">
-          <Wallet className="mx-auto text-muted-foreground" size={28} />
-          <p className="text-sm text-muted-foreground">Nenhum saque registrado no período.</p>
-        </CardContent>
-      </Card>
-    );
-  }
+  return (
+    <div className="space-y-4">
+      <WithdrawalCyclesAdmin />
 
+      {saques.length === 0 ? (
+        <Card>
+          <CardContent className="py-16 text-center space-y-2">
+            <Wallet className="mx-auto text-muted-foreground" size={28} />
+            <p className="text-sm text-muted-foreground">Nenhum saque registrado no período.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <SaquesTable saques={saques} />
+      )}
+    </div>
+  );
+}
+
+function SaquesTable({ saques }: Props) {
   return (
     <Card>
       <CardContent className="p-0">
