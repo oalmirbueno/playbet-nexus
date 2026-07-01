@@ -140,6 +140,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
 
   const qc = useQueryClient();
   const [creatingInstance, setCreatingInstance] = useState(false);
+  const [batchApplying, setBatchApplying] = useState(false);
 
   // ── Link intelligence: auto-detect platform/category/game from pasted URL ──
   const detection = useMemo(
@@ -213,6 +214,73 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
       hype_reason: g.hype_reason || p.hype_reason,
     }));
     toast({ title: `Aplicado: ${g.game_name}`, description: g.hype_reason || "Jogo em alta selecionado." });
+  };
+
+  const applyAllHypedBatch = async () => {
+    if (form.id) {
+      toast({ title: "Batch indisponível", description: "Use lote apenas ao criar um link novo.", variant: "destructive" });
+      return;
+    }
+    if (!form.influencer_id || !form.platform_account_id || !form.base_url) {
+      toast({ title: "Faltam dados", description: "Preencha influencer, conta e link de afiliado antes.", variant: "destructive" });
+      return;
+    }
+    if (useLp && !form.landing_page_instance_id) {
+      toast({ title: "Faltam dados", description: "Selecione a landing page.", variant: "destructive" });
+      return;
+    }
+    if (!hypedGames.length) return;
+
+    setBatchApplying(true);
+    try {
+      // Persist affiliate URL on the LP instance once (Com LP)
+      if (useLp && selectedInstance && selectedInstance.affiliate_link !== form.base_url) {
+        await landingPageInstanceService.update(selectedInstance.id, { affiliate_link: form.base_url });
+        await qc.invalidateQueries({ queryKey: ["landing_page_instances"] });
+      }
+
+      const rows = hypedGames.map((g: any) => ({
+        influencer_id: form.influencer_id,
+        platform_account_id: form.platform_account_id,
+        landing_page_id: useLp ? (form.landing_page_id || null) : null,
+        landing_page_instance_id: useLp ? (form.landing_page_instance_id || null) : null,
+        campanha_id: form.campanha_id || null,
+        conteudo_id: form.conteudo_id || null,
+        base_url: form.base_url,
+        final_url: finalUrl,
+        short_url: form.short_url || null,
+        click_id_param_name: form.click_id_param_name,
+        tracking_role: form.tracking_role,
+        notes: form.notes || null,
+        use_lp: useLp,
+        game_slug: g.game_slug,
+        game_name: g.game_name,
+        game_icon_url: g.icon_url || null,
+        link_category: g.category || form.link_category || null,
+        hype_reason: g.hype_reason || null,
+        hype_priority: g.priority ?? null,
+      }));
+
+      const { data: inserted, error } = await (supabase as any)
+        .from("tracking_links")
+        .insert(rows)
+        .select("id, game_name");
+
+      if (error) throw error;
+      await qc.invalidateQueries({ queryKey: ["tracking_links"] });
+      toast({
+        title: `${inserted?.length ?? rows.length} links criados em lote`,
+        description: (inserted ?? rows).map((r: any) => r.game_name).filter(Boolean).join(", "),
+      });
+      onOpenChange(false);
+    } catch (e: any) {
+      const msg = e?.message?.includes("duplicate") || e?.code === "23505"
+        ? "Alguns jogos já têm link para este influencer/LP. Remova os duplicados e tente de novo."
+        : (e?.message || "Falha ao criar links em lote.");
+      toast({ title: "Erro no lote", description: msg, variant: "destructive" });
+    } finally {
+      setBatchApplying(false);
+    }
   };
 
   // LPs where this influencer already has an instance (resolved + ready)
@@ -556,6 +624,18 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                     <Flame size={11} className="text-orange-400" />
                     <span className="uppercase tracking-wider font-semibold text-orange-400">Top 5 jogos em alta</span>
                     <span className="text-muted-foreground">nesta casa · clique para aplicar</span>
+                    {!form.id && (
+                      <button
+                        type="button"
+                        onClick={applyAllHypedBatch}
+                        disabled={batchApplying}
+                        className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded border border-orange-500/40 bg-orange-500/10 text-orange-300 hover:bg-orange-500/20 text-[10px] font-semibold disabled:opacity-60"
+                        title="Cria 1 link para cada jogo do Top 5, preenchendo prioridade e motivo do hype"
+                      >
+                        {batchApplying ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
+                        {batchApplying ? "Criando…" : `Aplicar todos em lote (${hypedGames.length})`}
+                      </button>
+                    )}
                   </div>
                   <div className="grid grid-cols-5 gap-1.5">
                     {hypedGames.map((g: any) => {

@@ -1,0 +1,2 @@
+ALTER TABLE public.tracking_links ADD COLUMN IF NOT EXISTS hype_priority smallint;
+COMMENT ON COLUMN public.tracking_links.hype_priority IS 'Prioridade (1-5) do jogo em alta quando o link foi criado a partir do Top 5';
