@@ -1339,6 +1339,42 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          action_url: string | null
+          body: string | null
+          created_at: string
+          id: string
+          meta: Json | null
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          action_url?: string | null
+          body?: string | null
+          created_at?: string
+          id?: string
+          meta?: Json | null
+          read_at?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          action_url?: string | null
+          body?: string | null
+          created_at?: string
+          id?: string
+          meta?: Json | null
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       platform_accounts: {
         Row: {
           account_external_id: string | null
@@ -1580,61 +1616,100 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address_city: string | null
+          address_complement: string | null
+          address_district: string | null
+          address_number: string | null
+          address_state: string | null
+          address_street: string | null
+          address_zip: string | null
           allowed_modules: string[]
           avatar_url: string | null
           city: string | null
           created_at: string | null
           denied_modules: string[]
+          document_number: string | null
+          document_type: string | null
           email: string | null
           full_name: string | null
           id: string
           influencer_id: string | null
           is_active: boolean | null
           last_sign_in_at: string | null
+          legal_name: string | null
           manager_id: string | null
           notes: string | null
           phone: string | null
           pix_key: string | null
           pix_key_type: string | null
+          trade_name: string | null
           updated_at: string | null
+          withdrawal_terms_accepted_at: string | null
+          withdrawal_terms_version: string | null
         }
         Insert: {
+          address_city?: string | null
+          address_complement?: string | null
+          address_district?: string | null
+          address_number?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_zip?: string | null
           allowed_modules?: string[]
           avatar_url?: string | null
           city?: string | null
           created_at?: string | null
           denied_modules?: string[]
+          document_number?: string | null
+          document_type?: string | null
           email?: string | null
           full_name?: string | null
           id: string
           influencer_id?: string | null
           is_active?: boolean | null
           last_sign_in_at?: string | null
+          legal_name?: string | null
           manager_id?: string | null
           notes?: string | null
           phone?: string | null
           pix_key?: string | null
           pix_key_type?: string | null
+          trade_name?: string | null
           updated_at?: string | null
+          withdrawal_terms_accepted_at?: string | null
+          withdrawal_terms_version?: string | null
         }
         Update: {
+          address_city?: string | null
+          address_complement?: string | null
+          address_district?: string | null
+          address_number?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_zip?: string | null
           allowed_modules?: string[]
           avatar_url?: string | null
           city?: string | null
           created_at?: string | null
           denied_modules?: string[]
+          document_number?: string | null
+          document_type?: string | null
           email?: string | null
           full_name?: string | null
           id?: string
           influencer_id?: string | null
           is_active?: boolean | null
           last_sign_in_at?: string | null
+          legal_name?: string | null
           manager_id?: string | null
           notes?: string | null
           phone?: string | null
           pix_key?: string | null
           pix_key_type?: string | null
+          trade_name?: string | null
           updated_at?: string | null
+          withdrawal_terms_accepted_at?: string | null
+          withdrawal_terms_version?: string | null
         }
         Relationships: [
           {
@@ -1664,6 +1739,7 @@ export type Database = {
           codigo: string
           conta: string | null
           created_at: string | null
+          cycle_id: string | null
           data: string | null
           divergence_reason: string | null
           id: string
@@ -1671,10 +1747,14 @@ export type Database = {
           is_demo: boolean
           manager_id: string | null
           nome: string
+          nota_fiscal_number: string | null
+          nota_fiscal_uploaded_at: string | null
+          nota_fiscal_url: string | null
           origem: string | null
           paid_at: string | null
           pix_key: string | null
           pix_key_type: string | null
+          requester_user_id: string | null
           responsavel: string | null
           status: string | null
           tipo: string
@@ -1692,6 +1772,7 @@ export type Database = {
           codigo: string
           conta?: string | null
           created_at?: string | null
+          cycle_id?: string | null
           data?: string | null
           divergence_reason?: string | null
           id?: string
@@ -1699,10 +1780,14 @@ export type Database = {
           is_demo?: boolean
           manager_id?: string | null
           nome: string
+          nota_fiscal_number?: string | null
+          nota_fiscal_uploaded_at?: string | null
+          nota_fiscal_url?: string | null
           origem?: string | null
           paid_at?: string | null
           pix_key?: string | null
           pix_key_type?: string | null
+          requester_user_id?: string | null
           responsavel?: string | null
           status?: string | null
           tipo?: string
@@ -1720,6 +1805,7 @@ export type Database = {
           codigo?: string
           conta?: string | null
           created_at?: string | null
+          cycle_id?: string | null
           data?: string | null
           divergence_reason?: string | null
           id?: string
@@ -1727,10 +1813,14 @@ export type Database = {
           is_demo?: boolean
           manager_id?: string | null
           nome?: string
+          nota_fiscal_number?: string | null
+          nota_fiscal_uploaded_at?: string | null
+          nota_fiscal_url?: string | null
           origem?: string | null
           paid_at?: string | null
           pix_key?: string | null
           pix_key_type?: string | null
+          requester_user_id?: string | null
           responsavel?: string | null
           status?: string | null
           tipo?: string
@@ -2593,6 +2683,57 @@ export type Database = {
           },
         ]
       }
+      withdrawal_cycles: {
+        Row: {
+          amount: number
+          available_at: string
+          consumed_amount: number
+          created_at: string
+          created_by: string | null
+          id: string
+          landed_at: string
+          notes: string | null
+          reference: string | null
+          source: string | null
+          status: string
+          target_id: string
+          target_type: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          available_at: string
+          consumed_amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          landed_at?: string
+          notes?: string | null
+          reference?: string | null
+          source?: string | null
+          status?: string
+          target_id: string
+          target_type: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          available_at?: string
+          consumed_amount?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          landed_at?: string
+          notes?: string | null
+          reference?: string | null
+          source?: string | null
+          status?: string
+          target_id?: string
+          target_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -2610,7 +2751,20 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      notify_target: {
+        Args: {
+          _action_url: string
+          _body: string
+          _meta: Json
+          _target_id: string
+          _target_type: string
+          _title: string
+          _type: string
+        }
+        Returns: undefined
+      }
       pick_manager_for_squad: { Args: { _squad_id: string }; Returns: string }
+      release_available_withdrawal_cycles: { Args: never; Returns: number }
       validate_api_key: { Args: { _key: string }; Returns: boolean }
     }
     Enums: {
