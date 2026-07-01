@@ -111,6 +111,7 @@ export default function PortalLinks() {
           game_icon_url: l.game_icon_url,
           link_category: l.link_category,
           hype_reason: l.hype_reason,
+          hype_priority: l.hype_priority,
           metrics: metricsByAcc.get(l.platform_account_id || "_") ?? { clicks: 0, regs: 0, ftd: 0, revenue: 0 },
         };
       });
