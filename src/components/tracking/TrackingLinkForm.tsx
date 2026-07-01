@@ -140,6 +140,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
 
   const qc = useQueryClient();
   const [creatingInstance, setCreatingInstance] = useState(false);
+  const [batchApplying, setBatchApplying] = useState(false);
 
   // ── Link intelligence: auto-detect platform/category/game from pasted URL ──
   const detection = useMemo(
