@@ -2693,6 +2693,8 @@ export type Database = {
           id: string
           landed_at: string
           notes: string | null
+          notified_available_at: string | null
+          notified_landed_at: string | null
           reference: string | null
           source: string | null
           status: string
@@ -2709,6 +2711,8 @@ export type Database = {
           id?: string
           landed_at?: string
           notes?: string | null
+          notified_available_at?: string | null
+          notified_landed_at?: string | null
           reference?: string | null
           source?: string | null
           status?: string
@@ -2725,6 +2729,8 @@ export type Database = {
           id?: string
           landed_at?: string
           notes?: string | null
+          notified_available_at?: string | null
+          notified_landed_at?: string | null
           reference?: string | null
           source?: string | null
           status?: string
@@ -2761,7 +2767,7 @@ export type Database = {
           _title: string
           _type: string
         }
-        Returns: undefined
+        Returns: string
       }
       pick_manager_for_squad: { Args: { _squad_id: string }; Returns: string }
       release_available_withdrawal_cycles: { Args: never; Returns: number }
