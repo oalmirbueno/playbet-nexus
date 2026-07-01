@@ -2,6 +2,8 @@ import { Link, useLocation } from "react-router-dom";
 import { LayoutDashboard, Trophy, Users, Link2, Sparkles, Wallet, User, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import PreviewBanner from "@/components/PreviewBanner";
+import LiveSyncBadge from "@/components/LiveSyncBadge";
+import { useManagerSync } from "@/hooks/useManagerSync";
 import logo from "@/assets/logo.png";
 
 const items = [
@@ -17,6 +19,7 @@ const items = [
 export default function ManagerLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { signOut, user } = useAuth();
+  const { lastSyncedAt } = useManagerSync();
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
