@@ -26,7 +26,9 @@ export default function PortalLinks() {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const { data: prof } = await supabase.from("profiles").select("influencer_id").eq("id", user!.id).maybeSingle();
+      const prof = scope.active
+        ? { full_name: scope.target?.name ?? "", influencer_id: scope.influencerId, manager_id: scope.managerId } as any
+        : (await supabase.from("profiles").select("influencer_id").eq("id", user!.id).maybeSingle()).data;
       const infId = prof?.influencer_id;
       if (!infId) { setLoading(false); return; }
 

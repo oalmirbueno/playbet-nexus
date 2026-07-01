@@ -20,7 +20,9 @@ export default function GerenteSaques() {
   const [available, setAvailable] = useState(0);
 
   const load = async () => {
-    const { data: prof } = await supabase.from("profiles").select("manager_id").eq("id", user!.id).maybeSingle();
+    const prof = scope.active
+        ? { full_name: scope.target?.name ?? "", influencer_id: scope.influencerId, manager_id: scope.managerId } as any
+        : (await supabase.from("profiles").select("manager_id").eq("id", user!.id).maybeSingle()).data;
     const mid = prof?.manager_id;
     if (!mid) { setLoading(false); return; }
 

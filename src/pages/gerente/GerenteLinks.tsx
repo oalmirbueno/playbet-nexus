@@ -33,7 +33,9 @@ export default function GerenteLinks() {
 
   const load = async () => {
     setLoading(true);
-    const { data: prof } = await supabase.from("profiles").select("manager_id").eq("id", user!.id).maybeSingle();
+    const prof = scope.active
+        ? { full_name: scope.target?.name ?? "", influencer_id: scope.influencerId, manager_id: scope.managerId } as any
+        : (await supabase.from("profiles").select("manager_id").eq("id", user!.id).maybeSingle()).data;
     if (!prof?.manager_id) { setLoading(false); return; }
     const { data: m } = await supabase.from("managers").select("squad_id").eq("id", prof.manager_id).maybeSingle();
     if (!m?.squad_id) { setLoading(false); return; }

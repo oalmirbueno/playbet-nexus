@@ -30,7 +30,9 @@ export default function GerenteRanking() {
   useEffect(() => {
     (async () => {
       setLoading(true);
-      const { data: prof } = await supabase.from("profiles").select("manager_id").eq("id", user!.id).maybeSingle();
+      const prof = scope.active
+        ? { full_name: scope.target?.name ?? "", influencer_id: scope.influencerId, manager_id: scope.managerId } as any
+        : (await supabase.from("profiles").select("manager_id").eq("id", user!.id).maybeSingle()).data;
       if (!prof?.manager_id) { setLoading(false); return; }
       const { data: m } = await supabase.from("managers").select("squad_id").eq("id", prof.manager_id).maybeSingle();
       const { data: infs } = await supabase.from("influencers").select("id, name, slug, instagram").eq("squad_id", m?.squad_id ?? "");
