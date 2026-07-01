@@ -319,6 +319,13 @@ export default function PlataformasPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <HypedGamesPreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        preview={previewData}
+        onApplied={() => setRefreshStatus({ ok: true, message: "Seleção aplicada.", at: new Date().toLocaleTimeString("pt-BR") })}
+      />
     </div>
   );
 }
