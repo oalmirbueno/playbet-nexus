@@ -4,11 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CheckCircle2, ArrowRight, Loader2, Plus } from "lucide-react";
+import { CheckCircle2, ArrowRight, Loader2, Plus, Sparkles, Wand2, Flame } from "lucide-react";
 import type { TrackingLinkRow } from "@/services/trackingService";
 import { landingPageInstanceService } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { detectFromUrl, CATEGORY_LABELS, type LinkCategory } from "@/lib/linkIntelligence";
 
 interface Props {
   open: boolean;
