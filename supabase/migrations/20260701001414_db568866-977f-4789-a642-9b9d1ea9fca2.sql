@@ -1,0 +1,1 @@
+DELETE FROM public.commercial_pipeline_cards WHERE id = 'f62d05e9-1412-489c-b821-457483fcd776';
