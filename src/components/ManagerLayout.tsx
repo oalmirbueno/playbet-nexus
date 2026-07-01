@@ -55,7 +55,7 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
 
       <main className="flex-1 p-4 md:p-8 pb-24 md:pb-8 max-w-7xl w-full mx-auto animate-fade-in">{children}</main>
 
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl grid grid-cols-5">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl grid grid-cols-6">
         {items.map((it) => {
           const active = location.pathname === it.path;
           return (
