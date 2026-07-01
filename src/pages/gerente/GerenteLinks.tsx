@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { useManagerSync } from "@/hooks/useManagerSync";
-import { Copy, ExternalLink, Link2, Search, Power, PowerOff, ShieldAlert } from "lucide-react";
+import { Copy, ExternalLink, Link2, Search, Power, PowerOff, ShieldAlert, Flame, Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { resolveShareUrl } from "@/lib/trackingUrl";
 
