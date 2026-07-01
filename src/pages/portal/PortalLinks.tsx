@@ -13,8 +13,13 @@ interface EnrichedLink {
   status: string | null;
   share_url: string;
   platform_name?: string;
+  platform_id?: string | null;
   lp_name?: string;
   lp_domain?: string | null;
+  game_name?: string | null;
+  game_icon_url?: string | null;
+  link_category?: string | null;
+  hype_reason?: string | null;
   metrics: { clicks: number; regs: number; ftd: number; revenue: number };
 }
 
