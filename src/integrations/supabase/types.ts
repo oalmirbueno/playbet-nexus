@@ -2207,6 +2207,7 @@ export type Database = {
           game_icon_url: string | null
           game_name: string | null
           game_slug: string | null
+          hype_priority: number | null
           hype_reason: string | null
           id: string
           influencer_id: string | null
@@ -2236,6 +2237,7 @@ export type Database = {
           game_icon_url?: string | null
           game_name?: string | null
           game_slug?: string | null
+          hype_priority?: number | null
           hype_reason?: string | null
           id?: string
           influencer_id?: string | null
@@ -2265,6 +2267,7 @@ export type Database = {
           game_icon_url?: string | null
           game_name?: string | null
           game_slug?: string | null
+          hype_priority?: number | null
           hype_reason?: string | null
           id?: string
           influencer_id?: string | null
