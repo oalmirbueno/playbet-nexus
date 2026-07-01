@@ -60,12 +60,12 @@ export default function SquadsTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h2 className="text-[15px] font-semibold">Squads</h2>
           <p className="text-xs text-muted-foreground">Times de trabalho · gerente responsável + influencers vinculados</p>
         </div>
-        <Button size="sm" onClick={() => { setEdit(empty); setOpen(true); }}>
+        <Button size="sm" onClick={() => { setEdit(empty); setOpen(true); }} className="self-start sm:self-auto">
           <Plus size={14} className="mr-1.5" /> Novo Squad
         </Button>
       </div>
