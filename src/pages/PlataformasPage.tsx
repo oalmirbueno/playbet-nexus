@@ -150,11 +150,35 @@ export default function PlataformasPage() {
           <h1 className="page-header">Plataformas</h1>
           <p className="page-subtitle">Parceiros, modelos de comissão e status operacional</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center flex-wrap">
+          <button
+            className="btn-ghost flex items-center gap-1.5"
+            onClick={refreshHypedGames}
+            disabled={refreshing}
+            title="Atualiza os jogos hypados de todas as plataformas via IA"
+          >
+            {refreshing
+              ? <RefreshCw size={14} className="animate-spin" />
+              : <Sparkles size={14} />}
+            {refreshing ? "Atualizando jogos..." : "Atualizar jogos"}
+          </button>
           <ExportDropdown data={exportableData} filename="plataformas-playbet" />
           <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Adicionar</button>
         </div>
       </div>
+
+      {refreshStatus && (
+        <div className={`glass-card p-3 text-xs flex items-center gap-2 ${refreshStatus.ok ? "text-foreground" : "text-destructive"}`}>
+          {refreshing
+            ? <RefreshCw size={13} className="animate-spin text-accent" />
+            : refreshStatus.ok
+              ? <CheckCircle size={13} className="text-success" />
+              : <XCircle size={13} className="text-destructive" />}
+          <span className="font-medium">Jogos hypados:</span>
+          <span className="text-muted-foreground">{refreshStatus.message}</span>
+          <span className="ml-auto text-[10px] text-muted-foreground/70">{refreshStatus.at}</span>
+        </div>
+      )}
 
       {/* KPIs compactos */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
