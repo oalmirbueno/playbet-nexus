@@ -137,17 +137,17 @@ export default function ComercialPipeline() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between gap-4 px-6 py-4 border-b border-border/60 bg-background/70 backdrop-blur-xl sticky top-0 z-10">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4 px-4 md:px-6 py-4 border-b border-border/60 bg-background/70 backdrop-blur-xl sticky top-0 z-10">
         <div>
-          <h1 className="text-2xl font-display font-semibold tracking-tight">Pipeline comercial</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Captação, qualificação e ativação de afiliados.</p>
+          <h1 className="text-xl md:text-2xl font-display font-semibold tracking-tight">Pipeline comercial</h1>
+          <p className="text-xs md:text-sm text-muted-foreground mt-0.5">Captação, qualificação e ativação de afiliados.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full md:w-auto">
           <Input
             placeholder="Buscar candidato, handle ou nicho..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-72"
+            className="flex-1 md:w-72"
           />
           <NewCardDialog open={newOpen} onOpenChange={setNewOpen} onCreated={load} />
         </div>
