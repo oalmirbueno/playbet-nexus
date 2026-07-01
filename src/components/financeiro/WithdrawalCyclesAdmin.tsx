@@ -182,6 +182,23 @@ function StatusPill({ status }: { status: string }) {
   );
 }
 
+function NotificationPill({ row }: { row: CycleRow }) {
+  const needLanded = !row.notified_landed_at;
+  const needAvailable = row.status === "available" && !row.notified_available_at;
+  if (needLanded || needAvailable) {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20">
+        <UserX size={10} /> Aguardando cadastro
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full border bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
+      <CheckCircle2 size={10} /> Enviada
+    </span>
+  );
+}
+
 function NewCycleDialog({ open, onOpenChange, influencers, managers, onCreated }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
