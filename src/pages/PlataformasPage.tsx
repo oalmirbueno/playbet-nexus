@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ExportDropdown from "@/components/ExportDropdown";
 import { supabase } from "@/integrations/supabase/client";
+import HypedGamesPreviewDialog, { type HypedPreviewPlatform } from "@/components/tracking/HypedGamesPreviewDialog";
 
 type EditingState = {
   id?: string;
@@ -40,21 +41,23 @@ export default function PlataformasPage() {
   const [filterTipo, setFilterTipo] = useState("Todos");
   const [refreshing, setRefreshing] = useState(false);
   const [refreshStatus, setRefreshStatus] = useState<null | { ok: boolean; message: string; details?: any; at: string }>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewData, setPreviewData] = useState<HypedPreviewPlatform[]>([]);
 
   const refreshHypedGames = async () => {
     setRefreshing(true);
-    setRefreshStatus({ ok: true, message: "Executando…", at: new Date().toLocaleTimeString("pt-BR") });
+    setRefreshStatus({ ok: true, message: "Buscando candidatos…", at: new Date().toLocaleTimeString("pt-BR") });
     try {
-      const { data: resp, error } = await supabase.functions.invoke("hyped-games-refresh", { body: {} });
+      const { data: resp, error } = await supabase.functions.invoke("hyped-games-refresh", { body: { dry_run: true } });
       if (error) throw error;
-      const updated = resp?.updated ?? resp?.count ?? resp?.platforms_updated;
-      const msg = updated != null
-        ? `Jogos hypados atualizados (${updated} plataforma${updated === 1 ? "" : "s"}).`
-        : "Jogos hypados atualizados.";
+      const prev: HypedPreviewPlatform[] = resp?.preview ?? [];
+      setPreviewData(prev);
+      setPreviewOpen(true);
+      const totalGames = prev.reduce((s, p) => s + p.games.length, 0);
+      const msg = `Prévia pronta: ${prev.length} plataforma(s), ${totalGames} jogo(s). Revise e confirme.`;
       setRefreshStatus({ ok: true, message: msg, details: resp, at: new Date().toLocaleTimeString("pt-BR") });
-      toast({ title: "Atualização concluída", description: msg });
     } catch (e: any) {
-      const msg = e?.message || "Falha ao atualizar jogos hypados.";
+      const msg = e?.message || "Falha ao gerar prévia dos jogos.";
       setRefreshStatus({ ok: false, message: msg, at: new Date().toLocaleTimeString("pt-BR") });
       toast({ title: "Erro", description: msg, variant: "destructive" });
     } finally {
@@ -155,12 +158,12 @@ export default function PlataformasPage() {
             className="btn-ghost flex items-center gap-1.5"
             onClick={refreshHypedGames}
             disabled={refreshing}
-            title="Atualiza os jogos hypados de todas as plataformas via IA"
+            title="Busca candidatos de jogos e imagens para revisão antes de gravar"
           >
             {refreshing
               ? <RefreshCw size={14} className="animate-spin" />
               : <Sparkles size={14} />}
-            {refreshing ? "Atualizando jogos..." : "Atualizar jogos"}
+            {refreshing ? "Buscando prévia..." : "Atualizar jogos"}
           </button>
           <ExportDropdown data={exportableData} filename="plataformas-playbet" />
           <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Adicionar</button>
@@ -316,6 +319,13 @@ export default function PlataformasPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <HypedGamesPreviewDialog
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+        preview={previewData}
+        onApplied={() => setRefreshStatus({ ok: true, message: "Seleção aplicada.", at: new Date().toLocaleTimeString("pt-BR") })}
+      />
     </div>
   );
 }
