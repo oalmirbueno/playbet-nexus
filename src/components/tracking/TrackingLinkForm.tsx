@@ -478,6 +478,109 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                 placeholder="Cole o link bruto da plataforma"
               />
 
+              {/* Detecção inteligente */}
+              {form.base_url && (
+                <div className="rounded-md border border-primary/20 bg-background/40 p-2.5 space-y-2">
+                  <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground flex-wrap">
+                    <Wand2 size={11} className="text-primary" />
+                    <span className="uppercase tracking-wider font-semibold text-primary/90">Detectado</span>
+                    {detectedPlatformName ? (
+                      <span className="text-foreground">{detectedPlatformName}</span>
+                    ) : (
+                      <span className="text-amber-500">plataforma não reconhecida — selecione manualmente abaixo</span>
+                    )}
+                    {form.link_category && (
+                      <span className="px-1.5 py-0.5 rounded bg-secondary/60 text-foreground text-[9px]">
+                        {CATEGORY_LABELS[form.link_category as LinkCategory] ?? form.link_category}
+                      </span>
+                    )}
+                    {form.game_name && (
+                      <span className="px-1.5 py-0.5 rounded bg-primary/15 text-primary text-[9px]">
+                        {form.game_name}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Tipo</Label>
+                      <Select value={form.link_category || "none"} onValueChange={v => set("link_category", v === "none" ? "" : v)}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Auto" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">Auto</SelectItem>
+                          {(Object.keys(CATEGORY_LABELS) as LinkCategory[]).map(k => (
+                            <SelectItem key={k} value={k}>{CATEGORY_LABELS[k]}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Jogo / evento</Label>
+                      <Input
+                        className="h-8 text-xs"
+                        value={form.game_name}
+                        onChange={e => setForm(p => ({ ...p, game_name: e.target.value, game_slug: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-") }))}
+                        placeholder="Fortune Tiger, Aviator…"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Motivo do hype</Label>
+                    <Input
+                      className="h-8 text-xs"
+                      value={form.hype_reason}
+                      onChange={e => set("hype_reason", e.target.value)}
+                      placeholder="Ex: Fortune Tiger está pagando muito essa semana"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Jogos hypados da casa */}
+              {currentPlatformId && hypedGames.length > 0 && (
+                <div className="rounded-md border border-orange-500/25 bg-orange-500/5 p-2.5 space-y-2">
+                  <div className="flex items-center gap-1.5 text-[10px] flex-wrap">
+                    <Flame size={11} className="text-orange-400" />
+                    <span className="uppercase tracking-wider font-semibold text-orange-400">Top 5 jogos em alta</span>
+                    <span className="text-muted-foreground">nesta casa · clique para aplicar</span>
+                  </div>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {hypedGames.map((g: any) => {
+                      const selected = form.game_slug === g.game_slug;
+                      return (
+                        <button
+                          key={g.id}
+                          type="button"
+                          onClick={() => applyHypedGame(g)}
+                          className={`group flex flex-col items-center gap-1 rounded-md border p-1.5 text-center transition ${
+                            selected
+                              ? "border-orange-500/60 bg-orange-500/10"
+                              : "border-border/50 bg-background/40 hover:border-orange-500/40 hover:bg-orange-500/5"
+                          }`}
+                          title={g.hype_reason || g.game_name}
+                        >
+                          <div className="relative">
+                            {g.icon_url ? (
+                              <img src={g.icon_url} alt={g.game_name} className="w-8 h-8 rounded object-cover" onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }} />
+                            ) : (
+                              <div className="w-8 h-8 rounded bg-secondary/60 flex items-center justify-center">
+                                <Sparkles size={12} className="text-muted-foreground" />
+                              </div>
+                            )}
+                            <span className="absolute -top-1 -left-1 text-[8px] font-bold bg-orange-500 text-black rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                              {g.priority}
+                            </span>
+                          </div>
+                          <span className="text-[9px] font-medium truncate w-full leading-tight">{g.game_name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+
               <div className="space-y-1.5">
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
                   Parâmetro de atribuição (escolha o equivalente na casa)
