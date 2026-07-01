@@ -57,6 +57,26 @@ export function WithdrawalCyclesAdmin() {
   const [totalCount, setTotalCount] = useState(0);
   const [counts, setCounts] = useState({ all: 0, pending_profile: 0, landed: 0, available: 0 });
   const [stats, setStats] = useState({ landed: 0, available: 0 });
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+
+  // Debounce da busca (300ms)
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  const escapeLike = (s: string) => s.replace(/[%,()]/g, "\\$&");
+
+  // IDs de influencer/manager cujo nome bate com a busca
+  const matchedTargetIds = useMemo(() => {
+    if (!search) return null;
+    const q = search.toLowerCase();
+    const ids = new Set<string>();
+    influencers.forEach((i) => { if (i.name.toLowerCase().includes(q)) ids.add(i.id); });
+    managers.forEach((m) => { if (m.name.toLowerCase().includes(q)) ids.add(m.id); });
+    return Array.from(ids);
+  }, [search, influencers, managers]);
 
   const applyFilter = useCallback((q: any, key: FilterKey) => {
     if (key === "landed" || key === "available") q = q.eq("status", key);
@@ -64,7 +84,17 @@ export function WithdrawalCyclesAdmin() {
     return q;
   }, []);
 
-  // Rows for current page — server-side filter/sort/range
+  const applySearch = useCallback((q: any) => {
+    if (!search) return q;
+    const safe = escapeLike(search);
+    const orParts = [`reference.ilike.%${safe}%`];
+    if (matchedTargetIds && matchedTargetIds.length > 0) {
+      orParts.push(`target_id.in.(${matchedTargetIds.join(",")})`);
+    }
+    return q.or(orParts.join(","));
+  }, [search, matchedTargetIds]);
+
+  // Rows for current page — server-side filter/sort/range/search
   const loadRows = useCallback(async () => {
     setLoading(true);
     const from = (page - 1) * pageSize;
@@ -76,17 +106,19 @@ export function WithdrawalCyclesAdmin() {
       .order(column, { ascending: asc })
       .range(from, to);
     q = applyFilter(q, filter);
+    q = applySearch(q);
     const { data, count } = await q;
     setRows((data ?? []) as CycleRow[]);
     setTotalCount(count ?? 0);
     setLoading(false);
-  }, [page, pageSize, sort, filter, applyFilter]);
+  }, [page, pageSize, sort, filter, applyFilter, applySearch]);
 
-  // Chip counts + monetary stats — one aggregate refresh per load cycle
+  // Chip counts (respeitam a busca) + stats monetários totais
   const loadCounts = useCallback(async () => {
     const head = (key: FilterKey) => {
       let q = supabase.from("withdrawal_cycles").select("id", { count: "exact", head: true });
       q = applyFilter(q, key);
+      q = applySearch(q);
       return q;
     };
     const [all, pending, landed, available, sumLanded, sumAvail] = await Promise.all([
@@ -107,7 +139,7 @@ export function WithdrawalCyclesAdmin() {
       landed: (sumLanded.data ?? []).reduce((a: number, r: any) => a + Number(r.amount), 0),
       available: (sumAvail.data ?? []).reduce((a: number, r: any) => a + Number(r.amount), 0),
     });
-  }, [applyFilter]);
+  }, [applyFilter, applySearch]);
 
   const loadDirectory = useCallback(async () => {
     const [{ data: inf }, { data: mgr }] = await Promise.all([
@@ -126,8 +158,8 @@ export function WithdrawalCyclesAdmin() {
   useEffect(() => { loadRows(); }, [loadRows]);
   useEffect(() => { loadCounts(); }, [loadCounts]);
 
-  // Reset to page 1 when filters/sort change
-  useEffect(() => { setPage(1); }, [filter, sort, pageSize]);
+  // Reset to page 1 when filters/sort/search change
+  useEffect(() => { setPage(1); }, [filter, sort, pageSize, search]);
 
   const refreshAll = () => { loadRows(); loadCounts(); };
 
