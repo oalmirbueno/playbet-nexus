@@ -34,6 +34,15 @@ interface CycleRow {
 type FilterKey = "all" | "pending_profile" | "landed" | "available";
 type SortKey = "created_desc" | "created_asc" | "landed_desc" | "amount_desc";
 
+const PENDING_OR = "notified_landed_at.is.null,and(status.eq.available,notified_available_at.is.null)";
+
+const SORT_MAP: Record<SortKey, { column: string; asc: boolean }> = {
+  created_desc: { column: "created_at", asc: false },
+  created_asc: { column: "created_at", asc: true },
+  landed_desc: { column: "landed_at", asc: false },
+  amount_desc: { column: "amount", asc: false },
+};
+
 export function WithdrawalCyclesAdmin() {
   const [rows, setRows] = useState<CycleRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,56 +52,97 @@ export function WithdrawalCyclesAdmin() {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<FilterKey>("all");
   const [sort, setSort] = useState<SortKey>("created_desc");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
+  const [totalCount, setTotalCount] = useState(0);
+  const [counts, setCounts] = useState({ all: 0, pending_profile: 0, landed: 0, available: 0 });
+  const [stats, setStats] = useState({ landed: 0, available: 0 });
 
-  const load = async () => {
+  const applyFilter = useCallback((q: any, key: FilterKey) => {
+    if (key === "landed" || key === "available") q = q.eq("status", key);
+    else if (key === "pending_profile") q = q.or(PENDING_OR);
+    return q;
+  }, []);
+
+  // Rows for current page — server-side filter/sort/range
+  const loadRows = useCallback(async () => {
     setLoading(true);
-    const [{ data: c }, { data: inf }, { data: mgr }] = await Promise.all([
-      supabase.from("withdrawal_cycles").select("*").order("created_at", { ascending: false }).limit(120),
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+    const { column, asc } = SORT_MAP[sort];
+    let q = supabase
+      .from("withdrawal_cycles")
+      .select("*", { count: "exact" })
+      .order(column, { ascending: asc })
+      .range(from, to);
+    q = applyFilter(q, filter);
+    const { data, count } = await q;
+    setRows((data ?? []) as CycleRow[]);
+    setTotalCount(count ?? 0);
+    setLoading(false);
+  }, [page, pageSize, sort, filter, applyFilter]);
+
+  // Chip counts + monetary stats — one aggregate refresh per load cycle
+  const loadCounts = useCallback(async () => {
+    const head = (key: FilterKey) => {
+      let q = supabase.from("withdrawal_cycles").select("id", { count: "exact", head: true });
+      q = applyFilter(q, key);
+      return q;
+    };
+    const [all, pending, landed, available, sumLanded, sumAvail] = await Promise.all([
+      head("all"),
+      head("pending_profile"),
+      head("landed"),
+      head("available"),
+      supabase.from("withdrawal_cycles").select("amount").eq("status", "landed"),
+      supabase.from("withdrawal_cycles").select("amount").eq("status", "available"),
+    ]);
+    setCounts({
+      all: all.count ?? 0,
+      pending_profile: pending.count ?? 0,
+      landed: landed.count ?? 0,
+      available: available.count ?? 0,
+    });
+    setStats({
+      landed: (sumLanded.data ?? []).reduce((a: number, r: any) => a + Number(r.amount), 0),
+      available: (sumAvail.data ?? []).reduce((a: number, r: any) => a + Number(r.amount), 0),
+    });
+  }, [applyFilter]);
+
+  const loadDirectory = useCallback(async () => {
+    const [{ data: inf }, { data: mgr }] = await Promise.all([
       supabase.from("influencers").select("id,name").eq("is_active", true).order("name"),
       supabase.from("managers").select("id,name").eq("is_active", true).order("name"),
     ]);
-    setRows((c ?? []) as CycleRow[]);
     setInfluencers(inf ?? []);
     setManagers(mgr ?? []);
     const map: Record<string, string> = {};
     (inf ?? []).forEach((i: any) => { map[i.id] = i.name; });
     (mgr ?? []).forEach((m: any) => { map[m.id] = m.name; });
     setNameById(map);
-    setLoading(false);
-  };
+  }, []);
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { loadDirectory(); }, [loadDirectory]);
+  useEffect(() => { loadRows(); }, [loadRows]);
+  useEffect(() => { loadCounts(); }, [loadCounts]);
+
+  // Reset to page 1 when filters/sort change
+  useEffect(() => { setPage(1); }, [filter, sort, pageSize]);
+
+  const refreshAll = () => { loadRows(); loadCounts(); };
 
   const isPendingProfile = (r: CycleRow) =>
     !r.notified_landed_at || (r.status === "available" && !r.notified_available_at);
 
-  const stats = useMemo(() => {
-    const landed = rows.filter((r) => r.status === "landed").reduce((a, r) => a + Number(r.amount), 0);
-    const available = rows.filter((r) => r.status === "available").reduce((a, r) => a + Number(r.amount), 0);
-    const pending = rows.filter(isPendingProfile).length;
-    return { landed, available, count: rows.length, pending };
-  }, [rows]);
-
-  const visibleRows = useMemo(() => {
-    let list = rows.filter((r) => {
-      if (filter === "all") return true;
-      if (filter === "pending_profile") return isPendingProfile(r);
-      return r.status === filter;
-    });
-    const cmp: Record<SortKey, (a: CycleRow, b: CycleRow) => number> = {
-      created_desc: (a, b) => +new Date(b.created_at) - +new Date(a.created_at),
-      created_asc: (a, b) => +new Date(a.created_at) - +new Date(b.created_at),
-      landed_desc: (a, b) => +new Date(b.landed_at) - +new Date(a.landed_at),
-      amount_desc: (a, b) => Number(b.amount) - Number(a.amount),
-    };
-    return [...list].sort(cmp[sort]);
-  }, [rows, filter, sort]);
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const rangeStart = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
+  const rangeEnd = Math.min(page * pageSize, totalCount);
 
   const filterOptions: { key: FilterKey; label: string; count: number }[] = [
-    { key: "all", label: "Todos", count: rows.length },
-    { key: "pending_profile", label: "Aguardando cadastro", count: stats.pending },
-    { key: "landed", label: "Aguardando liberar", count: rows.filter((r) => r.status === "landed").length },
-    { key: "available", label: "Liberados", count: rows.filter((r) => r.status === "available").length },
+    { key: "all", label: "Todos", count: counts.all },
+    { key: "pending_profile", label: "Aguardando cadastro", count: counts.pending_profile },
+    { key: "landed", label: "Aguardando liberar", count: counts.landed },
+    { key: "available", label: "Liberados", count: counts.available },
   ];
 
   return (
@@ -155,6 +205,8 @@ export function WithdrawalCyclesAdmin() {
           </Select>
         </div>
       </div>
+
+
 
 
 
