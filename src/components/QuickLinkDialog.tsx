@@ -128,7 +128,19 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
 
   const trackingCode = useMemo(() => subid || `link-${Date.now().toString(36)}`, [subid]);
 
-  const canSave = influencerId && rawLink.trim() && (accountId || detectedPlatform);
+  // Duplicate guard: same influencer × account × LP already has a link
+  const { data: existingLinks } = useTrackingLinks();
+  const duplicate = useMemo(() => {
+    if (!influencerId || !accountId) return null;
+    return existingLinks.find((l: any) =>
+      l.influencer_id === influencerId &&
+      l.platform_account_id === accountId &&
+      (l.landing_page_id ?? null) === (landingPageId || null)
+    ) || null;
+  }, [existingLinks, influencerId, accountId, landingPageId]);
+
+  const canSave = influencerId && rawLink.trim() && (accountId || detectedPlatform) && !duplicate;
+
 
   const handleSave = async () => {
     if (!canSave) {
