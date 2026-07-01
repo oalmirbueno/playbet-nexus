@@ -15,7 +15,7 @@ export default function PortalLinks() {
       if (!prof?.influencer_id) { setLoading(false); return; }
       const { data } = await supabase
         .from("tracking_links")
-        .select("id, short_url, full_url, created_at, platform_account_id")
+        .select("id, short_url, final_url, created_at, platform_account_id")
         .eq("influencer_id", prof.influencer_id)
         .order("created_at", { ascending: false });
       setLinks(data ?? []);
