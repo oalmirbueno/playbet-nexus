@@ -224,10 +224,12 @@
   display: none;
 }
 .invisible-scroll,
-.sidebar-scroll {
+.sidebar-scroll,
+.scrollbar-none {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
+.scrollbar-none::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
 /* Minimal overlay scrollbar - 3px hairline, fades in on hover/scroll */
 .main-scroll {
