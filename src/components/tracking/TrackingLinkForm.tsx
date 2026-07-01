@@ -216,6 +216,73 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
     toast({ title: `Aplicado: ${g.game_name}`, description: g.hype_reason || "Jogo em alta selecionado." });
   };
 
+  const applyAllHypedBatch = async () => {
+    if (form.id) {
+      toast({ title: "Batch indisponível", description: "Use lote apenas ao criar um link novo.", variant: "destructive" });
+      return;
+    }
+    if (!form.influencer_id || !form.platform_account_id || !form.base_url) {
+      toast({ title: "Faltam dados", description: "Preencha influencer, conta e link de afiliado antes.", variant: "destructive" });
+      return;
+    }
+    if (useLp && !form.landing_page_instance_id) {
+      toast({ title: "Faltam dados", description: "Selecione a landing page.", variant: "destructive" });
+      return;
+    }
+    if (!hypedGames.length) return;
+
+    setBatchApplying(true);
+    try {
+      // Persist affiliate URL on the LP instance once (Com LP)
+      if (useLp && selectedInstance && selectedInstance.affiliate_link !== form.base_url) {
+        await landingPageInstanceService.update(selectedInstance.id, { affiliate_link: form.base_url });
+        await qc.invalidateQueries({ queryKey: ["landing_page_instances"] });
+      }
+
+      const rows = hypedGames.map((g: any) => ({
+        influencer_id: form.influencer_id,
+        platform_account_id: form.platform_account_id,
+        landing_page_id: useLp ? (form.landing_page_id || null) : null,
+        landing_page_instance_id: useLp ? (form.landing_page_instance_id || null) : null,
+        campanha_id: form.campanha_id || null,
+        conteudo_id: form.conteudo_id || null,
+        base_url: form.base_url,
+        final_url: finalUrl,
+        short_url: form.short_url || null,
+        click_id_param_name: form.click_id_param_name,
+        tracking_role: form.tracking_role,
+        notes: form.notes || null,
+        use_lp: useLp,
+        game_slug: g.game_slug,
+        game_name: g.game_name,
+        game_icon_url: g.icon_url || null,
+        link_category: g.category || form.link_category || null,
+        hype_reason: g.hype_reason || null,
+        hype_priority: g.priority ?? null,
+      }));
+
+      const { data: inserted, error } = await (supabase as any)
+        .from("tracking_links")
+        .insert(rows)
+        .select("id, game_name");
+
+      if (error) throw error;
+      await qc.invalidateQueries({ queryKey: ["tracking_links"] });
+      toast({
+        title: `${inserted?.length ?? rows.length} links criados em lote`,
+        description: (inserted ?? rows).map((r: any) => r.game_name).filter(Boolean).join(", "),
+      });
+      onOpenChange(false);
+    } catch (e: any) {
+      const msg = e?.message?.includes("duplicate") || e?.code === "23505"
+        ? "Alguns jogos já têm link para este influencer/LP. Remova os duplicados e tente de novo."
+        : (e?.message || "Falha ao criar links em lote.");
+      toast({ title: "Erro no lote", description: msg, variant: "destructive" });
+    } finally {
+      setBatchApplying(false);
+    }
+  };
+
   // LPs where this influencer already has an instance (resolved + ready)
   const lpsForInfluencer = useMemo(() => {
     if (!form.influencer_id) return [] as any[];
