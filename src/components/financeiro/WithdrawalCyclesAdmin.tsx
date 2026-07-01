@@ -27,6 +27,8 @@ interface CycleRow {
   reference: string | null;
   notes: string | null;
   created_at: string;
+  notified_landed_at: string | null;
+  notified_available_at: string | null;
 }
 
 export function WithdrawalCyclesAdmin() {
