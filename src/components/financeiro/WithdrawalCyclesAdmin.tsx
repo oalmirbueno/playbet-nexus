@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Coins, Plus, CalendarClock, Loader2, CheckCircle2, XCircle, UserX, ChevronLeft, ChevronRight } from "lucide-react";
+import { Coins, Plus, CalendarClock, Loader2, CheckCircle2, XCircle, UserX, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -57,6 +57,26 @@ export function WithdrawalCyclesAdmin() {
   const [totalCount, setTotalCount] = useState(0);
   const [counts, setCounts] = useState({ all: 0, pending_profile: 0, landed: 0, available: 0 });
   const [stats, setStats] = useState({ landed: 0, available: 0 });
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+
+  // Debounce da busca (300ms)
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
+
+  const escapeLike = (s: string) => s.replace(/[%,()]/g, "\\$&");
+
+  // IDs de influencer/manager cujo nome bate com a busca
+  const matchedTargetIds = useMemo(() => {
+    if (!search) return null;
+    const q = search.toLowerCase();
+    const ids = new Set<string>();
+    influencers.forEach((i) => { if (i.name.toLowerCase().includes(q)) ids.add(i.id); });
+    managers.forEach((m) => { if (m.name.toLowerCase().includes(q)) ids.add(m.id); });
+    return Array.from(ids);
+  }, [search, influencers, managers]);
 
   const applyFilter = useCallback((q: any, key: FilterKey) => {
     if (key === "landed" || key === "available") q = q.eq("status", key);
@@ -64,7 +84,17 @@ export function WithdrawalCyclesAdmin() {
     return q;
   }, []);
 
-  // Rows for current page — server-side filter/sort/range
+  const applySearch = useCallback((q: any) => {
+    if (!search) return q;
+    const safe = escapeLike(search);
+    const orParts = [`reference.ilike.%${safe}%`];
+    if (matchedTargetIds && matchedTargetIds.length > 0) {
+      orParts.push(`target_id.in.(${matchedTargetIds.join(",")})`);
+    }
+    return q.or(orParts.join(","));
+  }, [search, matchedTargetIds]);
+
+  // Rows for current page — server-side filter/sort/range/search
   const loadRows = useCallback(async () => {
     setLoading(true);
     const from = (page - 1) * pageSize;
@@ -76,17 +106,19 @@ export function WithdrawalCyclesAdmin() {
       .order(column, { ascending: asc })
       .range(from, to);
     q = applyFilter(q, filter);
+    q = applySearch(q);
     const { data, count } = await q;
     setRows((data ?? []) as CycleRow[]);
     setTotalCount(count ?? 0);
     setLoading(false);
-  }, [page, pageSize, sort, filter, applyFilter]);
+  }, [page, pageSize, sort, filter, applyFilter, applySearch]);
 
-  // Chip counts + monetary stats — one aggregate refresh per load cycle
+  // Chip counts (respeitam a busca) + stats monetários totais
   const loadCounts = useCallback(async () => {
     const head = (key: FilterKey) => {
       let q = supabase.from("withdrawal_cycles").select("id", { count: "exact", head: true });
       q = applyFilter(q, key);
+      q = applySearch(q);
       return q;
     };
     const [all, pending, landed, available, sumLanded, sumAvail] = await Promise.all([
@@ -107,7 +139,7 @@ export function WithdrawalCyclesAdmin() {
       landed: (sumLanded.data ?? []).reduce((a: number, r: any) => a + Number(r.amount), 0),
       available: (sumAvail.data ?? []).reduce((a: number, r: any) => a + Number(r.amount), 0),
     });
-  }, [applyFilter]);
+  }, [applyFilter, applySearch]);
 
   const loadDirectory = useCallback(async () => {
     const [{ data: inf }, { data: mgr }] = await Promise.all([
@@ -126,8 +158,8 @@ export function WithdrawalCyclesAdmin() {
   useEffect(() => { loadRows(); }, [loadRows]);
   useEffect(() => { loadCounts(); }, [loadCounts]);
 
-  // Reset to page 1 when filters/sort change
-  useEffect(() => { setPage(1); }, [filter, sort, pageSize]);
+  // Reset to page 1 when filters/sort/search change
+  useEffect(() => { setPage(1); }, [filter, sort, pageSize, search]);
 
   const refreshAll = () => { loadRows(); loadCounts(); };
 
@@ -190,7 +222,26 @@ export function WithdrawalCyclesAdmin() {
             );
           })}
         </div>
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Buscar nome ou referência…"
+              className="h-7 text-xs pl-8 pr-7 w-[230px]"
+            />
+            {searchInput && (
+              <button
+                type="button"
+                onClick={() => setSearchInput("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                aria-label="Limpar busca"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Ordenar</span>
           <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
             <SelectTrigger className="h-7 text-xs w-[190px]">
@@ -212,7 +263,7 @@ export function WithdrawalCyclesAdmin() {
 
       {loading && rows.length === 0 ? (
         <div className="p-6 text-sm text-muted-foreground">Carregando…</div>
-      ) : totalCount === 0 && filter === "all" ? (
+      ) : totalCount === 0 && filter === "all" && !search ? (
         <div className="p-10 text-center">
           <CalendarClock className="mx-auto mb-2 text-muted-foreground" size={22} />
           <p className="text-sm font-medium">Nenhum ciclo registrado ainda</p>
@@ -222,9 +273,9 @@ export function WithdrawalCyclesAdmin() {
         </div>
       ) : rows.length === 0 ? (
         <div className="p-10 text-center">
-          <UserX className="mx-auto mb-2 text-muted-foreground" size={22} />
-          <p className="text-sm font-medium">Nenhum ciclo neste filtro</p>
-          <p className="text-xs text-muted-foreground mt-1">Ajuste o filtro acima para ver outros ciclos.</p>
+          {search ? <Search className="mx-auto mb-2 text-muted-foreground" size={22} /> : <UserX className="mx-auto mb-2 text-muted-foreground" size={22} />}
+          <p className="text-sm font-medium">{search ? `Nenhum resultado para "${search}"` : "Nenhum ciclo neste filtro"}</p>
+          <p className="text-xs text-muted-foreground mt-1">{search ? "Tente outro nome ou referência." : "Ajuste o filtro acima para ver outros ciclos."}</p>
         </div>
       ) : (
         <div className={`overflow-x-auto max-h-[420px] ${loading ? "opacity-60" : ""}`}>
