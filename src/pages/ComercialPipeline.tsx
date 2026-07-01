@@ -59,6 +59,11 @@ interface Card {
   checklist_progress: number;
   stage_moved_at: string;
   notes: string | null;
+  role_type: "influencer" | "gerente" | null;
+  generated_email: string | null;
+  generated_password: string | null;
+  generated_user_id: string | null;
+  credentials_generated_at: string | null;
 }
 
 interface Squad { id: string; name: string; color: string }
