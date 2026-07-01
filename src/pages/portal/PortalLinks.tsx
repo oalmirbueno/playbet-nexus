@@ -102,8 +102,13 @@ export default function PortalLinks() {
           status: l.status,
           share_url: share || l.short_url || l.final_url || l.base_url || "",
           platform_name: acc?.platforms?.name || acc?.nome_conta,
+          platform_id: acc?.platform_id ?? null,
           lp_name: lp?.name,
           lp_domain: lp?.domain,
+          game_name: l.game_name,
+          game_icon_url: l.game_icon_url,
+          link_category: l.link_category,
+          hype_reason: l.hype_reason,
           metrics: metricsByAcc.get(l.platform_account_id || "_") ?? { clicks: 0, regs: 0, ftd: 0, revenue: 0 },
         };
       });
