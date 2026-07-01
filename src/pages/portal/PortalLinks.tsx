@@ -45,10 +45,11 @@ export default function PortalLinks() {
           .select(`
             id, tracking_code, created_at, status, base_url, final_url, short_url,
             click_id_param_name, landing_page_instance_id, landing_page_id, platform_account_id,
-            game_name, game_icon_url, link_category, hype_reason
+            game_name, game_icon_url, link_category, hype_reason, hype_priority
           `)
           .eq("influencer_id", infId)
           .eq("is_demo", false)
+          .order("hype_priority", { ascending: true, nullsFirst: false })
           .order("created_at", { ascending: false }),
         supabase
           .from("tracking_metrics")
