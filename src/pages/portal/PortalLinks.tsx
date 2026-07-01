@@ -91,7 +91,7 @@ export default function PortalLinks() {
           created_at: l.created_at,
           status: l.status,
           share_url: share || l.short_url || l.final_url || l.base_url || "",
-          platform_name: acc?.platforms?.name || acc?.display_name,
+          platform_name: acc?.platforms?.name || acc?.nome_conta,
           lp_name: lp?.name,
           lp_domain: lp?.domain,
           metrics: metricsByAcc.get(l.platform_account_id || "_") ?? { clicks: 0, regs: 0, ftd: 0, revenue: 0 },
