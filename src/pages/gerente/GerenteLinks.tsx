@@ -218,11 +218,19 @@ export default function GerenteLinks() {
                     {l.lp_name && (
                       <span className="text-[10px] uppercase tracking-[0.16em] px-2 py-0.5 rounded-full bg-secondary/60 text-muted-foreground border border-border/40">LP · {l.lp_name}</span>
                     )}
+                    {l.game_name && (
+                      <span className="text-[10px] uppercase tracking-[0.16em] px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/25 inline-flex items-center gap-1">
+                        <Flame size={10} /> {l.game_name}
+                      </span>
+                    )}
                     <span className={`text-[10px] uppercase tracking-[0.16em] px-2 py-0.5 rounded-full border ${l.status === "paused" ? "bg-muted/40 text-muted-foreground border-border/40" : "bg-success/10 text-success border-success/20"}`}>
                       {l.status === "paused" ? "pausado" : "ativo"}
                     </span>
                   </div>
                   <p className="text-[12px] font-mono truncate text-foreground/90" title={l.share_url}>{l.share_url}</p>
+                  {l.hype_reason && (
+                    <p className="text-[11px] text-orange-400/90 mt-1 italic">💡 {l.hype_reason}</p>
+                  )}
                   <p className="text-[11px] text-muted-foreground mt-1">
                     Código <span className="font-mono">{l.tracking_code}</span> · criado em {new Date(l.created_at).toLocaleDateString("pt-BR")}
                   </p>
