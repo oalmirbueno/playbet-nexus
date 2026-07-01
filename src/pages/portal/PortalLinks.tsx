@@ -46,7 +46,7 @@ export default function PortalLinks() {
       ) : (
         <div className="space-y-2">
           {links.map((l) => {
-            const url = l.short_url || l.full_url;
+            const url = l.short_url || l.final_url;
             return (
               <div key={l.id} className="glass-card p-3 md:p-4 flex items-center gap-3">
                 <div className="flex-1 min-w-0">
