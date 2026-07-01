@@ -31,6 +31,9 @@ interface CycleRow {
   notified_available_at: string | null;
 }
 
+type FilterKey = "all" | "pending_profile" | "landed" | "available";
+type SortKey = "created_desc" | "created_asc" | "landed_desc" | "amount_desc";
+
 export function WithdrawalCyclesAdmin() {
   const [rows, setRows] = useState<CycleRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,11 +41,13 @@ export function WithdrawalCyclesAdmin() {
   const [managers, setManagers] = useState<{ id: string; name: string }[]>([]);
   const [nameById, setNameById] = useState<Record<string, string>>({});
   const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState<FilterKey>("all");
+  const [sort, setSort] = useState<SortKey>("created_desc");
 
   const load = async () => {
     setLoading(true);
     const [{ data: c }, { data: inf }, { data: mgr }] = await Promise.all([
-      supabase.from("withdrawal_cycles").select("*").order("landed_at", { ascending: false }).limit(60),
+      supabase.from("withdrawal_cycles").select("*").order("created_at", { ascending: false }).limit(120),
       supabase.from("influencers").select("id,name").eq("is_active", true).order("name"),
       supabase.from("managers").select("id,name").eq("is_active", true).order("name"),
     ]);
@@ -58,11 +63,37 @@ export function WithdrawalCyclesAdmin() {
 
   useEffect(() => { load(); }, []);
 
+  const isPendingProfile = (r: CycleRow) =>
+    !r.notified_landed_at || (r.status === "available" && !r.notified_available_at);
+
   const stats = useMemo(() => {
     const landed = rows.filter((r) => r.status === "landed").reduce((a, r) => a + Number(r.amount), 0);
     const available = rows.filter((r) => r.status === "available").reduce((a, r) => a + Number(r.amount), 0);
-    return { landed, available, count: rows.length };
+    const pending = rows.filter(isPendingProfile).length;
+    return { landed, available, count: rows.length, pending };
   }, [rows]);
+
+  const visibleRows = useMemo(() => {
+    let list = rows.filter((r) => {
+      if (filter === "all") return true;
+      if (filter === "pending_profile") return isPendingProfile(r);
+      return r.status === filter;
+    });
+    const cmp: Record<SortKey, (a: CycleRow, b: CycleRow) => number> = {
+      created_desc: (a, b) => +new Date(b.created_at) - +new Date(a.created_at),
+      created_asc: (a, b) => +new Date(a.created_at) - +new Date(b.created_at),
+      landed_desc: (a, b) => +new Date(b.landed_at) - +new Date(a.landed_at),
+      amount_desc: (a, b) => Number(b.amount) - Number(a.amount),
+    };
+    return [...list].sort(cmp[sort]);
+  }, [rows, filter, sort]);
+
+  const filterOptions: { key: FilterKey; label: string; count: number }[] = [
+    { key: "all", label: "Todos", count: rows.length },
+    { key: "pending_profile", label: "Aguardando cadastro", count: stats.pending },
+    { key: "landed", label: "Aguardando liberar", count: rows.filter((r) => r.status === "landed").length },
+    { key: "available", label: "Liberados", count: rows.filter((r) => r.status === "available").length },
+  ];
 
   return (
     <div className="rounded-xl border border-border/60 bg-card/40 overflow-hidden">
@@ -87,6 +118,46 @@ export function WithdrawalCyclesAdmin() {
         </div>
       </div>
 
+      <div className="px-5 py-2.5 border-b border-border/40 flex flex-wrap items-center gap-2 bg-secondary/10">
+        <div className="flex flex-wrap items-center gap-1">
+          {filterOptions.map((opt) => {
+            const active = filter === opt.key;
+            return (
+              <button
+                key={opt.key}
+                onClick={() => setFilter(opt.key)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[11px] transition-colors ${
+                  active
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-transparent hover:bg-secondary/60 border-border/60 text-muted-foreground"
+                }`}
+              >
+                {opt.label}
+                <span className={`tabular-nums text-[10px] px-1.5 py-0.5 rounded-full ${active ? "bg-primary-foreground/20" : "bg-secondary/70"}`}>
+                  {opt.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Ordenar</span>
+          <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
+            <SelectTrigger className="h-7 text-xs w-[190px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="created_desc">Criação (mais recente)</SelectItem>
+              <SelectItem value="created_asc">Criação (mais antigo)</SelectItem>
+              <SelectItem value="landed_desc">Data de chegada</SelectItem>
+              <SelectItem value="amount_desc">Maior valor</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+
+
       {loading ? (
         <div className="p-6 text-sm text-muted-foreground">Carregando…</div>
       ) : rows.length === 0 ? (
@@ -96,6 +167,12 @@ export function WithdrawalCyclesAdmin() {
           <p className="text-xs text-muted-foreground mt-1">
             Ao registrar, o influenciador ou gerente é notificado automaticamente.
           </p>
+        </div>
+      ) : visibleRows.length === 0 ? (
+        <div className="p-10 text-center">
+          <UserX className="mx-auto mb-2 text-muted-foreground" size={22} />
+          <p className="text-sm font-medium">Nenhum ciclo neste filtro</p>
+          <p className="text-xs text-muted-foreground mt-1">Ajuste o filtro acima para ver outros ciclos.</p>
         </div>
       ) : (
         <div className="overflow-x-auto max-h-[420px]">
@@ -112,7 +189,7 @@ export function WithdrawalCyclesAdmin() {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => {
+              {visibleRows.map((r) => {
                 const pending = !r.notified_landed_at || (r.status === "available" && !r.notified_available_at);
                 return (
                 <tr key={r.id} className="border-t border-border/40 hover:bg-secondary/20">
