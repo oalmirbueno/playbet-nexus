@@ -66,7 +66,7 @@ export default function GerenteRanking() {
       setRows(Object.values(byInf));
       setLoading(false);
     })();
-  }, [user, period]);
+  }, [user, period, revision]);
 
   const sorted = useMemo(() => {
     const filtered = q ? rows.filter(r => (r.name + (r.instagram ?? "") + r.slug).toLowerCase().includes(q.toLowerCase())) : rows;
