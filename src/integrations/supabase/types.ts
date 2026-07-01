@@ -492,10 +492,14 @@ export type Database = {
           content_info: Json | null
           created_at: string
           created_by: string | null
+          credentials_generated_at: string | null
           document: string | null
           documents: Json | null
           email: string | null
           financial_info: Json | null
+          generated_email: string | null
+          generated_password: string | null
+          generated_user_id: string | null
           handle: string | null
           id: string
           influencer_id: string | null
@@ -509,6 +513,7 @@ export type Database = {
           position: number
           primary_channel: string | null
           responded_at: string | null
+          role_type: string | null
           social_profiles: Json | null
           source: string | null
           squad_id: string | null
@@ -527,10 +532,14 @@ export type Database = {
           content_info?: Json | null
           created_at?: string
           created_by?: string | null
+          credentials_generated_at?: string | null
           document?: string | null
           documents?: Json | null
           email?: string | null
           financial_info?: Json | null
+          generated_email?: string | null
+          generated_password?: string | null
+          generated_user_id?: string | null
           handle?: string | null
           id?: string
           influencer_id?: string | null
@@ -544,6 +553,7 @@ export type Database = {
           position?: number
           primary_channel?: string | null
           responded_at?: string | null
+          role_type?: string | null
           social_profiles?: Json | null
           source?: string | null
           squad_id?: string | null
@@ -562,10 +572,14 @@ export type Database = {
           content_info?: Json | null
           created_at?: string
           created_by?: string | null
+          credentials_generated_at?: string | null
           document?: string | null
           documents?: Json | null
           email?: string | null
           financial_info?: Json | null
+          generated_email?: string | null
+          generated_password?: string | null
+          generated_user_id?: string | null
           handle?: string | null
           id?: string
           influencer_id?: string | null
@@ -579,6 +593,7 @@ export type Database = {
           position?: number
           primary_channel?: string | null
           responded_at?: string | null
+          role_type?: string | null
           social_profiles?: Json | null
           source?: string | null
           squad_id?: string | null
