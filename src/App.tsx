@@ -69,6 +69,8 @@ import GerenteRanking from "./pages/gerente/GerenteRanking";
 import GerenteInfluenciadores from "./pages/gerente/GerenteInfluenciadores";
 import GerenteLinks from "./pages/gerente/GerenteLinks";
 import GerenteOportunidades from "./pages/gerente/GerenteOportunidades";
+import GerenteFinanceiro from "./pages/gerente/GerenteFinanceiro";
+import GerenteSaques from "./pages/gerente/GerenteSaques";
 import GerentePerfil from "./pages/gerente/GerentePerfil";
 
 const queryClient = new QueryClient();
@@ -156,6 +158,8 @@ function ManagerRoutes() {
         <Route path="/gerente/influenciadores" element={<GerenteInfluenciadores />} />
         <Route path="/gerente/links" element={<GerenteLinks />} />
         <Route path="/gerente/oportunidades" element={<GerenteOportunidades />} />
+        <Route path="/gerente/financeiro" element={<GerenteFinanceiro />} />
+        <Route path="/gerente/saques" element={<GerenteSaques />} />
         <Route path="/gerente/perfil" element={<GerentePerfil />} />
         <Route path="/influencers/:id" element={<InfluencerDetalhe />} />
         <Route path="*" element={<Navigate to="/gerente" replace />} />

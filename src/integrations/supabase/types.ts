@@ -1267,6 +1267,9 @@ export type Database = {
           monthly_goal: number | null
           name: string
           notes: string | null
+          pix_key: string | null
+          pix_key_type: string | null
+          share_url: string | null
           slug: string
           squad_id: string | null
           team_color: string
@@ -1283,6 +1286,9 @@ export type Database = {
           monthly_goal?: number | null
           name: string
           notes?: string | null
+          pix_key?: string | null
+          pix_key_type?: string | null
+          share_url?: string | null
           slug: string
           squad_id?: string | null
           team_color?: string
@@ -1299,6 +1305,9 @@ export type Database = {
           monthly_goal?: number | null
           name?: string
           notes?: string | null
+          pix_key?: string | null
+          pix_key_type?: string | null
+          share_url?: string | null
           slug?: string
           squad_id?: string | null
           team_color?: string
@@ -1636,6 +1645,7 @@ export type Database = {
           id: string
           influencer_id: string | null
           is_demo: boolean
+          manager_id: string | null
           nome: string
           origem: string | null
           paid_at: string | null
@@ -1663,6 +1673,7 @@ export type Database = {
           id?: string
           influencer_id?: string | null
           is_demo?: boolean
+          manager_id?: string | null
           nome: string
           origem?: string | null
           paid_at?: string | null
@@ -1690,6 +1701,7 @@ export type Database = {
           id?: string
           influencer_id?: string | null
           is_demo?: boolean
+          manager_id?: string | null
           nome?: string
           origem?: string | null
           paid_at?: string | null
@@ -1708,6 +1720,13 @@ export type Database = {
             columns: ["influencer_id"]
             isOneToOne: false
             referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saques_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
             referencedColumns: ["id"]
           },
         ]
