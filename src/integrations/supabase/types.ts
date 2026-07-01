@@ -1557,6 +1557,7 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          city: string | null
           created_at: string | null
           email: string | null
           full_name: string | null
@@ -1565,10 +1566,14 @@ export type Database = {
           is_active: boolean | null
           last_sign_in_at: string | null
           manager_id: string | null
+          phone: string | null
+          pix_key: string | null
+          pix_key_type: string | null
           updated_at: string | null
         }
         Insert: {
           avatar_url?: string | null
+          city?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
@@ -1577,10 +1582,14 @@ export type Database = {
           is_active?: boolean | null
           last_sign_in_at?: string | null
           manager_id?: string | null
+          phone?: string | null
+          pix_key?: string | null
+          pix_key_type?: string | null
           updated_at?: string | null
         }
         Update: {
           avatar_url?: string | null
+          city?: string | null
           created_at?: string | null
           email?: string | null
           full_name?: string | null
@@ -1589,6 +1598,9 @@ export type Database = {
           is_active?: boolean | null
           last_sign_in_at?: string | null
           manager_id?: string | null
+          phone?: string | null
+          pix_key?: string | null
+          pix_key_type?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -1618,6 +1630,7 @@ export type Database = {
           created_at: string | null
           data: string | null
           id: string
+          influencer_id: string | null
           is_demo: boolean
           nome: string
           origem: string | null
@@ -1638,6 +1651,7 @@ export type Database = {
           created_at?: string | null
           data?: string | null
           id?: string
+          influencer_id?: string | null
           is_demo?: boolean
           nome: string
           origem?: string | null
@@ -1658,6 +1672,7 @@ export type Database = {
           created_at?: string | null
           data?: string | null
           id?: string
+          influencer_id?: string | null
           is_demo?: boolean
           nome?: string
           origem?: string | null
@@ -1669,7 +1684,15 @@ export type Database = {
           updated_at?: string | null
           valor?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "saques_influencer_id_fkey"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       socios: {
         Row: {
