@@ -154,7 +154,7 @@ export default function ComercialPipeline() {
       </div>
 
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="flex-1 overflow-x-auto px-6 py-5">
+        <div className="flex-1 overflow-x-auto scrollbar-none px-4 md:px-6 py-5">
           <div className="flex gap-4 min-w-max h-full">
             {STAGES.map(stage => (
               <Column
