@@ -252,6 +252,7 @@ export default function PortalLinks() {
                     {l.game_name && (
                       <span className="text-[10px] uppercase tracking-[0.16em] px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 border border-orange-500/25 inline-flex items-center gap-1">
                         <Flame size={10} /> {l.game_name}
+                        {l.hype_priority ? <span className="ml-1 px-1 rounded bg-orange-500/20 text-[9px] font-bold">#{l.hype_priority}</span> : null}
                       </span>
                     )}
                     <span className={`text-[10px] uppercase tracking-[0.16em] px-2 py-0.5 rounded-full border ${l.status === "active" || !l.status ? "bg-success/10 text-success border-success/20" : "bg-muted/40 text-muted-foreground border-border/40"}`}>
