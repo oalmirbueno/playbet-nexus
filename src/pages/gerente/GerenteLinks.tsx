@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useManagerSync } from "@/hooks/useManagerSync";
 import { Copy, ExternalLink, Link2, Search, Power, PowerOff, ShieldAlert } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { resolveShareUrl } from "@/lib/trackingUrl";
@@ -22,6 +23,7 @@ interface EnrichedLink {
 
 export default function GerenteLinks() {
   const { user } = useAuth();
+  const { revision } = useManagerSync();
   const [links, setLinks] = useState<EnrichedLink[]>([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -107,7 +109,7 @@ export default function GerenteLinks() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [user]);
+  useEffect(() => { load(); }, [user, revision]);
 
   const filtered = useMemo(() => {
     return links.filter(l => {

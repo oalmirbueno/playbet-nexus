@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useManagerSync } from "@/hooks/useManagerSync";
 import { Wallet, Plus, Check, Clock, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
@@ -9,6 +10,7 @@ interface SaqueRow { id: string; codigo: string; valor: number; status: string |
 
 export default function GerenteSaques() {
   const { user } = useAuth();
+  const { revision } = useManagerSync();
   const [rows, setRows] = useState<SaqueRow[]>([]);
   const [mgr, setMgr] = useState<any>(null);
   const [amount, setAmount] = useState("");
@@ -45,7 +47,7 @@ export default function GerenteSaques() {
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [user]);
+  useEffect(() => { load(); }, [user, revision]);
 
   const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const pixMissing = !mgr?.pix_key || !mgr?.pix_key_type;

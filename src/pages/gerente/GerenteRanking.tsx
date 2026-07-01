@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useManagerSync } from "@/hooks/useManagerSync";
 import { Trophy, Medal, Search } from "lucide-react";
 
 type Row = {
@@ -18,6 +19,7 @@ const PERIODS = [
 
 export default function GerenteRanking() {
   const { user } = useAuth();
+  const { revision } = useManagerSync();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<typeof PERIODS[number]["key"]>("30d");
@@ -64,7 +66,7 @@ export default function GerenteRanking() {
       setRows(Object.values(byInf));
       setLoading(false);
     })();
-  }, [user, period]);
+  }, [user, period, revision]);
 
   const sorted = useMemo(() => {
     const filtered = q ? rows.filter(r => (r.name + (r.instagram ?? "") + r.slug).toLowerCase().includes(q.toLowerCase())) : rows;

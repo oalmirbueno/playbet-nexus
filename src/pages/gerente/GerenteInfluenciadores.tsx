@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useManagerSync } from "@/hooks/useManagerSync";
 import { Search, Users } from "lucide-react";
 
 type Row = {
@@ -12,6 +13,7 @@ type Row = {
 
 export default function GerenteInfluenciadores() {
   const { user } = useAuth();
+  const { revision } = useManagerSync();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
@@ -40,7 +42,7 @@ export default function GerenteInfluenciadores() {
       setRows((infs ?? []).map(i => ({ ...i, ...(agg.get(i.id) ?? { clicks: 0, ftd: 0, revenue: 0 }) })));
       setLoading(false);
     })();
-  }, [user]);
+  }, [user, revision]);
 
   const filtered = useMemo(() => rows.filter(r => {
     if (statusFilter === "active" && !r.is_active) return false;

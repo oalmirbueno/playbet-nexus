@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useManagerSync } from "@/hooks/useManagerSync";
 import { Wallet, TrendingUp, Users, ArrowRight, Percent, Info } from "lucide-react";
 
 type InfBreakdown = { id: string; name: string; slug: string; revenue: number; ftd: number };
 
 export default function GerenteFinanceiro() {
   const { user } = useAuth();
+  const { revision } = useManagerSync();
   const [loading, setLoading] = useState(true);
   const [mgr, setMgr] = useState<any>(null);
   const [squadRevenue, setSquadRevenue] = useState(0);
@@ -52,7 +54,7 @@ export default function GerenteFinanceiro() {
       setSaques(sq ?? []);
       setLoading(false);
     })();
-  }, [user]);
+  }, [user, revision]);
 
   const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   const pct = Number(mgr?.commission_percent ?? 0);
