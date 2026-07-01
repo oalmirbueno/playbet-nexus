@@ -41,21 +41,23 @@ export default function PlataformasPage() {
   const [filterTipo, setFilterTipo] = useState("Todos");
   const [refreshing, setRefreshing] = useState(false);
   const [refreshStatus, setRefreshStatus] = useState<null | { ok: boolean; message: string; details?: any; at: string }>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewData, setPreviewData] = useState<HypedPreviewPlatform[]>([]);
 
   const refreshHypedGames = async () => {
     setRefreshing(true);
-    setRefreshStatus({ ok: true, message: "Executando…", at: new Date().toLocaleTimeString("pt-BR") });
+    setRefreshStatus({ ok: true, message: "Buscando candidatos…", at: new Date().toLocaleTimeString("pt-BR") });
     try {
-      const { data: resp, error } = await supabase.functions.invoke("hyped-games-refresh", { body: {} });
+      const { data: resp, error } = await supabase.functions.invoke("hyped-games-refresh", { body: { dry_run: true } });
       if (error) throw error;
-      const updated = resp?.updated ?? resp?.count ?? resp?.platforms_updated;
-      const msg = updated != null
-        ? `Jogos hypados atualizados (${updated} plataforma${updated === 1 ? "" : "s"}).`
-        : "Jogos hypados atualizados.";
+      const prev: HypedPreviewPlatform[] = resp?.preview ?? [];
+      setPreviewData(prev);
+      setPreviewOpen(true);
+      const totalGames = prev.reduce((s, p) => s + p.games.length, 0);
+      const msg = `Prévia pronta: ${prev.length} plataforma(s), ${totalGames} jogo(s). Revise e confirme.`;
       setRefreshStatus({ ok: true, message: msg, details: resp, at: new Date().toLocaleTimeString("pt-BR") });
-      toast({ title: "Atualização concluída", description: msg });
     } catch (e: any) {
-      const msg = e?.message || "Falha ao atualizar jogos hypados.";
+      const msg = e?.message || "Falha ao gerar prévia dos jogos.";
       setRefreshStatus({ ok: false, message: msg, at: new Date().toLocaleTimeString("pt-BR") });
       toast({ title: "Erro", description: msg, variant: "destructive" });
     } finally {
