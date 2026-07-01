@@ -158,6 +158,8 @@ function ManagerRoutes() {
         <Route path="/gerente/influenciadores" element={<GerenteInfluenciadores />} />
         <Route path="/gerente/links" element={<GerenteLinks />} />
         <Route path="/gerente/oportunidades" element={<GerenteOportunidades />} />
+        <Route path="/gerente/financeiro" element={<GerenteFinanceiro />} />
+        <Route path="/gerente/saques" element={<GerenteSaques />} />
         <Route path="/gerente/perfil" element={<GerentePerfil />} />
         <Route path="/influencers/:id" element={<InfluencerDetalhe />} />
         <Route path="*" element={<Navigate to="/gerente" replace />} />
