@@ -524,6 +524,12 @@ function CardDetailSheet({ card, squads, managers, onClose, onUpdated }: {
           <SheetDescription>{card.handle ?? "—"} · {card.niche ?? "sem nicho"} · etapa atual: <span className="text-foreground">{card.stage}</span></SheetDescription>
         </SheetHeader>
 
+        {(card.stage === "aprovado" || card.stage === "concluido") && (
+          <AccessProvisioningPanel card={card} onUpdated={onUpdated} />
+        )}
+
+
+
         <Tabs defaultValue={card.stage === "cadastro" || card.stage === "analise" ? "cadastro" : "checklist"} className="mt-6">
           <TabsList className="grid grid-cols-2 w-full">
             <TabsTrigger value="checklist">Checklist & squad</TabsTrigger>
