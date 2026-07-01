@@ -289,9 +289,63 @@ function CardItem({ card, squads, managers, onOpen, dragging }: {
               </span>
             )}
           </div>
+
+          {card.generated_password && (
+            <div className="mt-2.5" onClick={(e) => e.stopPropagation()}>
+              <CopyCredentialsButton card={card} compact />
+            </div>
+          )}
         </div>
       </div>
     </div>
+  );
+}
+
+function buildCredentialsMessage(card: Card): string {
+  return [
+    `Olá ${card.name}! Seu acesso ao Painel Playbet foi liberado 🎉`,
+    ``,
+    `🔗 https://painelcentral.playbet.app.br`,
+    `👤 Login: ${card.generated_email}`,
+    `🔑 Senha: ${card.generated_password}`,
+    ``,
+    card.role_type === "gerente"
+      ? `Perfil: Gerente`
+      : `Perfil: Influenciador`,
+    ``,
+    `Você pode trocar sua senha a qualquer momento em Perfil → Segurança.`,
+  ].join("\n");
+}
+
+function CopyCredentialsButton({ card, compact }: { card: Card; compact?: boolean }) {
+  const { toast } = useToast();
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(buildCredentialsMessage(card));
+      setCopied(true);
+      toast({ title: "Credenciais copiadas", description: "Cole no WhatsApp do usuário." });
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      toast({ title: "Não foi possível copiar", variant: "destructive" });
+    }
+  }
+  if (compact) {
+    return (
+      <button
+        onClick={copy}
+        className="w-full flex items-center justify-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10.5px] font-medium py-1.5 px-2 transition-colors"
+      >
+        {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+        {copied ? "Copiado" : "Copiar credenciais"}
+      </button>
+    );
+  }
+  return (
+    <Button size="sm" variant="secondary" onClick={copy} className="gap-1.5">
+      {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+      {copied ? "Copiado" : "Copiar mensagem para WhatsApp"}
+    </Button>
   );
 }
 
