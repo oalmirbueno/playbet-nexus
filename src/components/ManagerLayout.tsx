@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Trophy, Users, Link2, Sparkles, User, LogOut } from "lucide-react";
+import { LayoutDashboard, Trophy, Users, Link2, Sparkles, Wallet, User, LogOut } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import PreviewBanner from "@/components/PreviewBanner";
 import logo from "@/assets/logo.png";
@@ -7,9 +7,10 @@ import logo from "@/assets/logo.png";
 const items = [
   { label: "Squad", icon: LayoutDashboard, path: "/gerente" },
   { label: "Ranking", icon: Trophy, path: "/gerente/ranking" },
-  { label: "Influenciadores", icon: Users, path: "/gerente/influenciadores" },
+  { label: "Time", icon: Users, path: "/gerente/influenciadores" },
   { label: "Links", icon: Link2, path: "/gerente/links" },
-  { label: "Oportunidades", icon: Sparkles, path: "/gerente/oportunidades" },
+  { label: "Ganhos", icon: Wallet, path: "/gerente/financeiro" },
+  { label: "Ofertas", icon: Sparkles, path: "/gerente/oportunidades" },
   { label: "Perfil", icon: User, path: "/gerente/perfil" },
 ];
 
