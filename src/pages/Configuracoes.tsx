@@ -87,6 +87,8 @@ export default function Configuracoes() {
           </div>
         </div>
       )}
+      {tab === "sistema" && <UsersAccessSection />}
+
 
       {tab === "integracoes" && (
         <div className="space-y-4 animate-fade-in">
