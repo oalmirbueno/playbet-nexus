@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Save, Settings, DollarSign, Users, Plug } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Save, Settings, DollarSign, Users, Plug, ShieldCheck } from "lucide-react";
+import UsersAccessSection from "@/components/settings/UsersAccessSection";
 
 const tabs = [
   { key: "geral", label: "Geral", icon: Settings },
   { key: "financeiro", label: "Financeiro", icon: DollarSign },
   { key: "usuarios", label: "Usuários", icon: Users },
+  { key: "sistema", label: "Sistema · Admin", icon: ShieldCheck },
   { key: "integracoes", label: "Integrações", icon: Plug },
 ];
 
