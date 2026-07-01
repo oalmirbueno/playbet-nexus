@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Save, Settings, DollarSign, Users, Plug, ShieldCheck } from "lucide-react";
 import UsersAccessSection from "@/components/settings/UsersAccessSection";
+import { useAuth } from "@/contexts/AuthContext";
 
-const tabs = [
+const tabsAll = [
   { key: "geral", label: "Geral", icon: Settings },
   { key: "financeiro", label: "Financeiro", icon: DollarSign },
   { key: "usuarios", label: "Usuários", icon: Users },
@@ -11,7 +12,12 @@ const tabs = [
 ];
 
 export default function Configuracoes() {
+  const { previewAs } = useAuth();
+  const isPreviewing = !!previewAs;
+  // Sensitive admin tools are hidden while previewing another user
+  const tabs = isPreviewing ? tabsAll.filter((t) => t.key !== "sistema") : tabsAll;
   const [tab, setTab] = useState("geral");
+
 
   return (
     <div className="space-y-6">
@@ -87,7 +93,7 @@ export default function Configuracoes() {
           </div>
         </div>
       )}
-      {tab === "sistema" && <UsersAccessSection />}
+      {tab === "sistema" && !isPreviewing && <UsersAccessSection />}
 
 
       {tab === "integracoes" && (

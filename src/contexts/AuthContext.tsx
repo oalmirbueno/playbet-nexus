@@ -12,16 +12,17 @@ export type AppRole =
   | "gerente"
   | "influencer";
 
-export type PreviewAs = "influencer" | "gerente" | null;
+export type PreviewAs = AppRole | null;
 
 export interface PreviewTarget {
-  role: "influencer" | "gerente";
+  role: AppRole;
   userId?: string;
   influencerId?: string | null;
   managerId?: string | null;
   name?: string | null;
   email?: string | null;
 }
+
 
 interface AuthContextType {
   user: User | null;
@@ -52,8 +53,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [previewAs, setPreviewAsState] = useState<PreviewAs>(() => {
     if (typeof window === "undefined") return null;
     const v = window.localStorage.getItem(PREVIEW_KEY);
-    return v === "influencer" || v === "gerente" ? v : null;
+    return (v as PreviewAs) ?? null;
   });
+
   const [previewTarget, setPreviewTargetState] = useState<PreviewTarget | null>(() => {
     if (typeof window === "undefined") return null;
     try {
@@ -146,7 +148,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const isAdmin = role === "admin_master" || role === "socio";
-  const effectiveRole: AppRole | null = isAdmin && previewAs ? previewAs : role;
+  const effectiveRole: AppRole | null =
+    isAdmin && (previewAs === "influencer" || previewAs === "gerente") ? previewAs : role;
+
 
   return (
     <AuthContext.Provider

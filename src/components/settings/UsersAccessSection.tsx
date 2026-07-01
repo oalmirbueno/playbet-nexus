@@ -76,27 +76,23 @@ export default function UsersAccessSection() {
   };
 
   const viewAsUser = (r: Row) => {
-    if (r.role === "influencer" || r.role === "gerente") {
-      setPreviewTarget({
-        role: r.role,
-        userId: r.id,
-        influencerId: r.influencer_id,
-        managerId: r.manager_id,
-        name: r.full_name,
-        email: r.email,
-      });
-      navigate(r.role === "influencer" ? "/portal" : "/gerente");
+    if (!r.role) {
+      toast({ title: "Usuário sem papel definido", variant: "destructive" });
       return;
     }
-    // Admins/sócios/operacionais não têm portal dedicado — abre o painel principal
-    // como referência, com banner identificando o usuário observado.
-    setPreviewTarget(null);
-    toast({
-      title: `Sem portal dedicado para ${ROLE_OPTIONS.find((o) => o.value === r.role)?.label ?? "este papel"}`,
-      description: "Sócios, admins e equipe interna usam o painel principal — abrindo agora.",
+    setPreviewTarget({
+      role: r.role,
+      userId: r.id,
+      influencerId: r.influencer_id,
+      managerId: r.manager_id,
+      name: r.full_name,
+      email: r.email,
     });
-    navigate("/");
+    if (r.role === "influencer") navigate("/portal");
+    else if (r.role === "gerente") navigate("/gerente");
+    else navigate("/"); // sócio, admin, financeiro, operação, conteúdo, visualização → painel principal
   };
+
 
 
 
