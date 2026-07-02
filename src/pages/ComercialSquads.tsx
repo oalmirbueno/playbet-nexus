@@ -17,6 +17,7 @@ interface Manager {
   influencer_id: string | null;
   socio_id: string | null;
   compensation_mode: "manager" | "socio_only" | "influencer_only";
+  hierarchy_role: "gerente" | "gerente_diretor" | "diretor_squads";
 }
 interface Director { id: string; name: string; color: string; title: string; is_active: boolean }
 interface Influencer { id: string; name: string; slug: string; manager_id: string | null }
