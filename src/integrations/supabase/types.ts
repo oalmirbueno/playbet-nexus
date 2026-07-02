@@ -239,44 +239,53 @@ export type Database = {
       }
       clicks: {
         Row: {
+          click_id: string | null
           clicked_at: string | null
           id: string
           influencer_id: string | null
           ip_address: string | null
           is_demo: boolean
           landing_page_id: string | null
+          landing_page_instance_id: string | null
           referrer: string | null
           route: string | null
           source: string | null
           template_id: string | null
+          tracking_link_id: string | null
           user_agent: string | null
           utm_id: string | null
         }
         Insert: {
+          click_id?: string | null
           clicked_at?: string | null
           id?: string
           influencer_id?: string | null
           ip_address?: string | null
           is_demo?: boolean
           landing_page_id?: string | null
+          landing_page_instance_id?: string | null
           referrer?: string | null
           route?: string | null
           source?: string | null
           template_id?: string | null
+          tracking_link_id?: string | null
           user_agent?: string | null
           utm_id?: string | null
         }
         Update: {
+          click_id?: string | null
           clicked_at?: string | null
           id?: string
           influencer_id?: string | null
           ip_address?: string | null
           is_demo?: boolean
           landing_page_id?: string | null
+          landing_page_instance_id?: string | null
           referrer?: string | null
           route?: string | null
           source?: string | null
           template_id?: string | null
+          tracking_link_id?: string | null
           user_agent?: string | null
           utm_id?: string | null
         }
@@ -296,10 +305,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "clicks_landing_page_instance_id_fkey"
+            columns: ["landing_page_instance_id"]
+            isOneToOne: false
+            referencedRelation: "landing_page_instances"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "clicks_template_id_fkey"
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clicks_tracking_link_id_fkey"
+            columns: ["tracking_link_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_links"
             referencedColumns: ["id"]
           },
           {
