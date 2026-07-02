@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
 
     const { data: link, error: linkErr } = await supa
       .from("tracking_links")
-      .select("id, influencer_id, landing_page_id, landing_page_instance_id, platform_account_id, game_slug, game_name, game_icon_url, link_category, hype_reason")
+      .select("id, influencer_id, landing_page_id, landing_page_instance_id, platform_account_id, game_slug, game_name, game_icon_url, link_category, hype_reason, base_url, final_url")
       .eq("id", trackingLinkId)
       .maybeSingle();
     if (linkErr || !link) throw new Error(linkErr?.message || "link not found");
@@ -86,23 +86,51 @@ Deno.serve(async (req) => {
       title: hypeCopy.title || null,
       subtitle: hypeCopy.subtitle || link.hype_reason || null,
       cta_label: hypeCopy.cta_label || (mode === "odds" ? "Apostar agora" : "Jogar agora"),
+      game_slug: link.game_slug || null,
+      game_name: link.game_name || null,
+      game_icon_url: link.game_icon_url || null,
+      auto: true,
     };
 
     // Create or update the LP instance
     let instanceId = link.landing_page_instance_id;
 
     if (instanceId) {
+      const { data: currentInstance } = await supa
+        .from("landing_page_instances")
+        .select("hype_copy, source_tracking_link_id")
+        .eq("id", instanceId)
+        .maybeSingle();
+
+      const currentHype = (currentInstance?.hype_copy || {}) as Record<string, unknown>;
+      const manualLayout = currentHype.auto === false;
+
+      // If the visual editor already saved manual changes, do NOT replace the
+      // registered page/mode/copy. Only keep the source link relation alive.
+      const updatePayload = manualLayout
+        ? {
+            hype_copy: {
+              ...currentHype,
+              game_slug: currentHype.game_slug || link.game_slug || null,
+              game_name: currentHype.game_name || link.game_name || null,
+              game_icon_url: currentHype.game_icon_url || link.game_icon_url || null,
+            },
+            source_tracking_link_id: currentInstance?.source_tracking_link_id || trackingLinkId,
+            auto_generated: true,
+          }
+        : {
+            lp_mode: mode,
+            game_slugs: allSlugs,
+            game_ids: gameIds,
+            layout_config: layoutConfig,
+            hype_copy: finalHypeCopy,
+            source_tracking_link_id: currentInstance?.source_tracking_link_id || trackingLinkId,
+            auto_generated: true,
+          };
+
       await supa
         .from("landing_page_instances")
-        .update({
-          lp_mode: mode,
-          game_slugs: allSlugs,
-          game_ids: gameIds,
-          layout_config: layoutConfig,
-          hype_copy: finalHypeCopy,
-          source_tracking_link_id: trackingLinkId,
-          auto_generated: true,
-        })
+        .update(updatePayload)
         .eq("id", instanceId);
     }
 
