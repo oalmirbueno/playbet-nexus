@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 
 export interface CreativeStudioLink {
   id: string;
+  influencerId?: string | null;
   gameName?: string | null;
   gameIconUrl?: string | null;
   platformName?: string | null;
@@ -294,26 +295,11 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
           .eq("id", existing.id);
         if (error) throw error;
       } else {
-        const { data: tl } = await supabase
-          .from("tracking_links")
-          .select("influencer_id, platform_account_id")
-          .eq("id", link.id)
-          .maybeSingle();
-        let platformId: string | null = null;
-        if ((tl as any)?.platform_account_id) {
-          const { data: account } = await supabase
-            .from("platform_accounts")
-            .select("platform_id")
-            .eq("id", (tl as any).platform_account_id)
-            .maybeSingle();
-          platformId = (account as any)?.platform_id ?? null;
-        }
         const { error } = await supabase
           .from("link_materials")
           .insert({
             tracking_link_id: link.id,
-            influencer_id: (tl as any)?.influencer_id ?? null,
-            platform_id: platformId,
+            influencer_id: link.influencerId ?? null,
             format,
             style,
             game_name: link.gameName ?? null,
