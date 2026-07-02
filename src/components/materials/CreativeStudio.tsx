@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  renderCreative, downloadCreative, slugify, defaultLayersFor,
+  renderCreative, downloadCreative, downloadRawAsset, slugify, defaultLayersFor,
   FORMAT_SIZES, CREATIVE_TEMPLATES, applyTemplate,
   type CreativeFormat, type CreativeStyle, type CreativeInput, type RenderedCreative,
   type Layer, type TextLayer, type ImageLayer,
 } from "@/lib/creativeStudio";
+import playbetLogo from "@/assets/logo-mark.png";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Download, Loader2, RefreshCw, Sparkles, Copy, Check, Trash2,
   AlignLeft, AlignCenter, AlignRight, Type, Image as ImageIcon,
-  ChevronUp, ChevronDown, Save, Undo2, MousePointer2,
+  ChevronUp, ChevronDown, Save, Undo2, MousePointer2, ImageDown, Package,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -457,6 +458,21 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     } finally { setRendering(false); }
   };
 
+  const downloadGameArt = async () => {
+    if (!link?.gameIconUrl) { toast.error("Este link não tem arte do jogo"); return; }
+    try {
+      await downloadRawAsset(link.gameIconUrl, `${slugify(link.gameName || "jogo")}-arte`);
+      toast.success("Arte do jogo baixada");
+    } catch (e) { toast.error("Falha ao baixar arte", { description: (e as Error).message }); }
+  };
+
+  const downloadPlaybetLogo = async () => {
+    try {
+      await downloadRawAsset(playbetLogo, "playbet-logo");
+      toast.success("Logo Playbet baixada");
+    } catch (e) { toast.error("Falha ao baixar logo", { description: (e as Error).message }); }
+  };
+
   const copyLink = async () => {
     if (!link?.shortUrl) return;
     try {
@@ -749,6 +765,34 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
               <Button onClick={() => exportPng("all")} disabled={rendering} variant="secondary" className="w-full h-9 text-sm">
                 <Sparkles className="w-4 h-4 mr-2" /> Kit completo (4 formatos)
               </Button>
+
+              <div className="pt-2 mt-1 border-t border-border/40 space-y-1.5">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground px-0.5">
+                  Ativos isolados
+                </Label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <Button
+                    onClick={downloadGameArt}
+                    disabled={!link.gameIconUrl}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-[11px] px-2"
+                    title="Baixa apenas a imagem original do jogo, sem edição"
+                  >
+                    <ImageDown className="w-3.5 h-3.5 mr-1.5" /> Logo do jogo
+                  </Button>
+                  <Button
+                    onClick={downloadPlaybetLogo}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-[11px] px-2"
+                    title="Baixa a logo Playbet em PNG"
+                  >
+                    <Package className="w-3.5 h-3.5 mr-1.5" /> Logo Playbet
+                  </Button>
+                </div>
+              </div>
+
               <Button onClick={() => setRenderKey(k => k + 1)} variant="ghost" size="sm" className="w-full h-8 text-xs text-muted-foreground">
                 <RefreshCw className="w-3.5 h-3.5 mr-2" /> Regenerar fundo
               </Button>
