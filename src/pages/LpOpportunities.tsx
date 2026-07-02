@@ -289,7 +289,7 @@ export default function LpOpportunities() {
         <div>
           <h1 className="text-2xl font-semibold">Oportunidades LP</h1>
           <p className="text-sm text-muted-foreground max-w-2xl">
-            A landing pública lê estes cards automaticamente. Use no máximo 3 destaques ativos por campanha.
+            Cada link já vira uma landing page pronta. Abaixo, complementos manuais e o assistente para eventos esportivos.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -305,6 +305,10 @@ export default function LpOpportunities() {
         </div>
       </div>
 
+      {/* Automatic: LP per link (mirrors Materiais UX) */}
+      <LinkLpGrid />
+
+      {/* Manual/assistant panels */}
       <SportsEventsPanel
         platforms={platforms as any}
         landingPages={lps as any}
