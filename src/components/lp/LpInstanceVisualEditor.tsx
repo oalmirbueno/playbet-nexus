@@ -167,6 +167,8 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         }
         const m: LpMode = ((inst as any).lp_mode as LpMode) || "catalog";
         setMode(m);
+        setPreviewTab(m === "catalog" ? "catalog" : "generated");
+
 
         setGameSlugs(((inst as any).game_slugs as string[]) || []);
         const lc = (inst as any).layout_config;
