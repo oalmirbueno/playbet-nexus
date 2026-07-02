@@ -750,8 +750,3 @@ function InfluencerLinksSheet({ influencerId, onClose, canManage }: {
     </Sheet>
   );
 }
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
-}
