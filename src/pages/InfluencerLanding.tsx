@@ -116,11 +116,9 @@ export default function InfluencerLanding() {
       // Always try to enrich with the link's own game_icon_url as canonical fallback
       let tlQuery = supabase
         .from("tracking_links")
-        .select("game_slug, game_name, game_icon_url, platform_account_id, platform_accounts(platform_id)")
-        .limit(1)
-        .maybeSingle();
+        .select("game_slug, game_name, game_icon_url, platform_account_id, platform_accounts(platform_id)");
       tlQuery = instanceId ? tlQuery.eq("landing_page_instance_id", instanceId) : tlQuery.eq("landing_page_id", landingPageId ?? "");
-      const { data: tl } = await tlQuery;
+      const { data: tl } = await tlQuery.limit(1).maybeSingle();
       const linkIcon: GameArt | null = (tl as any)?.game_slug
         ? { slug: (tl as any).game_slug, name: (tl as any).game_name || (tl as any).game_slug, icon_url: (tl as any).game_icon_url || null }
         : null;
