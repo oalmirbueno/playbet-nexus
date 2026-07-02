@@ -13,6 +13,7 @@ export type CreativeFormat = "feed" | "story" | "landscape" | "square_wa";
 export type CreativeStyle = "hype" | "minimal" | "editorial";
 
 export interface TextLayer {
+  kind: "text";
   id: string;
   text: string;               // may contain \n
   xPct: number;               // 0-100 (left edge of box)
@@ -26,7 +27,29 @@ export interface TextLayer {
   uppercase?: boolean;
   shadow?: boolean;
   lineHeight?: number;        // multiplier (default 1.05)
+  bgColor?: string | null;    // optional pill/box background
+  bgPadPct?: number;          // padding for pill (% of font size)
+  bgRadiusPct?: number;       // corner radius (% of height)
 }
+
+export interface ImageLayer {
+  kind: "image";
+  id: string;
+  src: string;
+  label?: string;
+  xPct: number;
+  yPct: number;
+  widthPct: number;
+  heightPct: number;
+  radiusPct?: number;         // % of min(w,h)
+  opacity?: number;           // 0..1
+  fit?: "cover" | "contain";
+  glow?: string | null;       // hex accent glow color
+  blur?: number;              // px of blur (for backdrop layers)
+  brightness?: number;        // 0..2
+}
+
+export type Layer = TextLayer | ImageLayer;
 
 export interface CreativeInput {
   format: CreativeFormat;
@@ -42,8 +65,10 @@ export interface CreativeInput {
   hypeReason?: string | null;
   /** When true, auto text (headline/hype/cta/handle) is not drawn — use `layers` instead. */
   hideAutoText?: boolean;
-  /** Custom text layers rendered on top of the artwork. */
-  layers?: TextLayer[];
+  /** When true, auto artwork (hero image, backdrop, logo, pill) is not drawn — use `layers` instead. */
+  hideAutoArt?: boolean;
+  /** Custom layers (text + image) rendered on top of the artwork. */
+  layers?: Layer[];
 }
 
 export interface CreativeSize { w: number; h: number; label: string; }
