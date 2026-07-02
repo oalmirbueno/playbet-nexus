@@ -868,9 +868,27 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
           </div>
 
           <div className="flex flex-col overflow-hidden bg-secondary/20">
-            <div className="flex items-center justify-between px-4 py-2 border-b bg-background/60 shrink-0">
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Preview</span>
-              <div className="flex items-center gap-1.5">
+            <div className="flex items-center justify-between gap-2 px-4 py-2 border-b bg-background/60 shrink-0">
+              <div className="inline-flex rounded-md border border-border/60 bg-background/40 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setPreviewTab("catalog")}
+                  disabled={!catalogPreviewSrc}
+                  className={`px-2.5 py-1 text-[10px] font-medium rounded transition ${previewTab === "catalog" ? "bg-primary/15 text-foreground" : "text-muted-foreground hover:text-foreground"} disabled:opacity-40 disabled:cursor-not-allowed`}
+                  title={basePage?.name ? `LP padrão · ${basePage.name}` : "LP padrão cadastrada"}
+                >
+                  LP padrão
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewTab("generated")}
+                  disabled={!generatedPreviewSrc}
+                  className={`px-2.5 py-1 text-[10px] font-medium rounded transition ${previewTab === "generated" ? "bg-primary/15 text-foreground" : "text-muted-foreground hover:text-foreground"} disabled:opacity-40 disabled:cursor-not-allowed`}
+                >
+                  LP gerada
+                </button>
+              </div>
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => setPreviewKey((k) => k + 1)}
                   className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
@@ -878,9 +896,9 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                 >
                   <RefreshCw size={11} /> Reload
                 </button>
-                {publicUrl && (
+                {activeExternalUrl && (
                   <a
-                    href={publicUrl}
+                    href={activeExternalUrl}
                     target="_blank"
                     rel="noreferrer"
                     className="text-[10px] text-primary hover:underline inline-flex items-center gap-1"
@@ -891,10 +909,10 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
               </div>
             </div>
             <div className="flex-1 min-h-0">
-              {previewSrc ? (
+              {activePreviewSrc ? (
               <iframe
-                  key={previewKey}
-                  src={previewSrc}
+                  key={`${previewTab}-${previewKey}`}
+                  src={activePreviewSrc}
                   className="w-full h-full border-0 bg-background [color-scheme:dark]"
                   title="LP preview"
                   onLoad={(event) => {
@@ -912,13 +930,16 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                       `;
                       doc.head.appendChild(style);
                     } catch {
-                      // External previews may block access; same-origin previews receive the injected style.
+                      // External previews (LP padrão em outro domínio) bloqueiam o acesso ao DOM — o scrollbar cai no CSS já hospedado.
                     }
                   }}
                 />
               ) : (
-                <div className="h-full flex items-center justify-center text-[11px] text-muted-foreground">
-                  Configure o domínio da LP para ver o preview.
+                <div className="h-full flex items-center justify-center text-[11px] text-muted-foreground px-6 text-center">
+                  {previewTab === "catalog"
+                    ? "Nenhuma LP padrão vinculada a essa instância."
+                    : "Configure o domínio da LP para ver o preview."}
+
                 </div>
               )}
             </div>
