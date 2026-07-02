@@ -26,11 +26,9 @@ const emptyEditing: EditingState = {
   landing_page_id: "", influencer_id: "", slug: "", affiliate_link: "", notes: "", is_active: true,
 };
 
+import { buildLpPublicUrl } from "@/lib/lpPublicUrl";
 function buildPublicUrl(domain: string | null, slug: string) {
-  if (!domain) return `/?ref=${slug}`;
-  let base = domain.replace(/\/+$/, "");
-  if (!/^https?:\/\//i.test(base)) base = `https://${base}`;
-  return `${base}/?ref=${slug}`;
+  return buildLpPublicUrl(domain, slug) ?? "";
 }
 
 export default function LPInstances() {
