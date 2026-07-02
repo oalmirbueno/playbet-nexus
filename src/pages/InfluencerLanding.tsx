@@ -418,21 +418,27 @@ export default function InfluencerLanding() {
 
       {isSectionOn("features") && (
         <section className="px-6 pb-16">
-          <div className="max-w-xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[
-              { icon: Trophy, title: "Bônus de Boas-Vindas", desc: "Ganhe bônus no primeiro depósito" },
-              { icon: Shield, title: "100% Seguro", desc: "Plataforma regulamentada e confiável" },
-              { icon: Gift, title: "Saques Rápidos", desc: "Receba seus ganhos via PIX em minutos" },
-            ].map((f) => (
-              <div key={f.title} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5 text-center">
-                <f.icon size={24} className="text-emerald-400 mx-auto mb-3" />
-                <h3 className="text-sm font-semibold mb-1">{f.title}</h3>
-                <p className="text-xs text-gray-500">{f.desc}</p>
-              </div>
-            ))}
+          <div className="max-w-xl mx-auto">
+            <h2 className="text-center text-[11px] uppercase tracking-[0.18em] text-emerald-400/80 font-semibold mb-5">
+              Ofertas oficiais
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                { icon: Trophy, title: "Bônus de boas-vindas", desc: "Ganho no 1º depósito" },
+                { icon: Shield, title: "100% seguro", desc: "Plataforma regulamentada" },
+                { icon: Gift, title: "Saque via PIX", desc: "Em minutos, sem burocracia" },
+              ].map((f) => (
+                <div key={f.title} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 text-center">
+                  <f.icon size={22} className="text-emerald-400 mx-auto mb-2" />
+                  <h3 className="text-sm font-semibold mb-0.5">{f.title}</h3>
+                  <p className="text-[11px] text-gray-500">{f.desc}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       )}
+
 
       {isSectionOn("games") && mode !== "odds" && (
         <section className="px-6 pb-16">
