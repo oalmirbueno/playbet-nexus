@@ -46,6 +46,9 @@ function buildQuery(table: string) {
       }
       return { data: null, error: null };
     }
+    if (table === "platform_hyped_games") {
+      return { data: [], error: null };
+    }
     if (table === "influencers") {
       if (state.filters.id === FIXTURE.influencer.id) return { data: FIXTURE.influencer, error: null };
       return { data: null, error: null };
@@ -59,6 +62,9 @@ function buildQuery(table: string) {
       state.filters[col] = val;
       return api;
     },
+    in: () => api,
+    not: () => api,
+    order: () => api,
     limit: () => api,
     maybeSingle: async () => resolveSingle(),
     single: async () => resolveSingle(),
