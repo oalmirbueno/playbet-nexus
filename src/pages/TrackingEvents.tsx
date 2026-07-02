@@ -16,7 +16,7 @@ import type { TrackingEventRow } from "@/services/trackingService";
 import { useToast } from "@/hooks/use-toast";
 
 const CANONICAL_EVENTS = [
-  "click", "registration", "ftd", "deposit", "redeposit",
+  "lp_view", "click", "registration", "ftd", "deposit", "redeposit",
   "revenue", "withdrawable_revenue", "app_install", "qualified_player",
 ];
 
