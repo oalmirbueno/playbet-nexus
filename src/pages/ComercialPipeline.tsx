@@ -168,12 +168,12 @@ export default function ComercialPipeline() {
 
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div
-          className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden sm:overflow-x-hidden sm:overflow-y-auto xl:overflow-x-auto xl:overflow-y-hidden px-3 sm:px-4 md:px-5 xl:px-6 py-4 xl:py-5 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch] snap-x snap-mandatory sm:snap-none"
+          className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden px-3 sm:px-4 md:px-5 xl:px-6 py-4 xl:py-5 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch] snap-x snap-mandatory xl:snap-none"
           style={{ scrollbarColor: "hsl(var(--border)) transparent" }}
         >
-          <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:flex gap-3 md:gap-4 min-w-max sm:min-w-0 h-full sm:h-auto xl:h-full pb-2">
+          <div className="flex gap-3 md:gap-4 h-full pb-2 w-max">
             {STAGES.map(stage => (
-              <div key={stage.id} className="snap-start sm:snap-align-none min-w-0">
+              <div key={stage.id} className="snap-start xl:snap-align-none">
                 <Column
                   stage={stage}
                   cards={byStage[stage.id] ?? []}
