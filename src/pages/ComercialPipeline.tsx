@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CandidateRegistrationForm } from "@/components/comercial/CandidateRegistrationForm";
 import { useToast } from "@/hooks/use-toast";
 import {
-  DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors,
+  DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors,
   useDraggable, useDroppable,
 } from "@dnd-kit/core";
 import { Plus, GripVertical, Users, Calendar as CalendarIcon, Sparkles, KeyRound, Copy, Check, Loader2, ShieldCheck } from "lucide-react";
