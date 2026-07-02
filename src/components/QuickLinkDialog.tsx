@@ -597,7 +597,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="px-6 pb-6 pt-3 border-t shrink-0">
             <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
             <Button onClick={handleSave} disabled={!canSave || saving}>{saving ? "Salvando…" : "Salvar e copiar"}</Button>
           </DialogFooter>
