@@ -30,6 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Pencil, Trash2, Copy, AlertTriangle, Sparkles, Wand2, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLpOpportunities } from "@/hooks/useLpOpportunities";
