@@ -83,7 +83,10 @@ export default function ComercialPipeline() {
   const [openCard, setOpenCard] = useState<Card | null>(null);
   const [newOpen, setNewOpen] = useState(false);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 6 } }),
+  );
 
   async function load() {
     setLoading(true);
