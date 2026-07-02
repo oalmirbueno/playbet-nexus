@@ -706,7 +706,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
                   Parâmetro de atribuição (escolha o equivalente na casa)
                 </Label>
-                <div className="grid grid-cols-[1fr_140px] gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px] gap-2">
                   <Select value={form.click_id_param_name} onValueChange={v => set("click_id_param_name", v)}>
                     <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
