@@ -86,12 +86,27 @@ async function findTrackingLink(instanceId: string | null, influencerId: string)
   return data || null;
 }
 
+interface InstanceContext {
+  lp_mode?: string | null;
+  game_slugs?: string[] | null;
+  layout_config?: any;
+  hype_copy?: any;
+}
+
+interface GameArt {
+  slug: string;
+  name: string;
+  icon_url: string | null;
+}
+
 export default function InfluencerLanding() {
   const { slug: pathSlug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
   const slug = searchParams.get("ref") || pathSlug;
   const [state, setState] = useState<LoadState>("loading");
   const [resolved, setResolved] = useState<ResolvedLanding | null>(null);
+  const [instanceCtx, setInstanceCtx] = useState<InstanceContext | null>(null);
+  const [gameArts, setGameArts] = useState<GameArt[]>([]);
   const [clicking, setClicking] = useState(false);
 
   useEffect(() => {
