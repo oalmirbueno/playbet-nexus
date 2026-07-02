@@ -26,10 +26,12 @@ const emptyEditing: EditingState = {
   landing_page_id: "", influencer_id: "", slug: "", affiliate_link: "", notes: "", is_active: true,
 };
 
-import { buildLpBaseUrl, buildLpPublicUrl } from "@/lib/lpPublicUrl";
+import { buildPublicLpUrl } from "@/lib/trackingUrl";
+import { buildLpPublicUrl } from "@/lib/lpPublicUrl";
 function buildPublicUrl(inst: LandingPageInstanceRow, lp?: any) {
-  if ((inst as any).lp_mode === "catalog") return buildLpBaseUrl(lp?.domain, lp?.route);
-  return buildLpPublicUrl(lp?.domain, inst.slug) ?? "";
+  return buildPublicLpUrl(lp?.domain, inst.slug, (inst as any).influencer_id || "", (inst as any).campanha_id || "", lp?.route)
+    || buildLpPublicUrl(lp?.domain, inst.slug)
+    || "";
 }
 
 export default function LPInstances() {

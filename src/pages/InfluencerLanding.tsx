@@ -9,6 +9,7 @@ type LoadState = "loading" | "ready" | "not_found" | "inactive" | "no_domain";
 interface ResolvedLanding {
   affiliate_link: string;
   influencer_id: string;
+  campanha_id: string | null;
   influencer_name: string;
   instance_id: string | null;
   landing_page_id: string | null;
@@ -66,9 +67,10 @@ async function findTrackingLink(instanceId: string | null, influencerId: string)
   if (instanceId) {
     const { data } = await supabase
       .from("tracking_links")
-      .select("id, click_id_param_name, base_url")
+      .select("id, click_id_param_name, base_url, short_url, campanha_id")
       .eq("landing_page_instance_id", instanceId)
       .eq("status", "active")
+      .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
     if (data) return data;
@@ -77,9 +79,10 @@ async function findTrackingLink(instanceId: string | null, influencerId: string)
   // Priority 2: by influencer
   const { data } = await supabase
     .from("tracking_links")
-    .select("id, click_id_param_name, base_url")
+    .select("id, click_id_param_name, base_url, short_url, campanha_id")
     .eq("influencer_id", influencerId)
     .eq("status", "active")
+    .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
@@ -292,10 +295,12 @@ export default function InfluencerLanding() {
       ) => {
         const tl = await findTrackingLink(instanceId, influencerId);
         const paramName = tl?.click_id_param_name || "sub1";
+        const outboundAffiliate = affiliateLink || tl?.base_url || tl?.short_url || "";
 
         setResolved({
-          affiliate_link: affiliateLink,
+          affiliate_link: outboundAffiliate,
           influencer_id: influencerId,
+          campanha_id: tl?.campanha_id || searchParams.get("sub3"),
           influencer_name: influencerName,
           instance_id: instanceId,
           landing_page_id: landingPageId,
@@ -421,14 +426,17 @@ export default function InfluencerLanding() {
     // so the click counts in tracking_metrics for the right casa.
     try {
       await supabase.from("clicks").insert({
+        click_id: resolved.click_id,
         influencer_id: resolved.influencer_id,
         landing_page_id: resolved.landing_page_id,
+        landing_page_instance_id: resolved.instance_id,
+        tracking_link_id: resolved.tracking_link_id,
         clicked_at: new Date().toISOString(),
         user_agent: navigator.userAgent,
         referrer: document.referrer || null,
         route: `/?ref=${slug}`,
         source: "cta_click",
-      });
+      } as any);
     } catch {
       // Don't block redirect
     }
@@ -437,12 +445,12 @@ export default function InfluencerLanding() {
     // Inject click_id (sub1) into affiliate link, and forward sub2/sub3 from
     // the LP's incoming URL so attribution survives the redirect.
     let finalUrl = injectClickId(resolved.affiliate_link, resolved.click_id_param, resolved.click_id);
-    const fwd2 = searchParams.get("sub2");
-    const fwd3 = searchParams.get("sub3");
+    const fwd2 = searchParams.get("sub2") || resolved.influencer_id;
+    const fwd3 = searchParams.get("sub3") || resolved.campanha_id;
     if (fwd2) finalUrl = injectClickId(finalUrl, "sub2", fwd2);
     if (fwd3) finalUrl = injectClickId(finalUrl, "sub3", fwd3);
     window.location.href = finalUrl;
-  }, [resolved, clicking, slug]);
+  }, [resolved, clicking, slug, searchParams]);
 
   // ── Loading ──
   if (state === "loading") {

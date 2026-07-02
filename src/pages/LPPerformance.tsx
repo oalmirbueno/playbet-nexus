@@ -8,10 +8,12 @@ import { toast } from "@/hooks/use-toast";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ExportDropdown from "@/components/ExportDropdown";
 
-import { buildLpBaseUrl, buildLpPublicUrl } from "@/lib/lpPublicUrl";
+import { buildLpPublicUrl } from "@/lib/lpPublicUrl";
+import { buildPublicLpUrl } from "@/lib/trackingUrl";
 function buildPublicUrl(inst: any, lp?: any) {
-  if (inst?.lp_mode === "catalog") return buildLpBaseUrl(lp?.domain, lp?.route);
-  return buildLpPublicUrl(lp?.domain, inst?.slug) ?? "";
+  return buildPublicLpUrl(lp?.domain, inst?.slug, inst?.influencer_id || "", inst?.campanha_id || "", lp?.route)
+    || buildLpPublicUrl(lp?.domain, inst?.slug)
+    || "";
 }
 
 export default function LPPerformance() {

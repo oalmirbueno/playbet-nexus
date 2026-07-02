@@ -45,8 +45,8 @@ interface Props {
 }
 
 function buildRowShareUrl(row: Row): string | null {
-  if (row.lp_mode === "catalog") return buildLpBaseUrl(row.lp_domain, row.lp_route);
-  return buildPublicLpUrl(row.lp_domain, row.lp_slug, row.influencer_id || "", row.campanha_id || "") || buildLpBaseUrl(row.lp_domain, row.lp_route);
+  return buildPublicLpUrl(row.lp_domain, row.lp_slug, row.influencer_id || "", row.campanha_id || "", row.lp_route)
+    || buildLpBaseUrl(row.lp_domain, row.lp_route);
 }
 
 export function LinkLpGrid({ influencerId, managerId, title = "LP por link", showInfluencer = false }: Props) {

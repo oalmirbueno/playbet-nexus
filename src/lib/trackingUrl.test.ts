@@ -17,8 +17,8 @@ describe("trackingUrl - Com LP", () => {
     expect(url.startsWith("https://oportunidades.playbet.app.br/?ref=camilly")).toBe(true);
   });
 
-  it("buildPublicLpUrl returns empty when domain or slug missing", () => {
-    expect(buildPublicLpUrl(null, "camilly", "x", "y")).toBe("");
+  it("buildPublicLpUrl uses the default LP domain and returns empty only when slug is missing", () => {
+    expect(buildPublicLpUrl(null, "camilly", "x", "y")).toBe("https://oportunidades.playbet.app.br/?ref=camilly&sub2=x&sub3=y");
     expect(buildPublicLpUrl("https://x.com", null, "x", "y")).toBe("");
   });
 
