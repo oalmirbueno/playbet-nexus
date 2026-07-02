@@ -86,15 +86,60 @@ async function findTrackingLink(instanceId: string | null, influencerId: string)
   return data || null;
 }
 
+interface InstanceContext {
+  lp_mode?: string | null;
+  game_slugs?: string[] | null;
+  layout_config?: any;
+  hype_copy?: any;
+}
+
+interface GameArt {
+  slug: string;
+  name: string;
+  icon_url: string | null;
+}
+
 export default function InfluencerLanding() {
   const { slug: pathSlug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
   const slug = searchParams.get("ref") || pathSlug;
   const [state, setState] = useState<LoadState>("loading");
   const [resolved, setResolved] = useState<ResolvedLanding | null>(null);
+  const [instanceCtx, setInstanceCtx] = useState<InstanceContext | null>(null);
+  const [gameArts, setGameArts] = useState<GameArt[]>([]);
   const [clicking, setClicking] = useState(false);
 
   useEffect(() => {
+    if (!slug) { setState("not_found"); return; }
+
+    const hydrateGameArts = async (landingPageId: string | null, slugs: string[]) => {
+      if (!slugs || slugs.length === 0) { setGameArts([]); return; }
+      let platformId: string | null = null;
+      // Try to derive platform via tracking_links → platform_accounts
+      const { data: tl } = await supabase
+        .from("tracking_links")
+        .select("platform_account_id, platform_accounts(platform_id)")
+        .eq("landing_page_id", landingPageId ?? "")
+        .limit(1)
+        .maybeSingle();
+      platformId = (tl as any)?.platform_accounts?.platform_id ?? null;
+
+      const q = supabase
+        .from("platform_hyped_games")
+        .select("game_slug, game_name, icon_url, platform_id")
+        .in("game_slug", slugs);
+      const { data } = platformId ? await q.eq("platform_id", platformId) : await q;
+      const byName = new Map<string, GameArt>();
+      (data ?? []).forEach((g: any) => {
+        if (!byName.has(g.game_slug)) {
+          byName.set(g.game_slug, { slug: g.game_slug, name: g.game_name, icon_url: g.icon_url });
+        }
+      });
+      const arts = slugs.map((s) => byName.get(s) ?? { slug: s, name: s.replace(/-/g, " "), icon_url: null });
+      setGameArts(arts);
+    };
+
+
     if (!slug) { setState("not_found"); return; }
 
     (async () => {
@@ -168,6 +213,13 @@ export default function InfluencerLanding() {
           .eq("id", instance.influencer_id)
           .maybeSingle();
 
+        setInstanceCtx({
+          lp_mode: (instance as any).lp_mode,
+          game_slugs: (instance as any).game_slugs,
+          layout_config: (instance as any).layout_config,
+          hype_copy: (instance as any).hype_copy,
+        });
+        await hydrateGameArts(lpBase.id, (instance as any).game_slugs || []);
         await finalize(instance.affiliate_link, instance.influencer_id, inf?.name || "", instance.id, instance.landing_page_id);
         return;
       }
@@ -188,6 +240,13 @@ export default function InfluencerLanding() {
           .eq("id", instance.influencer_id)
           .maybeSingle();
 
+        setInstanceCtx({
+          lp_mode: (instance as any).lp_mode,
+          game_slugs: (instance as any).game_slugs,
+          layout_config: (instance as any).layout_config,
+          hype_copy: (instance as any).hype_copy,
+        });
+        await hydrateGameArts(null, (instance as any).game_slugs || []);
         await finalize(instance.affiliate_link, instance.influencer_id, inf?.name || "", instance.id, instance.landing_page_id);
         return;
       }
@@ -283,92 +342,169 @@ export default function InfluencerLanding() {
 
   const hasLink = !!resolved?.affiliate_link;
 
+  const mode = (instanceCtx?.lp_mode as string) || "catalog";
+  const sections: Array<{ id: string; enabled: boolean }> =
+    instanceCtx?.layout_config?.sections ?? [
+      { id: "hero", enabled: true },
+      { id: "features", enabled: true },
+      { id: "games", enabled: true },
+      { id: "cta", enabled: true },
+      { id: "footer", enabled: true },
+    ];
+  const isSectionOn = (id: string) => sections.find((s) => s.id === id)?.enabled ?? false;
+
+  const hypeTitle: string | null = instanceCtx?.hype_copy?.title ?? null;
+  const hypeSub: string | null = instanceCtx?.hype_copy?.subtitle ?? null;
+  const ctaLabel: string = instanceCtx?.hype_copy?.cta_label || "Cadastrar Agora";
+
+  const primaryGame = gameArts[0];
+  const displayGames = mode === "single_game" && primaryGame ? [primaryGame] : gameArts;
+
   // ── Ready ──
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white overflow-x-hidden">
-      {/* Hero */}
-      <header className="relative pt-8 pb-16 px-6">
-        <div className="absolute inset-0 bg-gradient-to-b from-emerald-600/10 via-transparent to-transparent pointer-events-none" />
-        <div className="max-w-xl mx-auto relative z-10 text-center">
-          <img src={logo} alt="PlayBet" className="h-20 mx-auto mb-10 opacity-90" />
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium mb-6">
-            <Zap size={12} /> Oferta Exclusiva
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold leading-tight mb-4">
-            Jogue nos melhores<br />
-            <span className="text-emerald-400">jogos de aposta</span> do Brasil
-          </h1>
-          <p className="text-gray-400 text-sm sm:text-base max-w-md mx-auto mb-8">
-            Cadastre-se agora e aproveite bônus exclusivos. Plataforma segura, saques rápidos e os melhores jogos.
-          </p>
-          <button
-            onClick={handleCTA}
-            disabled={clicking || !hasLink}
-            className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-8 py-3.5 rounded-xl text-base transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-400/30 active:scale-[0.97]"
-          >
-            {clicking ? "Redirecionando..." : "Cadastrar Agora"} <ArrowRight size={18} />
-          </button>
-          {!hasLink && (
-            <p className="text-xs text-gray-500 mt-3">Link de cadastro em configuração.</p>
-          )}
-        </div>
-      </header>
-
-      {/* Features */}
-      <section className="px-6 pb-16">
-        <div className="max-w-xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {[
-            { icon: Trophy, title: "Bônus de Boas-Vindas", desc: "Ganhe bônus no primeiro depósito" },
-            { icon: Shield, title: "100% Seguro", desc: "Plataforma regulamentada e confiável" },
-            { icon: Gift, title: "Saques Rápidos", desc: "Receba seus ganhos via PIX em minutos" },
-          ].map((f) => (
-            <div key={f.title} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5 text-center">
-              <f.icon size={24} className="text-emerald-400 mx-auto mb-3" />
-              <h3 className="text-sm font-semibold mb-1">{f.title}</h3>
-              <p className="text-xs text-gray-500">{f.desc}</p>
+      {isSectionOn("hero") && (
+        <header className="relative pt-8 pb-16 px-6">
+          <div className="absolute inset-0 bg-gradient-to-b from-emerald-600/10 via-transparent to-transparent pointer-events-none" />
+          <div className="max-w-xl mx-auto relative z-10 text-center">
+            <img src={logo} alt="PlayBet" className="h-20 mx-auto mb-10 opacity-90" />
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium mb-6">
+              <Zap size={12} /> {mode === "odds" ? "Odds do dia" : "Oferta Exclusiva"}
             </div>
-          ))}
-        </div>
-      </section>
+            {mode === "single_game" && primaryGame ? (
+              <>
+                {primaryGame.icon_url ? (
+                  <img
+                    src={primaryGame.icon_url}
+                    alt={primaryGame.name}
+                    className="w-28 h-28 rounded-2xl mx-auto mb-5 object-cover shadow-xl shadow-emerald-500/20"
+                  />
+                ) : (
+                  <Gamepad2 size={80} className="text-emerald-400/60 mx-auto mb-5" />
+                )}
+                <h1 className="text-3xl sm:text-4xl font-extrabold leading-tight mb-3">
+                  Jogue <span className="text-emerald-400">{primaryGame.name}</span> agora
+                </h1>
+              </>
+            ) : (
+              <h1 className="text-3xl sm:text-4xl font-extrabold leading-tight mb-4">
+                {hypeTitle || (
+                  <>
+                    Jogue nos melhores<br />
+                    <span className="text-emerald-400">jogos de aposta</span> do Brasil
+                  </>
+                )}
+              </h1>
+            )}
+            <p className="text-gray-400 text-sm sm:text-base max-w-md mx-auto mb-8">
+              {hypeSub || "Cadastre-se agora e aproveite bônus exclusivos. Plataforma segura, saques rápidos e os melhores jogos."}
+            </p>
+            <button
+              onClick={handleCTA}
+              disabled={clicking || !hasLink}
+              className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-8 py-3.5 rounded-xl text-base transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-400/30 active:scale-[0.97]"
+            >
+              {clicking ? "Redirecionando..." : ctaLabel} <ArrowRight size={18} />
+            </button>
+            {!hasLink && (
+              <p className="text-xs text-gray-500 mt-3">Link de cadastro em configuração.</p>
+            )}
+          </div>
+        </header>
+      )}
 
-      {/* Games showcase */}
-      <section className="px-6 pb-16">
-        <div className="max-w-xl mx-auto text-center">
-          <h2 className="text-xl font-bold mb-2">Jogos Populares</h2>
-          <p className="text-sm text-gray-400 mb-6">Os jogos mais jogados da plataforma</p>
-          <div className="grid grid-cols-3 gap-3">
-            {["Fortune Tiger", "Aviator", "Mines", "Sweet Bonanza", "Gates of Olympus", "Spaceman"].map((g) => (
-              <div key={g} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 flex flex-col items-center gap-2">
-                <Gamepad2 size={20} className="text-emerald-400/60" />
-                <span className="text-xs font-medium">{g}</span>
+      {isSectionOn("features") && (
+        <section className="px-6 pb-16">
+          <div className="max-w-xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {[
+              { icon: Trophy, title: "Bônus de Boas-Vindas", desc: "Ganhe bônus no primeiro depósito" },
+              { icon: Shield, title: "100% Seguro", desc: "Plataforma regulamentada e confiável" },
+              { icon: Gift, title: "Saques Rápidos", desc: "Receba seus ganhos via PIX em minutos" },
+            ].map((f) => (
+              <div key={f.title} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5 text-center">
+                <f.icon size={24} className="text-emerald-400 mx-auto mb-3" />
+                <h3 className="text-sm font-semibold mb-1">{f.title}</h3>
+                <p className="text-xs text-gray-500">{f.desc}</p>
               </div>
             ))}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* Second CTA */}
-      <section className="px-6 pb-16">
-        <div className="max-w-xl mx-auto bg-gradient-to-r from-emerald-600/20 to-emerald-500/10 border border-emerald-500/20 rounded-2xl p-8 text-center">
-          <Star size={28} className="text-emerald-400 mx-auto mb-3" />
-          <h2 className="text-xl font-bold mb-2">Não perca essa oportunidade</h2>
-          <p className="text-sm text-gray-400 mb-5">Cadastre-se agora e comece a jogar com bônus exclusivo.</p>
-          <button
-            onClick={handleCTA}
-            disabled={clicking || !hasLink}
-            className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-8 py-3 rounded-xl text-sm transition-all shadow-lg shadow-emerald-500/25 active:scale-[0.97]"
-          >
-            {clicking ? "Redirecionando..." : "Quero Meu Bônus"} <ArrowRight size={16} />
-          </button>
-        </div>
-      </section>
+      {isSectionOn("games") && mode !== "odds" && (
+        <section className="px-6 pb-16">
+          <div className="max-w-xl mx-auto text-center">
+            <h2 className="text-xl font-bold mb-2">
+              {mode === "single_game" ? "Sobre o jogo" : mode === "multi_game" ? "Jogos em destaque" : "Jogos Populares"}
+            </h2>
+            <p className="text-sm text-gray-400 mb-6">
+              {displayGames.length > 0 ? "Clique e jogue agora" : "Os jogos mais jogados da plataforma"}
+            </p>
+            <div className={`grid gap-3 ${displayGames.length === 1 ? "grid-cols-1 max-w-xs mx-auto" : "grid-cols-3"}`}>
+              {(displayGames.length > 0
+                ? displayGames
+                : ["Fortune Tiger", "Aviator", "Mines", "Sweet Bonanza", "Gates of Olympus", "Spaceman"].map(
+                    (n) => ({ slug: n, name: n, icon_url: null } as GameArt),
+                  )
+              ).map((g) => (
+                <button
+                  key={g.slug}
+                  onClick={handleCTA}
+                  className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 flex flex-col items-center gap-2 hover:border-emerald-500/30 transition"
+                >
+                  {g.icon_url ? (
+                    <img src={g.icon_url} alt={g.name} className="w-14 h-14 rounded-lg object-cover" />
+                  ) : (
+                    <Gamepad2 size={24} className="text-emerald-400/60" />
+                  )}
+                  <span className="text-xs font-medium">{g.name}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
-      {/* Footer */}
-      <footer className="border-t border-white/[0.06] py-6 px-6 text-center">
-        <p className="text-xs text-gray-600">
-          PlayBet © {new Date().getFullYear()} · Jogue com responsabilidade · 18+
-        </p>
-      </footer>
+      {isSectionOn("odds") && mode === "odds" && (
+        <section className="px-6 pb-16">
+          <div className="max-w-xl mx-auto text-center">
+            <h2 className="text-xl font-bold mb-2">Odds do dia</h2>
+            <p className="text-sm text-gray-400 mb-6">Aposte agora nas melhores odds</p>
+            <button
+              onClick={handleCTA}
+              className="w-full max-w-md mx-auto bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-6 hover:bg-emerald-500/15 transition"
+            >
+              <p className="text-sm text-gray-300 mb-2">Confira as partidas ao vivo</p>
+              <p className="text-2xl font-extrabold text-emerald-400">Ver Odds →</p>
+            </button>
+          </div>
+        </section>
+      )}
+
+      {isSectionOn("cta") && (
+        <section className="px-6 pb-16">
+          <div className="max-w-xl mx-auto bg-gradient-to-r from-emerald-600/20 to-emerald-500/10 border border-emerald-500/20 rounded-2xl p-8 text-center">
+            <Star size={28} className="text-emerald-400 mx-auto mb-3" />
+            <h2 className="text-xl font-bold mb-2">Não perca essa oportunidade</h2>
+            <p className="text-sm text-gray-400 mb-5">Cadastre-se agora e comece a jogar com bônus exclusivo.</p>
+            <button
+              onClick={handleCTA}
+              disabled={clicking || !hasLink}
+              className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-8 py-3 rounded-xl text-sm transition-all shadow-lg shadow-emerald-500/25 active:scale-[0.97]"
+            >
+              {clicking ? "Redirecionando..." : "Quero Meu Bônus"} <ArrowRight size={16} />
+            </button>
+          </div>
+        </section>
+      )}
+
+      {isSectionOn("footer") && (
+        <footer className="border-t border-white/[0.06] py-6 px-6 text-center">
+          <p className="text-xs text-gray-600">
+            PlayBet © {new Date().getFullYear()} · Jogue com responsabilidade · 18+
+          </p>
+        </footer>
+      )}
     </div>
   );
 }

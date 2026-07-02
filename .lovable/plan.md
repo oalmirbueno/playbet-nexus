@@ -1,84 +1,98 @@
-# Squad Management Workspace
 
-Turn each squad card into a full management console. Click a squad → dedicated screen with roster, goals, cascading distribution, and admin tools. Director-only for squad/manager goals; manager+ for influencer distribution and troubleshooting.
+## Objetivo
 
-## 1. Navigation
-- `SquadsTab` cards become clickable → route `/pessoas/squads/:squadId` (new `SquadDetail.tsx` page).
-- Header: squad color badge, name, director, manager, active influencers count, monthly goal progress bar (BRL realized vs goal).
+Ao gerar um tracking link, o sistema decide/oferece uma LP de Oportunidade correspondente, monta o preview automaticamente com o conteúdo certo (1 jogo, N jogos, odds, ou catálogo geral) e dispara os materiais criativos vinculados àquele link — tudo sincronizado, editável e sem digitação manual.
 
-## 2. Sections in the Squad screen
+## Como o fluxo fica
 
-**a) Meta & Distribuição (top card)**
-- Fields: `monthly_goal` (squad), `manager_goal` (gerente do squad).
-- "Distribuir meta" button splits `monthly_goal` across active influencers. Modes:
-  - Igual (default)
-  - Ponderada por performance dos últimos 30 dias (revenue proporcional)
-  - Manual (editar cada linha antes de salvar)
-- Visible/editable only if director (own squads) or admin.
+```text
+Criar link ──► detecta contexto (jogo/odds/catálogo)
+     │
+     ├─► LP: [usar existente] ou [criar nova instância]
+     │        └─► preview auto-montado no modo certo:
+     │             • single-game    (1 jogo → hero + CTA direto)
+     │             • multi-game     (3/5/10 jogos → grade)
+     │             • odds           (partidas/mercados)
+     │             • catálogo geral (todos os jogos da casa)
+     │        └─► editor: reordenar, ocultar, editar copy inline
+     │        └─► salva → reflete na LP pública
+     │
+     └─► Materiais: gera automático conforme regra da plataforma
+              (admin escolhe formatos × estilos por casa)
+```
 
-**b) Roster de Influencers (tabela)**
-- Colunas: avatar/nome, categoria, meta individual (`monthly_goal_brl`), realizado 30d, % atingido, status, ações.
-- Inline edit da meta individual (manager+).
-- Ações por linha:
-  - Ver perfil → drawer `InfluencerQuickProfile` (dados, contatos, links, últimas notificações).
-  - Enviar link de redefinição de senha (dispara `admin-user-manage` reset).
-  - Reenviar convite (se sem `auth_user_id`).
-  - Marcar link quebrado / desativar link → abre lista dos `tracking_links` do influencer com toggle `is_active` e botão "regenerar slug".
-  - Remover do squad.
+## Entregas
 
-**c) Gerente & Diretor (side card)**
-- Trocar gerente (dropdown de managers existentes, respeita hierarquia).
-- Trocar diretor responsável.
-- Badge "Sócio" se manager for sócia (Camile) → mostra `compensation_mode = socio_only` como somente-leitura.
+### 1. Modo inteligente de LP (auto-detecção)
 
-**d) Notas & histórico**
-- Notas do squad (já existe).
-- Timeline curto: últimas 10 alterações (goals, membros entrando/saindo) via `commercial_card_history` filtrado + nova tabela leve `squad_activity`.
+Ao gerar o link, o backend classifica o `lp_mode` a partir do `link_category`, `game_slug` e quantidade de jogos escolhidos:
 
-## 3. RBAC
-- Director/admin: editar `monthly_goal`, `manager_goal`, distribuir meta, trocar gerente/diretor.
-- Manager do squad: editar metas individuais, disparar reset, desativar links.
-- Influencer/visualizacao: sem acesso à rota.
-- Enforcement via `useAuth` + RLS policies existentes (`is_admin`, `current_manager_squad_id`).
+- **`single_game`** — 1 jogo selecionado → hero grande com a arte, CTA "Jogar agora" com deep link do jogo.
+- **`multi_game`** — 3, 5 ou 10 jogos → grade com artes reais e CTA individual por card.
+- **`odds`** — categoria `sports`/`odds` → cartelas de partidas/mercados.
+- **`catalog`** — sem jogo específico → todas as opções ativas da casa.
 
-## 4. Backend
+Nunca mistura modos. A troca de modo é explícita no editor (dropdown).
 
-### Schema (migration)
-- `squads`: add `manager_goal_brl numeric`, `goal_distribution_mode text default 'equal'` (`equal|weighted|manual`), `goal_last_distributed_at timestamptz`.
-- `influencers`: ensure `monthly_goal_brl numeric` exists (add if missing).
-- `squad_activity` table: `id, squad_id, actor_user_id, action, payload jsonb, created_at`. Grants + RLS (`is_admin` or same squad manager).
+### 2. Passo "LP" dentro do QuickLinkDialog
 
-### RPC
-- `distribute_squad_goal(_squad_id uuid, _mode text, _overrides jsonb)` — SECURITY DEFINER. Recalcula `monthly_goal_brl` de cada influencer ativo do squad; grava `squad_activity`.
-- `request_influencer_password_reset(_influencer_id uuid)` — thin wrapper que valida permissão e chama edge function `admin-user-manage` via service role.
+Novo bloco entre "Contexto" e "SUBID":
 
-### Edge function
-- Reuse `admin-user-manage` (already exists) for password reset — add `action: 'send_reset_link'` if missing.
+- Opção **Usar LP existente** (select das instâncias ativas do influencer) **ou** **Criar nova instância**.
+- Ao criar: instancia derivada da LP base da plataforma, com `lp_mode`, `game_ids[]` e `hype_copy` já preenchidos.
+- Botão "Abrir preview" leva ao editor sem sair do fluxo.
 
-## 5. Files to create / edit
+### 3. Editor visual da LP de Oportunidades
 
-Create:
-- `src/pages/SquadDetail.tsx`
-- `src/components/squads/SquadGoalCard.tsx`
-- `src/components/squads/SquadRosterTable.tsx`
-- `src/components/squads/InfluencerQuickProfile.tsx` (Sheet)
-- `src/components/squads/InfluencerLinksManager.tsx`
-- `src/components/squads/GoalDistributionDialog.tsx`
-- `src/hooks/useSquadDetail.ts`
+Página nova `/admin/lps/oportunidades/:instanceId/editor`:
 
-Edit:
-- `src/components/people/SquadsTab.tsx` — card `onClick` → navigate.
-- `src/App.tsx` — add route.
-- `src/integrations/supabase/types.ts` — auto after migration.
+- Preview 1:1 do que sai em produção (iframe da rota real).
+- Painel lateral: reordenar/ocultar seções (hero, grade de jogos, odds, prova social, footer), editar título/subtítulo/motivo do hype inline.
+- Botão "Trocar modo" (single/multi/odds/catalog) recarrega o preview.
+- Salvar → grava em `landing_page_instances.layout_config` (JSONB) e propaga para a LP pública.
 
-## 6. UX notes
-- Layout: 12-col grid; header + 3 cards on desktop, stacked on tablet/mobile (same responsive rules as Pipeline overhaul).
-- Empty states para squad sem influencers ("Adicionar do pipeline aprovado").
-- Toasts em cada ação + optimistic update via React Query.
-- Confirm dialogs para reset de senha, remoção, desativação de link.
+### 4. Materiais configuráveis por plataforma
 
-## 7. Out of scope (esta iteração)
-- Meta anual, histórico gráfico longo, exportação — ficam para próxima.
-- Editor visual de LP dentro do squad.
+- Nova aba em `PlataformasPage`: **Regras de materiais** (matriz formato × estilo, toggle on/off por casa).
+- Ao criar o link, edge function `materials-autogenerate` lê a matriz da plataforma e enfileira os jobs. Cada material fica vinculado ao `tracking_link_id` (não só ao influencer).
+- Materiais aparecem em `/materiais` filtráveis por link.
 
-Confirmar para eu implementar (migração + telas em uma leva).
+## Detalhes técnicos
+
+### Migrations
+- `landing_page_instances`: adicionar `lp_mode text`, `game_ids uuid[]`, `layout_config jsonb`, `source_tracking_link_id uuid`, `hype_copy jsonb`.
+- `tracking_links`: já tem `landing_page_instance_id`. Adicionar `lp_auto_generated boolean`.
+- Nova tabela `platform_material_rules(platform_id, format, style, enabled)` com GRANTs + RLS (admin CRUD, todos leem).
+- Nova tabela `link_materials(id, tracking_link_id, format, style, image_url, status, meta)` com GRANTs + RLS (influencer/gerente do link leem; admin CRUD).
+
+### Edge functions
+- `lp-autoconfigure` — recebe `{tracking_link_id}`, decide `lp_mode`, monta `layout_config` inicial, cria/atualiza instância.
+- `materials-autogenerate` — recebe `{tracking_link_id}`, aplica matriz da plataforma, renderiza via `creativeStudio` server-side (canvas em Deno via `skia-canvas` — se indisponível, gera manifest e o front renderiza sob demanda em cache).
+
+### Frontend
+- `QuickLinkDialog.tsx` — novo passo "LP".
+- `TrackingLinkForm.tsx` — mesmo passo em versão desktop.
+- `src/pages/admin/lps/OportunidadeLpEditor.tsx` — editor com preview + painel.
+- `src/lib/lpMode.ts` — heurística de detecção compartilhada.
+- `PlataformasPage.tsx` — aba "Materiais".
+- `MateriaisView.tsx` — filtro por link + preview.
+
+### Sync
+- Trigger `after insert on tracking_links` → chama `lp-autoconfigure` e `materials-autogenerate` (via `pg_net` ou fila em `job_queue`).
+- Editor salva → `landing_page_instances.updated_at` bump → LP pública re-renderiza (React Query invalidation via realtime).
+
+## Fora do escopo desta entrega
+
+- A/B testing de LPs (fica para depois).
+- Deep-link real dentro do provedor (usa URL padrão do jogo até termos API oficial).
+- Editor de materiais pixel-a-pixel (usa presets do `creativeStudio` atual).
+
+## Ordem de execução
+
+1. Migrations (schema + RLS + GRANTs).
+2. `lp-autoconfigure` + trigger.
+3. Passo "LP" nos dois dialogs de link.
+4. Editor visual da LP.
+5. Matriz de materiais na PlataformasPage + `materials-autogenerate`.
+6. MateriaisView filtrado por link.
+7. QA end-to-end: criar link → LP montada → editar → salvar → materiais na fila → aparecer em `/materiais`.

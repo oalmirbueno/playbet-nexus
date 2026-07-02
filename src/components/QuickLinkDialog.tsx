@@ -50,6 +50,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   const [linkCategory, setLinkCategory] = useState("");
   const [hypeReason, setHypeReason] = useState("");
   const [campanhaId, setCampanhaId] = useState("");
+  const [extraGameSlugs, setExtraGameSlugs] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   // Inline-create modal states
@@ -72,6 +73,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       setLinkCategory("");
       setHypeReason("");
       setCampanhaId("");
+      setExtraGameSlugs([]);
     }
   }, [open, defaultInfluencerId, defaultLandingPageId]);
 
@@ -270,7 +272,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
 
       const useLp = !!landingPageId;
 
-      await createLink({
+      const createdLink: any = await createLink({
         influencer_id: influencerId,
         platform_account_id: finalAccountId,
         landing_page_id: landingPageId || null,
@@ -290,11 +292,35 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
         status: "active",
       } as any);
 
+      // ── Sync: LP config + Materiais (fire-and-forget, non-blocking) ──
+      const linkId = createdLink?.id;
+      if (linkId) {
+        Promise.allSettled([
+          useLp
+            ? supabase.functions.invoke("lp-autoconfigure", {
+                body: {
+                  tracking_link_id: linkId,
+                  extra_game_slugs: extraGameSlugs,
+                  hype_copy: { subtitle: hypeReason || null },
+                },
+              })
+            : Promise.resolve(null),
+          supabase.functions.invoke("materials-autogenerate", {
+            body: { tracking_link_id: linkId },
+          }),
+        ]).then(() => {
+          qc.invalidateQueries({ queryKey: ["landing_page_instances"] });
+          qc.invalidateQueries({ queryKey: ["link_materials"] });
+        });
+      }
+
       try { await navigator.clipboard.writeText(finalUrl); } catch {}
 
       toast({
         title: "Link cadastrado",
-        description: useLp ? "Link da landing page copiado." : "Link copiado. Postback ativo.",
+        description: useLp
+          ? "LP e materiais estão sincronizando em segundo plano."
+          : "Link copiado · materiais gerando em segundo plano.",
       });
       onOpenChange(false);
     } catch (err: any) {
@@ -477,22 +503,37 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
                       <div className="invisible-scroll flex gap-1.5 overflow-x-auto snap-x pb-1 -mx-0.5 px-0.5">
                         {hypedGames.map((g: any) => {
                           const selected = gameSlug === g.game_slug;
+                          const inExtras = extraGameSlugs.includes(g.game_slug);
                           return (
-                            <button
+                            <div
                               key={g.id}
-                              type="button"
-                              onClick={() => applyHypedGame(g)}
-                              className={`snap-start shrink-0 w-[72px] rounded-md border p-1.5 text-center transition ${selected ? "border-warning/60 bg-warning/10" : "border-border/50 bg-background/50 hover:border-warning/40"}`}
-                              title={g.hype_reason || g.game_name}
+                              className={`snap-start shrink-0 w-[72px] rounded-md border p-1.5 text-center transition relative ${selected ? "border-warning/60 bg-warning/10" : inExtras ? "border-primary/60 bg-primary/10" : "border-border/50 bg-background/50 hover:border-warning/40"}`}
                             >
-                              <div className="flex justify-center mb-1 relative">
-                                <GameArtwork slug={g.game_slug} name={g.game_name} iconUrl={g.icon_url} size="md" />
-                                <span className="absolute -top-1 -right-1 text-[8px] font-bold bg-warning text-warning-foreground rounded-full w-3.5 h-3.5 flex items-center justify-center">
-                                  {g.priority}
-                                </span>
-                              </div>
-                              <span className="block text-[9px] font-medium leading-tight truncate">{g.game_name}</span>
-                            </button>
+                              <button
+                                type="button"
+                                onClick={() => applyHypedGame(g)}
+                                className="w-full text-center"
+                                title={g.hype_reason || g.game_name}
+                              >
+                                <div className="flex justify-center mb-1 relative">
+                                  <GameArtwork slug={g.game_slug} name={g.game_name} iconUrl={g.icon_url} size="md" />
+                                  <span className="absolute -top-1 -right-1 text-[8px] font-bold bg-warning text-warning-foreground rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                                    {g.priority}
+                                  </span>
+                                </div>
+                                <span className="block text-[9px] font-medium leading-tight truncate">{g.game_name}</span>
+                              </button>
+                              {landingPageId && !selected && (
+                                <button
+                                  type="button"
+                                  onClick={() => setExtraGameSlugs((prev) => inExtras ? prev.filter((s) => s !== g.game_slug) : [...prev, g.game_slug])}
+                                  className={`absolute -bottom-1 -right-1 text-[8px] font-bold rounded px-1 border ${inExtras ? "bg-primary text-primary-foreground border-primary" : "bg-background/80 text-primary border-primary/40"}`}
+                                  title={inExtras ? "Remover da LP" : "Adicionar à LP"}
+                                >
+                                  {inExtras ? "✓ LP" : "+ LP"}
+                                </button>
+                              )}
+                            </div>
                           );
                         })}
                       </div>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Edit, Copy, Eye, XCircle, CheckCircle, Search, ExternalLink, AlertTriangle, Link2, Radio, Zap } from "lucide-react";
+import { Plus, Edit, Copy, Eye, XCircle, CheckCircle, Search, ExternalLink, AlertTriangle, Link2, Radio, Zap, Wand2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useLandingPageInstances, useLandingPages, useInfluencers, usePlatforms } from "@/hooks/useSupabaseQuery";
@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ExportDropdown from "@/components/ExportDropdown";
 import QuickLinkDialog from "@/components/QuickLinkDialog";
+import LpInstanceVisualEditor from "@/components/lp/LpInstanceVisualEditor";
 import { findPresetByName, buildPostbackUrlForEvent } from "@/config/platformPresets";
 
 type EditingState = {
@@ -44,6 +45,7 @@ export default function LPInstances() {
   const [previewOpen, setPreviewOpen] = useState<LandingPageInstanceRow | null>(null);
   const [postbackOpen, setPostbackOpen] = useState<LandingPageInstanceRow | null>(null);
   const [quickLinkFor, setQuickLinkFor] = useState<LandingPageInstanceRow | null>(null);
+  const [visualEditorFor, setVisualEditorFor] = useState<LandingPageInstanceRow | null>(null);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [filterLP, setFilterLP] = useState("Todos");
@@ -304,7 +306,8 @@ export default function LPInstances() {
                       <button onClick={() => setQuickLinkFor(inst)} className="p-1 rounded hover:bg-primary/15 text-primary transition-colors" title="Gerar link de afiliado"><Zap size={12} /></button>
                       <button onClick={() => setPreviewOpen(inst)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Preview"><Eye size={12} /></button>
                       <button onClick={() => setPostbackOpen(inst)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-accent transition-colors" title="Postback URLs"><Radio size={12} /></button>
-                      <button onClick={() => openEdit(inst)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Editar"><Edit size={12} /></button>
+                      <button onClick={() => setVisualEditorFor(inst)} className="p-1 rounded hover:bg-primary/15 text-muted-foreground hover:text-primary transition-colors" title="Editor visual"><Wand2 size={12} /></button>
+                      <button onClick={() => openEdit(inst)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Editar campos"><Edit size={12} /></button>
                       <button onClick={() => copyUrl(inst)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Copiar URL"><Copy size={12} /></button>
                       <button onClick={() => copyAffLink(inst)} className="p-1 rounded hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors" title="Copiar Affiliate Link"><Link2 size={12} /></button>
                       <button onClick={() => handleToggle(inst)} className={`p-1 rounded transition-colors text-muted-foreground ${inst.is_active ? "hover:bg-destructive/15 hover:text-destructive" : "hover:bg-success/15 hover:text-success"}`} title={inst.is_active ? "Desativar" : "Ativar"}>
@@ -600,6 +603,14 @@ export default function LPInstances() {
         onOpenChange={(v) => { if (!v) setQuickLinkFor(null); }}
         defaultInfluencerId={quickLinkFor?.influencer_id || ""}
         defaultLandingPageId={quickLinkFor?.landing_page_id || ""}
+      />
+
+      {/* Visual editor: mode, sections, hype copy, jogos */}
+      <LpInstanceVisualEditor
+        open={!!visualEditorFor}
+        onOpenChange={(v) => { if (!v) setVisualEditorFor(null); }}
+        instanceId={visualEditorFor?.id || null}
+        publicUrl={visualEditorFor ? buildPublicUrl(getLPDomain(visualEditorFor.landing_page_id), visualEditorFor.slug) : null}
       />
     </div>
   );

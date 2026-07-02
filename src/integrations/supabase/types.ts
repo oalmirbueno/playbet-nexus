@@ -905,38 +905,59 @@ export type Database = {
       landing_page_instances: {
         Row: {
           affiliate_link: string
+          auto_generated: boolean
           created_at: string | null
+          game_ids: string[]
+          game_slugs: string[]
+          hype_copy: Json
           id: string
           influencer_id: string
           is_active: boolean | null
           is_demo: boolean
           landing_page_id: string
+          layout_config: Json
+          lp_mode: string
           notes: string | null
           slug: string
+          source_tracking_link_id: string | null
           updated_at: string | null
         }
         Insert: {
           affiliate_link: string
+          auto_generated?: boolean
           created_at?: string | null
+          game_ids?: string[]
+          game_slugs?: string[]
+          hype_copy?: Json
           id?: string
           influencer_id: string
           is_active?: boolean | null
           is_demo?: boolean
           landing_page_id: string
+          layout_config?: Json
+          lp_mode?: string
           notes?: string | null
           slug: string
+          source_tracking_link_id?: string | null
           updated_at?: string | null
         }
         Update: {
           affiliate_link?: string
+          auto_generated?: boolean
           created_at?: string | null
+          game_ids?: string[]
+          game_slugs?: string[]
+          hype_copy?: Json
           id?: string
           influencer_id?: string
           is_active?: boolean | null
           is_demo?: boolean
           landing_page_id?: string
+          layout_config?: Json
+          lp_mode?: string
           notes?: string | null
           slug?: string
+          source_tracking_link_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -952,6 +973,13 @@ export type Database = {
             columns: ["landing_page_id"]
             isOneToOne: false
             referencedRelation: "landing_pages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "landing_page_instances_source_tracking_link_id_fkey"
+            columns: ["source_tracking_link_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_links"
             referencedColumns: ["id"]
           },
         ]
@@ -1022,6 +1050,82 @@ export type Database = {
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      link_materials: {
+        Row: {
+          created_at: string
+          error: string | null
+          format: string
+          game_name: string | null
+          game_slug: string | null
+          id: string
+          image_url: string | null
+          influencer_id: string | null
+          meta: Json
+          platform_id: string | null
+          status: string
+          style: string
+          thumbnail_url: string | null
+          tracking_link_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          error?: string | null
+          format: string
+          game_name?: string | null
+          game_slug?: string | null
+          id?: string
+          image_url?: string | null
+          influencer_id?: string | null
+          meta?: Json
+          platform_id?: string | null
+          status?: string
+          style: string
+          thumbnail_url?: string | null
+          tracking_link_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          error?: string | null
+          format?: string
+          game_name?: string | null
+          game_slug?: string | null
+          id?: string
+          image_url?: string | null
+          influencer_id?: string | null
+          meta?: Json
+          platform_id?: string | null
+          status?: string
+          style?: string
+          thumbnail_url?: string | null
+          tracking_link_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "link_materials_influencer_id_fkey"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "link_materials_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "platforms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "link_materials_tracking_link_id_fkey"
+            columns: ["tracking_link_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_links"
             referencedColumns: ["id"]
           },
         ]
@@ -1723,6 +1827,47 @@ export type Database = {
           },
         ]
       }
+      platform_material_rules: {
+        Row: {
+          auto_on_new_link: boolean
+          created_at: string
+          enabled: boolean
+          format: string
+          id: string
+          platform_id: string
+          style: string
+          updated_at: string
+        }
+        Insert: {
+          auto_on_new_link?: boolean
+          created_at?: string
+          enabled?: boolean
+          format: string
+          id?: string
+          platform_id: string
+          style: string
+          updated_at?: string
+        }
+        Update: {
+          auto_on_new_link?: boolean
+          created_at?: string
+          enabled?: boolean
+          format?: string
+          id?: string
+          platform_id?: string
+          style?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_material_rules_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "platforms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platforms: {
         Row: {
           affiliate_manager: string | null
@@ -2382,6 +2527,7 @@ export type Database = {
           landing_page_id: string | null
           landing_page_instance_id: string | null
           link_category: string | null
+          lp_auto_generated: boolean
           notes: string | null
           parent_link_id: string | null
           platform_account_id: string | null
@@ -2412,6 +2558,7 @@ export type Database = {
           landing_page_id?: string | null
           landing_page_instance_id?: string | null
           link_category?: string | null
+          lp_auto_generated?: boolean
           notes?: string | null
           parent_link_id?: string | null
           platform_account_id?: string | null
@@ -2442,6 +2589,7 @@ export type Database = {
           landing_page_id?: string | null
           landing_page_instance_id?: string | null
           link_category?: string | null
+          lp_auto_generated?: boolean
           notes?: string | null
           parent_link_id?: string | null
           platform_account_id?: string | null
