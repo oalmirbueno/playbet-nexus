@@ -72,6 +72,7 @@ export default function Influencers() {
   const [editingInf, setEditingInf] = useState<InfEdit | null>(null);
   const [confirmDeactivate, setConfirmDeactivate] = useState<InfluencerRow | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<InfluencerRow | null>(null);
+  const [confirmDeleteText, setConfirmDeleteText] = useState("");
   const [quickLinkFor, setQuickLinkFor] = useState<string | null>(null);
 
   // Manager state
