@@ -420,10 +420,30 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
   };
 
   const previewSrc = useMemo(() => {
+    // Prefer a same-origin preview so we always render the LATEST code and our thin scrollbars apply.
+    // Extract the LP slug from the public URL (?ref=slug) and load the local /i/:slug route.
+    let localSlug: string | null = null;
+    if (publicUrl) {
+      try {
+        const u = new URL(publicUrl, window.location.origin);
+        localSlug = u.searchParams.get("ref");
+        if (!localSlug) {
+          const m = u.pathname.match(/\/i\/([^/?#]+)/);
+          if (m) localSlug = m[1];
+        }
+      } catch {
+        const m = publicUrl.match(/[?&]ref=([^&]+)/);
+        if (m) localSlug = decodeURIComponent(m[1]);
+      }
+    }
+    if (localSlug) {
+      return `${window.location.origin}/i/${localSlug}?_preview=${previewKey}`;
+    }
     if (!publicUrl) return null;
     const sep = publicUrl.includes("?") ? "&" : "?";
     return `${publicUrl}${sep}_preview=${previewKey}`;
   }, [publicUrl, previewKey]);
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
