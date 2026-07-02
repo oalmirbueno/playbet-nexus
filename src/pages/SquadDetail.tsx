@@ -197,8 +197,10 @@ export default function SquadDetail() {
     else { toast({ title: "Removido do squad" }); invalidateAll(); }
   };
 
-  const sendPasswordReset = async (email: string | null) => {
-    if (!email) { toast({ title: "Sem email cadastrado", variant: "destructive" }); return; }
+  const sendPasswordReset = async (influencerId: string) => {
+    const { data: prof } = await db.from("profiles").select("email").eq("influencer_id", influencerId).maybeSingle();
+    const email = prof?.email ?? null;
+    if (!email) { toast({ title: "Sem email cadastrado para este influenciador", variant: "destructive" }); return; }
     const { data, error } = await (supabase as any).functions.invoke("admin-user-manage", {
       body: { action: "send_recovery", email },
     });
