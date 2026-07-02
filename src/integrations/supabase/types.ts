@@ -3166,6 +3166,7 @@ export type Database = {
         Returns: boolean
       }
       is_admin: { Args: { _user_id: string }; Returns: boolean }
+      lp_opp_slugify: { Args: { txt: string }; Returns: string }
       notify_target: {
         Args: {
           _action_url: string
