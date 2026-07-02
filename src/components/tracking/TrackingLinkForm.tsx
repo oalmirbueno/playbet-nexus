@@ -750,11 +750,12 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
               </div>
 
               {trackedAffiliateUrl && form.base_url && (
-                <div className="flex items-start gap-1.5 text-[10px] pt-1 border-t border-border/40">
+                <div className="flex items-start gap-1.5 text-[10px] pt-1 border-t border-border/40 min-w-0">
                   <span className="text-[9px] uppercase tracking-wider text-muted-foreground mt-0.5 shrink-0">CTA →</span>
-                  <code className="font-mono break-all text-muted-foreground">{trackedAffiliateUrl}</code>
+                  <code className="font-mono break-all text-muted-foreground min-w-0 flex-1">{trackedAffiliateUrl}</code>
                 </div>
               )}
+
             </div>
           )}
 
