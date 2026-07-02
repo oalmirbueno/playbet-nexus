@@ -471,7 +471,7 @@ export default function TrackingLinks() {
                               <Button variant="ghost" size="icon" className="h-7 w-7" title="Editar" onClick={() => openEdit(l)}>
                                 <Pencil size={13} />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" title="Remover" onClick={() => remove(l.id)}>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" title="Remover" onClick={() => handleDelete(l)}>
                                 <Trash2 size={13} />
                               </Button>
                             </div>
@@ -565,7 +565,7 @@ export default function TrackingLinks() {
                             <Button variant="ghost" size="icon" className="h-7 w-7" title="Editar" onClick={() => openEdit(l)}>
                               <Pencil size={13} />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" title="Remover" onClick={() => remove(l.id)}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" title="Remover" onClick={() => handleDelete(l)}>
                               <Trash2 size={13} />
                             </Button>
                           </div>
