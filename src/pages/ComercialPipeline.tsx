@@ -530,7 +530,13 @@ function CardDetailSheet({ card, squads, managers, onClose, onUpdated }: {
 
   async function saveMeta() {
     const payload: Record<string, unknown> = { notes };
-    payload.squad_id = squadId === "none" ? null : squadId;
+    if (isManagerCard) {
+      payload.squad_ids = squadIds;
+      payload.squad_id = squadIds[0] ?? null;
+    } else {
+      payload.squad_id = squadId === "none" ? null : squadId;
+      payload.squad_ids = [];
+    }
     const { error } = await supabase.from("commercial_pipeline_cards").update(payload).eq("id", card.id);
     if (error) {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
@@ -539,6 +545,16 @@ function CardDetailSheet({ card, squads, managers, onClose, onUpdated }: {
     toast({ title: "Salvo" });
     onUpdated();
   }
+
+  function toggleSquad(id: string) {
+    setSquadIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
+
+  const hierarchyFromCount = (n: number) =>
+    n >= 5 ? { label: "Diretor de Squads", tone: "text-fuchsia-500" }
+    : n >= 3 ? { label: "Gerente Diretor", tone: "text-indigo-500" }
+    : { label: "Gerente", tone: "text-emerald-500" };
+
 
   return (
     <Sheet open={!!card} onOpenChange={v => !v && onClose()}>
