@@ -61,32 +61,46 @@ async function findLPBaseByHostname(hostname: string) {
   return null;
 }
 
-/** Find tracking_link for a given instance or influencer */
+/** Find tracking_link for a given instance or influencer (any status; prefer active) */
 async function findTrackingLink(instanceId: string | null, influencerId: string) {
-  // Priority 1: by instance
   if (instanceId) {
     const { data } = await supabase
       .from("tracking_links")
-      .select("id, click_id_param_name, base_url, short_url, campanha_id")
+      .select("id, click_id_param_name, base_url, short_url, final_url, campanha_id, status")
       .eq("landing_page_instance_id", instanceId)
-      .eq("status", "active")
+      .order("status", { ascending: true }) // active < paused alphabetically
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
     if (data) return data;
   }
 
-  // Priority 2: by influencer
   const { data } = await supabase
     .from("tracking_links")
-    .select("id, click_id_param_name, base_url, short_url, campanha_id")
+    .select("id, click_id_param_name, base_url, short_url, final_url, campanha_id, status")
     .eq("influencer_id", influencerId)
-    .eq("status", "active")
+    .order("status", { ascending: true })
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
   return data || null;
+}
+
+/** Fallback: get any opportunity destination for the instance/influencer */
+async function findOpportunityDestination(instanceId: string | null, landingPageId: string | null) {
+  if (!landingPageId && !instanceId) return null;
+  const query = supabase
+    .from("lp_opportunities")
+    .select("destination_url")
+    .eq("is_active", true)
+    .not("destination_url", "is", null)
+    .order("sort_order", { ascending: false })
+    .limit(1);
+  const { data } = landingPageId
+    ? await query.eq("landing_page_id", landingPageId).maybeSingle()
+    : await query.maybeSingle();
+  return data?.destination_url || null;
 }
 
 interface InstanceContext {
@@ -295,7 +309,9 @@ export default function InfluencerLanding() {
       ) => {
         const tl = await findTrackingLink(instanceId, influencerId);
         const paramName = tl?.click_id_param_name || "sub1";
-        const outboundAffiliate = affiliateLink || tl?.base_url || tl?.short_url || "";
+        const fallbackOpportunity = await findOpportunityDestination(instanceId, landingPageId);
+        const outboundAffiliate =
+          affiliateLink || (tl as any)?.base_url || (tl as any)?.short_url || (tl as any)?.final_url || fallbackOpportunity || "";
 
         setResolved({
           affiliate_link: outboundAffiliate,
@@ -652,7 +668,7 @@ export default function InfluencerLanding() {
           <div className="max-w-xl mx-auto">
             <div className="text-center mb-6">
               <h2 className="text-xl font-bold mb-2">Odds do dia</h2>
-              <p className="text-sm text-gray-400">Curadoria PlayBet — mercados simples e valor real</p>
+              <p className="text-sm text-gray-400">Opções em destaque com mercado simples e valor real</p>
             </div>
             {smartOdds.length > 0 ? (
               <div className="space-y-2">
@@ -691,7 +707,7 @@ export default function InfluencerLanding() {
                 onClick={handleCTA}
                 className="w-full max-w-md mx-auto block bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-6 hover:bg-emerald-500/15 transition"
               >
-                <p className="text-sm text-gray-300 mb-2">Confira as partidas ao vivo</p>
+                <p className="text-sm text-gray-300 mb-2">Ver todas as opções em destaque</p>
                 <p className="text-2xl font-extrabold text-emerald-400">Ver Odds →</p>
               </button>
             )}

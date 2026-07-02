@@ -825,7 +825,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                       </button>
                     </div>
                     <p className="text-[10px] text-muted-foreground leading-relaxed">
-                      Ranqueadas por score de curadoria PlayBet (mercado simples, proximidade, confiança de sinal, odd em destaque).
+                      Ordenadas por mercado simples, proximidade do jogo e odd em destaque.
                     </p>
                     <div className="flex gap-1.5">
                       <Button size="sm" variant="secondary" className="h-7 text-[10px] flex-1"
