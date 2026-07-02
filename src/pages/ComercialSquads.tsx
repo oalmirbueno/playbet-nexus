@@ -289,15 +289,14 @@ function NewManagerDialog({
     if (!selected) return toast({ title: "Selecione uma pessoa", variant: "destructive" });
     const baseName = selected.name.trim();
     const slug = baseName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + Math.random().toString(36).slice(2, 6);
-    const payload: Record<string, unknown> = {
+    const { error } = await supabase.from("managers").insert({
       name: baseName,
       slug,
       team_name: baseName,
       squad_id: squadId === "none" ? null : squadId,
       influencer_id: selected.type === "influencer" ? selected.id : null,
       socio_id: selected.type === "socio" ? selected.id : null,
-    };
-    const { error } = await supabase.from("managers").insert(payload);
+    });
     if (error) return toast({ title: "Erro", description: error.message, variant: "destructive" });
     setPersonKey(""); setSquadId("none"); onOpenChange(false); onCreated();
     toast({
