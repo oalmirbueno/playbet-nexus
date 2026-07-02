@@ -554,20 +554,19 @@ export default function InfluencerLanding() {
 
       {isSectionOn("cta") && (
         <section className="px-6 pb-16">
-          <div className="max-w-xl mx-auto bg-gradient-to-r from-emerald-600/20 to-emerald-500/10 border border-emerald-500/20 rounded-2xl p-8 text-center">
-            <Star size={28} className="text-emerald-400 mx-auto mb-3" />
-            <h2 className="text-xl font-bold mb-2">Não perca essa oportunidade</h2>
-            <p className="text-sm text-gray-400 mb-5">Cadastre-se agora e comece a jogar com bônus exclusivo.</p>
+          <div className="max-w-xl mx-auto text-center">
             <button
               onClick={handleCTA}
               disabled={clicking || !hasLink}
-              className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-8 py-3 rounded-xl text-sm transition-all shadow-lg shadow-emerald-500/25 active:scale-[0.97]"
+              className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-8 py-3.5 rounded-xl text-base transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-400/30 active:scale-[0.97]"
             >
-              {clicking ? "Redirecionando..." : "Quero Meu Bônus"} <ArrowRight size={16} />
+              {clicking ? "Redirecionando..." : ctaLabel} <ArrowRight size={18} />
             </button>
+            <p className="text-[11px] text-gray-500 mt-3">Cadastro rápido · Jogue com responsabilidade · 18+</p>
           </div>
         </section>
       )}
+
 
       {isSectionOn("footer") && (
         <footer className="border-t border-white/[0.06] py-6 px-6 text-center">
