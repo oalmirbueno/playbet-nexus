@@ -73,6 +73,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       setLinkCategory("");
       setHypeReason("");
       setCampanhaId("");
+      setExtraGameSlugs([]);
     }
   }, [open, defaultInfluencerId, defaultLandingPageId]);
 
