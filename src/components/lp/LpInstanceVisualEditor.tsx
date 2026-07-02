@@ -8,8 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { ArrowUp, ArrowDown, RefreshCw, ExternalLink, Loader2, Wand2, Users, Sparkles, TrendingUp } from "lucide-react";
-import { LP_MODE_LABELS, LP_MODE_HINTS, defaultLayoutConfig, type LpMode } from "@/lib/lpMode";
+import { ArrowUp, ArrowDown, RefreshCw, ExternalLink, Loader2, Wand2, Users, Sparkles, TrendingUp, Gift } from "lucide-react";
+import { LP_MODE_LABELS, defaultLayoutConfig, type LpMode } from "@/lib/lpMode";
 import GameArtwork from "@/components/tracking/GameArtwork";
 import { suggestThreeOptions, computeOpportunityScore } from "@/lib/opportunityEngine";
 
@@ -50,21 +50,35 @@ interface CommunityCta {
   note?: string;
 }
 
+interface BonusOffer {
+  enabled: boolean;
+  title: string;
+  code: string;
+  note: string;
+  cta_label: string;
+}
+
+function isBonusCategory(category: string | null | undefined): boolean {
+  const cat = (category || "").toLowerCase();
+  return ["bonus", "bônus", "promo", "oferta", "offer", "cupom", "codigo", "código"].includes(cat);
+}
+
 function categoryCta(category: string | null | undefined, gameName?: string | null): string {
   const cat = (category || "").toLowerCase();
+  if (isBonusCategory(cat)) return "Resgatar bônus";
   if (["odds", "sports", "sportsbook", "esportes"].includes(cat)) return "Apostar agora";
   if (["crash", "slots", "casino", "live"].includes(cat)) return gameName ? `Jogar ${gameName}` : "Jogar agora";
-  return "Jogar agora";
+  return "Acessar oportunidades";
 }
 
 function adaptiveSubtitle(mode: LpMode, gameName?: string | null, platformName?: string | null): string {
   if (mode === "odds")
-    return "Odds selecionadas pela curadoria PlayBet — foco em mercados simples e valor real.";
+    return "Melhores oportunidades de hoje.";
   if (mode === "single_game")
-    return `Bônus e cashback ativos hoje em ${gameName || "jogos selecionados"}${platformName ? ` na ${platformName}` : ""}.`;
+    return `Oferta ativa${gameName ? ` para ${gameName}` : ""}${platformName ? ` na ${platformName}` : ""}.`;
   if (mode === "multi_game")
-    return "Seleção quente da semana — jogos com maior conversão dos influencers PlayBet.";
-  return "Cadastro rápido, saques via PIX e catálogo completo.";
+    return "Jogos em alta com ofertas oficiais.";
+  return "Bônus oficial e acesso rápido.";
 }
 
 export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId, publicUrl }: Props) {
@@ -85,6 +99,13 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
     label: "",
     url: "",
     note: "",
+  });
+  const [bonusOffer, setBonusOffer] = useState<BonusOffer>({
+    enabled: true,
+    title: "",
+    code: "",
+    note: "",
+    cta_label: "",
   });
   const [smartOdds, setSmartOdds] = useState<SmartOdd[]>([]);
   const [oddsCandidates, setOddsCandidates] = useState<SmartOdd[]>([]);
@@ -131,6 +152,13 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
           url: hc.community_cta?.url || "",
           note: hc.community_cta?.note || "",
         });
+        setBonusOffer({
+          enabled: hc.bonus_offer?.enabled ?? true,
+          title: hc.bonus_offer?.title || "",
+          code: hc.bonus_offer?.code || "",
+          note: hc.bonus_offer?.note || "",
+          cta_label: hc.bonus_offer?.cta_label || "",
+        });
         setSmartOdds(Array.isArray(hc.smart_odds) ? hc.smart_odds : []);
 
         // Load tracking link linked to this instance (source of truth for game/hype)
@@ -159,9 +187,16 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
           }));
           setCommunity(prev => ({
             enabled: prev.enabled,
-            label: prev.label || (gname ? `Entrar na comunidade de ${gname}` : "Entrar na comunidade PlayBet"),
+            label: prev.label || (gname ? `Comunidade ${gname}` : "Comunidade PlayBet"),
             url: prev.url,
-            note: prev.note || (gname ? `Grupo VIP com dicas e horários quentes de ${gname}` : "Grupo VIP com dicas diárias"),
+            note: prev.note,
+          }));
+          setBonusOffer(prev => ({
+            enabled: prev.enabled,
+            title: prev.title || (isBonusCategory(cat) ? `Bônus ${gname || "exclusivo"}` : "Oferta oficial"),
+            code: prev.code,
+            note: prev.note || "Use no cadastro.",
+            cta_label: prev.cta_label || categoryCta(cat, gname),
           }));
         }
 
@@ -174,7 +209,15 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
           const merged = [...(games || [])];
           // Ensure the link's own game shows up (with its real icon) even if not hyped yet
           const lg = (tl as any)?.game_slug;
-          if (lg && !merged.some(g => g.game_slug === lg)) {
+          const existingIdx = lg ? merged.findIndex(g => g.game_slug === lg) : -1;
+          if (existingIdx >= 0) {
+            merged[existingIdx] = {
+              ...merged[existingIdx],
+              game_name: merged[existingIdx].game_name || (tl as any).game_name || lg,
+              icon_url: (tl as any).game_icon_url || merged[existingIdx].icon_url || null,
+              priority: Math.max(Number(merged[existingIdx].priority || 0), 999),
+            };
+          } else if (lg) {
             merged.unshift({
               id: `link-${lg}`,
               game_slug: lg,
@@ -302,10 +345,16 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
     });
     setCommunity(prev => ({
       ...prev,
-      label: gname ? `Entrar na comunidade de ${gname}` : "Entrar na comunidade PlayBet",
-      note: gname ? `Grupo VIP com dicas e horários quentes de ${gname}` : "Grupo VIP com dicas diárias",
+      label: gname ? `Comunidade ${gname}` : "Comunidade PlayBet",
+      note: prev.note,
     }));
-    toast({ title: "Copy adaptativa aplicada", description: "Preencheu a partir do jogo e categoria do link." });
+    setBonusOffer(prev => ({
+      ...prev,
+      title: isBonusCategory(link?.link_category) ? `Bônus ${gname || "exclusivo"}` : "Oferta oficial",
+      note: prev.note || "Use no cadastro.",
+      cta_label: categoryCta(link?.link_category, gname),
+    }));
+    toast({ title: "Copy aplicada" });
   };
 
   const pickTopOdds = (n = 3) => {
@@ -336,6 +385,16 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
           url: community.url || null,
           note: community.note || null,
         },
+        bonus_offer: {
+          enabled: bonusOffer.enabled,
+          title: bonusOffer.title || null,
+          code: bonusOffer.code || null,
+          note: bonusOffer.note || null,
+          cta_label: bonusOffer.cta_label || null,
+        },
+        game_slug: link?.game_slug || gameSlugs[0] || null,
+        game_name: link?.game_name || availableGames.find((g: any) => g.game_slug === gameSlugs[0])?.game_name || null,
+        game_icon_url: link?.game_icon_url || availableGames.find((g: any) => g.game_slug === gameSlugs[0])?.icon_url || null,
         category: link?.link_category || null,
         auto: false,
       };
@@ -379,9 +438,6 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
               </Badge>
             )}
           </DialogTitle>
-          <p className="text-[11px] text-muted-foreground">
-            Modo, seções, copy e jogos ficam sincronizados com o link — preview ao lado atualiza ao salvar.
-          </p>
         </DialogHeader>
 
         <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[380px_1fr] overflow-hidden">
@@ -409,7 +465,6 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-[10px] text-muted-foreground mt-1">{LP_MODE_HINTS[mode]}</p>
                 </div>
 
                 <div>
@@ -443,6 +498,47 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                     placeholder="Rótulo do CTA"
                     value={copy.cta_label}
                     onChange={(e) => setCopy({ ...copy, cta_label: e.target.value })}
+                  />
+                </div>
+
+                {/* Bonus */}
+                <div className="rounded-md border border-border/60 bg-secondary/20 p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Gift size={13} className="text-primary" />
+                    <Label className="text-[10px] uppercase tracking-wider text-muted-foreground flex-1">
+                      Bônus / código
+                    </Label>
+                    <Switch checked={bonusOffer.enabled} onCheckedChange={(v) => setBonusOffer({ ...bonusOffer, enabled: v })} />
+                  </div>
+                  <Input
+                    className="h-8 text-xs"
+                    placeholder="Oferta (ex: Bônus de boas-vindas)"
+                    value={bonusOffer.title}
+                    onChange={(e) => setBonusOffer({ ...bonusOffer, title: e.target.value })}
+                    disabled={!bonusOffer.enabled}
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <Input
+                      className="h-8 text-xs uppercase"
+                      placeholder="Código"
+                      value={bonusOffer.code}
+                      onChange={(e) => setBonusOffer({ ...bonusOffer, code: e.target.value.toUpperCase() })}
+                      disabled={!bonusOffer.enabled}
+                    />
+                    <Input
+                      className="h-8 text-xs"
+                      placeholder="Botão"
+                      value={bonusOffer.cta_label}
+                      onChange={(e) => setBonusOffer({ ...bonusOffer, cta_label: e.target.value })}
+                      disabled={!bonusOffer.enabled}
+                    />
+                  </div>
+                  <Input
+                    className="h-8 text-xs"
+                    placeholder="Nota curta"
+                    value={bonusOffer.note}
+                    onChange={(e) => setBonusOffer({ ...bonusOffer, note: e.target.value })}
+                    disabled={!bonusOffer.enabled}
                   />
                 </div>
 

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Gamepad2, Star, Shield, ArrowRight, Zap, Trophy, Gift, Users } from "lucide-react";
+import { Gamepad2, Shield, ArrowRight, Zap, Trophy, Gift, Users, Copy } from "lucide-react";
 import logo from "@/assets/logo.png";
 
 type LoadState = "loading" | "ready" | "not_found" | "inactive" | "no_domain";
@@ -112,16 +112,23 @@ export default function InfluencerLanding() {
   useEffect(() => {
     if (!slug) { setState("not_found"); return; }
 
-    const hydrateGameArts = async (landingPageId: string | null, slugs: string[]) => {
+    const hydrateGameArts = async (
+      landingPageId: string | null,
+      instanceId: string | null,
+      slugs: string[],
+      fallback?: { game_slug?: string | null; game_name?: string | null; game_icon_url?: string | null },
+    ) => {
       // Always try to enrich with the link's own game_icon_url as canonical fallback
-      const { data: tl } = await supabase
+      let tlQuery = supabase
         .from("tracking_links")
-        .select("game_slug, game_name, game_icon_url, platform_account_id, platform_accounts(platform_id)")
-        .eq("landing_page_id", landingPageId ?? "")
-        .limit(1)
-        .maybeSingle();
-      const linkIcon: GameArt | null = (tl as any)?.game_slug
-        ? { slug: (tl as any).game_slug, name: (tl as any).game_name || (tl as any).game_slug, icon_url: (tl as any).game_icon_url || null }
+        .select("game_slug, game_name, game_icon_url, platform_account_id, platform_accounts(platform_id)");
+      tlQuery = instanceId ? tlQuery.eq("landing_page_instance_id", instanceId) : tlQuery.eq("landing_page_id", landingPageId ?? "");
+      const { data: tl } = await tlQuery.limit(1).maybeSingle();
+      const fallbackSlug = fallback?.game_slug || (tl as any)?.game_slug;
+      const fallbackName = fallback?.game_name || (tl as any)?.game_name || fallbackSlug;
+      const fallbackIcon = fallback?.game_icon_url || (tl as any)?.game_icon_url || null;
+      const linkIcon: GameArt | null = fallbackSlug
+        ? { slug: fallbackSlug, name: fallbackName || fallbackSlug, icon_url: fallbackIcon }
         : null;
       const platformId: string | null = (tl as any)?.platform_accounts?.platform_id ?? null;
 
@@ -141,9 +148,14 @@ export default function InfluencerLanding() {
           byName.set(g.game_slug, { slug: g.game_slug, name: g.game_name, icon_url: g.icon_url });
         }
       });
-      // Prefer platform_hyped_games icon; fallback to link's own icon for the matching slug
-      if (linkIcon && !byName.get(linkIcon.slug)?.icon_url) {
-        byName.set(linkIcon.slug, linkIcon);
+      // Prefer the link's selected official asset for its game; fallback to the platform catalog for the rest.
+      if (linkIcon) {
+        const catalogIcon = byName.get(linkIcon.slug);
+        byName.set(linkIcon.slug, {
+          ...(catalogIcon || {}),
+          ...linkIcon,
+          icon_url: linkIcon.icon_url || catalogIcon?.icon_url || null,
+        });
       }
       const arts = slugs.map((s) => byName.get(s) ?? { slug: s, name: s.replace(/-/g, " "), icon_url: null });
       setGameArts(arts);
@@ -230,7 +242,11 @@ export default function InfluencerLanding() {
           layout_config: (instance as any).layout_config,
           hype_copy: (instance as any).hype_copy,
         });
-        await hydrateGameArts(lpBase.id, (instance as any).game_slugs || []);
+        await hydrateGameArts(lpBase.id, instance.id, (instance as any).game_slugs || [], {
+          game_slug: (instance as any).hype_copy?.game_slug,
+          game_name: (instance as any).hype_copy?.game_name,
+          game_icon_url: (instance as any).hype_copy?.game_icon_url,
+        });
         await finalize(instance.affiliate_link, instance.influencer_id, inf?.name || "", instance.id, instance.landing_page_id);
         return;
       }
@@ -257,7 +273,11 @@ export default function InfluencerLanding() {
           layout_config: (instance as any).layout_config,
           hype_copy: (instance as any).hype_copy,
         });
-        await hydrateGameArts(null, (instance as any).game_slugs || []);
+        await hydrateGameArts(instance.landing_page_id, instance.id, (instance as any).game_slugs || [], {
+          game_slug: (instance as any).hype_copy?.game_slug,
+          game_name: (instance as any).hype_copy?.game_name,
+          game_icon_url: (instance as any).hype_copy?.game_icon_url,
+        });
         await finalize(instance.affiliate_link, instance.influencer_id, inf?.name || "", instance.id, instance.landing_page_id);
         return;
       }
@@ -366,13 +386,20 @@ export default function InfluencerLanding() {
 
   const hypeTitle: string | null = instanceCtx?.hype_copy?.title ?? null;
   const hypeSub: string | null = instanceCtx?.hype_copy?.subtitle ?? null;
-  const ctaLabel: string = instanceCtx?.hype_copy?.cta_label || "Cadastrar Agora";
+  const bonusOffer = instanceCtx?.hype_copy?.bonus_offer;
+  const ctaLabel: string = bonusOffer?.cta_label || instanceCtx?.hype_copy?.cta_label || "Acessar oportunidades";
   const communityCta = instanceCtx?.hype_copy?.community_cta;
   const smartOdds: Array<{ event_name: string; market_name: string; odd_label?: string | null; badge?: string | null; starts_at?: string | null }> =
     Array.isArray(instanceCtx?.hype_copy?.smart_odds) ? instanceCtx.hype_copy.smart_odds : [];
 
   const primaryGame = gameArts[0];
   const displayGames = mode === "single_game" && primaryGame ? [primaryGame] : gameArts;
+  const heroTitle = hypeTitle || primaryGame?.name || "Oferta oficial";
+  const heroSubtitle = hypeSub || (primaryGame ? "Bônus ativo para jogar agora." : "Bônus oficial e acesso rápido.");
+  const copyBonusCode = async () => {
+    if (!bonusOffer?.code) return;
+    try { await navigator.clipboard.writeText(bonusOffer.code); } catch {}
+  };
 
   // ── Ready ──
   return (
@@ -383,7 +410,7 @@ export default function InfluencerLanding() {
           <div className="max-w-xl mx-auto relative z-10 text-center">
             <img src={logo} alt="PlayBet" className="h-20 mx-auto mb-10 opacity-90" />
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium mb-6">
-              <Zap size={12} /> {mode === "odds" ? "Odds do dia" : "Oferta Exclusiva"}
+              <Zap size={12} /> {mode === "odds" ? "Odds oficiais" : "Oferta oficial"}
             </div>
             {mode === "single_game" && primaryGame ? (
               <>
@@ -397,12 +424,12 @@ export default function InfluencerLanding() {
                   <Gamepad2 size={80} className="text-emerald-400/60 mx-auto mb-5" />
                 )}
                 <h1 className="text-3xl sm:text-4xl font-extrabold leading-tight mb-3">
-                  Jogue <span className="text-emerald-400">{primaryGame.name}</span> agora
+                  {heroTitle}
                 </h1>
               </>
             ) : (
               <h1 className="text-3xl sm:text-4xl font-extrabold leading-tight mb-4">
-                {hypeTitle || (
+                {heroTitle || (
                   <>
                     Jogue nos melhores<br />
                     <span className="text-emerald-400">jogos de aposta</span> do Brasil
@@ -411,14 +438,27 @@ export default function InfluencerLanding() {
               </h1>
             )}
             <p className="text-gray-400 text-sm sm:text-base max-w-md mx-auto mb-8">
-              {hypeSub || "Cadastre-se agora e aproveite bônus exclusivos. Plataforma segura, saques rápidos e os melhores jogos."}
+              {heroSubtitle}
             </p>
+            {bonusOffer?.enabled && (bonusOffer.title || bonusOffer.code) && (
+              <div className="max-w-sm mx-auto mb-5 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-3">
+                <div className="flex items-center justify-center gap-2 text-sm font-bold text-emerald-300">
+                  <Gift size={16} /> {bonusOffer.title || "Bônus ativo"}
+                </div>
+                {bonusOffer.code && (
+                  <button onClick={copyBonusCode} className="mt-2 inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.06] px-3 py-1.5 font-mono text-sm font-bold tracking-wider">
+                    {bonusOffer.code} <Copy size={13} />
+                  </button>
+                )}
+                {bonusOffer.note && <p className="mt-2 text-[11px] text-gray-400">{bonusOffer.note}</p>}
+              </div>
+            )}
             <button
               onClick={handleCTA}
               disabled={clicking || !hasLink}
               className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-8 py-3.5 rounded-xl text-base transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-400/30 active:scale-[0.97]"
             >
-              {clicking ? "Redirecionando..." : ctaLabel} <ArrowRight size={18} />
+              {clicking ? "Abrindo..." : ctaLabel} <ArrowRight size={18} />
             </button>
             {!hasLink && (
               <p className="text-xs text-gray-500 mt-3">Link de cadastro em configuração.</p>
@@ -435,9 +475,9 @@ export default function InfluencerLanding() {
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {[
-                { icon: Trophy, title: "Bônus de boas-vindas", desc: "Ganho no 1º depósito" },
-                { icon: Shield, title: "100% seguro", desc: "Plataforma regulamentada" },
-                { icon: Gift, title: "Saque via PIX", desc: "Em minutos, sem burocracia" },
+                { icon: Gift, title: bonusOffer?.title || "Bônus ativo", desc: bonusOffer?.code ? `Código ${bonusOffer.code}` : "Oferta disponível" },
+                { icon: Trophy, title: mode === "odds" ? "Odds" : "Jogo", desc: primaryGame?.name || "Selecionado" },
+                { icon: Shield, title: "PIX", desc: "Saque rápido" },
               ].map((f) => (
                 <div key={f.title} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 text-center">
                   <f.icon size={22} className="text-emerald-400 mx-auto mb-2" />
@@ -454,12 +494,9 @@ export default function InfluencerLanding() {
       {isSectionOn("games") && mode !== "odds" && (
         <section className="px-6 pb-16">
           <div className="max-w-xl mx-auto text-center">
-            <h2 className="text-xl font-bold mb-2">
-              {mode === "single_game" ? "Sobre o jogo" : mode === "multi_game" ? "Jogos em destaque" : "Jogos Populares"}
-            </h2>
-            <p className="text-sm text-gray-400 mb-6">
-              {displayGames.length > 0 ? "Clique e jogue agora" : "Os jogos mais jogados da plataforma"}
-            </p>
+              <h2 className="text-xl font-bold mb-6">
+                {mode === "single_game" ? primaryGame?.name || "Jogo selecionado" : mode === "multi_game" ? "Jogos em alta" : "Catálogo"}
+              </h2>
             <div className={`grid gap-3 ${displayGames.length === 1 ? "grid-cols-1 max-w-xs mx-auto" : "grid-cols-3"}`}>
               {(displayGames.length > 0
                 ? displayGames
@@ -554,7 +591,7 @@ export default function InfluencerLanding() {
                 rel="noreferrer"
                 className="inline-flex items-center gap-2 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.12] px-6 py-2.5 rounded-xl text-sm font-semibold transition"
               >
-                Entrar no grupo <ArrowRight size={14} />
+                Acessar comunidade <ArrowRight size={14} />
               </a>
             ) : (
               <p className="text-[11px] text-gray-500">Link do grupo em configuração pelo influenciador.</p>
@@ -571,9 +608,8 @@ export default function InfluencerLanding() {
               disabled={clicking || !hasLink}
               className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-8 py-3.5 rounded-xl text-base transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-400/30 active:scale-[0.97]"
             >
-              {clicking ? "Redirecionando..." : ctaLabel} <ArrowRight size={18} />
+              {clicking ? "Abrindo..." : ctaLabel} <ArrowRight size={18} />
             </button>
-            <p className="text-[11px] text-gray-500 mt-3">Cadastro rápido · Jogue com responsabilidade · 18+</p>
           </div>
         </section>
       )}
