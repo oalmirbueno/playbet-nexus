@@ -40,13 +40,7 @@ interface Props {
   showInfluencer?: boolean;
 }
 
-function buildPublicUrl(domain: string | null | undefined, slug: string | null | undefined): string | null {
-  if (!slug) return null;
-  if (!domain) return `/?ref=${slug}`;
-  let base = domain.replace(/\/+$/, "");
-  if (!/^https?:\/\//i.test(base)) base = `https://${base}`;
-  return `${base}/?ref=${slug}`;
-}
+import { buildLpPublicUrl as buildPublicUrl } from "@/lib/lpPublicUrl";
 
 export function LinkLpGrid({ influencerId, managerId, title = "LP por link", showInfluencer = false }: Props) {
   const [rows, setRows] = useState<Row[]>([]);
