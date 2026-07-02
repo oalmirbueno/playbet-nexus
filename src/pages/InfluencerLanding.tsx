@@ -691,7 +691,7 @@ export default function InfluencerLanding() {
                 onClick={handleCTA}
                 className="w-full max-w-md mx-auto block bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-6 hover:bg-emerald-500/15 transition"
               >
-                <p className="text-sm text-gray-300 mb-2">Confira as partidas ao vivo</p>
+                <p className="text-sm text-gray-300 mb-2">Ver todas as opções em destaque</p>
                 <p className="text-2xl font-extrabold text-emerald-400">Ver Odds →</p>
               </button>
             )}
