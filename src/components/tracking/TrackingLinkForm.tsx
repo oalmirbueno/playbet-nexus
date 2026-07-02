@@ -561,7 +561,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
 
           {/* 4. Affiliate link + auto sub1/sub2/sub3 */}
           {form.platform_account_id && (
-            <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+            <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-3 min-w-0">
               <div className="flex items-center justify-between">
                 <Step n={4} label="Link de afiliado (destino do CTA)" />
                 <span className="text-[9px] uppercase tracking-wider text-primary/80 font-semibold">
