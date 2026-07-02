@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   renderCreative, downloadCreative, slugify, defaultLayersFor,
   FORMAT_SIZES, STYLE_LABEL,
@@ -75,7 +76,7 @@ function saveState(linkId: string, fmt: CreativeFormat, s: SavedState) {
 export function CreativeStudio({ open, onOpenChange, link }: Props) {
   const [style, setStyle] = useState<CreativeStyle>("hype");
   const [format, setFormat] = useState<CreativeFormat>("feed");
-  const [editorMode, setEditorMode] = useState(false);
+  const [editorMode, setEditorMode] = useState(true);
   const [layers, setLayers] = useState<Layer[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
@@ -86,6 +87,8 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
   const [handle, setHandle] = useState("");
   const [renderKey, setRenderKey] = useState(0);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const [savingLayout, setSavingLayout] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
 
   const selected = layers.find(l => l.id === selectedId) || null;
@@ -103,35 +106,68 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     }, { includeImages: withImages });
   }, [link]);
 
+  const loadDatabaseState = useCallback(async (linkId: string, fmt: CreativeFormat): Promise<SavedState | null> => {
+    const { data, error } = await supabase
+      .from("link_materials")
+      .select("style, meta, updated_at")
+      .eq("tracking_link_id", linkId)
+      .eq("format", fmt)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) return null;
+    const layout = (data?.meta as any)?.studioLayout;
+    if (!layout || !Array.isArray(layout.layers)) return null;
+    return {
+      layers: layout.layers,
+      style: (layout.style ?? data?.style ?? "hype") as CreativeStyle,
+      editorMode: true,
+      updatedAt: Date.parse(data?.updated_at ?? "") || layout.updatedAt || Date.now(),
+    };
+  }, []);
+
   // Load persisted state on open / link change / format change
   useEffect(() => {
     if (!link || !open) return;
+    let cancelled = false;
     setHandle(link.handle || (link.shortUrl ? link.shortUrl.replace(/^https?:\/\//, "") : ""));
-    const saved = loadState(link.id, format);
-    if (saved) {
-      setLayers(saved.layers);
-      setStyle(saved.style);
-      setEditorMode(saved.editorMode);
-      setSavedAt(saved.updatedAt);
-    } else {
-      setLayers(seedLayers(format));
-      setEditorMode(false);
-      setSavedAt(null);
-    }
     setSelectedId(null);
     setEditingTextId(null);
-    setRenderKey(k => k + 1);
-  }, [link?.id, format, open]); // eslint-disable-line react-hooks/exhaustive-deps
+    setEditorMode(true);
+    (async () => {
+      const databaseSaved = await loadDatabaseState(link.id, format);
+      if (cancelled) return;
+      const localSaved = loadState(link.id, format);
+      const saved = databaseSaved ?? localSaved;
+      if (saved) {
+        setLayers(saved.layers);
+        setStyle(saved.style);
+        setSavedAt(saved.updatedAt);
+        setDirty(false);
+      } else {
+        setLayers(seedLayers(format));
+        setSavedAt(null);
+        setDirty(true);
+      }
+      setRenderKey(k => k + 1);
+    })();
+    return () => { cancelled = true; };
+  }, [link?.id, format, open, loadDatabaseState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-save (debounced)
   useEffect(() => {
     if (!link || !open) return;
     const t = setTimeout(() => {
       saveState(link.id, format, { layers, style, editorMode, updatedAt: Date.now() });
-      setSavedAt(Date.now());
     }, 300);
     return () => clearTimeout(t);
   }, [layers, style, editorMode, link?.id, format, open]);
+
+  useEffect(() => {
+    if (!open || !link || layers.length === 0) return;
+    setDirty(true);
+  }, [layers, style, editorMode, open, link?.id]);
 
   const baseInput = useMemo<CreativeInput | null>(() => {
     if (!link) return null;
@@ -216,6 +252,67 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     setSelectedId(null);
     setEditingTextId(null);
     toast.success("Layout restaurado");
+  };
+
+  const saveLayout = async () => {
+    if (!link) return;
+    setSavingLayout(true);
+    const now = Date.now();
+    const snapshot: SavedState = { layers, style, editorMode: true, updatedAt: now };
+    saveState(link.id, format, snapshot);
+
+    try {
+      const { data: existing, error: readError } = await supabase
+        .from("link_materials")
+        .select("id, meta")
+        .eq("tracking_link_id", link.id)
+        .eq("format", format)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (readError) throw readError;
+
+      const nextMeta = {
+        ...((existing?.meta as any) ?? {}),
+        studioLayout: {
+          version: 2,
+          format,
+          style,
+          layers,
+          updatedAt: now,
+        },
+      };
+
+      if (existing?.id) {
+        const { error } = await supabase
+          .from("link_materials")
+          .update({ style, meta: nextMeta, updated_at: new Date(now).toISOString() } as any)
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("link_materials")
+          .insert({
+            tracking_link_id: link.id,
+            format,
+            style,
+            game_name: link.gameName ?? null,
+            image_url: link.gameIconUrl ?? null,
+            thumbnail_url: link.gameIconUrl ?? null,
+            status: "ready",
+            meta: nextMeta,
+          } as any);
+        if (error) throw error;
+      }
+
+      setSavedAt(now);
+      setDirty(false);
+      toast.success("Layout salvo");
+    } catch (e) {
+      toast.error("Salvo só neste navegador", { description: (e as Error).message });
+    } finally {
+      setSavingLayout(false);
+    }
   };
 
   /* ─────────── drag / resize ─────────── */
@@ -313,6 +410,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     if (!baseInput || !link) return;
     setRendering(true);
     try {
+      await saveLayout();
       const targets = which === "all" ? FORMATS : [which];
       for (const f of targets) {
         const useLayers = f === format
@@ -320,8 +418,8 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
           : (loadState(link.id, f)?.layers ?? seedLayers(f));
         const r = await renderCreative({
           ...baseInput, format: f,
-          hideAutoText: editorMode, hideAutoArt: editorMode,
-          layers: editorMode ? useLayers : undefined,
+          hideAutoText: true, hideAutoArt: true,
+          layers: useLayers,
         });
         downloadCreative(r, `playbet-${slugify(link.gameName || "criativo")}-${f}`);
         await new Promise(res => setTimeout(res, 120));
@@ -363,23 +461,19 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
               </DialogTitle>
               <DialogDescription className="text-xs flex items-center gap-2">
                 {link.platformName || "Plataforma"} · {size.label} · {size.w}×{size.h}px
-                {savedAt && (
-                  <span className="inline-flex items-center gap-1 text-primary/80">
-                    <Save className="w-3 h-3" /> salvo
-                  </span>
-                )}
+                <span className={cn("inline-flex items-center gap-1", dirty ? "text-amber-500" : "text-primary/80")}>
+                  <Save className="w-3 h-3" /> {dirty ? "alterações pendentes" : savedAt ? "salvo" : "rascunho"}
+                </span>
               </DialogDescription>
             </div>
-            <button
-              onClick={() => setEditorMode(v => !v)}
-              className={cn(
-                "text-xs px-3 py-1.5 rounded-md border transition-all flex items-center gap-1.5",
-                editorMode ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:text-foreground",
-              )}
-            >
+            <button className="text-xs px-3 py-1.5 rounded-md border border-primary bg-primary/10 text-foreground transition-all flex items-center gap-1.5">
               <MousePointer2 className="w-3.5 h-3.5" />
-              {editorMode ? "Editor ativo" : "Editar tudo"}
+              Editor ativo
             </button>
+            <Button onClick={saveLayout} disabled={savingLayout} size="sm" className="h-8 text-xs">
+              {savingLayout ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
+              Salvar
+            </Button>
             {link.shortUrl && (
               <button onClick={copyLink} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-secondary/40">
                 {copied ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
@@ -419,7 +513,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                 <Skeleton className="absolute inset-0" />
               )}
 
-              {editorMode && layers.map((L) => {
+              {layers.map((L) => {
                 const isSel = L.id === selectedId;
                 const isEditing = editingTextId === L.id;
                 const commonStyle: React.CSSProperties = {
@@ -469,7 +563,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                       isEditing ? "cursor-text" : "cursor-move",
                       isSel ? "ring-2 ring-primary/80" : "hover:ring-1 hover:ring-primary/40",
                     )}
-                    style={commonStyle}
+                    style={{ ...commonStyle, textAlign: L.align }}
                   >
                     <div
                       contentEditable={isEditing}
@@ -503,11 +597,16 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                         lineHeight: L.lineHeight ?? 1.05,
                         textShadow: L.shadow ? `0 2px ${Math.max(4, L.fontSizePct * 0.6)}px rgba(0,0,0,0.55)` : undefined,
                         background: L.bgColor || undefined,
-                        padding: L.bgColor ? `${(L.bgPadPct ?? 40) * 0.5}% ${(L.bgPadPct ?? 40) * 0.8}%` : undefined,
+                        padding: L.bgColor
+                          ? `${(L.fontSizePct * (L.bgPadPct ?? 40)) / 160}cqw ${(L.fontSizePct * (L.bgPadPct ?? 40)) / 100}cqw`
+                          : undefined,
                         borderRadius: L.bgColor ? `${L.bgRadiusPct ?? 20}%` : undefined,
                         whiteSpace: "pre-wrap",
                         wordBreak: "break-word",
                         display: "inline-block",
+                        width: L.bgColor ? "fit-content" : "100%",
+                        maxWidth: "100%",
+                        boxSizing: "border-box",
                         minWidth: "1ch",
                       }}
                     >
@@ -558,9 +657,8 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
               </div>
             )}
 
-            {editorMode && (
-              <>
-                <div className="flex items-center justify-between">
+            <>
+              <div className="flex items-center justify-between">
                   <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Camadas</Label>
                   <div className="flex items-center gap-1">
                     <button onClick={addTextLayer} title="Adicionar texto" className="text-[10px] px-2 py-1 rounded border border-border/60 hover:border-primary hover:text-foreground text-muted-foreground flex items-center gap-1">
@@ -604,9 +702,12 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                   <Undo2 className="w-3 h-3" /> Restaurar layout padrão
                 </button>
               </>
-            )}
 
             <div className="pt-3 space-y-2 border-t border-border/60">
+              <Button onClick={saveLayout} disabled={savingLayout} variant={dirty ? "default" : "secondary"} className="w-full h-9 text-sm">
+                {savingLayout ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                Salvar layout
+              </Button>
               <Button onClick={() => exportPng(format)} disabled={!bg || rendering} className="w-full h-9 text-sm">
                 <Download className="w-4 h-4 mr-2" /> Baixar {FORMAT_SIZES[format].label}
               </Button>
