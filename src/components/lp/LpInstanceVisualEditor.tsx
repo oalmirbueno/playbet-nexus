@@ -179,14 +179,24 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         });
         setSmartOdds(Array.isArray(hc.smart_odds) ? hc.smart_odds : []);
 
-        // Load tracking link linked to this instance (source of truth for game/hype)
-        const { data: tl } = await supabase
+        // Load tracking link linked to this instance (source of truth for game/hype).
+        // Prefer the live instance relation, but fall back to source_tracking_link_id
+        // so already registered LPs keep working even if an older sync missed the FK.
+        let { data: tl } = await supabase
           .from("tracking_links")
           .select("id, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, platform_account_id, platform_accounts(platform_id, platforms(name))")
           .eq("landing_page_instance_id", instanceId)
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
+        if (!tl && (inst as any).source_tracking_link_id) {
+          const { data: sourceTl } = await supabase
+            .from("tracking_links")
+            .select("id, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, platform_account_id, platform_accounts(platform_id, platforms(name))")
+            .eq("id", (inst as any).source_tracking_link_id)
+            .maybeSingle();
+          tl = sourceTl;
+        }
         setLink(tl);
         const platformId = (tl as any)?.platform_accounts?.platform_id;
         const pName = (tl as any)?.platform_accounts?.platforms?.name || null;
@@ -472,7 +482,17 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         .select("id, influencer_id, campanha_id")
         .eq("landing_page_instance_id", instanceId);
 
-      const shareUrls = ((linkedTrackingLinks || []) as any[])
+      let linksToSync = ((linkedTrackingLinks || []) as any[]);
+      if (!linksToSync.length && instance?.source_tracking_link_id) {
+        const { data: sourceTl } = await supabase
+          .from("tracking_links")
+          .select("id, influencer_id, campanha_id")
+          .eq("id", instance.source_tracking_link_id)
+          .maybeSingle();
+        if (sourceTl) linksToSync = [sourceTl as any];
+      }
+
+      const shareUrls = linksToSync
         .map((tl) => buildPublicLpUrl(
           lpDomain,
           instance?.slug,
@@ -482,7 +502,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         .filter(Boolean);
 
       await Promise.all(
-        ((linkedTrackingLinks || []) as any[]).map((tl, idx) => supabase
+        linksToSync.map((tl, idx) => supabase
           .from("tracking_links")
           .update({
             landing_page_id: instance?.landing_page_id || null,
