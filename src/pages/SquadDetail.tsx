@@ -617,7 +617,7 @@ function DistributeGoalDialog({ open, onClose, squadId, squadGoal, rows, perfMap
 // ────────────────────────────────────────────────────────────
 function InfluencerQuickProfile({ influencerId, onClose, onOpenLinks, onSendReset, canManage }: {
   influencerId: string | null; onClose: () => void; onOpenLinks: (id: string) => void;
-  onSendReset: (email: string | null) => void; canManage: boolean;
+  onSendReset: (influencerId: string) => void; canManage: boolean;
 }) {
   const q = useQuery({
     queryKey: ["influencer-profile", influencerId],
@@ -656,7 +656,7 @@ function InfluencerQuickProfile({ influencerId, onClose, onOpenLinks, onSendRese
               <Info label="Email" value={profile?.email ?? "—"} />
               <Info label="Telefone" value={profile?.phone ?? "—"} />
               {canManage && (
-                <Button size="sm" variant="outline" className="w-full mt-1" onClick={() => onSendReset(profile?.email ?? null)}>
+                <Button size="sm" variant="outline" className="w-full mt-1" onClick={() => onSendReset(inf.id)}>
                   <KeyRound size={13} className="mr-1.5" /> Enviar link de reset de senha
                 </Button>
               )}
