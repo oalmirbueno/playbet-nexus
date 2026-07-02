@@ -239,44 +239,53 @@ export type Database = {
       }
       clicks: {
         Row: {
+          click_id: string | null
           clicked_at: string | null
           id: string
           influencer_id: string | null
           ip_address: string | null
           is_demo: boolean
           landing_page_id: string | null
+          landing_page_instance_id: string | null
           referrer: string | null
           route: string | null
           source: string | null
           template_id: string | null
+          tracking_link_id: string | null
           user_agent: string | null
           utm_id: string | null
         }
         Insert: {
+          click_id?: string | null
           clicked_at?: string | null
           id?: string
           influencer_id?: string | null
           ip_address?: string | null
           is_demo?: boolean
           landing_page_id?: string | null
+          landing_page_instance_id?: string | null
           referrer?: string | null
           route?: string | null
           source?: string | null
           template_id?: string | null
+          tracking_link_id?: string | null
           user_agent?: string | null
           utm_id?: string | null
         }
         Update: {
+          click_id?: string | null
           clicked_at?: string | null
           id?: string
           influencer_id?: string | null
           ip_address?: string | null
           is_demo?: boolean
           landing_page_id?: string | null
+          landing_page_instance_id?: string | null
           referrer?: string | null
           route?: string | null
           source?: string | null
           template_id?: string | null
+          tracking_link_id?: string | null
           user_agent?: string | null
           utm_id?: string | null
         }
@@ -296,10 +305,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "clicks_landing_page_instance_id_fkey"
+            columns: ["landing_page_instance_id"]
+            isOneToOne: false
+            referencedRelation: "landing_page_instances"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "clicks_template_id_fkey"
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clicks_tracking_link_id_fkey"
+            columns: ["tracking_link_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_links"
             referencedColumns: ["id"]
           },
           {
@@ -3180,6 +3203,40 @@ export type Database = {
         Returns: string
       }
       pick_manager_for_squad: { Args: { _squad_id: string }; Returns: string }
+      playbet_append_url_param: {
+        Args: {
+          _overwrite?: boolean
+          _param: string
+          _url: string
+          _value: string
+        }
+        Returns: string
+      }
+      playbet_public_lp_url: {
+        Args: {
+          _campanha_id: string
+          _domain: string
+          _influencer_id: string
+          _instance_slug: string
+          _lp_mode: string
+          _route: string
+        }
+        Returns: string
+      }
+      playbet_tracked_affiliate_url: {
+        Args: {
+          _base_url: string
+          _campanha_id: string
+          _click_param: string
+          _influencer_id: string
+          _tracking_code: string
+        }
+        Returns: string
+      }
+      playbet_url_has_param: {
+        Args: { _param: string; _url: string }
+        Returns: boolean
+      }
       recalc_manager_hierarchy: {
         Args: { _manager_id: string }
         Returns: undefined

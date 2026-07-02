@@ -205,7 +205,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         // so already registered LPs keep working even if an older sync missed the FK.
         let { data: tl } = await supabase
           .from("tracking_links")
-          .select("id, influencer_id, campanha_id, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, platform_account_id, platform_accounts(platform_id, platforms(name))")
+          .select("id, influencer_id, campanha_id, tracking_code, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, platform_account_id, platform_accounts(platform_id, platforms(name))")
           .eq("landing_page_instance_id", instanceId)
           .order("created_at", { ascending: false })
           .limit(1)
@@ -213,7 +213,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         if (!tl && (inst as any).source_tracking_link_id) {
           const { data: sourceTl } = await supabase
             .from("tracking_links")
-            .select("id, influencer_id, campanha_id, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, platform_account_id, platform_accounts(platform_id, platforms(name))")
+            .select("id, influencer_id, campanha_id, tracking_code, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, platform_account_id, platform_accounts(platform_id, platforms(name))")
             .eq("id", (inst as any).source_tracking_link_id)
             .maybeSingle();
           tl = sourceTl;
@@ -502,28 +502,34 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
 
       const { data: linkedTrackingLinks } = await supabase
         .from("tracking_links")
-        .select("id, influencer_id, campanha_id")
+        .select("id, influencer_id, campanha_id, tracking_code")
         .eq("landing_page_instance_id", instanceId);
 
       let linksToSync = ((linkedTrackingLinks || []) as any[]);
       if (!linksToSync.length && instance?.source_tracking_link_id) {
         const { data: sourceTl } = await supabase
           .from("tracking_links")
-          .select("id, influencer_id, campanha_id")
+          .select("id, influencer_id, campanha_id, tracking_code")
           .eq("id", instance.source_tracking_link_id)
           .maybeSingle();
         if (sourceTl) linksToSync = [sourceTl as any];
       }
 
-      const catalogShareUrl = buildLpBaseUrl(lpDomain, basePage?.route);
+      const catalogShareUrl = buildPublicLpUrl(
+        lpDomain,
+        instance?.slug,
+        instance?.influencer_id || "",
+        "",
+        basePage?.route,
+      );
       const shareUrls = linksToSync
-        .map((tl) => effectiveMode === "catalog"
-          ? catalogShareUrl
-          : buildPublicLpUrl(
+        .map((tl) => buildPublicLpUrl(
               lpDomain,
               instance?.slug,
               tl.influencer_id || instance?.influencer_id || "",
               tl.campanha_id || "",
+              basePage?.route,
+              tl.tracking_code || "",
             ))
         .filter(Boolean);
 
@@ -545,7 +551,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
       const publicShareUrl = shareUrls[0]
         || (effectiveMode === "catalog"
           ? catalogShareUrl
-          : buildPublicLpUrl(lpDomain, instance?.slug, instance?.influencer_id || "", ""))
+          : buildPublicLpUrl(lpDomain, instance?.slug, instance?.influencer_id || "", "", basePage?.route))
         || publicUrl
         || "";
       if (publicShareUrl) {
@@ -618,13 +624,22 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
       instance.slug,
       link?.influencer_id || instance?.influencer_id || "",
       link?.campanha_id || "",
+      basePage?.route,
+        link?.tracking_code || "",
     );
-  }, [basePage?.domain, instance?.slug, instance?.influencer_id, link?.influencer_id, link?.campanha_id, publicUrl]);
+  }, [basePage?.domain, basePage?.route, instance?.slug, instance?.influencer_id, link?.influencer_id, link?.campanha_id, link?.tracking_code, publicUrl]);
 
   const catalogPublicUrl = useMemo(() => {
     if (!basePage) return null;
-    return buildLpBaseUrl(basePage.domain, basePage.route);
-  }, [basePage]);
+    return buildPublicLpUrl(
+      basePage.domain,
+      instance?.slug,
+      link?.influencer_id || instance?.influencer_id || "",
+      link?.campanha_id || "",
+      basePage.route,
+      link?.tracking_code || "",
+    );
+  }, [basePage, instance?.slug, instance?.influencer_id, link?.influencer_id, link?.campanha_id, link?.tracking_code]);
 
   const activePreviewSrc = previewTab === "catalog" ? catalogPreviewSrc : generatedPreviewSrc;
   const activeExternalUrl = previewTab === "catalog"

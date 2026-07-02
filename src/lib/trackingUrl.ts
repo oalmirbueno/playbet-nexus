@@ -4,13 +4,13 @@
  *
  * Rule:
  *  - If the tracking link is bound to an LP instance AND the LP has a public
- *    domain/mode, the shared URL is the PUBLIC generated LP URL (`<domain>/i/<slug>?sub2&sub3`).
+ *    domain/mode, the shared URL is the PUBLIC LP URL (`<domain>/?ref=<slug>&sub2&sub3`).
  *    Visitors land on the LP, click the CTA, and only then are redirected to
  *    the affiliate URL (which carries sub1/sub2/sub3 attribution).
  *  - Otherwise, the shared URL is the affiliate URL itself with sub1/2/3.
  */
 
-import { buildLpBaseUrl, normalizeLpDomain } from "@/lib/lpPublicUrl";
+import { buildLpBaseUrl } from "@/lib/lpPublicUrl";
 
 export function appendParam(url: string, name: string, value: string): string {
   if (!url || !value) return url;
@@ -43,10 +43,13 @@ export function buildPublicLpUrl(
   instanceSlug: string | null | undefined,
   sub2: string,
   sub3: string,
+  lpRoute?: string | null | undefined,
+  sub1?: string | null | undefined,
 ): string {
   if (!instanceSlug) return "";
-  const base = normalizeLpDomain(lpDomain);
-  let url = `${base}/i/${encodeURIComponent(instanceSlug)}`;
+  let url = buildLpBaseUrl(lpDomain, lpRoute);
+  url = appendParam(url, "ref", instanceSlug);
+  if (sub1) url = appendParam(url, "sub1", sub1);
   if (sub2) url = appendParam(url, "sub2", sub2);
   if (sub3) url = appendParam(url, "sub3", sub3);
   return url;
@@ -67,9 +70,10 @@ export function resolveShareUrl(args: {
   sub2?: string;
   sub3?: string;
 }): string {
-  if (args.lpMode === "catalog") return buildLpBaseUrl(args.lpDomain, args.lpRoute);
   const hasLpContext = Boolean(args.lpMode || args.lpDomain);
-  const publicLp = hasLpContext ? buildPublicLpUrl(args.lpDomain, args.instanceSlug, args.sub2 || "", args.sub3 || "") : "";
+  const publicLp = hasLpContext
+    ? buildPublicLpUrl(args.lpDomain, args.instanceSlug, args.sub2 || "", args.sub3 || "", args.lpRoute, args.sub1)
+    : "";
   if (publicLp) return publicLp;
   return buildTrackedAffiliateUrl(
     args.affiliateBaseUrl || "",
