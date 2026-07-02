@@ -80,6 +80,7 @@ export default function Influencers() {
   const [mgrModalOpen, setMgrModalOpen] = useState(false);
   const [editingMgr, setEditingMgr] = useState<MgrEdit | null>(null);
   const [confirmDeleteMgr, setConfirmDeleteMgr] = useState<ManagerRow | null>(null);
+  const [confirmDeleteMgrText, setConfirmDeleteMgrText] = useState("");
 
   // ── Derived ───────────────────────────────────────────────────────
   const managersById = useMemo(() => {
