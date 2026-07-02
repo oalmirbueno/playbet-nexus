@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Link2, Wallet, DollarSign, User, LogOut } from "lucide-react";
+import { LayoutDashboard, Link2, Wallet, DollarSign, User, LogOut, Wand2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import PreviewBanner from "@/components/PreviewBanner";
 import { PortalNotificationBell } from "@/components/PortalNotificationBell";
@@ -8,6 +8,7 @@ import logo from "@/assets/logo.png";
 const items = [
   { label: "Painel", icon: LayoutDashboard, path: "/portal" },
   { label: "Meus links", icon: Link2, path: "/portal/links" },
+  { label: "Materiais", icon: Wand2, path: "/portal/materiais" },
   { label: "Financeiro", icon: DollarSign, path: "/portal/financeiro" },
   { label: "Saques", icon: Wallet, path: "/portal/saques" },
   { label: "Perfil", icon: User, path: "/portal/perfil" },
