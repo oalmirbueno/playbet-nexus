@@ -12,6 +12,7 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { detectFromUrl, CATEGORY_LABELS, inferAttributionParam, type LinkCategory } from "@/lib/linkIntelligence";
 import GameArtwork from "@/components/tracking/GameArtwork";
+import { detectLpMode, LP_MODE_LABELS, LP_MODE_HINTS, type LpMode } from "@/lib/lpMode";
 
 interface Props {
   open: boolean;
@@ -394,14 +395,27 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
   // sub3 = campanha_id (UUID). Automático quando campanha selecionada.
   const sub3Value = form.campanha_id || "";
 
+  // LP mode: user picks between the registered "LP padrão" (catalog) and the
+  // auto-generated "LP gerada" seeded from the game context. Detects the
+  // sensible default from the current link, but always respects manual overrides.
+  const detectedLpMode = useMemo<LpMode>(
+    () => detectLpMode({ linkCategory: form.link_category, gameSlug: form.game_slug }),
+    [form.link_category, form.game_slug],
+  );
+  const instanceMode = ((selectedInstance as any)?.lp_mode ?? null) as LpMode | null;
+  const [lpModeOverride, setLpModeOverride] = useState<LpMode | null>(instanceMode);
+  useEffect(() => { setLpModeOverride(instanceMode); }, [selectedInstance?.id, instanceMode]);
+  const effectiveLpMode: LpMode = lpModeOverride ?? instanceMode ?? detectedLpMode;
+  const canUseGenerated = !!(form.game_slug || form.game_name);
+
   // The link the influencer shares = the LP public URL (NOT the affiliate URL).
   // Visitors land on the LP, click the CTA, and only then get redirected to
   // the affiliate URL (which is stored on the LP instance).
   const publicLpUrl = useMemo(() => {
     if (!useLp) return "";
-    if ((selectedInstance as any)?.lp_mode === "catalog") return buildLpBaseUrl(selectedLP?.domain, selectedLP?.route);
+    if (effectiveLpMode === "catalog") return buildLpBaseUrl(selectedLP?.domain, selectedLP?.route);
     return buildPublicLpUrl(selectedLP?.domain, selectedInstance?.slug, sub2Value, sub3Value);
-  }, [useLp, selectedLP, selectedInstance, sub2Value, sub3Value]);
+  }, [useLp, effectiveLpMode, selectedLP, selectedInstance, sub2Value, sub3Value]);
 
   // The deep affiliate URL with attribution params - used by the LP CTA, not shared directly.
   const trackedAffiliateUrl = useMemo(
@@ -418,15 +432,20 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
     && (useLp ? !!form.landing_page_instance_id : true);
 
   const handleSave = async () => {
-    // Persist the tracked deep affiliate URL on the LP instance so the LP CTA can use it (Com LP only).
-    // A instância continua sendo a página cadastrada; o link público é salvo em final_url.
-    if (useLp && selectedInstance && form.base_url && selectedInstance.affiliate_link !== trackedAffiliateUrl) {
-      try {
-        await landingPageInstanceService.update(selectedInstance.id, { affiliate_link: trackedAffiliateUrl });
-        await qc.invalidateQueries({ queryKey: ["landing_page_instances"] });
-      } catch (e: any) {
-        toast({ title: "Erro ao salvar link no botão da LP", description: e.message, variant: "destructive" });
-        return;
+    // Persist affiliate link + chosen LP mode on the instance so the LP CTA and
+    // the public URL always match what the influencer sees in the form.
+    if (useLp && selectedInstance && form.base_url) {
+      const patch: Record<string, any> = {};
+      if (selectedInstance.affiliate_link !== trackedAffiliateUrl) patch.affiliate_link = trackedAffiliateUrl;
+      if (instanceMode !== effectiveLpMode) patch.lp_mode = effectiveLpMode;
+      if (Object.keys(patch).length > 0) {
+        try {
+          await landingPageInstanceService.update(selectedInstance.id, patch);
+          await qc.invalidateQueries({ queryKey: ["landing_page_instances"] });
+        } catch (e: any) {
+          toast({ title: "Erro ao salvar LP", description: e.message, variant: "destructive" });
+          return;
+        }
       }
     }
     // Sem LP: drop instance/LP refs so the saved tracking_link reflects mode.
@@ -522,6 +541,30 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                 <code className="font-mono truncate min-w-0 flex-1" title={selectedInstance.affiliate_link}>
                   {selectedInstance.affiliate_link || <em className="not-italic text-muted-foreground">vazio - preencha abaixo</em>}
                 </code>
+              </div>
+            )}
+
+            {/* LP mode picker — pick the page style; the affiliate link auto-pulls */}
+            {selectedInstance && (
+              <div className="rounded-lg border border-border bg-secondary/30 p-2 space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Modelo da LP</span>
+                  <div className="inline-flex rounded-md border border-border bg-background p-0.5 text-[10px] font-medium">
+                    <button
+                      type="button"
+                      onClick={() => setLpModeOverride("catalog")}
+                      className={`px-2 py-1 rounded ${effectiveLpMode === "catalog" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    >LP padrão</button>
+                    <button
+                      type="button"
+                      onClick={() => canUseGenerated && setLpModeOverride(detectedLpMode === "catalog" ? "single_game" : detectedLpMode)}
+                      disabled={!canUseGenerated}
+                      title={canUseGenerated ? "" : "Selecione um jogo para habilitar"}
+                      className={`px-2 py-1 rounded ${effectiveLpMode !== "catalog" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"} ${!canUseGenerated ? "opacity-40 cursor-not-allowed" : ""}`}
+                    >LP gerada</button>
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground">{LP_MODE_HINTS[effectiveLpMode]} · {LP_MODE_LABELS[effectiveLpMode]}</p>
               </div>
             )}
 
