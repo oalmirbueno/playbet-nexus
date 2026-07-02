@@ -268,8 +268,10 @@ export async function renderCreative(input: CreativeInput): Promise<RenderedCrea
     } else {
       await drawHype(ctx, size, input, gameImg, logoImg, brandAccent);
     }
-  } else if (!input.hideAutoArt) {
-    // Still draw the branded chrome: logo + platform pill (only when auto art isn't overridden).
+  } else if (input.hideAutoArt) {
+    // Editor mode: draw a rich decorative background instead of a flat blur.
+    drawEditorBackdrop(ctx, size, brandAccent);
+  } else {
     const pad = Math.round(Math.min(size.w, size.h) * 0.055);
     drawLogo(ctx, logoImg, pad, pad, Math.round(size.w * 0.24));
     if (input.platformName) {
@@ -287,6 +289,39 @@ export async function renderCreative(input: CreativeInput): Promise<RenderedCrea
     canvas.toBlob((b) => resolve(b!), "image/png", 0.95)
   );
   return { canvas, dataUrl, blob, size };
+}
+
+/* ────────────────────────── editor backdrop ────────────────────────── */
+
+function drawEditorBackdrop(ctx: CanvasRenderingContext2D, size: CreativeSize, accent: string) {
+  const { w, h } = size;
+  const g = ctx.createLinearGradient(0, 0, w, h);
+  g.addColorStop(0, "#050B1E");
+  g.addColorStop(0.55, "#0A1740");
+  g.addColorStop(1, "#050B1E");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+
+  const blob1 = ctx.createRadialGradient(w * 0.15, h * 0.2, 0, w * 0.15, h * 0.2, Math.max(w, h) * 0.55);
+  blob1.addColorStop(0, hexToRgba(accent, 0.55));
+  blob1.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = blob1; ctx.fillRect(0, 0, w, h);
+
+  const blob2 = ctx.createRadialGradient(w * 0.85, h * 0.85, 0, w * 0.85, h * 0.85, Math.max(w, h) * 0.6);
+  blob2.addColorStop(0, hexToRgba(BRAND.yellow, 0.28));
+  blob2.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = blob2; ctx.fillRect(0, 0, w, h);
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,255,255,0.035)"; ctx.lineWidth = 1;
+  const step = Math.round(Math.min(w, h) / 24);
+  for (let x = 0; x < w; x += step) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+  for (let y = 0; y < h; y += step) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+  ctx.restore();
+
+  const shade = ctx.createLinearGradient(0, h * 0.55, 0, h);
+  shade.addColorStop(0, "rgba(0,0,0,0)");
+  shade.addColorStop(1, "rgba(0,0,0,0.75)");
+  ctx.fillStyle = shade; ctx.fillRect(0, h * 0.55, w, h * 0.45);
 }
 
 /* ────────────────────────── text layers ────────────────────────── */
