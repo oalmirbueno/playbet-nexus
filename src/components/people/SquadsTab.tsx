@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Plus, Edit2, Trash2, Users, Target, Palette } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Plus, Edit2, Trash2, Users, Target, Palette, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
