@@ -216,7 +216,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           >
             <Search size={15} />
           </button>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto lg:ml-0 flex items-center gap-2">
             <NotificationPanel />
             <div className="h-5 w-px bg-border/60 mx-1" />
             <div className="flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-secondary/40 transition-colors cursor-pointer">
