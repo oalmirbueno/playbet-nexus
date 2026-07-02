@@ -29,9 +29,9 @@ import { ptBR } from "date-fns/locale";
 
 type Stage =
   | "em_contato" | "respondeu" | "checklist" | "cadastro"
-  | "analise" | "aprovado" | "concluido";
+  | "analise" | "aprovado" | "concluido" | "standby" | "desqualificado";
 
-const STAGES: { id: Stage; label: string; accent: string }[] = [
+const STAGES: { id: Stage; label: string; accent: string; tone?: "danger" | "muted" }[] = [
   { id: "em_contato", label: "Em contato", accent: "from-slate-500/20 to-slate-500/0" },
   { id: "respondeu", label: "Respondeu", accent: "from-sky-500/20 to-sky-500/0" },
   { id: "checklist", label: "Checklist", accent: "from-violet-500/20 to-violet-500/0" },
@@ -39,6 +39,8 @@ const STAGES: { id: Stage; label: string; accent: string }[] = [
   { id: "analise", label: "Análise", accent: "from-amber-500/20 to-amber-500/0" },
   { id: "aprovado", label: "Aprovado", accent: "from-emerald-500/20 to-emerald-500/0" },
   { id: "concluido", label: "Concluído", accent: "from-primary/30 to-primary/0" },
+  { id: "standby", label: "Standby (futuro)", accent: "from-zinc-500/25 to-zinc-500/0", tone: "muted" },
+  { id: "desqualificado", label: "Desqualificado", accent: "from-red-500/25 to-red-500/0", tone: "danger" },
 ];
 
 interface Card {
