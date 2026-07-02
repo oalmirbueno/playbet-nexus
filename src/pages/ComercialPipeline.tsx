@@ -212,19 +212,19 @@ function Column({ stage, cards, squads, managers, loading, onOpen }: {
   return (
     <div
       ref={setNodeRef}
-      className={`w-[300px] flex-shrink-0 flex flex-col rounded-xl border border-border/60 bg-card/40 backdrop-blur transition-colors ${
+      className={`w-[78vw] xs:w-[64vw] sm:w-[300px] md:w-[264px] lg:w-[280px] xl:w-[300px] flex-shrink-0 flex flex-col rounded-xl border border-border/60 bg-card/40 backdrop-blur transition-colors ${
         isOver ? "ring-2 ring-primary/40 bg-card/70" : ""
       }`}
     >
-      <div className={`px-3 py-2.5 rounded-t-xl bg-gradient-to-b ${stage.accent} border-b border-border/40`}>
+      <div className={`px-3 py-2.5 rounded-t-xl bg-gradient-to-b ${stage.accent} border-b border-border/40 sticky top-0`}>
         <div className="flex items-center justify-between">
-          <span className="text-xs font-display font-semibold uppercase tracking-wider text-foreground/90">
+          <span className="text-[11px] md:text-xs font-display font-semibold uppercase tracking-wider text-foreground/90 truncate">
             {stage.label}
           </span>
-          <Badge variant="secondary" className="text-[10px] h-5 px-1.5">{cards.length}</Badge>
+          <Badge variant="secondary" className="text-[10px] h-5 px-1.5 shrink-0 ml-2">{cards.length}</Badge>
         </div>
       </div>
-      <div className="flex-1 p-2 space-y-2 min-h-[120px] overflow-y-auto">
+      <div className="flex-1 p-2 space-y-2 min-h-[120px] max-h-[calc(100vh-220px)] overflow-y-auto [scrollbar-width:thin] overscroll-contain">
         {loading && <div className="text-xs text-muted-foreground p-3">Carregando...</div>}
         {!loading && cards.length === 0 && (
           <div className="text-xs text-muted-foreground/70 p-4 text-center border border-dashed border-border/40 rounded-lg">
