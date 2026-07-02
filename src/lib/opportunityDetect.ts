@@ -157,8 +157,8 @@ const CATEGORY_CTA: Record<OpportunityCategory, string> = {
 };
 
 const CATEGORY_BADGE: Record<OpportunityCategory, string> = {
-  sports: "Odd em destaque",
-  casino: "Jogo em destaque",
+  sports: "Em destaque",
+  casino: "Em destaque",
   offer: "Oferta oficial",
   guide: "Guia rápido",
 };
@@ -203,7 +203,7 @@ export function detectOpportunity({
 
   const suggestedTitle =
     category === "sports" ? "Aposta sugerida"
-    : category === "casino" ? "Jogo em destaque"
+    : category === "casino" ? "Em destaque"
     : category === "offer" ? "Oferta exclusiva"
     : "Guia rápido";
 
@@ -312,7 +312,7 @@ export function scoreSports({ detected, hasValidDestination, casa, oddLabel, mar
 
   if (hasValidDestination) { score += 30; reasons.push("Link oficial válido"); }
   if (detected.platform || (casa && casa.trim())) { score += 20; reasons.push("Casa definida"); labels.push("Campanha oficial"); }
-  if (oddLabel && oddLabel.trim()) { score += 15; reasons.push("Odd preenchida"); labels.push("Odd em destaque"); }
+  if (oddLabel && oddLabel.trim()) { score += 15; reasons.push("Odd preenchida"); labels.push("Em destaque"); }
   if (marketName && SIMPLE_MARKET_HINTS.some((h) => marketName.toLowerCase().includes(h))) {
     score += 20; reasons.push("Mercado simples"); labels.push("Mercado simples");
   }
@@ -330,7 +330,7 @@ export function scoreCasino({ detected, hasValidDestination, casa, gameName, gam
 
   if (hasValidDestination) { score += 30; reasons.push("Link oficial válido"); }
   if (detected.platform || (casa && casa.trim())) { score += 20; reasons.push("Casa definida"); labels.push("Campanha oficial"); }
-  if (gameName && gameName.trim()) { score += 20; reasons.push("Jogo identificado"); labels.push("Jogo em destaque"); }
+  if (gameName && gameName.trim()) { score += 20; reasons.push("Jogo identificado"); labels.push("Em destaque"); }
   if ((gameType && gameType.trim()) || (provider && provider.trim())) { score += 15; reasons.push("Tipo/Provedor definido"); }
   if (badge && /novidade|destaque|oferta|cassino em alta/i.test(badge)) { score += 15; reasons.push("Marcado como novidade/destaque"); labels.push(badge); }
   return { score: Math.min(100, score), labels: Array.from(new Set(labels)), reasons };

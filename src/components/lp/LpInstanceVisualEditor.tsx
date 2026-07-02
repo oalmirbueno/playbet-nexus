@@ -434,7 +434,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
 
   const pickTopOdds = (n = 3) => {
     setSmartOdds(oddsCandidates.slice(0, n));
-    toast({ title: `Top ${n} odds inteligentes selecionadas`, description: "Curadoria por score + proximidade + confiança do sinal." });
+    toast({ title: `Top ${n} opções selecionadas`, description: "Ordenadas por mercado simples, proximidade e sinal disponível." });
   };
 
   const toggleOdd = (o: SmartOdd) => {
@@ -450,27 +450,34 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
     const effectiveMode: LpMode = previewTab === "generated" && mode === "catalog" ? "single_game" : mode;
     setSaving(true);
     try {
+      const selectedGame = availableGames.find((g: any) => g.game_slug === gameSlugs[0]);
+      const effectiveGameSlug = link?.game_slug || gameSlugs[0] || null;
+      const effectiveGameName = link?.game_name || selectedGame?.game_name || null;
+      const effectiveGameIconUrl = link?.game_icon_url || selectedGame?.icon_url || null;
+      const cleanTitle = copy.title || titleForMode(effectiveMode, effectiveGameName);
+      const cleanSubtitle = copy.subtitle || adaptiveSubtitle(effectiveMode, effectiveGameName, platformName);
+      const cleanCta = copy.cta_label || ctaForMode(effectiveMode, link?.link_category, effectiveGameName) || null;
       const layoutConfig = { mode: effectiveMode, sections, updated_at: new Date().toISOString() };
       const hype_copy: any = {
-        title: copy.title || null,
-        subtitle: copy.subtitle || null,
-        cta_label: copy.cta_label || ctaForMode(effectiveMode, link?.link_category, link?.game_name) || null,
+        title: cleanTitle || null,
+        subtitle: cleanSubtitle || null,
+        cta_label: cleanCta,
         community_cta: {
           enabled: community.enabled,
-          label: community.label || null,
+          label: community.label || (effectiveGameName ? `Comunidade ${effectiveGameName}` : null),
           url: community.url || null,
           note: community.note || null,
         },
         bonus_offer: {
           enabled: bonusOffer.enabled,
-          title: bonusOffer.title || null,
+          title: bonusOffer.title || (effectiveGameName ? `Oferta ${effectiveGameName}` : null),
           code: bonusOffer.code || null,
           note: bonusOffer.note || null,
-          cta_label: bonusOffer.cta_label || copy.cta_label || ctaForMode(effectiveMode, link?.link_category, link?.game_name) || null,
+          cta_label: bonusOffer.cta_label || cleanCta,
         },
-        game_slug: link?.game_slug || gameSlugs[0] || null,
-        game_name: link?.game_name || availableGames.find((g: any) => g.game_slug === gameSlugs[0])?.game_name || null,
-        game_icon_url: link?.game_icon_url || availableGames.find((g: any) => g.game_slug === gameSlugs[0])?.icon_url || null,
+        game_slug: effectiveGameSlug,
+        game_name: effectiveGameName,
+        game_icon_url: effectiveGameIconUrl,
         category: link?.link_category || null,
         auto: false,
       };
@@ -612,10 +619,22 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
 
   const catalogPreviewSrc = useMemo(() => {
     if (!basePage) return null;
-    const base = buildLpBaseUrl(basePage.domain, basePage.route);
-    const sep = base.includes("?") ? "&" : "?";
-    return `${base}${sep}_preview=${previewKey}`;
-  }, [basePage, previewKey]);
+    const url = buildPublicLpUrl(
+      basePage.domain,
+      instance?.slug,
+      link?.influencer_id || instance?.influencer_id || "",
+      link?.campanha_id || "",
+      basePage.route,
+      link?.tracking_code || "",
+    );
+    if (!url) {
+      const base = buildLpBaseUrl(basePage.domain, basePage.route);
+      const sep = base.includes("?") ? "&" : "?";
+      return `${base}${sep}_preview=${previewKey}`;
+    }
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}_preview=${previewKey}`;
+  }, [basePage, instance?.slug, instance?.influencer_id, link?.influencer_id, link?.campanha_id, link?.tracking_code, previewKey]);
 
   const generatedPublicUrl = useMemo(() => {
     if (!instance?.slug) return publicUrl || null;
@@ -825,7 +844,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                       </button>
                     </div>
                     <p className="text-[10px] text-muted-foreground leading-relaxed">
-                      Ordenadas por mercado simples, proximidade do jogo e odd em destaque.
+                      Ordenadas por mercado simples, proximidade do jogo e sinal disponível.
                     </p>
                     <div className="flex gap-1.5">
                       <Button size="sm" variant="secondary" className="h-7 text-[10px] flex-1"

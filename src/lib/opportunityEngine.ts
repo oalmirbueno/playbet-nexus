@@ -2,8 +2,8 @@
  * Motor de Oportunidades - geração de até 3 sugestões por evento Sports
  * e cálculo de score consolidado.
  *
- * Linguagem permitida: "score", "confiança", "mercado simples", "odd em destaque",
- * "curadoria PlayBet". Proibido: "garantido", "certeiro", "chance de ganhar", "lucro".
+ * Linguagem permitida: "score", "confiança", "mercado simples", "em destaque".
+ * Proibido: "garantido", "certeiro", "chance de ganhar", "lucro".
  */
 
 import type { LpEventRow } from "@/services/lpEventService";
@@ -36,7 +36,7 @@ export interface SuggestInput {
   signals?: LpSignalRow[];
 }
 
-/** Gera no máximo 3 opções: simples, odd em destaque e alternativa/sinal. */
+/** Gera no máximo 3 opções: simples, destaque e alternativa/sinal. */
 export function suggestThreeOptions({ event, signals = [] }: SuggestInput): SuggestedOpportunity[] {
   const home = event.home_team?.trim() || "Mandante";
   const away = event.away_team?.trim() || "Visitante";
@@ -52,12 +52,12 @@ export function suggestThreeOptions({ event, signals = [] }: SuggestInput): Sugg
     recommendation_score: 0,
   });
 
-  // 2) Odd em destaque: total de gols
+  // 2) Em destaque: total de gols
   out.push({
     title: "Mais de 1.5 gols",
     market_type: "total_gols",
     market_name: "Total de gols (Mais de 1.5)",
-    badge: "Odd em destaque",
+    badge: "Em destaque",
     recommendation_reason: "Mercado de gols costuma ter leitura estatística estável.",
     recommendation_score: 0,
   });
@@ -72,8 +72,8 @@ export function suggestThreeOptions({ event, signals = [] }: SuggestInput): Sugg
       title: topSignal.market_name || `Sinal ${topSignal.source_name ?? ""}`.trim(),
       market_type: (topSignal.market_type as MarketType) || "especial",
       market_name: topSignal.market_name || "Sinal curado",
-      badge: "Curadoria PlayBet",
-      recommendation_reason: `Indicação da sala de sinais (${topSignal.source_name ?? "fonte interna"}).`,
+      badge: "Em destaque",
+      recommendation_reason: `Sinal disponível (${topSignal.source_name ?? "fonte interna"}).`,
       recommendation_score: 0,
       signal_source: topSignal.source_name ?? topSignal.source_channel,
       signal_confidence: topSignal.confidence,
@@ -118,7 +118,7 @@ export interface ScoreInput {
 }
 
 /**
- * Score consolidado 0-100. Não é promessa de acerto - é qualidade da curadoria.
+  * Score consolidado 0-100. Não é promessa de acerto - é qualidade do sinal.
  * Critérios: mercado simples, odd preenchida, casa definida, link oficial válido,
  * evento próximo, sinal recebido, estatística preenchida, coerência odd↔mercado.
  */
@@ -188,7 +188,7 @@ export function signalToOpportunityDraft(
     signal_id: signal.id,
     signal_source: signal.source_name ?? signal.source_channel,
     signal_confidence: signal.confidence,
-    badge: "Curadoria PlayBet",
+    badge: "Em destaque",
     is_active: false, // rascunho - nunca publica automático
     sort_order: 0,
   };
