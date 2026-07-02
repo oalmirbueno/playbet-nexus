@@ -4,13 +4,13 @@
  *
  * Rule:
  *  - If the tracking link is bound to an LP instance AND the LP has a public
- *    domain, the shared URL is the PUBLIC LP URL (`<domain>/?ref=<slug>&sub2&sub3`).
+ *    domain/mode, the shared URL is the PUBLIC generated LP URL (`<domain>/i/<slug>?sub2&sub3`).
  *    Visitors land on the LP, click the CTA, and only then are redirected to
  *    the affiliate URL (which carries sub1/sub2/sub3 attribution).
  *  - Otherwise, the shared URL is the affiliate URL itself with sub1/2/3.
  */
 
-import { DEFAULT_LP_DOMAIN } from "@/lib/lpPublicUrl";
+import { buildLpBaseUrl, normalizeLpDomain } from "@/lib/lpPublicUrl";
 
 export function appendParam(url: string, name: string, value: string): string {
   if (!url || !value) return url;
@@ -45,10 +45,8 @@ export function buildPublicLpUrl(
   sub3: string,
 ): string {
   if (!instanceSlug) return "";
-  const raw = (lpDomain && lpDomain.trim()) || DEFAULT_LP_DOMAIN;
-  let base = raw.replace(/\/+$/, "");
-  if (!/^https?:\/\//i.test(base)) base = `https://${base}`;
-  let url = appendParam(base, "ref", instanceSlug);
+  const base = normalizeLpDomain(lpDomain);
+  let url = `${base}/i/${encodeURIComponent(instanceSlug)}`;
   if (sub2) url = appendParam(url, "sub2", sub2);
   if (sub3) url = appendParam(url, "sub3", sub3);
   return url;
@@ -60,6 +58,8 @@ export function buildPublicLpUrl(
  */
 export function resolveShareUrl(args: {
   lpDomain?: string | null;
+  lpRoute?: string | null;
+  lpMode?: string | null;
   instanceSlug?: string | null;
   affiliateBaseUrl?: string | null;
   clickIdParamName?: string | null;
@@ -67,7 +67,9 @@ export function resolveShareUrl(args: {
   sub2?: string;
   sub3?: string;
 }): string {
-  const publicLp = buildPublicLpUrl(args.lpDomain, args.instanceSlug, args.sub2 || "", args.sub3 || "");
+  if (args.lpMode === "catalog") return buildLpBaseUrl(args.lpDomain, args.lpRoute);
+  const hasLpContext = Boolean(args.lpMode || args.lpDomain);
+  const publicLp = hasLpContext ? buildPublicLpUrl(args.lpDomain, args.instanceSlug, args.sub2 || "", args.sub3 || "") : "";
   if (publicLp) return publicLp;
   return buildTrackedAffiliateUrl(
     args.affiliateBaseUrl || "",

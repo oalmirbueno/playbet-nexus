@@ -8,9 +8,10 @@ import { toast } from "@/hooks/use-toast";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ExportDropdown from "@/components/ExportDropdown";
 
-import { buildLpPublicUrl } from "@/lib/lpPublicUrl";
-function buildPublicUrl(domain: string | null, slug: string) {
-  return buildLpPublicUrl(domain, slug) ?? "";
+import { buildLpBaseUrl, buildLpPublicUrl } from "@/lib/lpPublicUrl";
+function buildPublicUrl(inst: any, lp?: any) {
+  if (inst?.lp_mode === "catalog") return buildLpBaseUrl(lp?.domain, lp?.route);
+  return buildLpPublicUrl(lp?.domain, inst?.slug) ?? "";
 }
 
 export default function LPPerformance() {
@@ -38,7 +39,7 @@ export default function LPPerformance() {
       activeInstances: lpInstances.filter(i => i.is_active).length,
       totalClicks: lpClicks.length,
       topInfluencer: topInstance ? getInfluencerName(topInstance.inst.influencer_id) : "-",
-      topUrl: topInstance ? buildPublicUrl(lp.domain, topInstance.inst.slug) : "-",
+      topUrl: topInstance ? buildPublicUrl(topInstance.inst, lp) : "-",
     };
   }).sort((a, b) => b.totalClicks - a.totalClicks);
 
@@ -52,7 +53,7 @@ export default function LPPerformance() {
       domain: lp?.domain || "",
       influencer: getInfluencerName(inst.influencer_id),
       clicks: instClicks,
-      url: buildPublicUrl(lp?.domain || null, inst.slug),
+      url: buildPublicUrl(inst, lp),
     };
   }).sort((a, b) => b.clicks - a.clicks);
 

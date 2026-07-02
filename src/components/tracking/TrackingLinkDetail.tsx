@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import PostbackEventBlocks from "./PostbackEventBlocks";
 import type { TrackingLinkRow } from "@/services/trackingService";
-import { buildPublicLpUrl, buildTrackedAffiliateUrl } from "@/lib/trackingUrl";
+import { buildPublicLpUrl, buildTrackedAffiliateUrl, resolveShareUrl } from "@/lib/trackingUrl";
 
 const ROLE_LABELS: Record<string, { label: string; color: string }> = {
   influencer: { label: "Influencer", color: "bg-primary/15 text-primary" },
@@ -82,9 +82,15 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
 
   const primaryLink = hasInstanceLink ? instanceAffiliateLink : (link.base_url || "");
 
-  // Public LP URL (the link the influencer actually shares - passes through the LP)
-  // Public LP URL (the link the influencer actually shares - passes through the LP)
-  const publicLpUrl: string = buildPublicLpUrl(lp?.domain, instance?.slug, link.influencer_id || "", link.campanha_id || "");
+  // Public LP URL (the link the influencer actually shares - passes through the selected LP mode)
+  const publicLpUrl: string = instance ? resolveShareUrl({
+    lpDomain: lp?.domain,
+    lpRoute: lp?.route,
+    lpMode: instance?.lp_mode,
+    instanceSlug: instance?.slug,
+    sub2: link.influencer_id || "",
+    sub3: link.campanha_id || "",
+  }) : "";
   const trackedAffiliateUrl: string = buildTrackedAffiliateUrl(
     primaryLink,
     link.click_id_param_name || "sub1",
@@ -142,7 +148,7 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
           {/* PRIMARY - what the influencer actually shares */}
           {publicLpUrl ? (
             <CopyBlock
-              label={`Link para divulgar (passa pela LP /${instance?.slug})`}
+              label={`Link para divulgar (${instance?.lp_mode === "catalog" ? "LP padrão" : `LP gerada /${instance?.slug}`})`}
               value={publicLpUrl}
               primary
               help="Este é o link que o influencer publica. Visitantes abrem a landing page e só depois são redirecionados para o afiliado."

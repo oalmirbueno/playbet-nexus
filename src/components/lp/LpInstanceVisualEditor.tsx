@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import { LP_MODE_LABELS, defaultLayoutConfig, type LpMode } from "@/lib/lpMode";
 import GameArtwork from "@/components/tracking/GameArtwork";
 import { suggestThreeOptions, computeOpportunityScore } from "@/lib/opportunityEngine";
 import { buildPublicLpUrl } from "@/lib/trackingUrl";
+import { buildLpBaseUrl } from "@/lib/lpPublicUrl";
 
 interface Props {
   open: boolean;
@@ -106,6 +108,7 @@ function adaptiveSubtitle(mode: LpMode, gameName?: string | null, platformName?:
 }
 
 export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId, publicUrl }: Props) {
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [instance, setInstance] = useState<any>(null);
@@ -202,7 +205,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         // so already registered LPs keep working even if an older sync missed the FK.
         let { data: tl } = await supabase
           .from("tracking_links")
-          .select("id, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, platform_account_id, platform_accounts(platform_id, platforms(name))")
+          .select("id, influencer_id, campanha_id, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, platform_account_id, platform_accounts(platform_id, platforms(name))")
           .eq("landing_page_instance_id", instanceId)
           .order("created_at", { ascending: false })
           .limit(1)
@@ -210,7 +213,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         if (!tl && (inst as any).source_tracking_link_id) {
           const { data: sourceTl } = await supabase
             .from("tracking_links")
-            .select("id, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, platform_account_id, platform_accounts(platform_id, platforms(name))")
+            .select("id, influencer_id, campanha_id, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, platform_account_id, platform_accounts(platform_id, platforms(name))")
             .eq("id", (inst as any).source_tracking_link_id)
             .maybeSingle();
           tl = sourceTl;
@@ -384,6 +387,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
 
   const handleModeChange = (nextMode: LpMode) => {
     setMode(nextMode);
+    setPreviewTab(nextMode === "catalog" ? "catalog" : "generated");
     if (nextMode === "odds" && oddsCandidates.length === 0) {
       loadOddsCandidates((link as any)?.platform_accounts?.platform_id);
     }
@@ -443,13 +447,14 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
 
   const handleSave = async () => {
     if (!instanceId) return;
+    const effectiveMode: LpMode = previewTab === "generated" && mode === "catalog" ? "single_game" : mode;
     setSaving(true);
     try {
-      const layoutConfig = { mode, sections, updated_at: new Date().toISOString() };
+      const layoutConfig = { mode: effectiveMode, sections, updated_at: new Date().toISOString() };
       const hype_copy: any = {
         title: copy.title || null,
         subtitle: copy.subtitle || null,
-        cta_label: copy.cta_label || ctaForMode(mode, link?.link_category, link?.game_name) || null,
+        cta_label: copy.cta_label || ctaForMode(effectiveMode, link?.link_category, link?.game_name) || null,
         community_cta: {
           enabled: community.enabled,
           label: community.label || null,
@@ -461,7 +466,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
           title: bonusOffer.title || null,
           code: bonusOffer.code || null,
           note: bonusOffer.note || null,
-          cta_label: bonusOffer.cta_label || copy.cta_label || ctaForMode(mode, link?.link_category, link?.game_name) || null,
+          cta_label: bonusOffer.cta_label || copy.cta_label || ctaForMode(effectiveMode, link?.link_category, link?.game_name) || null,
         },
         game_slug: link?.game_slug || gameSlugs[0] || null,
         game_name: link?.game_name || availableGames.find((g: any) => g.game_slug === gameSlugs[0])?.game_name || null,
@@ -469,12 +474,12 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         category: link?.link_category || null,
         auto: false,
       };
-      if (mode === "odds" && smartOdds.length) hype_copy.smart_odds = smartOdds;
+      if (effectiveMode === "odds" && smartOdds.length) hype_copy.smart_odds = smartOdds;
 
       const { error } = await supabase
         .from("landing_page_instances")
         .update({
-          lp_mode: mode,
+          lp_mode: effectiveMode,
           game_slugs: gameSlugs,
           layout_config: layoutConfig,
           hype_copy,
@@ -510,44 +515,64 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         if (sourceTl) linksToSync = [sourceTl as any];
       }
 
+      const catalogShareUrl = buildLpBaseUrl(lpDomain, basePage?.route);
       const shareUrls = linksToSync
-        .map((tl) => buildPublicLpUrl(
-          lpDomain,
-          instance?.slug,
-          tl.influencer_id || instance?.influencer_id || "",
-          tl.campanha_id || "",
-        ))
+        .map((tl) => effectiveMode === "catalog"
+          ? catalogShareUrl
+          : buildPublicLpUrl(
+              lpDomain,
+              instance?.slug,
+              tl.influencer_id || instance?.influencer_id || "",
+              tl.campanha_id || "",
+            ))
         .filter(Boolean);
 
-      await Promise.all(
+      const syncResults = await Promise.all(
         linksToSync.map((tl, idx) => supabase
           .from("tracking_links")
           .update({
             landing_page_id: instance?.landing_page_id || null,
             landing_page_instance_id: instanceId,
+            lp_mode: effectiveMode,
             final_url: shareUrls[idx] || null,
             use_lp: true,
             lp_auto_generated: true,
           } as any)
           .eq("id", tl.id)),
       );
+      const syncError = syncResults.find((r: any) => r?.error)?.error;
+      if (syncError) throw new Error(syncError.message);
 
-      const publicShareUrl = shareUrls[0] || buildPublicLpUrl(lpDomain, instance?.slug, instance?.influencer_id || "", "") || publicUrl || "";
+      const publicShareUrl = shareUrls[0]
+        || (effectiveMode === "catalog"
+          ? catalogShareUrl
+          : buildPublicLpUrl(lpDomain, instance?.slug, instance?.influencer_id || "", ""))
+        || publicUrl
+        || "";
       if (publicShareUrl) {
         try { await navigator.clipboard.writeText(publicShareUrl); } catch {}
       }
 
+      setMode(effectiveMode);
+      setPreviewTab(effectiveMode === "catalog" ? "catalog" : "generated");
       setInstance((prev: any) => prev ? {
         ...prev,
-        lp_mode: mode,
+        lp_mode: effectiveMode,
         game_slugs: gameSlugs,
         layout_config: layoutConfig,
         hype_copy,
       } : prev);
 
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["landing_page_instances"] }),
+        queryClient.invalidateQueries({ queryKey: ["tracking_links"] }),
+        queryClient.refetchQueries({ queryKey: ["landing_page_instances"], type: "active" }),
+        queryClient.refetchQueries({ queryKey: ["tracking_links"], type: "active" }),
+      ]);
+
       toast({
         title: "LP salva",
-        description: publicShareUrl ? "Página preservada e link de divulgação atualizado." : "Página preservada e preview atualizado.",
+        description: publicShareUrl ? `Link ${effectiveMode === "catalog" ? "da LP padrão" : "da LP gerada"} atualizado e copiado.` : "Página preservada e preview atualizado.",
       });
       setPreviewKey((k) => k + 1);
     } catch (e: any) {
@@ -582,21 +607,30 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
 
   const catalogPreviewSrc = useMemo(() => {
     if (!basePage) return null;
-    const rawDomain = (basePage.domain || "").trim();
-    const domain = rawDomain
-      ? (/^https?:\/\//i.test(rawDomain) ? rawDomain : `https://${rawDomain}`)
-      : "https://oportunidades.playbet.app.br";
-    const base = domain.replace(/\/+$/, "");
-    const route = basePage.route && basePage.route !== "/" ? basePage.route : "";
-    const path = route.startsWith("/") || !route ? route : `/${route}`;
-    const sep = path.includes("?") ? "&" : "?";
-    return `${base}${path}${sep}_preview=${previewKey}`;
+    const base = buildLpBaseUrl(basePage.domain, basePage.route);
+    const sep = base.includes("?") ? "&" : "?";
+    return `${base}${sep}_preview=${previewKey}`;
   }, [basePage, previewKey]);
+
+  const generatedPublicUrl = useMemo(() => {
+    if (!instance?.slug) return publicUrl || null;
+    return buildPublicLpUrl(
+      basePage?.domain || null,
+      instance.slug,
+      link?.influencer_id || instance?.influencer_id || "",
+      link?.campanha_id || "",
+    );
+  }, [basePage?.domain, instance?.slug, instance?.influencer_id, link?.influencer_id, link?.campanha_id, publicUrl]);
+
+  const catalogPublicUrl = useMemo(() => {
+    if (!basePage) return null;
+    return buildLpBaseUrl(basePage.domain, basePage.route);
+  }, [basePage]);
 
   const activePreviewSrc = previewTab === "catalog" ? catalogPreviewSrc : generatedPreviewSrc;
   const activeExternalUrl = previewTab === "catalog"
-    ? (catalogPreviewSrc ? catalogPreviewSrc.split("?")[0] : null)
-    : publicUrl;
+    ? catalogPublicUrl
+    : generatedPublicUrl;
 
 
 
