@@ -712,11 +712,6 @@ function InfluencerLinksSheet({ influencerId, onClose, canManage }: {
     if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
     else qc.invalidateQueries({ queryKey: ["influencer-tracking-links", influencerId] });
   };
-      await toggle(id, true);
-    } else {
-      qc.invalidateQueries({ queryKey: ["influencer-tracking-links", influencerId] });
-    }
-  };
 
   return (
     <Sheet open={!!influencerId} onOpenChange={(v) => !v && onClose()}>
@@ -731,31 +726,30 @@ function InfluencerLinksSheet({ influencerId, onClose, canManage }: {
                 <div key={l.id} className="rounded-lg border border-border p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-[13px] font-medium truncate">{l.name ?? l.game_name ?? "Link"}</p>
+                      <p className="text-[13px] font-medium truncate">{l.game_name ?? "Link"}</p>
                       <a href={l.short_url ?? l.base_url} target="_blank" rel="noreferrer" className="text-[11px] text-muted-foreground hover:text-foreground break-all">
                         {l.short_url ?? l.base_url}
                       </a>
                       <div className="flex items-center gap-1.5 mt-1">
                         {l.link_category && <Badge variant="outline" className="h-4 text-[9px]">{l.link_category}</Badge>}
                         {!l.is_active && <Badge variant="destructive" className="h-4 text-[9px]">Inativo</Badge>}
-                        {l.is_broken && <Badge variant="destructive" className="h-4 text-[9px]">Quebrado</Badge>}
                       </div>
                     </div>
                     {canManage && (
                       <div className="flex flex-col items-end gap-1.5 shrink-0">
                         <Switch checked={l.is_active} onCheckedChange={() => toggle(l.id, l.is_active)} />
-                        <button
-                          onClick={() => markBroken(l.id, l.is_broken)}
-                          className="text-[10px] text-muted-foreground hover:text-destructive underline"
-                        >
-                          {l.is_broken ? "Marcar OK" : "Marcar quebrado"}
-                        </button>
+                        <span className="text-[10px] text-muted-foreground">{l.is_active ? "Ativo" : "Inativo"}</span>
                       </div>
                     )}
                   </div>
                 </div>
               ))
             )}
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
         </div>
       </SheetContent>
     </Sheet>
