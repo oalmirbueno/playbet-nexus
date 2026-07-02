@@ -269,40 +269,47 @@ function CreativeCard({
   row, onOpen, onEdit, muted, showInfluencer,
 }: { row: Row; onOpen: () => void; onEdit: () => void; muted?: boolean; showInfluencer?: boolean }) {
   return (
-    <div className={`group relative overflow-hidden rounded-lg border border-border/60 bg-card hover:border-primary/60 hover:shadow-lg transition-all ${muted ? "opacity-75" : ""}`}>
-      <button onClick={onOpen} className="block w-full text-left">
-        <div className="aspect-square relative bg-gradient-to-br from-secondary/30 to-secondary/5">
-          {row.game_icon_url ? (
-            <img src={row.game_icon_url} alt={row.game_name ?? ""} className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
-              <ImageIcon className="w-8 h-8 opacity-40" />
-            </div>
-          )}
-          <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/85 to-transparent" />
-          {row.hype_reason && (
-            <Badge className="absolute top-2 left-2 bg-primary/95 text-primary-foreground border-0 text-[10px] font-semibold">
-              <Sparkles className="w-2.5 h-2.5 mr-1" />{row.hype_reason}
-            </Badge>
-          )}
-          <div className="absolute inset-x-0 bottom-0 p-3 pr-12 space-y-0.5">
-            <div className="text-white font-semibold text-sm truncate drop-shadow">{row.game_name || "Sem título"}</div>
-            <div className="text-white/70 text-[10px] uppercase tracking-wider truncate">
-              {row.platform_name || "Plataforma"}
-              {showInfluencer && row.influencer_name ? ` · ${row.influencer_name}` : ""}
-            </div>
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
+      className={`group relative overflow-hidden rounded-lg border border-border/60 bg-card hover:border-primary/60 hover:shadow-lg transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/60 ${muted ? "opacity-75" : ""}`}
+    >
+      <div className="aspect-square relative bg-gradient-to-br from-secondary/30 to-secondary/5">
+        {row.game_icon_url ? (
+          <img src={row.game_icon_url} alt={row.game_name ?? ""} className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+            <ImageIcon className="w-8 h-8 opacity-40" />
           </div>
-          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-primary/20 backdrop-blur-[2px] flex items-center justify-center pointer-events-none">
-            <div className="bg-primary text-primary-foreground text-xs font-semibold px-3 py-2 rounded-md shadow-lg flex items-center gap-1.5">
-              <Wand2 className="w-3.5 h-3.5" /> Abrir estúdio
-            </div>
+        )}
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/85 to-transparent" />
+        {row.hype_reason && (
+          <Badge className="absolute top-2 left-2 bg-primary/95 text-primary-foreground border-0 text-[10px] font-semibold max-w-[calc(100%-3.5rem)] truncate">
+            <Sparkles className="w-2.5 h-2.5 mr-1 shrink-0" /><span className="truncate">{row.hype_reason}</span>
+          </Badge>
+        )}
+        <div className="absolute inset-x-0 bottom-0 p-3 pr-12 space-y-0.5 pointer-events-none">
+          <div className="text-white font-semibold text-sm truncate drop-shadow">{row.game_name || "Sem título"}</div>
+          <div className="text-white/70 text-[10px] uppercase tracking-wider truncate">
+            {row.platform_name || "Plataforma"}
+            {showInfluencer && row.influencer_name ? ` · ${row.influencer_name}` : ""}
           </div>
         </div>
-      </button>
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-primary/20 backdrop-blur-[2px] flex items-center justify-center pointer-events-none">
+          <div className="bg-primary text-primary-foreground text-xs font-semibold px-3 py-2 rounded-md shadow-lg flex items-center gap-1.5">
+            <Wand2 className="w-3.5 h-3.5" /> Abrir estúdio
+          </div>
+        </div>
+      </div>
       <button
-        onClick={(e) => { e.stopPropagation(); onEdit(); }}
-        title="Editar textos e LP"
-        className="absolute top-2 right-2 z-10 w-8 h-8 rounded-md bg-background/85 hover:bg-background border border-border/60 backdrop-blur-sm flex items-center justify-center text-foreground hover:text-primary transition-colors"
+        type="button"
+        onClick={(e) => { e.stopPropagation(); e.preventDefault(); onEdit(); }}
+        onPointerDown={(e) => e.stopPropagation()}
+        title="Editar textos, arte e LP"
+        aria-label="Editar material"
+        className="absolute top-2 right-2 z-20 w-8 h-8 rounded-md bg-background/90 hover:bg-background border border-border/60 backdrop-blur-sm flex items-center justify-center text-foreground hover:text-primary transition-colors shadow-md"
       >
         <Pencil className="w-3.5 h-3.5" />
       </button>
