@@ -3,7 +3,7 @@ import {
   renderCreative, downloadCreative, slugify, defaultLayersFor,
   FORMAT_SIZES, STYLE_LABEL,
   type CreativeFormat, type CreativeStyle, type CreativeInput, type RenderedCreative,
-  type TextLayer,
+  type Layer, type TextLayer, type ImageLayer,
 } from "@/lib/creativeStudio";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,8 @@ import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Download, Loader2, RefreshCw, Sparkles, Copy, Check, Plus, Trash2,
-  AlignLeft, AlignCenter, AlignRight, Type, Bold, MoveUpRight,
+  AlignLeft, AlignCenter, AlignRight, Type, Image as ImageIcon,
+  ChevronUp, ChevronDown, Save, Undo2, MousePointer2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -47,23 +48,49 @@ const FAMILY_CSS: Record<TextLayer["family"], string> = {
 
 const WEIGHTS: TextLayer["weight"][] = [400, 500, 600, 700, 800, 900];
 
+const STORAGE_PREFIX = "playbet:creative-studio:v2";
+const storageKey = (linkId: string, fmt: CreativeFormat) => `${STORAGE_PREFIX}:${linkId}:${fmt}`;
+
+interface SavedState {
+  layers: Layer[];
+  style: CreativeStyle;
+  editorMode: boolean;
+  updatedAt: number;
+}
+
+function loadState(linkId: string, fmt: CreativeFormat): SavedState | null {
+  try {
+    const raw = localStorage.getItem(storageKey(linkId, fmt));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as SavedState;
+    if (!Array.isArray(parsed.layers)) return null;
+    return parsed;
+  } catch { return null; }
+}
+
+function saveState(linkId: string, fmt: CreativeFormat, s: SavedState) {
+  try { localStorage.setItem(storageKey(linkId, fmt), JSON.stringify(s)); } catch { /* ignore */ }
+}
+
 export function CreativeStudio({ open, onOpenChange, link }: Props) {
   const [style, setStyle] = useState<CreativeStyle>("hype");
   const [format, setFormat] = useState<CreativeFormat>("feed");
   const [editorMode, setEditorMode] = useState(false);
-  const [layers, setLayers] = useState<TextLayer[]>([]);
+  const [layers, setLayers] = useState<Layer[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editingTextId, setEditingTextId] = useState<string | null>(null);
 
   const [rendering, setRendering] = useState(false);
-  const [bg, setBg] = useState<RenderedCreative | null>(null); // background-only preview
+  const [bg, setBg] = useState<RenderedCreative | null>(null);
   const [copied, setCopied] = useState(false);
   const [handle, setHandle] = useState("");
   const [renderKey, setRenderKey] = useState(0);
+  const [savedAt, setSavedAt] = useState<number | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
 
   const selected = layers.find(l => l.id === selectedId) || null;
 
-  const seedLayers = useCallback((fmt: CreativeFormat) => {
+  const seedLayers = useCallback((fmt: CreativeFormat, withImages = true): Layer[] => {
     if (!link) return [];
     return defaultLayersFor({
       gameName: link.gameName,
@@ -71,25 +98,40 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       cta: "JOGUE AGORA →",
       handle: link.handle || (link.shortUrl ? link.shortUrl.replace(/^https?:\/\//, "") : ""),
       format: fmt,
-    });
+      platformName: link.platformName,
+      gameImageUrl: link.gameIconUrl,
+    }, { includeImages: withImages });
   }, [link]);
 
+  // Load persisted state on open / link change / format change
   useEffect(() => {
-    if (!link) return;
+    if (!link || !open) return;
     setHandle(link.handle || (link.shortUrl ? link.shortUrl.replace(/^https?:\/\//, "") : ""));
-    setLayers(seedLayers(format));
-    setSelectedId(null);
-    setEditorMode(false);
-    setRenderKey(k => k + 1);
-  }, [link?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Re-seed layer defaults when format changes in editor mode (positions depend on aspect ratio)
-  useEffect(() => {
-    if (editorMode && link) {
+    const saved = loadState(link.id, format);
+    if (saved) {
+      setLayers(saved.layers);
+      setStyle(saved.style);
+      setEditorMode(saved.editorMode);
+      setSavedAt(saved.updatedAt);
+    } else {
       setLayers(seedLayers(format));
-      setSelectedId(null);
+      setEditorMode(false);
+      setSavedAt(null);
     }
-  }, [format]); // eslint-disable-line react-hooks/exhaustive-deps
+    setSelectedId(null);
+    setEditingTextId(null);
+    setRenderKey(k => k + 1);
+  }, [link?.id, format, open]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Auto-save (debounced)
+  useEffect(() => {
+    if (!link || !open) return;
+    const t = setTimeout(() => {
+      saveState(link.id, format, { layers, style, editorMode, updatedAt: Date.now() });
+      setSavedAt(Date.now());
+    }, 300);
+    return () => clearTimeout(t);
+  }, [layers, style, editorMode, link?.id, format, open]);
 
   const baseInput = useMemo<CreativeInput | null>(() => {
     if (!link) return null;
@@ -104,17 +146,18 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       hypeReason: link.hypeReason,
       shortUrl: link.shortUrl ?? undefined,
       hideAutoText: editorMode,
+      hideAutoArt: editorMode,
     };
   }, [link, format, style, handle, editorMode]);
 
-  // Render background (no layers) — used as the canvas behind the DOM overlays
+  // Render background-only preview (no layers) — layers are DOM overlays
   useEffect(() => {
     if (!open || !baseInput) return;
     let cancelled = false;
     setRendering(true);
     renderCreative(baseInput)
       .then(r => { if (!cancelled) setBg(r); })
-      .catch(e => { if (!cancelled) toast.error("Falha ao gerar criativo", { description: e.message }); })
+      .catch(e => { if (!cancelled) toast.error("Falha ao gerar", { description: e.message }); })
       .finally(() => { if (!cancelled) setRendering(false); });
     return () => { cancelled = true; };
   }, [baseInput, open, renderKey]);
@@ -122,15 +165,30 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
   const size = FORMAT_SIZES[format];
 
   /* ─────────── layer ops ─────────── */
-  const updateLayer = (id: string, patch: Partial<TextLayer>) =>
-    setLayers(ls => ls.map(l => l.id === id ? { ...l, ...patch } : l));
+  const updateLayer = <T extends Layer>(id: string, patch: Partial<T>) =>
+    setLayers(ls => ls.map(l => l.id === id ? ({ ...l, ...patch } as Layer) : l));
+
   const deleteLayer = (id: string) => {
     setLayers(ls => ls.filter(l => l.id !== id));
     if (selectedId === id) setSelectedId(null);
+    if (editingTextId === id) setEditingTextId(null);
   };
-  const addLayer = () => {
+
+  const moveLayer = (id: string, dir: -1 | 1) => {
+    setLayers(ls => {
+      const idx = ls.findIndex(l => l.id === id);
+      if (idx < 0) return ls;
+      const j = idx + dir;
+      if (j < 0 || j >= ls.length) return ls;
+      const next = [...ls];
+      [next[idx], next[j]] = [next[j], next[idx]];
+      return next;
+    });
+  };
+
+  const addTextLayer = () => {
     const nl: TextLayer = {
-      id: crypto.randomUUID(),
+      kind: "text", id: crypto.randomUUID(),
       text: "Novo texto",
       xPct: 20, yPct: 45, widthPct: 60,
       fontSizePct: 6, color: "#FFFFFF", weight: 800,
@@ -141,38 +199,114 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     setEditorMode(true);
   };
 
-  /* ─────────── drag / resize ─────────── */
-  const dragRef = useRef<{ id: string; mode: "move" | "resize"; startX: number; startY: number; l0: TextLayer } | null>(null);
+  const addImageLayer = () => {
+    if (!link?.gameIconUrl) return;
+    const nl: ImageLayer = {
+      kind: "image", id: crypto.randomUUID(), src: link.gameIconUrl, label: "Arte do jogo",
+      xPct: 30, yPct: 20, widthPct: 40, heightPct: 40,
+      radiusPct: 8, opacity: 1, fit: "cover", glow: null,
+    };
+    setLayers(ls => [...ls, nl]);
+    setSelectedId(nl.id);
+    setEditorMode(true);
+  };
 
-  const onLayerPointerDown = (e: React.PointerEvent, layer: TextLayer, mode: "move" | "resize") => {
-    if ((e.target as HTMLElement).isContentEditable && mode === "move") return;
+  const resetToDefaults = () => {
+    setLayers(seedLayers(format));
+    setSelectedId(null);
+    setEditingTextId(null);
+    toast.success("Layout restaurado");
+  };
+
+  /* ─────────── drag / resize ─────────── */
+  type DragState =
+    | { id: string; mode: "move"; startX: number; startY: number; l0: Layer }
+    | { id: string; mode: "resize"; corner: "br" | "bl" | "tr" | "tl"; startX: number; startY: number; l0: Layer };
+  const dragRef = useRef<DragState | null>(null);
+
+  const onLayerPointerDown = (e: React.PointerEvent, layer: Layer) => {
+    if (editingTextId === layer.id) return; // editing text → let contentEditable receive events
     e.preventDefault();
     e.stopPropagation();
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
     setSelectedId(layer.id);
-    dragRef.current = { id: layer.id, mode, startX: e.clientX, startY: e.clientY, l0: { ...layer } };
+    dragRef.current = { id: layer.id, mode: "move", startX: e.clientX, startY: e.clientY, l0: layer };
+  };
+
+  const onResizePointerDown = (e: React.PointerEvent, layer: Layer, corner: "br" | "bl" | "tr" | "tl") => {
+    e.preventDefault();
+    e.stopPropagation();
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    setSelectedId(layer.id);
+    dragRef.current = { id: layer.id, mode: "resize", corner, startX: e.clientX, startY: e.clientY, l0: layer };
   };
 
   const onStagePointerMove = (e: React.PointerEvent) => {
     const d = dragRef.current;
     if (!d || !stageRef.current) return;
     const rect = stageRef.current.getBoundingClientRect();
-    const dx = ((e.clientX - d.startX) / rect.width) * 100;
-    const dy = ((e.clientY - d.startY) / rect.height) * 100;
+    const dxPct = ((e.clientX - d.startX) / rect.width) * 100;
+    const dyPct = ((e.clientY - d.startY) / rect.height) * 100;
+
     if (d.mode === "move") {
+      const l0 = d.l0;
+      const h = l0.kind === "image" ? l0.heightPct : 5;
       updateLayer(d.id, {
-        xPct: Math.max(0, Math.min(100 - d.l0.widthPct, d.l0.xPct + dx)),
-        yPct: Math.max(0, Math.min(98, d.l0.yPct + dy)),
+        xPct: Math.max(0, Math.min(100 - l0.widthPct, l0.xPct + dxPct)),
+        yPct: Math.max(0, Math.min(100 - Math.min(h, 5), l0.yPct + dyPct)),
       });
+      return;
+    }
+
+    // resize
+    const l0 = d.l0;
+    const affectLeft = d.corner === "bl" || d.corner === "tl";
+    const affectTop = d.corner === "tl" || d.corner === "tr";
+    let newX = l0.xPct;
+    let newY = l0.yPct;
+    let newW = l0.widthPct;
+    let newH = l0.kind === "image" ? l0.heightPct : 0;
+
+    if (affectLeft) {
+      newX = Math.max(0, l0.xPct + dxPct);
+      newW = Math.max(6, l0.widthPct - dxPct);
     } else {
-      const newW = Math.max(8, Math.min(100 - d.l0.xPct, d.l0.widthPct + dx));
-      // scale font proportionally to width delta for intuitive resize
-      const scale = newW / d.l0.widthPct;
-      const newFs = Math.max(1, Math.min(20, d.l0.fontSizePct * scale));
-      updateLayer(d.id, { widthPct: newW, fontSizePct: newFs });
+      newW = Math.max(6, Math.min(100 - l0.xPct, l0.widthPct + dxPct));
+    }
+    if (l0.kind === "image") {
+      if (affectTop) {
+        newY = Math.max(0, l0.yPct + dyPct);
+        newH = Math.max(6, l0.heightPct - dyPct);
+      } else {
+        newH = Math.max(6, Math.min(100 - l0.yPct, l0.heightPct + dyPct));
+      }
+      updateLayer<ImageLayer>(d.id, { xPct: newX, yPct: newY, widthPct: newW, heightPct: newH });
+    } else {
+      // scale font proportionally to width delta
+      const scale = newW / l0.widthPct;
+      const newFs = Math.max(1, Math.min(24, l0.fontSizePct * scale));
+      updateLayer<TextLayer>(d.id, { xPct: newX, widthPct: newW, fontSizePct: newFs });
     }
   };
   const onStagePointerUp = () => { dragRef.current = null; };
+
+  // Keyboard nudge
+  useEffect(() => {
+    if (!selectedId || editingTextId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (["INPUT", "TEXTAREA"].includes((e.target as HTMLElement).tagName)) return;
+      const step = e.shiftKey ? 5 : 1;
+      const L = layers.find(l => l.id === selectedId);
+      if (!L) return;
+      if (e.key === "ArrowLeft") { e.preventDefault(); updateLayer(L.id, { xPct: Math.max(0, L.xPct - step) }); }
+      if (e.key === "ArrowRight") { e.preventDefault(); updateLayer(L.id, { xPct: Math.min(100 - L.widthPct, L.xPct + step) }); }
+      if (e.key === "ArrowUp") { e.preventDefault(); updateLayer(L.id, { yPct: Math.max(0, L.yPct - step) }); }
+      if (e.key === "ArrowDown") { e.preventDefault(); updateLayer(L.id, { yPct: Math.min(95, L.yPct + step) }); }
+      if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); deleteLayer(L.id); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedId, editingTextId, layers]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /* ─────────── export ─────────── */
   const exportPng = async (which: CreativeFormat | "all") => {
@@ -181,9 +315,14 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     try {
       const targets = which === "all" ? FORMATS : [which];
       for (const f of targets) {
-        // For non-selected formats, re-seed a plausible layer layout to keep positions valid.
-        const useLayers = f === format ? layers : seedLayers(f);
-        const r = await renderCreative({ ...baseInput, format: f, hideAutoText: editorMode, layers: editorMode ? useLayers : undefined });
+        const useLayers = f === format
+          ? layers
+          : (loadState(link.id, f)?.layers ?? seedLayers(f));
+        const r = await renderCreative({
+          ...baseInput, format: f,
+          hideAutoText: editorMode, hideAutoArt: editorMode,
+          layers: editorMode ? useLayers : undefined,
+        });
         downloadCreative(r, `playbet-${slugify(link.gameName || "criativo")}-${f}`);
         await new Promise(res => setTimeout(res, 120));
       }
@@ -204,6 +343,11 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
 
   if (!link) return null;
 
+  const asText = (l: Layer | null): TextLayer | null => l && l.kind === "text" ? l : null;
+  const asImage = (l: Layer | null): ImageLayer | null => l && l.kind === "image" ? l : null;
+  const selectedText = asText(selected);
+  const selectedImage = asImage(selected);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-6xl p-0 overflow-hidden gap-0 bg-background border-border/60 w-[calc(100vw-1rem)]">
@@ -217,20 +361,24 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                 Estúdio · {link.gameName || "Sem título"}
                 {link.hypeReason && <Badge variant="secondary" className="text-[10px] font-normal"><Sparkles className="w-3 h-3 mr-1" />{link.hypeReason}</Badge>}
               </DialogTitle>
-              <DialogDescription className="text-xs">
+              <DialogDescription className="text-xs flex items-center gap-2">
                 {link.platformName || "Plataforma"} · {size.label} · {size.w}×{size.h}px
+                {savedAt && (
+                  <span className="inline-flex items-center gap-1 text-primary/80">
+                    <Save className="w-3 h-3" /> salvo
+                  </span>
+                )}
               </DialogDescription>
             </div>
             <button
-              onClick={() => { setEditorMode(v => !v); if (!editorMode && layers.length === 0) setLayers(seedLayers(format)); }}
+              onClick={() => setEditorMode(v => !v)}
               className={cn(
                 "text-xs px-3 py-1.5 rounded-md border transition-all flex items-center gap-1.5",
                 editorMode ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:text-foreground",
               )}
-              title="Editor de camadas"
             >
-              <Type className="w-3.5 h-3.5" />
-              {editorMode ? "Editor ativo" : "Editar textos"}
+              <MousePointer2 className="w-3.5 h-3.5" />
+              {editorMode ? "Editor ativo" : "Editar tudo"}
             </button>
             {link.shortUrl && (
               <button onClick={copyLink} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-secondary/40">
@@ -248,7 +396,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
             onPointerMove={onStagePointerMove}
             onPointerUp={onStagePointerUp}
             onPointerLeave={onStagePointerUp}
-            onClick={(e) => { if (e.target === e.currentTarget) setSelectedId(null); }}
+            onClick={(e) => { if (e.target === e.currentTarget) { setSelectedId(null); setEditingTextId(null); } }}
           >
             <div
               ref={stageRef}
@@ -271,66 +419,117 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                 <Skeleton className="absolute inset-0" />
               )}
 
-              {/* Layer overlays — only interactive in editor mode */}
               {editorMode && layers.map((L) => {
                 const isSel = L.id === selectedId;
+                const isEditing = editingTextId === L.id;
+                const commonStyle: React.CSSProperties = {
+                  left: `${L.xPct}%`,
+                  top: `${L.yPct}%`,
+                  width: `${L.widthPct}%`,
+                };
+
+                if (L.kind === "image") {
+                  return (
+                    <div
+                      key={L.id}
+                      onPointerDown={(e) => onLayerPointerDown(e, L)}
+                      onClick={(e) => { e.stopPropagation(); setSelectedId(L.id); }}
+                      className={cn(
+                        "absolute z-10 cursor-move",
+                        isSel ? "ring-2 ring-primary/80" : "hover:ring-1 hover:ring-primary/40",
+                      )}
+                      style={{ ...commonStyle, height: `${L.heightPct}%` }}
+                    >
+                      <img
+                        src={L.src}
+                        alt={L.label || ""}
+                        draggable={false}
+                        className="w-full h-full pointer-events-none"
+                        style={{
+                          objectFit: L.fit === "contain" ? "contain" : "cover",
+                          borderRadius: `${L.radiusPct ?? 0}%`,
+                          opacity: L.opacity ?? 1,
+                          boxShadow: L.glow ? `0 0 0 2px ${L.glow}, 0 0 24px ${L.glow}80` : undefined,
+                        }}
+                      />
+                      {isSel && <ResizeHandles onDown={(c, e) => onResizePointerDown(e, L, c)} />}
+                    </div>
+                  );
+                }
+
+                // Text layer
                 return (
                   <div
                     key={L.id}
-                    onPointerDown={(e) => onLayerPointerDown(e, L, "move")}
+                    onPointerDown={(e) => onLayerPointerDown(e, L)}
                     onClick={(e) => { e.stopPropagation(); setSelectedId(L.id); }}
+                    onDoubleClick={(e) => { e.stopPropagation(); setEditingTextId(L.id); }}
                     className={cn(
-                      "absolute z-10 cursor-move outline-none",
-                      isSel ? "ring-2 ring-primary/70 ring-offset-1 ring-offset-transparent" : "hover:ring-1 hover:ring-primary/40",
+                      "absolute z-10 outline-none",
+                      isEditing ? "cursor-text" : "cursor-move",
+                      isSel ? "ring-2 ring-primary/80" : "hover:ring-1 hover:ring-primary/40",
                     )}
-                    style={{
-                      left: `${L.xPct}%`,
-                      top: `${L.yPct}%`,
-                      width: `${L.widthPct}%`,
-                    }}
+                    style={commonStyle}
                   >
                     <div
-                      contentEditable
+                      contentEditable={isEditing}
                       suppressContentEditableWarning
                       spellCheck={false}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onBlur={(e) => updateLayer(L.id, { text: (e.target as HTMLDivElement).innerText })}
+                      ref={(el) => {
+                        if (el && isEditing && document.activeElement !== el) {
+                          el.focus();
+                          // put cursor at end
+                          const r = document.createRange();
+                          r.selectNodeContents(el);
+                          r.collapse(false);
+                          const s = window.getSelection();
+                          s?.removeAllRanges();
+                          s?.addRange(r);
+                        }
+                      }}
+                      onPointerDown={(e) => { if (isEditing) e.stopPropagation(); }}
+                      onInput={(e) => updateLayer<TextLayer>(L.id, { text: (e.target as HTMLDivElement).innerText })}
+                      onBlur={() => setEditingTextId(cur => cur === L.id ? null : cur)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") { (e.target as HTMLElement).blur(); }
+                      }}
                       style={{
                         fontFamily: FAMILY_CSS[L.family],
                         fontWeight: L.weight,
-                        fontSize: `clamp(8px, ${L.fontSizePct}cqw, 999px)`,
+                        fontSize: `${L.fontSizePct}cqw`,
                         color: L.color,
                         textAlign: L.align,
                         textTransform: L.uppercase ? "uppercase" : "none",
                         lineHeight: L.lineHeight ?? 1.05,
                         textShadow: L.shadow ? `0 2px ${Math.max(4, L.fontSizePct * 0.6)}px rgba(0,0,0,0.55)` : undefined,
+                        background: L.bgColor || undefined,
+                        padding: L.bgColor ? `${(L.bgPadPct ?? 40) * 0.5}% ${(L.bgPadPct ?? 40) * 0.8}%` : undefined,
+                        borderRadius: L.bgColor ? `${L.bgRadiusPct ?? 20}%` : undefined,
                         whiteSpace: "pre-wrap",
                         wordBreak: "break-word",
-                        cursor: "text",
-                      
+                        display: "inline-block",
+                        minWidth: "1ch",
                       }}
                     >
                       {L.text}
                     </div>
-                    {isSel && (
-                      <div
-                        onPointerDown={(e) => onLayerPointerDown(e, L, "resize")}
-                        className="absolute -right-2 -bottom-2 w-4 h-4 bg-primary rounded-sm cursor-nwse-resize shadow-md flex items-center justify-center"
-                        title="Redimensionar"
-                      >
-                        <MoveUpRight className="w-2.5 h-2.5 text-primary-foreground rotate-90" />
+                    {isSel && !isEditing && <ResizeHandles onDown={(c, e) => onResizePointerDown(e, L, c)} textOnly />}
+                    {isSel && !isEditing && (
+                      <div className="absolute -top-6 left-0 flex items-center gap-1 bg-background/95 border border-border/60 rounded px-1.5 py-0.5 shadow text-[10px]">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setEditingTextId(L.id); }}
+                          className="px-1.5 py-0.5 hover:bg-secondary/60 rounded text-foreground"
+                        >Editar texto</button>
                       </div>
                     )}
                   </div>
                 );
               })}
             </div>
-
-            {/* Container-query hack: cqw needs a container. We set inline-size container above per layer. */}
           </div>
 
           {/* Controls */}
-          <div className="border-t md:border-t-0 md:border-l border-border/60 p-4 space-y-4 overflow-y-auto">
+          <div className="border-t md:border-t-0 md:border-l border-border/60 p-4 space-y-4 overflow-y-auto scrollbar-thin">
             <div className="space-y-2">
               <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Formato</Label>
               <div className="grid grid-cols-2 gap-1.5">
@@ -363,164 +562,47 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
               <>
                 <div className="flex items-center justify-between">
                   <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Camadas</Label>
-                  <button onClick={addLayer} className="text-xs text-primary hover:underline flex items-center gap-1">
-                    <Plus className="w-3 h-3" /> Adicionar
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button onClick={addTextLayer} title="Adicionar texto" className="text-[10px] px-2 py-1 rounded border border-border/60 hover:border-primary hover:text-foreground text-muted-foreground flex items-center gap-1">
+                      <Type className="w-3 h-3" /> Texto
+                    </button>
+                    <button onClick={addImageLayer} title="Adicionar imagem" disabled={!link.gameIconUrl} className="text-[10px] px-2 py-1 rounded border border-border/60 hover:border-primary hover:text-foreground text-muted-foreground flex items-center gap-1 disabled:opacity-40">
+                      <ImageIcon className="w-3 h-3" /> Imagem
+                    </button>
+                  </div>
                 </div>
-                <div className="space-y-1 max-h-[140px] overflow-y-auto -mx-1 px-1">
-                  {layers.map((L) => (
-                    <button
+                <div className="space-y-1 max-h-[160px] overflow-y-auto -mx-1 px-1 scrollbar-thin">
+                  {layers.slice().reverse().map((L) => (
+                    <div
                       key={L.id}
                       onClick={() => setSelectedId(L.id)}
                       className={cn(
-                        "w-full text-left text-xs px-2 py-1.5 rounded-md flex items-center gap-2 border",
+                        "w-full text-left text-xs px-2 py-1.5 rounded-md flex items-center gap-1.5 border cursor-pointer",
                         selectedId === L.id ? "bg-primary/10 border-primary/50" : "border-transparent hover:bg-secondary/40",
                       )}
                     >
-                      <Type className="w-3 h-3 text-muted-foreground shrink-0" />
-                      <span className="truncate flex-1 text-foreground">{L.text.split("\n")[0] || "(vazio)"}</span>
-                      <span
-                        role="button"
-                        tabIndex={-1}
-                        onClick={(e) => { e.stopPropagation(); deleteLayer(L.id); }}
-                        className="opacity-60 hover:opacity-100 hover:text-destructive p-0.5"
-                      >
-                        <Trash2 className="w-3 h-3" />
+                      {L.kind === "text"
+                        ? <Type className="w-3 h-3 text-muted-foreground shrink-0" />
+                        : <ImageIcon className="w-3 h-3 text-muted-foreground shrink-0" />}
+                      <span className="truncate flex-1 text-foreground">
+                        {L.kind === "text" ? (L.text.split("\n")[0] || "(vazio)") : (L.label || "imagem")}
                       </span>
-                    </button>
+                      <button onClick={(e) => { e.stopPropagation(); moveLayer(L.id, 1); }} className="opacity-50 hover:opacity-100 p-0.5"><ChevronUp className="w-3 h-3" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); moveLayer(L.id, -1); }} className="opacity-50 hover:opacity-100 p-0.5"><ChevronDown className="w-3 h-3" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); deleteLayer(L.id); }} className="opacity-60 hover:opacity-100 hover:text-destructive p-0.5"><Trash2 className="w-3 h-3" /></button>
+                    </div>
                   ))}
                   {layers.length === 0 && (
-                    <p className="text-[11px] text-muted-foreground px-2 py-3 text-center">Nenhuma camada. Adicione um texto.</p>
+                    <p className="text-[11px] text-muted-foreground px-2 py-3 text-center">Nenhuma camada.</p>
                   )}
                 </div>
 
-                {selected && (
-                  <div className="space-y-3 pt-3 border-t border-border/60">
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Texto</Label>
-                      <Textarea
-                        value={selected.text}
-                        onChange={(e) => updateLayer(selected.id, { text: e.target.value })}
-                        rows={3}
-                        className="text-sm resize-none"
-                        placeholder="Digite aqui. Enter quebra linha."
-                      />
-                    </div>
+                {selectedText && <TextInspector layer={selectedText} onChange={(p) => updateLayer<TextLayer>(selectedText.id, p)} />}
+                {selectedImage && <ImageInspector layer={selectedImage} onChange={(p) => updateLayer<ImageLayer>(selectedImage.id, p)} />}
 
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Fonte</Label>
-                        <select
-                          value={selected.family}
-                          onChange={(e) => updateLayer(selected.id, { family: e.target.value as TextLayer["family"] })}
-                          className="w-full h-8 text-xs bg-background border border-border/60 rounded-md px-2"
-                        >
-                          <option value="display">Display</option>
-                          <option value="sans">Sans</option>
-                          <option value="grotesk">Grotesk</option>
-                        </select>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Peso</Label>
-                        <select
-                          value={selected.weight}
-                          onChange={(e) => updateLayer(selected.id, { weight: Number(e.target.value) as TextLayer["weight"] })}
-                          className="w-full h-8 text-xs bg-background border border-border/60 rounded-md px-2"
-                        >
-                          {WEIGHTS.map(w => <option key={w} value={w}>{w}</option>)}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Tamanho</Label>
-                        <span className="text-[10px] text-muted-foreground tabular-nums">{selected.fontSizePct.toFixed(1)}%</span>
-                      </div>
-                      <Slider
-                        value={[selected.fontSizePct]}
-                        min={1} max={20} step={0.1}
-                        onValueChange={([v]) => updateLayer(selected.id, { fontSizePct: v })}
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Largura</Label>
-                        <span className="text-[10px] text-muted-foreground tabular-nums">{selected.widthPct.toFixed(0)}%</span>
-                      </div>
-                      <Slider
-                        value={[selected.widthPct]}
-                        min={10} max={100} step={1}
-                        onValueChange={([v]) => updateLayer(selected.id, { widthPct: v })}
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Entrelinhas</Label>
-                        <span className="text-[10px] text-muted-foreground tabular-nums">{(selected.lineHeight ?? 1.05).toFixed(2)}</span>
-                      </div>
-                      <Slider
-                        value={[selected.lineHeight ?? 1.05]}
-                        min={0.8} max={2} step={0.05}
-                        onValueChange={([v]) => updateLayer(selected.id, { lineHeight: v })}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-[1fr_auto] gap-2 items-end">
-                      <div className="space-y-1">
-                        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Cor</Label>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="color"
-                            value={selected.color.length === 7 ? selected.color : "#FFFFFF"}
-                            onChange={(e) => updateLayer(selected.id, { color: e.target.value.toUpperCase() })}
-                            className="w-8 h-8 rounded border border-border/60 bg-background cursor-pointer"
-                          />
-                          <Input
-                            value={selected.color}
-                            onChange={(e) => updateLayer(selected.id, { color: e.target.value })}
-                            className="h-8 text-xs font-mono"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      {(["left", "center", "right"] as const).map(a => (
-                        <button
-                          key={a}
-                          onClick={() => updateLayer(selected.id, { align: a })}
-                          className={cn(
-                            "flex-1 h-8 rounded-md border flex items-center justify-center transition",
-                            selected.align === a ? "border-primary bg-primary/10" : "border-border/60 hover:border-border text-muted-foreground",
-                          )}
-                        >
-                          {a === "left" && <AlignLeft className="w-3.5 h-3.5" />}
-                          {a === "center" && <AlignCenter className="w-3.5 h-3.5" />}
-                          {a === "right" && <AlignRight className="w-3.5 h-3.5" />}
-                        </button>
-                      ))}
-                      <button
-                        onClick={() => updateLayer(selected.id, { uppercase: !selected.uppercase })}
-                        className={cn(
-                          "h-8 px-2 rounded-md border text-[10px] font-bold",
-                          selected.uppercase ? "border-primary bg-primary/10" : "border-border/60 text-muted-foreground",
-                        )}
-                        title="Maiúsculas"
-                      >AA</button>
-                      <button
-                        onClick={() => updateLayer(selected.id, { shadow: !selected.shadow })}
-                        className={cn(
-                          "h-8 px-2 rounded-md border",
-                          selected.shadow ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground",
-                        )}
-                        title="Sombra"
-                      ><Bold className="w-3 h-3" /></button>
-                    </div>
-                  </div>
-                )}
+                <button onClick={resetToDefaults} className="w-full text-[11px] text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5 py-1.5 border border-border/60 rounded-md">
+                  <Undo2 className="w-3 h-3" /> Restaurar layout padrão
+                </button>
               </>
             )}
 
@@ -539,5 +621,167 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/* ─────────── inspectors ─────────── */
+
+function TextInspector({ layer, onChange }: { layer: TextLayer; onChange: (p: Partial<TextLayer>) => void }) {
+  return (
+    <div className="space-y-3 pt-3 border-t border-border/60">
+      <div className="space-y-1.5">
+        <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Texto</Label>
+        <Textarea
+          value={layer.text}
+          onChange={(e) => onChange({ text: e.target.value })}
+          rows={3}
+          className="text-sm resize-none"
+          placeholder="Digite aqui. Enter quebra linha."
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <SelectField label="Fonte" value={layer.family} onChange={(v) => onChange({ family: v as TextLayer["family"] })}
+          options={[["display", "Display"], ["sans", "Sans"], ["grotesk", "Grotesk"]]} />
+        <SelectField label="Peso" value={String(layer.weight)} onChange={(v) => onChange({ weight: Number(v) as TextLayer["weight"] })}
+          options={WEIGHTS.map(w => [String(w), String(w)] as [string, string])} />
+      </div>
+      <SliderField label="Tamanho" value={layer.fontSizePct} min={1} max={24} step={0.1} suffix="%" onChange={(v) => onChange({ fontSizePct: v })} />
+      <SliderField label="Largura" value={layer.widthPct} min={10} max={100} step={1} suffix="%" onChange={(v) => onChange({ widthPct: v })} />
+      <SliderField label="Entrelinhas" value={layer.lineHeight ?? 1.05} min={0.8} max={2} step={0.05} onChange={(v) => onChange({ lineHeight: v })} />
+      <ColorField label="Cor do texto" value={layer.color} onChange={(v) => onChange({ color: v })} />
+      <div className="flex items-center gap-1">
+        {(["left", "center", "right"] as const).map(a => (
+          <button key={a} onClick={() => onChange({ align: a })}
+            className={cn("flex-1 h-8 rounded-md border flex items-center justify-center transition",
+              layer.align === a ? "border-primary bg-primary/10" : "border-border/60 hover:border-border text-muted-foreground")}>
+            {a === "left" && <AlignLeft className="w-3.5 h-3.5" />}
+            {a === "center" && <AlignCenter className="w-3.5 h-3.5" />}
+            {a === "right" && <AlignRight className="w-3.5 h-3.5" />}
+          </button>
+        ))}
+        <button onClick={() => onChange({ uppercase: !layer.uppercase })}
+          className={cn("h-8 px-2 rounded-md border text-[10px] font-bold",
+            layer.uppercase ? "border-primary bg-primary/10" : "border-border/60 text-muted-foreground")}
+          title="Maiúsculas">AA</button>
+        <button onClick={() => onChange({ shadow: !layer.shadow })}
+          className={cn("h-8 px-2 rounded-md border text-[10px]",
+            layer.shadow ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground")}
+          title="Sombra">◐</button>
+      </div>
+      <div className="pt-2 border-t border-border/40 space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Fundo (pílula)</Label>
+          <button onClick={() => onChange({ bgColor: layer.bgColor ? null : "#FFC72C" })}
+            className={cn("text-[10px] px-2 py-0.5 rounded border",
+              layer.bgColor ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground")}>
+            {layer.bgColor ? "Ativo" : "Inativo"}
+          </button>
+        </div>
+        {layer.bgColor && (
+          <>
+            <ColorField label="Cor" value={layer.bgColor} onChange={(v) => onChange({ bgColor: v })} />
+            <SliderField label="Arredondamento" value={layer.bgRadiusPct ?? 20} min={0} max={50} step={1} suffix="%" onChange={(v) => onChange({ bgRadiusPct: v })} />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ImageInspector({ layer, onChange }: { layer: ImageLayer; onChange: (p: Partial<ImageLayer>) => void }) {
+  return (
+    <div className="space-y-3 pt-3 border-t border-border/60">
+      <SliderField label="Largura" value={layer.widthPct} min={5} max={100} step={1} suffix="%" onChange={(v) => onChange({ widthPct: v })} />
+      <SliderField label="Altura" value={layer.heightPct} min={5} max={100} step={1} suffix="%" onChange={(v) => onChange({ heightPct: v })} />
+      <SliderField label="Arredondamento" value={layer.radiusPct ?? 0} min={0} max={50} step={1} suffix="%" onChange={(v) => onChange({ radiusPct: v })} />
+      <SliderField label="Opacidade" value={layer.opacity ?? 1} min={0} max={1} step={0.05} onChange={(v) => onChange({ opacity: v })} />
+      <div className="grid grid-cols-2 gap-2">
+        <SelectField label="Ajuste" value={layer.fit ?? "cover"} onChange={(v) => onChange({ fit: v as ImageLayer["fit"] })}
+          options={[["cover", "Preencher"], ["contain", "Conter"]]} />
+        <div className="space-y-1">
+          <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Brilho</Label>
+          <button onClick={() => onChange({ glow: layer.glow ? null : "#FFC72C" })}
+            className={cn("w-full h-8 text-[10px] rounded border",
+              layer.glow ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground")}>
+            {layer.glow ? "Contorno ligado" : "Desligado"}
+          </button>
+        </div>
+      </div>
+      {layer.glow && <ColorField label="Cor do contorno" value={layer.glow} onChange={(v) => onChange({ glow: v })} />}
+    </div>
+  );
+}
+
+/* ─────────── small primitives ─────────── */
+
+function SliderField({ label, value, min, max, step, suffix, onChange }: {
+  label: string; value: number; min: number; max: number; step: number; suffix?: string; onChange: (v: number) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between">
+        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</Label>
+        <span className="text-[10px] text-muted-foreground tabular-nums">
+          {step < 1 ? value.toFixed(2) : Math.round(value)}{suffix ?? ""}
+        </span>
+      </div>
+      <Slider value={[value]} min={min} max={max} step={step} onValueChange={([v]) => onChange(v)} />
+    </div>
+  );
+}
+
+function ColorField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const safe = value.length === 7 && value.startsWith("#") ? value : "#FFFFFF";
+  return (
+    <div className="space-y-1">
+      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</Label>
+      <div className="flex items-center gap-2">
+        <input type="color" value={safe} onChange={(e) => onChange(e.target.value.toUpperCase())}
+          className="w-8 h-8 rounded border border-border/60 bg-background cursor-pointer" />
+        <Input value={value} onChange={(e) => onChange(e.target.value)} className="h-8 text-xs font-mono" />
+      </div>
+    </div>
+  );
+}
+
+function SelectField({ label, value, onChange, options }: {
+  label: string; value: string; onChange: (v: string) => void; options: [string, string][];
+}) {
+  return (
+    <div className="space-y-1">
+      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</Label>
+      <select value={value} onChange={(e) => onChange(e.target.value)}
+        className="w-full h-8 text-xs bg-background border border-border/60 rounded-md px-2">
+        {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+      </select>
+    </div>
+  );
+}
+
+function ResizeHandles({ onDown, textOnly = false }: {
+  onDown: (corner: "br" | "bl" | "tr" | "tl", e: React.PointerEvent) => void;
+  textOnly?: boolean;
+}) {
+  const corners: Array<{ c: "br" | "bl" | "tr" | "tl"; pos: string; cursor: string }> = textOnly
+    ? [
+        { c: "br", pos: "-right-1.5 -bottom-1.5", cursor: "ew-resize" },
+        { c: "bl", pos: "-left-1.5 -bottom-1.5", cursor: "ew-resize" },
+      ]
+    : [
+        { c: "tl", pos: "-left-1.5 -top-1.5", cursor: "nwse-resize" },
+        { c: "tr", pos: "-right-1.5 -top-1.5", cursor: "nesw-resize" },
+        { c: "bl", pos: "-left-1.5 -bottom-1.5", cursor: "nesw-resize" },
+        { c: "br", pos: "-right-1.5 -bottom-1.5", cursor: "nwse-resize" },
+      ];
+  return (
+    <>
+      {corners.map(({ c, pos, cursor }) => (
+        <div key={c}
+          onPointerDown={(e) => onDown(c, e)}
+          className={cn("absolute w-3 h-3 bg-primary rounded-sm shadow-md", pos)}
+          style={{ cursor }}
+        />
+      ))}
+    </>
   );
 }
