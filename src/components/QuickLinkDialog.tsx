@@ -50,6 +50,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   const [linkCategory, setLinkCategory] = useState("");
   const [hypeReason, setHypeReason] = useState("");
   const [campanhaId, setCampanhaId] = useState("");
+  const [extraGameSlugs, setExtraGameSlugs] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   // Inline-create modal states
