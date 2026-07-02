@@ -32,6 +32,11 @@ const SECTION_LABELS: Record<string, string> = {
   footer: "Rodapé",
 };
 
+const PRIMARY_MODE_OPTIONS: Array<{ value: LpMode; title: string; badge: string }> = [
+  { value: "catalog", title: "LP padrão", badge: "normal" },
+  { value: "single_game", title: "LP gerada", badge: "jogo único" },
+];
+
 interface SmartOdd {
   event_id?: string | null;
   event_name: string;
@@ -69,6 +74,32 @@ function categoryCta(category: string | null | undefined, gameName?: string | nu
   if (["odds", "sports", "sportsbook", "esportes"].includes(cat)) return "Apostar agora";
   if (["crash", "slots", "casino", "live"].includes(cat)) return gameName ? `Jogar ${gameName}` : "Jogar agora";
   return "Acessar oportunidades";
+}
+
+function ctaForMode(lpMode: LpMode, category: string | null | undefined, gameName?: string | null): string {
+  if (lpMode === "catalog") return "Acessar oportunidades";
+  if (lpMode === "odds") return "Apostar agora";
+  if (isBonusCategory(category)) return "Resgatar bônus";
+  if (lpMode === "multi_game") return "Ver jogos";
+  return gameName ? `Jogar ${gameName}` : "Jogar agora";
+}
+
+function titleForMode(lpMode: LpMode, gameName?: string | null): string {
+  if (lpMode === "catalog") return "Oportunidades PlayBet";
+  if (lpMode === "odds") return "Odds do dia";
+  if (lpMode === "multi_game") return "Jogos em alta";
+  return gameName || "Oferta oficial";
+}
+
+function ensureCommunitySection(rawSections: SectionDef[]): SectionDef[] {
+  if (rawSections.some((s) => s.id === "community")) return rawSections;
+  const ctaIndex = rawSections.findIndex((s) => s.id === "cta");
+  const insertAt = ctaIndex >= 0 ? ctaIndex : rawSections.length;
+  return [
+    ...rawSections.slice(0, insertAt),
+    { id: "community", label: "Comunidade", enabled: true },
+    ...rawSections.slice(insertAt),
+  ];
 }
 
 function adaptiveSubtitle(mode: LpMode, gameName?: string | null, platformName?: string | null): string {
@@ -132,13 +163,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         const lc = (inst as any).layout_config;
         const rawSections: SectionDef[] = Array.isArray(lc?.sections) && lc.sections.length > 0
           ? lc.sections : defaultLayoutConfig(m).sections;
-        // Ensure community section always exists
-        const withCommunity = rawSections.some(s => s.id === "community")
-          ? rawSections
-          : [...rawSections.slice(0, rawSections.findIndex(s => s.id === "cta") + 1 || rawSections.length),
-             { id: "community", label: "Comunidade", enabled: true },
-             ...rawSections.slice(rawSections.findIndex(s => s.id === "cta") + 1 || rawSections.length)];
-        setSections(withCommunity);
+        setSections(ensureCommunitySection(rawSections));
 
         const hc = (inst as any).hype_copy || {};
         setCopy({
@@ -336,12 +361,37 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
   const toggleGame = (slug: string) =>
     setGameSlugs((prev) => (prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]));
 
+  const handleModeChange = (nextMode: LpMode) => {
+    setMode(nextMode);
+    if (nextMode === "odds" && oddsCandidates.length === 0) {
+      loadOddsCandidates((link as any)?.platform_accounts?.platform_id);
+    }
+
+    const gname = link?.game_name;
+    const nextCta = ctaForMode(nextMode, link?.link_category, gname);
+    setSections(ensureCommunitySection(defaultLayoutConfig(nextMode).sections));
+    setCopy((prev) => ({
+      title: prev.title && prev.title !== "Oferta oficial" && prev.title !== "Oportunidades PlayBet" ? prev.title : titleForMode(nextMode, gname),
+      subtitle: adaptiveSubtitle(nextMode, gname, platformName),
+      cta_label: nextCta,
+    }));
+    setBonusOffer((prev) => ({
+      ...prev,
+      title: nextMode === "catalog" ? prev.title : prev.title || (isBonusCategory(link?.link_category) ? `Bônus ${gname || "exclusivo"}` : "Oferta oficial"),
+      cta_label: nextCta,
+    }));
+
+    if (nextMode === "single_game" && link?.game_slug) {
+      setGameSlugs([link.game_slug]);
+    }
+  };
+
   const applyAdaptiveCopy = () => {
     const gname = link?.game_name;
     setCopy({
-      title: gname || copy.title || "",
+      title: titleForMode(mode, gname) || copy.title || "",
       subtitle: link?.hype_reason || adaptiveSubtitle(mode, gname, platformName),
-      cta_label: categoryCta(link?.link_category, gname),
+      cta_label: ctaForMode(mode, link?.link_category, gname),
     });
     setCommunity(prev => ({
       ...prev,
@@ -352,7 +402,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
       ...prev,
       title: isBonusCategory(link?.link_category) ? `Bônus ${gname || "exclusivo"}` : "Oferta oficial",
       note: prev.note || "Use no cadastro.",
-      cta_label: categoryCta(link?.link_category, gname),
+      cta_label: ctaForMode(mode, link?.link_category, gname),
     }));
     toast({ title: "Copy aplicada" });
   };
@@ -378,7 +428,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
       const hype_copy: any = {
         title: copy.title || null,
         subtitle: copy.subtitle || null,
-        cta_label: copy.cta_label || null,
+        cta_label: copy.cta_label || ctaForMode(mode, link?.link_category, link?.game_name) || null,
         community_cta: {
           enabled: community.enabled,
           label: community.label || null,
@@ -390,7 +440,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
           title: bonusOffer.title || null,
           code: bonusOffer.code || null,
           note: bonusOffer.note || null,
-          cta_label: bonusOffer.cta_label || null,
+          cta_label: bonusOffer.cta_label || copy.cta_label || ctaForMode(mode, link?.link_category, link?.game_name) || null,
         },
         game_slug: link?.game_slug || gameSlugs[0] || null,
         game_name: link?.game_name || availableGames.find((g: any) => g.game_slug === gameSlugs[0])?.game_name || null,
@@ -470,13 +520,24 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
               <>
                 <div>
                   <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Modo da LP</Label>
-                  <Select value={mode} onValueChange={(v) => {
-                    setMode(v as LpMode);
-                    if (v === "odds" && oddsCandidates.length === 0) {
-                      loadOddsCandidates((link as any)?.platform_accounts?.platform_id);
-                    }
-                  }}>
-                    <SelectTrigger className="h-9 text-xs mt-1">
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    {PRIMARY_MODE_OPTIONS.map((opt) => {
+                      const active = mode === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => handleModeChange(opt.value)}
+                          className={`rounded-md border px-3 py-2 text-left transition ${active ? "border-primary bg-primary/10 text-foreground" : "border-border/60 bg-background/40 text-muted-foreground hover:border-primary/40 hover:text-foreground"}`}
+                        >
+                          <span className="block text-xs font-semibold leading-tight">{opt.title}</span>
+                          <span className="block text-[10px] leading-tight opacity-75 mt-0.5">{opt.badge}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <Select value={mode} onValueChange={(v) => handleModeChange(v as LpMode)}>
+                    <SelectTrigger className="h-9 text-xs mt-2">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -728,11 +789,29 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
             </div>
             <div className="flex-1 min-h-0">
               {previewSrc ? (
-                <iframe
+              <iframe
                   key={previewKey}
                   src={previewSrc}
-                  className="w-full h-full border-0 bg-white"
+                  className="w-full h-full border-0 bg-background [color-scheme:dark]"
                   title="LP preview"
+                  onLoad={(event) => {
+                    try {
+                      const doc = event.currentTarget.contentDocument;
+                      if (!doc || doc.getElementById("lp-preview-scrollbar-style")) return;
+                      const style = doc.createElement("style");
+                      style.id = "lp-preview-scrollbar-style";
+                      style.textContent = `
+                        html, body { background: #0a0a0f !important; color-scheme: dark !important; scrollbar-width: thin !important; scrollbar-color: rgba(16,185,129,.5) transparent !important; }
+                        ::-webkit-scrollbar { width: 4px !important; height: 4px !important; background: transparent !important; }
+                        ::-webkit-scrollbar-track, ::-webkit-scrollbar-track-piece { background: transparent !important; border: 0 !important; box-shadow: none !important; }
+                        ::-webkit-scrollbar-thumb { background: rgba(16,185,129,.48) !important; border-radius: 999px !important; border: 0 !important; box-shadow: none !important; min-height: 40px !important; }
+                        ::-webkit-scrollbar-button, ::-webkit-scrollbar-corner { width: 0 !important; height: 0 !important; display: none !important; background: transparent !important; }
+                      `;
+                      doc.head.appendChild(style);
+                    } catch {
+                      // External previews may block access; same-origin previews receive the injected style.
+                    }
+                  }}
                 />
               ) : (
                 <div className="h-full flex items-center justify-center text-[11px] text-muted-foreground">
