@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CandidateRegistrationForm } from "@/components/comercial/CandidateRegistrationForm";
 import { useToast } from "@/hooks/use-toast";
 import {
-  DndContext, DragEndEvent, DragOverlay, DragStartEvent, PointerSensor, useSensor, useSensors,
+  DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors,
   useDraggable, useDroppable,
 } from "@dnd-kit/core";
 import { Plus, GripVertical, Users, Calendar as CalendarIcon, Sparkles, KeyRound, Copy, Check, Loader2, ShieldCheck } from "lucide-react";
@@ -83,7 +83,10 @@ export default function ComercialPipeline() {
   const [openCard, setOpenCard] = useState<Card | null>(null);
   const [newOpen, setNewOpen] = useState(false);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 6 } }),
+  );
 
   async function load() {
     setLoading(true);
@@ -261,22 +264,16 @@ function CardItem({ card, squads, managers, onOpen, dragging }: {
   return (
     <div
       ref={setNodeRef}
-      className={`group relative rounded-lg border border-border/60 bg-card p-3 shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer ${
+      {...attributes}
+      {...listeners}
+      className={`group relative rounded-lg border border-border/60 bg-card p-3 shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-grab active:cursor-grabbing touch-none select-none ${
         isDragging || dragging ? "opacity-50" : ""
       }`}
       onClick={onOpen}
     >
       <div className="flex items-start gap-2">
-        <button
-          {...attributes}
-          {...listeners}
-          onClick={e => e.stopPropagation()}
-          className="text-muted-foreground/50 hover:text-foreground mt-0.5 cursor-grab active:cursor-grabbing touch-none p-1 -m-1 md:p-0 md:m-0"
-          aria-label="Arrastar"
-        >
-          <GripVertical className="h-4 w-4 md:h-3.5 md:w-3.5" />
-        </button>
         <div className="flex-1 min-w-0">
+
           <div className="flex items-center gap-1.5">
             <div className="h-7 w-7 rounded-full bg-gradient-to-br from-primary to-primary-glow text-primary-foreground text-[11px] font-semibold flex items-center justify-center shadow-[0_2px_8px_-2px_hsl(var(--primary)/0.5)]">
               {card.name.slice(0, 2).toUpperCase()}
