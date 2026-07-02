@@ -46,6 +46,9 @@ function buildQuery(table: string) {
       }
       return { data: null, error: null };
     }
+    if (table === "platform_hyped_games") {
+      return { data: [], error: null };
+    }
     if (table === "influencers") {
       if (state.filters.id === FIXTURE.influencer.id) return { data: FIXTURE.influencer, error: null };
       return { data: null, error: null };
@@ -59,6 +62,9 @@ function buildQuery(table: string) {
       state.filters[col] = val;
       return api;
     },
+    in: () => api,
+    not: () => api,
+    order: () => api,
     limit: () => api,
     maybeSingle: async () => resolveSingle(),
     single: async () => resolveSingle(),
@@ -102,7 +108,7 @@ describe("InfluencerLanding - Com LP end-to-end", () => {
     );
 
     // LP renders the CTA after resolving the instance
-    const cta = await waitFor(() => screen.getByRole("button", { name: /cadastrar agora/i }));
+    const cta = await waitFor(() => screen.getAllByRole("button", { name: /acessar oportunidades/i })[0]);
     expect(cta).toBeEnabled();
 
     // Click CTA → window.location.href should become the affiliate URL with sub1/sub2/sub3
