@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   renderCreative, downloadCreative, slugify, defaultLayersFor,
-  FORMAT_SIZES, STYLE_LABEL,
+  FORMAT_SIZES,
   type CreativeFormat, type CreativeStyle, type CreativeInput, type RenderedCreative,
   type Layer, type TextLayer, type ImageLayer,
 } from "@/lib/creativeStudio";
@@ -14,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Download, Loader2, RefreshCw, Sparkles, Copy, Check, Plus, Trash2,
+  Download, Loader2, RefreshCw, Sparkles, Copy, Check, Trash2,
   AlignLeft, AlignCenter, AlignRight, Type, Image as ImageIcon,
   ChevronUp, ChevronDown, Save, Undo2, MousePointer2,
 } from "lucide-react";
@@ -23,6 +24,7 @@ import { cn } from "@/lib/utils";
 
 export interface CreativeStudioLink {
   id: string;
+  influencerId?: string | null;
   gameName?: string | null;
   gameIconUrl?: string | null;
   platformName?: string | null;
@@ -38,8 +40,6 @@ interface Props {
 }
 
 const FORMATS: CreativeFormat[] = ["feed", "story", "landscape", "square_wa"];
-const STYLES: CreativeStyle[] = ["hype", "minimal", "editorial"];
-
 const FAMILY_CSS: Record<TextLayer["family"], string> = {
   display: '"Archivo Black","Inter",sans-serif',
   sans: '"Inter",system-ui,sans-serif',
@@ -48,7 +48,7 @@ const FAMILY_CSS: Record<TextLayer["family"], string> = {
 
 const WEIGHTS: TextLayer["weight"][] = [400, 500, 600, 700, 800, 900];
 
-const STORAGE_PREFIX = "playbet:creative-studio:v2";
+const STORAGE_PREFIX = "playbet:creative-studio:v3";
 const storageKey = (linkId: string, fmt: CreativeFormat) => `${STORAGE_PREFIX}:${linkId}:${fmt}`;
 
 interface SavedState {
@@ -56,6 +56,7 @@ interface SavedState {
   style: CreativeStyle;
   editorMode: boolean;
   updatedAt: number;
+  cloudSaved?: boolean;
 }
 
 function loadState(linkId: string, fmt: CreativeFormat): SavedState | null {
@@ -75,7 +76,7 @@ function saveState(linkId: string, fmt: CreativeFormat, s: SavedState) {
 export function CreativeStudio({ open, onOpenChange, link }: Props) {
   const [style, setStyle] = useState<CreativeStyle>("hype");
   const [format, setFormat] = useState<CreativeFormat>("feed");
-  const [editorMode, setEditorMode] = useState(false);
+  const [editorMode, setEditorMode] = useState(true);
   const [layers, setLayers] = useState<Layer[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editingTextId, setEditingTextId] = useState<string | null>(null);
@@ -86,6 +87,8 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
   const [handle, setHandle] = useState("");
   const [renderKey, setRenderKey] = useState(0);
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const [savingLayout, setSavingLayout] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
 
   const selected = layers.find(l => l.id === selectedId) || null;
@@ -103,35 +106,67 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     }, { includeImages: withImages });
   }, [link]);
 
+  const loadDatabaseState = useCallback(async (linkId: string, fmt: CreativeFormat): Promise<SavedState | null> => {
+    const { data, error } = await supabase
+      .from("link_materials")
+      .select("style, meta, updated_at")
+      .eq("tracking_link_id", linkId)
+      .eq("format", fmt)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) return null;
+    const layout = (data?.meta as any)?.studioLayout;
+    if (!layout || !Array.isArray(layout.layers)) return null;
+    if (layout.version !== 3) return null;
+    return {
+      layers: layout.layers,
+      style: (layout.style ?? data?.style ?? "hype") as CreativeStyle,
+      editorMode: true,
+      updatedAt: Date.parse(data?.updated_at ?? "") || layout.updatedAt || Date.now(),
+      cloudSaved: true,
+    };
+  }, []);
+
   // Load persisted state on open / link change / format change
   useEffect(() => {
     if (!link || !open) return;
+    let cancelled = false;
     setHandle(link.handle || (link.shortUrl ? link.shortUrl.replace(/^https?:\/\//, "") : ""));
-    const saved = loadState(link.id, format);
-    if (saved) {
-      setLayers(saved.layers);
-      setStyle(saved.style);
-      setEditorMode(saved.editorMode);
-      setSavedAt(saved.updatedAt);
-    } else {
-      setLayers(seedLayers(format));
-      setEditorMode(false);
-      setSavedAt(null);
-    }
     setSelectedId(null);
     setEditingTextId(null);
-    setRenderKey(k => k + 1);
-  }, [link?.id, format, open]); // eslint-disable-line react-hooks/exhaustive-deps
+    setEditorMode(true);
+    (async () => {
+      const databaseSaved = await loadDatabaseState(link.id, format);
+      if (cancelled) return;
+      const localSaved = loadState(link.id, format);
+      const saved = localSaved && databaseSaved
+        ? (localSaved.updatedAt > databaseSaved.updatedAt ? localSaved : databaseSaved)
+        : (databaseSaved ?? localSaved);
+      if (saved) {
+        setLayers(saved.layers);
+        setStyle(saved.style);
+        setSavedAt(saved.updatedAt);
+        setDirty(!saved.cloudSaved);
+      } else {
+        setLayers(seedLayers(format));
+        setSavedAt(null);
+        setDirty(true);
+      }
+      setRenderKey(k => k + 1);
+    })();
+    return () => { cancelled = true; };
+  }, [link?.id, format, open, loadDatabaseState]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-save (debounced)
   useEffect(() => {
-    if (!link || !open) return;
+    if (!link || !open || !dirty) return;
     const t = setTimeout(() => {
-      saveState(link.id, format, { layers, style, editorMode, updatedAt: Date.now() });
-      setSavedAt(Date.now());
+      saveState(link.id, format, { layers, style, editorMode, updatedAt: Date.now(), cloudSaved: false });
     }, 300);
     return () => clearTimeout(t);
-  }, [layers, style, editorMode, link?.id, format, open]);
+  }, [layers, style, editorMode, link?.id, format, open, dirty]);
 
   const baseInput = useMemo<CreativeInput | null>(() => {
     if (!link) return null;
@@ -165,10 +200,13 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
   const size = FORMAT_SIZES[format];
 
   /* ─────────── layer ops ─────────── */
-  const updateLayer = <T extends Layer>(id: string, patch: Partial<T>) =>
+  const updateLayer = <T extends Layer>(id: string, patch: Partial<T>) => {
+    setDirty(true);
     setLayers(ls => ls.map(l => l.id === id ? ({ ...l, ...patch } as Layer) : l));
+  };
 
   const deleteLayer = (id: string) => {
+    setDirty(true);
     setLayers(ls => ls.filter(l => l.id !== id));
     if (selectedId === id) setSelectedId(null);
     if (editingTextId === id) setEditingTextId(null);
@@ -184,6 +222,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       [next[idx], next[j]] = [next[j], next[idx]];
       return next;
     });
+    setDirty(true);
   };
 
   const addTextLayer = () => {
@@ -195,6 +234,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       align: "left", family: "sans", uppercase: false, shadow: true, lineHeight: 1.1,
     };
     setLayers(ls => [...ls, nl]);
+    setDirty(true);
     setSelectedId(nl.id);
     setEditorMode(true);
   };
@@ -207,15 +247,80 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       radiusPct: 8, opacity: 1, fit: "cover", glow: null,
     };
     setLayers(ls => [...ls, nl]);
+    setDirty(true);
     setSelectedId(nl.id);
     setEditorMode(true);
   };
 
   const resetToDefaults = () => {
     setLayers(seedLayers(format));
+    setDirty(true);
     setSelectedId(null);
     setEditingTextId(null);
     toast.success("Layout restaurado");
+  };
+
+  const saveLayout = async () => {
+    if (!link) return;
+    setSavingLayout(true);
+    const now = Date.now();
+    const snapshot: SavedState = { layers, style, editorMode: true, updatedAt: now, cloudSaved: false };
+    saveState(link.id, format, snapshot);
+
+    try {
+      const { data: existing, error: readError } = await supabase
+        .from("link_materials")
+        .select("id, meta")
+        .eq("tracking_link_id", link.id)
+        .eq("format", format)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (readError) throw readError;
+
+      const nextMeta = {
+        ...((existing?.meta as any) ?? {}),
+        studioLayout: {
+          version: 3,
+          format,
+          style,
+          layers,
+          updatedAt: now,
+        },
+      };
+
+      if (existing?.id) {
+        const { error } = await supabase
+          .from("link_materials")
+          .update({ style, meta: nextMeta, updated_at: new Date(now).toISOString() } as any)
+          .eq("id", existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("link_materials")
+          .insert({
+            tracking_link_id: link.id,
+            influencer_id: link.influencerId ?? null,
+            format,
+            style,
+            game_name: link.gameName ?? null,
+            image_url: link.gameIconUrl ?? null,
+            thumbnail_url: link.gameIconUrl ?? null,
+            status: "ready",
+            meta: nextMeta,
+          } as any);
+        if (error) throw error;
+      }
+
+      setSavedAt(now);
+      setDirty(false);
+      saveState(link.id, format, { ...snapshot, cloudSaved: true });
+      toast.success("Layout salvo");
+    } catch (e) {
+      toast.error("Salvo só neste navegador", { description: (e as Error).message });
+    } finally {
+      setSavingLayout(false);
+    }
   };
 
   /* ─────────── drag / resize ─────────── */
@@ -313,6 +418,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     if (!baseInput || !link) return;
     setRendering(true);
     try {
+      await saveLayout();
       const targets = which === "all" ? FORMATS : [which];
       for (const f of targets) {
         const useLayers = f === format
@@ -320,8 +426,8 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
           : (loadState(link.id, f)?.layers ?? seedLayers(f));
         const r = await renderCreative({
           ...baseInput, format: f,
-          hideAutoText: editorMode, hideAutoArt: editorMode,
-          layers: editorMode ? useLayers : undefined,
+          hideAutoText: true, hideAutoArt: true,
+          layers: useLayers,
         });
         downloadCreative(r, `playbet-${slugify(link.gameName || "criativo")}-${f}`);
         await new Promise(res => setTimeout(res, 120));
@@ -363,23 +469,19 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
               </DialogTitle>
               <DialogDescription className="text-xs flex items-center gap-2">
                 {link.platformName || "Plataforma"} · {size.label} · {size.w}×{size.h}px
-                {savedAt && (
-                  <span className="inline-flex items-center gap-1 text-primary/80">
-                    <Save className="w-3 h-3" /> salvo
-                  </span>
-                )}
+                <span className={cn("inline-flex items-center gap-1", dirty ? "text-amber-500" : "text-primary/80")}>
+                  <Save className="w-3 h-3" /> {dirty ? "alterações pendentes" : savedAt ? "salvo" : "rascunho"}
+                </span>
               </DialogDescription>
             </div>
-            <button
-              onClick={() => setEditorMode(v => !v)}
-              className={cn(
-                "text-xs px-3 py-1.5 rounded-md border transition-all flex items-center gap-1.5",
-                editorMode ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:text-foreground",
-              )}
-            >
+            <button className="text-xs px-3 py-1.5 rounded-md border border-primary bg-primary/10 text-foreground transition-all flex items-center gap-1.5">
               <MousePointer2 className="w-3.5 h-3.5" />
-              {editorMode ? "Editor ativo" : "Editar tudo"}
+              Editor ativo
             </button>
+            <Button onClick={saveLayout} disabled={savingLayout} size="sm" className="h-8 text-xs">
+              {savingLayout ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
+              Salvar
+            </Button>
             {link.shortUrl && (
               <button onClick={copyLink} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-secondary/40">
                 {copied ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
@@ -419,7 +521,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                 <Skeleton className="absolute inset-0" />
               )}
 
-              {editorMode && layers.map((L) => {
+              {layers.map((L) => {
                 const isSel = L.id === selectedId;
                 const isEditing = editingTextId === L.id;
                 const commonStyle: React.CSSProperties = {
@@ -469,7 +571,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                       isEditing ? "cursor-text" : "cursor-move",
                       isSel ? "ring-2 ring-primary/80" : "hover:ring-1 hover:ring-primary/40",
                     )}
-                    style={commonStyle}
+                    style={{ ...commonStyle, textAlign: L.align }}
                   >
                     <div
                       contentEditable={isEditing}
@@ -503,11 +605,16 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                         lineHeight: L.lineHeight ?? 1.05,
                         textShadow: L.shadow ? `0 2px ${Math.max(4, L.fontSizePct * 0.6)}px rgba(0,0,0,0.55)` : undefined,
                         background: L.bgColor || undefined,
-                        padding: L.bgColor ? `${(L.bgPadPct ?? 40) * 0.5}% ${(L.bgPadPct ?? 40) * 0.8}%` : undefined,
+                        padding: L.bgColor
+                          ? `${(L.fontSizePct * (L.bgPadPct ?? 40)) / 160}cqw ${(L.fontSizePct * (L.bgPadPct ?? 40)) / 100}cqw`
+                          : undefined,
                         borderRadius: L.bgColor ? `${L.bgRadiusPct ?? 20}%` : undefined,
                         whiteSpace: "pre-wrap",
                         wordBreak: "break-word",
                         display: "inline-block",
+                        width: L.bgColor ? "fit-content" : "100%",
+                        maxWidth: "100%",
+                        boxSizing: "border-box",
                         minWidth: "1ch",
                       }}
                     >
@@ -543,24 +650,8 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
               </div>
             </div>
 
-            {!editorMode && (
-              <div className="space-y-2">
-                <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Estilo</Label>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {STYLES.map(s => (
-                    <button key={s} onClick={() => setStyle(s)}
-                      className={cn("text-[11px] px-2 py-2 rounded-md border transition-all",
-                        style === s ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:text-foreground hover:border-border")}>
-                      {STYLE_LABEL[s]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {editorMode && (
-              <>
-                <div className="flex items-center justify-between">
+            <>
+              <div className="flex items-center justify-between">
                   <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Camadas</Label>
                   <div className="flex items-center gap-1">
                     <button onClick={addTextLayer} title="Adicionar texto" className="text-[10px] px-2 py-1 rounded border border-border/60 hover:border-primary hover:text-foreground text-muted-foreground flex items-center gap-1">
@@ -604,9 +695,12 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                   <Undo2 className="w-3 h-3" /> Restaurar layout padrão
                 </button>
               </>
-            )}
 
             <div className="pt-3 space-y-2 border-t border-border/60">
+              <Button onClick={saveLayout} disabled={savingLayout} variant={dirty ? "default" : "secondary"} className="w-full h-9 text-sm">
+                {savingLayout ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                Salvar layout
+              </Button>
               <Button onClick={() => exportPng(format)} disabled={!bg || rendering} className="w-full h-9 text-sm">
                 <Download className="w-4 h-4 mr-2" /> Baixar {FORMAT_SIZES[format].label}
               </Button>
@@ -646,6 +740,10 @@ function TextInspector({ layer, onChange }: { layer: TextLayer; onChange: (p: Pa
           options={WEIGHTS.map(w => [String(w), String(w)] as [string, string])} />
       </div>
       <SliderField label="Tamanho" value={layer.fontSizePct} min={1} max={24} step={0.1} suffix="%" onChange={(v) => onChange({ fontSizePct: v })} />
+      <div className="grid grid-cols-2 gap-2">
+        <SliderField label="X" value={layer.xPct} min={0} max={100 - layer.widthPct} step={0.5} suffix="%" onChange={(v) => onChange({ xPct: v })} />
+        <SliderField label="Y" value={layer.yPct} min={0} max={95} step={0.5} suffix="%" onChange={(v) => onChange({ yPct: v })} />
+      </div>
       <SliderField label="Largura" value={layer.widthPct} min={10} max={100} step={1} suffix="%" onChange={(v) => onChange({ widthPct: v })} />
       <SliderField label="Entrelinhas" value={layer.lineHeight ?? 1.05} min={0.8} max={2} step={0.05} onChange={(v) => onChange({ lineHeight: v })} />
       <ColorField label="Cor do texto" value={layer.color} onChange={(v) => onChange({ color: v })} />
@@ -691,6 +789,10 @@ function TextInspector({ layer, onChange }: { layer: TextLayer; onChange: (p: Pa
 function ImageInspector({ layer, onChange }: { layer: ImageLayer; onChange: (p: Partial<ImageLayer>) => void }) {
   return (
     <div className="space-y-3 pt-3 border-t border-border/60">
+      <div className="grid grid-cols-2 gap-2">
+        <SliderField label="X" value={layer.xPct} min={0} max={100 - layer.widthPct} step={0.5} suffix="%" onChange={(v) => onChange({ xPct: v })} />
+        <SliderField label="Y" value={layer.yPct} min={0} max={100 - layer.heightPct} step={0.5} suffix="%" onChange={(v) => onChange({ yPct: v })} />
+      </div>
       <SliderField label="Largura" value={layer.widthPct} min={5} max={100} step={1} suffix="%" onChange={(v) => onChange({ widthPct: v })} />
       <SliderField label="Altura" value={layer.heightPct} min={5} max={100} step={1} suffix="%" onChange={(v) => onChange({ heightPct: v })} />
       <SliderField label="Arredondamento" value={layer.radiusPct ?? 0} min={0} max={50} step={1} suffix="%" onChange={(v) => onChange({ radiusPct: v })} />

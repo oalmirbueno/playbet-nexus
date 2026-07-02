@@ -9,6 +9,8 @@
 
 import playbetLogo from "@/assets/logo-mark.png";
 
+export const PLAYBET_LOGO_SRC = playbetLogo;
+
 export type CreativeFormat = "feed" | "story" | "landscape" | "square_wa";
 export type CreativeStyle = "hype" | "minimal" | "editorial";
 
@@ -299,18 +301,43 @@ export function defaultLayersFor(
   input: Pick<CreativeInput, "gameName" | "hypeReason" | "cta" | "handle" | "format" | "platformName" | "gameImageUrl">,
   opts: { includeImages?: boolean } = {},
 ): Layer[] {
-  const vertical = FORMAT_SIZES[input.format].h >= FORMAT_SIZES[input.format].w * 1.2;
+  const size = FORMAT_SIZES[input.format];
+  const vertical = size.h >= size.w * 1.2;
+  const landscape = size.w > size.h * 1.3;
   const headline = (input.gameName || "Novo jogo em alta");
   const layers: Layer[] = [];
 
+  layers.push({
+    kind: "image", id: crypto.randomUUID(), src: PLAYBET_LOGO_SRC, label: "Logo Playbet",
+    xPct: 6, yPct: vertical ? 4 : 6,
+    widthPct: vertical ? 28 : 24,
+    heightPct: vertical ? 6 : 8,
+    radiusPct: 0, opacity: 1, fit: "contain", glow: null,
+  });
+
+  if (input.platformName) {
+    layers.push({
+      kind: "text", id: crypto.randomUUID(),
+      text: input.platformName,
+      xPct: vertical ? 56 : 60,
+      yPct: vertical ? 5.5 : 7.5,
+      widthPct: vertical ? 38 : 34,
+      fontSizePct: vertical ? 2.8 : 2,
+      color: "#FFFFFF", weight: 700, align: "right",
+      family: "grotesk", uppercase: true, shadow: false, lineHeight: 1,
+      bgColor: "#1E5FD9", bgPadPct: 55, bgRadiusPct: 50,
+    });
+  }
+
   if (opts.includeImages && input.gameImageUrl) {
     // Hero game art as an image layer (movable)
-    const heroSize = vertical ? 72 : 45;
+    const heroWidth = vertical ? 72 : landscape ? 38 : 50;
+    const heroHeight = vertical ? 42 : landscape ? 70 : 50;
     layers.push({
       kind: "image", id: crypto.randomUUID(), src: input.gameImageUrl, label: "Arte do jogo",
-      xPct: vertical ? (100 - heroSize) / 2 : 52,
-      yPct: vertical ? 16 : 18,
-      widthPct: heroSize, heightPct: vertical ? heroSize * 0.75 : 62,
+      xPct: vertical ? 14 : landscape ? 55 : 44,
+      yPct: vertical ? 20 : landscape ? 17 : 20,
+      widthPct: heroWidth, heightPct: heroHeight,
       radiusPct: 8, opacity: 1, fit: "cover", glow: "#FFC72C",
     });
   }
@@ -318,9 +345,9 @@ export function defaultLayersFor(
   layers.push({
     kind: "text", id: crypto.randomUUID(),
     text: headline,
-    xPct: 6, yPct: vertical ? 62 : 40,
-    widthPct: vertical ? 88 : 46,
-    fontSizePct: vertical ? 10 : 7.5,
+    xPct: 6, yPct: vertical ? 68 : landscape ? 35 : 42,
+    widthPct: vertical ? 88 : landscape ? 46 : 48,
+    fontSizePct: vertical ? 10 : landscape ? 7.5 : 8.2,
     color: "#FFFFFF", weight: 900, align: "left",
     family: "display", uppercase: true, shadow: true, lineHeight: 1.02,
   });
@@ -328,8 +355,8 @@ export function defaultLayersFor(
     layers.push({
       kind: "text", id: crypto.randomUUID(),
       text: input.hypeReason,
-      xPct: 6, yPct: vertical ? 58 : 36,
-      widthPct: 60, fontSizePct: 2.8,
+      xPct: 6, yPct: vertical ? 64 : landscape ? 30 : 36,
+      widthPct: 60, fontSizePct: vertical ? 2.8 : 2.6,
       color: "#FFC72C", weight: 700, align: "left",
       family: "grotesk", uppercase: true, shadow: false, lineHeight: 1.1,
     });
@@ -337,8 +364,8 @@ export function defaultLayersFor(
   layers.push({
     kind: "text", id: crypto.randomUUID(),
     text: input.cta || "JOGUE AGORA →",
-    xPct: 6, yPct: 86,
-    widthPct: 60, fontSizePct: 3.8,
+    xPct: 6, yPct: vertical ? 87 : landscape ? 78 : 84,
+    widthPct: vertical ? 64 : 58, fontSizePct: vertical ? 3.8 : 3.6,
     color: "#0B0F1E", weight: 800, align: "left",
     family: "sans", uppercase: true, shadow: false, lineHeight: 1.1,
     bgColor: "#FFC72C", bgPadPct: 60, bgRadiusPct: 50,
@@ -347,7 +374,7 @@ export function defaultLayersFor(
     layers.push({
       kind: "text", id: crypto.randomUUID(),
       text: input.handle,
-      xPct: 6, yPct: 94,
+      xPct: 6, yPct: vertical ? 94 : landscape ? 91 : 93,
       widthPct: 60, fontSizePct: 2.2,
       color: "#FFFFFFCC", weight: 600, align: "left",
       family: "grotesk", uppercase: false, shadow: false, lineHeight: 1,
