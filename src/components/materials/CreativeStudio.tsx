@@ -164,11 +164,6 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     return () => clearTimeout(t);
   }, [layers, style, editorMode, link?.id, format, open]);
 
-  useEffect(() => {
-    if (!open || !link || layers.length === 0) return;
-    setDirty(true);
-  }, [layers, style, editorMode, open, link?.id]);
-
   const baseInput = useMemo<CreativeInput | null>(() => {
     if (!link) return null;
     return {
@@ -202,10 +197,16 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
 
   /* ─────────── layer ops ─────────── */
   const updateLayer = <T extends Layer>(id: string, patch: Partial<T>) =>
-    setLayers(ls => ls.map(l => l.id === id ? ({ ...l, ...patch } as Layer) : l));
+    setLayers(ls => {
+      setDirty(true);
+      return ls.map(l => l.id === id ? ({ ...l, ...patch } as Layer) : l);
+    });
 
   const deleteLayer = (id: string) => {
-    setLayers(ls => ls.filter(l => l.id !== id));
+    setLayers(ls => {
+      setDirty(true);
+      return ls.filter(l => l.id !== id);
+    });
     if (selectedId === id) setSelectedId(null);
     if (editingTextId === id) setEditingTextId(null);
   };
@@ -218,6 +219,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       if (j < 0 || j >= ls.length) return ls;
       const next = [...ls];
       [next[idx], next[j]] = [next[j], next[idx]];
+      setDirty(true);
       return next;
     });
   };
@@ -231,6 +233,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       align: "left", family: "sans", uppercase: false, shadow: true, lineHeight: 1.1,
     };
     setLayers(ls => [...ls, nl]);
+    setDirty(true);
     setSelectedId(nl.id);
     setEditorMode(true);
   };
@@ -243,12 +246,14 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       radiusPct: 8, opacity: 1, fit: "cover", glow: null,
     };
     setLayers(ls => [...ls, nl]);
+    setDirty(true);
     setSelectedId(nl.id);
     setEditorMode(true);
   };
 
   const resetToDefaults = () => {
     setLayers(seedLayers(format));
+    setDirty(true);
     setSelectedId(null);
     setEditingTextId(null);
     toast.success("Layout restaurado");
@@ -290,10 +295,26 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
           .eq("id", existing.id);
         if (error) throw error;
       } else {
+        const { data: tl } = await supabase
+          .from("tracking_links")
+          .select("influencer_id, platform_account_id")
+          .eq("id", link.id)
+          .maybeSingle();
+        let platformId: string | null = null;
+        if ((tl as any)?.platform_account_id) {
+          const { data: account } = await supabase
+            .from("platform_accounts")
+            .select("platform_id")
+            .eq("id", (tl as any).platform_account_id)
+            .maybeSingle();
+          platformId = (account as any)?.platform_id ?? null;
+        }
         const { error } = await supabase
           .from("link_materials")
           .insert({
             tracking_link_id: link.id,
+            influencer_id: (tl as any)?.influencer_id ?? null,
+            platform_id: platformId,
             format,
             style,
             game_name: link.gameName ?? null,
