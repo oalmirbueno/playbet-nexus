@@ -47,7 +47,7 @@ const FAMILY_CSS: Record<TextLayer["family"], string> = {
 
 const WEIGHTS: TextLayer["weight"][] = [400, 500, 600, 700, 800, 900];
 
-const STORAGE_PREFIX = "playbet:creative-studio:v2";
+const STORAGE_PREFIX = "playbet:creative-studio:v3";
 const storageKey = (linkId: string, fmt: CreativeFormat) => `${STORAGE_PREFIX}:${linkId}:${fmt}`;
 
 interface SavedState {
@@ -279,7 +279,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       const nextMeta = {
         ...((existing?.meta as any) ?? {}),
         studioLayout: {
-          version: 2,
+          version: 3,
           format,
           style,
           layers,
