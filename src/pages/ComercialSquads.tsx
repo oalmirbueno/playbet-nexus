@@ -76,7 +76,15 @@ export default function ComercialSquads() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <NewDirectorDialog open={openDir} onOpenChange={setOpenDir} onCreated={load} />
+          <NewDirectorDialog
+            open={openDir}
+            onOpenChange={setOpenDir}
+            socios={socios}
+            managers={managers}
+            influencers={influencers}
+            existingDirectors={directors}
+            onCreated={load}
+          />
           <NewSquadDialog open={openSquad} onOpenChange={setOpenSquad} directors={directors} onCreated={load} />
           <NewManagerDialog
             open={openMgr}
