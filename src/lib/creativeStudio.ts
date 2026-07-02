@@ -295,23 +295,38 @@ const FAMILY_STACK: Record<TextLayer["family"], string> = {
   grotesk: '"Space Grotesk", "Inter", sans-serif',
 };
 
-export function defaultLayersFor(input: Pick<CreativeInput, "gameName" | "hypeReason" | "cta" | "handle" | "format">): TextLayer[] {
+export function defaultLayersFor(
+  input: Pick<CreativeInput, "gameName" | "hypeReason" | "cta" | "handle" | "format" | "platformName" | "gameImageUrl">,
+  opts: { includeImages?: boolean } = {},
+): Layer[] {
   const vertical = FORMAT_SIZES[input.format].h >= FORMAT_SIZES[input.format].w * 1.2;
   const headline = (input.gameName || "Novo jogo em alta");
-  const layers: TextLayer[] = [
-    {
-      id: crypto.randomUUID(),
-      text: headline,
-      xPct: 6, yPct: vertical ? 62 : 40,
-      widthPct: vertical ? 88 : 55,
-      fontSizePct: vertical ? 10 : 7.5,
-      color: "#FFFFFF", weight: 900, align: "left",
-      family: "display", uppercase: true, shadow: true, lineHeight: 1.02,
-    },
-  ];
+  const layers: Layer[] = [];
+
+  if (opts.includeImages && input.gameImageUrl) {
+    // Hero game art as an image layer (movable)
+    const heroSize = vertical ? 72 : 45;
+    layers.push({
+      kind: "image", id: crypto.randomUUID(), src: input.gameImageUrl, label: "Arte do jogo",
+      xPct: vertical ? (100 - heroSize) / 2 : 52,
+      yPct: vertical ? 16 : 18,
+      widthPct: heroSize, heightPct: vertical ? heroSize * 0.75 : 62,
+      radiusPct: 8, opacity: 1, fit: "cover", glow: "#FFC72C",
+    });
+  }
+
+  layers.push({
+    kind: "text", id: crypto.randomUUID(),
+    text: headline,
+    xPct: 6, yPct: vertical ? 62 : 40,
+    widthPct: vertical ? 88 : 46,
+    fontSizePct: vertical ? 10 : 7.5,
+    color: "#FFFFFF", weight: 900, align: "left",
+    family: "display", uppercase: true, shadow: true, lineHeight: 1.02,
+  });
   if (input.hypeReason) {
     layers.push({
-      id: crypto.randomUUID(),
+      kind: "text", id: crypto.randomUUID(),
       text: input.hypeReason,
       xPct: 6, yPct: vertical ? 58 : 36,
       widthPct: 60, fontSizePct: 2.8,
@@ -320,16 +335,17 @@ export function defaultLayersFor(input: Pick<CreativeInput, "gameName" | "hypeRe
     });
   }
   layers.push({
-    id: crypto.randomUUID(),
+    kind: "text", id: crypto.randomUUID(),
     text: input.cta || "JOGUE AGORA →",
     xPct: 6, yPct: 86,
     widthPct: 60, fontSizePct: 3.8,
     color: "#0B0F1E", weight: 800, align: "left",
     family: "sans", uppercase: true, shadow: false, lineHeight: 1.1,
+    bgColor: "#FFC72C", bgPadPct: 60, bgRadiusPct: 50,
   });
   if (input.handle) {
     layers.push({
-      id: crypto.randomUUID(),
+      kind: "text", id: crypto.randomUUID(),
       text: input.handle,
       xPct: 6, yPct: 94,
       widthPct: 60, fontSizePct: 2.2,
@@ -340,34 +356,96 @@ export function defaultLayersFor(input: Pick<CreativeInput, "gameName" | "hypeRe
   return layers;
 }
 
-function drawTextLayers(ctx: CanvasRenderingContext2D, size: CreativeSize, layers: TextLayer[]) {
-  const { w, h } = size;
+async function drawLayers(ctx: CanvasRenderingContext2D, size: CreativeSize, layers: Layer[]) {
   for (const L of layers) {
-    const fontPx = Math.max(10, (L.fontSizePct / 100) * w);
-    const boxW = (L.widthPct / 100) * w;
-    const x = (L.xPct / 100) * w;
-    const y = (L.yPct / 100) * h;
-    const text = L.uppercase ? L.text.toUpperCase() : L.text;
-    ctx.save();
-    ctx.font = `${L.weight} ${fontPx}px ${FAMILY_STACK[L.family]}`;
-    ctx.fillStyle = L.color;
-    ctx.textBaseline = "top";
-    ctx.textAlign = L.align;
-    if (L.shadow) {
-      ctx.shadowColor = "rgba(0,0,0,0.55)";
-      ctx.shadowBlur = fontPx * 0.18;
+    if (L.kind === "image") {
+      await drawImageLayer(ctx, size, L);
+    } else {
+      drawTextLayer(ctx, size, L);
     }
-    // Split by explicit newlines first, then word-wrap each paragraph.
-    const paragraphs = text.split(/\n/);
-    const lh = (L.lineHeight ?? 1.05) * fontPx;
-    let cursorY = y;
+  }
+}
+
+async function drawImageLayer(ctx: CanvasRenderingContext2D, size: CreativeSize, L: ImageLayer) {
+  const { w, h } = size;
+  const x = (L.xPct / 100) * w;
+  const y = (L.yPct / 100) * h;
+  const dw = (L.widthPct / 100) * w;
+  const dh = (L.heightPct / 100) * h;
+  const img = await loadImage(proxyUrl(L.src)).catch(() => null);
+  if (!img) return;
+  const radius = Math.min(dw, dh) * ((L.radiusPct ?? 0) / 100);
+  ctx.save();
+  ctx.globalAlpha = L.opacity ?? 1;
+  if (L.blur) ctx.filter = `blur(${L.blur}px)${L.brightness ? ` brightness(${L.brightness})` : ""}`;
+  else if (L.brightness) ctx.filter = `brightness(${L.brightness})`;
+  roundRect(ctx, x, y, dw, dh, radius);
+  ctx.clip();
+  if (L.fit === "contain") drawContain(ctx, img, x, y, dw, dh);
+  else drawCover(ctx, img, x, y, dw, dh);
+  ctx.restore();
+  if (L.glow) {
+    ctx.save();
+    ctx.strokeStyle = hexToRgba(L.glow, 0.9);
+    ctx.lineWidth = Math.max(2, Math.min(dw, dh) * 0.008);
+    ctx.shadowColor = hexToRgba(L.glow, 0.6);
+    ctx.shadowBlur = Math.min(dw, dh) * 0.06;
+    roundRect(ctx, x, y, dw, dh, radius);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawTextLayer(ctx: CanvasRenderingContext2D, size: CreativeSize, L: TextLayer) {
+  const { w, h } = size;
+  const fontPx = Math.max(10, (L.fontSizePct / 100) * w);
+  const boxW = (L.widthPct / 100) * w;
+  const x = (L.xPct / 100) * w;
+  const y = (L.yPct / 100) * h;
+  const text = L.uppercase ? L.text.toUpperCase() : L.text;
+  ctx.save();
+  ctx.font = `${L.weight} ${fontPx}px ${FAMILY_STACK[L.family]}`;
+  ctx.textBaseline = "top";
+  ctx.textAlign = L.align;
+  const paragraphs = text.split(/\n/);
+  const lh = (L.lineHeight ?? 1.05) * fontPx;
+
+  // Measure block for optional background pill
+  if (L.bgColor) {
+    let maxW = 0;
+    let totalLines = 0;
     for (const p of paragraphs) {
       const lines = p.length ? wrapText(ctx, p, boxW, 12) : [""];
-      for (const ln of lines) {
-        const anchorX = L.align === "center" ? x + boxW / 2 : L.align === "right" ? x + boxW : x;
-        ctx.fillText(ln, anchorX, cursorY);
-        cursorY += lh;
-      }
+      totalLines += lines.length;
+      for (const ln of lines) maxW = Math.max(maxW, ctx.measureText(ln).width);
+    }
+    const padPx = fontPx * ((L.bgPadPct ?? 40) / 100);
+    const bgW = Math.min(boxW, maxW + padPx * 2);
+    const bgH = totalLines * lh - (lh - fontPx) + padPx * 1.4;
+    const bgX = L.align === "center" ? x + (boxW - bgW) / 2
+              : L.align === "right" ? x + boxW - bgW : x;
+    const radius = bgH * ((L.bgRadiusPct ?? 20) / 100);
+    ctx.fillStyle = L.bgColor;
+    roundRect(ctx, bgX, y - padPx * 0.2, bgW, bgH, radius);
+    ctx.fill();
+  }
+
+  ctx.fillStyle = L.color;
+  if (L.shadow) {
+    ctx.shadowColor = "rgba(0,0,0,0.55)";
+    ctx.shadowBlur = fontPx * 0.18;
+  }
+  let cursorY = y;
+  for (const p of paragraphs) {
+    const lines = p.length ? wrapText(ctx, p, boxW, 12) : [""];
+    for (const ln of lines) {
+      const anchorX = L.align === "center" ? x + boxW / 2 : L.align === "right" ? x + boxW : x;
+      ctx.fillText(ln, anchorX, cursorY);
+      cursorY += lh;
+    }
+  }
+  ctx.restore();
+}
     }
     ctx.restore();
   }
