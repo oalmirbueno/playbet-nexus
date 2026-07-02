@@ -476,11 +476,14 @@ function CardDetailSheet({ card, squads, managers, onClose, onUpdated }: {
   const [answers, setAnswers] = useState<Record<string, ChecklistAnswer>>({});
   const [notes, setNotes] = useState("");
   const [squadId, setSquadId] = useState<string>("none");
+  const [squadIds, setSquadIds] = useState<string[]>([]);
+  const isManagerCard = card?.role_type === "gerente";
 
   useEffect(() => {
     if (!card) return;
     setNotes(card.notes ?? "");
     setSquadId(card.squad_id ?? "none");
+    setSquadIds(card.squad_ids ?? (card.squad_id ? [card.squad_id] : []));
     (async () => {
       if (!card.id) return;
       // load template items via card's template_id, or active
