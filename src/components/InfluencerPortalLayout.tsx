@@ -63,7 +63,7 @@ export default function InfluencerPortalLayout({ children }: { children: React.R
       <main className="flex-1 p-4 md:p-8 pb-24 md:pb-8 max-w-6xl w-full mx-auto animate-fade-in">{children}</main>
 
       {/* Mobile bottom tabs */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl grid grid-cols-5">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl grid grid-cols-6">
         {items.map((it) => {
           const active = location.pathname === it.path;
           return (
