@@ -259,10 +259,10 @@ function CardItem({ card, squads, managers, onOpen, dragging }: {
           {...attributes}
           {...listeners}
           onClick={e => e.stopPropagation()}
-          className="text-muted-foreground/50 hover:text-foreground mt-0.5 cursor-grab active:cursor-grabbing"
+          className="text-muted-foreground/50 hover:text-foreground mt-0.5 cursor-grab active:cursor-grabbing touch-none p-1 -m-1 md:p-0 md:m-0"
           aria-label="Arrastar"
         >
-          <GripVertical className="h-3.5 w-3.5" />
+          <GripVertical className="h-4 w-4 md:h-3.5 md:w-3.5" />
         </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
