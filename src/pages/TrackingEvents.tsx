@@ -237,7 +237,20 @@ export default function TrackingEvents() {
                       <TableCell className="text-xs">{getPlatformName(ev.platform_id)}</TableCell>
                       <TableCell className="text-xs">{getAccountName(ev.platform_account_id)}</TableCell>
                       <TableCell className="font-mono text-xs">{ev.raw_event_name}</TableCell>
-                      <TableCell><Badge variant="secondary" className="text-[10px]">{ev.canonical_event_name}</Badge></TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="secondary"
+                          className={`text-[10px] ${
+                            ev.canonical_event_name === "lp_view"
+                              ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30"
+                              : ev.canonical_event_name === "click"
+                              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                              : ""
+                          }`}
+                        >
+                          {ev.canonical_event_name}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="font-mono text-[10px] text-muted-foreground max-w-[100px] truncate">{ev.transaction_id || "-"}</TableCell>
                       <TableCell className="font-mono text-[10px] text-muted-foreground max-w-[100px] truncate">{ev.click_id || "-"}</TableCell>
                       <TableCell className="text-right">{ev.amount ? fmt(ev.amount) : "-"}</TableCell>
