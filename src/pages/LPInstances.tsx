@@ -603,6 +603,14 @@ export default function LPInstances() {
         defaultInfluencerId={quickLinkFor?.influencer_id || ""}
         defaultLandingPageId={quickLinkFor?.landing_page_id || ""}
       />
+
+      {/* Visual editor: mode, sections, hype copy, jogos */}
+      <LpInstanceVisualEditor
+        open={!!visualEditorFor}
+        onOpenChange={(v) => { if (!v) setVisualEditorFor(null); }}
+        instanceId={visualEditorFor?.id || null}
+        publicUrl={visualEditorFor ? buildPublicUrl(getLPDomain(visualEditorFor.landing_page_id), visualEditorFor.slug) : null}
+      />
     </div>
   );
 }
