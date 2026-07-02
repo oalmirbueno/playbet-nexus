@@ -30,6 +30,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Pencil, Trash2, Copy, AlertTriangle, Sparkles, Wand2, Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLpOpportunities } from "@/hooks/useLpOpportunities";
@@ -282,178 +283,185 @@ export default function LpOpportunities() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <Breadcrumbs items={[{ label: "Oportunidades LP" }]} />
 
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">Oportunidades LP</h1>
-          <p className="text-sm text-muted-foreground max-w-2xl">
-            Cada link já vira uma landing page pronta. Abaixo, complementos manuais e o assistente para eventos esportivos.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={copyJsonPreview}>
-            <Copy className="w-4 h-4" /> Copiar JSON
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">Oportunidades</h1>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="ghost" onClick={copyJsonPreview}>
+            <Copy className="w-4 h-4" />
           </Button>
-          <Button variant="secondary" onClick={openNew}>
-            <Plus className="w-4 h-4" /> Novo manual
+          <Button size="sm" variant="outline" onClick={openNew}>
+            <Plus className="w-4 h-4" /> Manual
           </Button>
-          <Button onClick={() => setWizardOpen(true)}>
+          <Button size="sm" onClick={() => setWizardOpen(true)}>
             <Wand2 className="w-4 h-4" /> Assistente
           </Button>
         </div>
       </div>
 
-      {/* Automatic: LP per link (mirrors Materiais UX) */}
-      <LinkLpGrid />
+      <Tabs defaultValue="links" className="space-y-5">
+        <TabsList className="bg-transparent p-0 h-auto gap-1 border-b border-border/60 rounded-none w-full justify-start">
+          <TabsTrigger
+            value="links"
+            className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-3 py-2 text-sm"
+          >
+            Links
+          </TabsTrigger>
+          <TabsTrigger
+            value="manual"
+            className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-3 py-2 text-sm"
+          >
+            Manual
+          </TabsTrigger>
+          <TabsTrigger
+            value="assistentes"
+            className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-3 py-2 text-sm"
+          >
+            Assistentes
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Manual/assistant panels */}
-      <SportsEventsPanel
-        platforms={platforms as any}
-        landingPages={lps as any}
-        onCreateOpportunity={(payload) => create(payload)}
-      />
+        <TabsContent value="links" className="mt-0">
+          <LinkLpGrid />
+        </TabsContent>
 
-      <SignalRoomPanel
-        platforms={platforms as any}
-        onCreateOpportunity={(payload) => create(payload)}
-      />
+        <TabsContent value="assistentes" className="mt-0 space-y-5">
+          <SportsEventsPanel
+            platforms={platforms as any}
+            landingPages={lps as any}
+            onCreateOpportunity={(payload) => create(payload)}
+          />
+          <SignalRoomPanel
+            platforms={platforms as any}
+            onCreateOpportunity={(payload) => create(payload)}
+          />
+        </TabsContent>
 
-      <Card>
-
-
-        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div>
-            <Label className="text-xs">Categoria</Label>
+        <TabsContent value="manual" className="mt-0 space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
             <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-9 w-[140px] text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="all">Categoria</SelectItem>
                 {CATEGORIES.map((c) => (
                   <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div>
-            <Label className="text-xs">Status</Label>
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-9 w-[130px] text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="all">Status</SelectItem>
                 <SelectItem value="active">Ativos</SelectItem>
                 <SelectItem value="inactive">Inativos</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <div>
-            <Label className="text-xs">Landing Page</Label>
             <Select value={filterLp} onValueChange={setFilterLp}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-9 w-[180px] text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Todas</SelectItem>
+                <SelectItem value="all">Todas as LPs</SelectItem>
                 {lps.map((lp: any) => (
                   <SelectItem key={lp.id} value={lp.id}>{lp.name || lp.slug}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <span className="text-xs text-muted-foreground ml-auto">
+              {filtered.length} {filtered.length === 1 ? "item" : "itens"}
+            </span>
           </div>
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="p-8 text-sm text-muted-foreground">Carregando…</div>
-          ) : filtered.length === 0 ? (
-            <EmptyState
-              icon={Sparkles}
-              title="Nenhuma oportunidade ainda"
-              description="Crie a primeira oportunidade para alimentar a landing pública."
-              actionLabel="Nova oportunidade"
-              onAction={openNew}
-            />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Ordem</TableHead>
-                  <TableHead>Título</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Período</TableHead>
-                  <TableHead>LP</TableHead>
-                  <TableHead>Ativo</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((r: LpOpportunityRow) => {
-                  const lp = lps.find((l: any) => l.id === r.landing_page_id);
-                  const overLimit =
-                    r.campanha_id && (activeCountByCampaign.get(r.campanha_id) || 0) > 3;
-                  const isHighlight = todaysHighlights.includes(r.id);
-                  return (
-                    <TableRow key={r.id} className={isHighlight ? "bg-primary/5" : ""}>
-                      <TableCell className="text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          {isHighlight && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />}
-                          {r.sort_order}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium flex items-center gap-2">
-                          {r.title}
-                          {isHighlight && <Badge className="bg-amber-500/15 text-amber-600 border-amber-500/30" variant="outline">Destaque de hoje</Badge>}
-                          {r.badge && <Badge variant="secondary">{r.badge}</Badge>}
-                          {overLimit && (
-                            <span title="Mais de 3 ativos nesta campanha">
-                              <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-                            </span>
-                          )}
-                        </div>
-                        {r.subtitle && (
-                          <div className="text-xs text-muted-foreground">{r.subtitle}</div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {CATEGORIES.find((c) => c.value === r.category)?.label || r.category}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {r.starts_at ? new Date(r.starts_at).toLocaleDateString("pt-BR") : "-"} →{" "}
-                        {r.ends_at ? new Date(r.ends_at).toLocaleDateString("pt-BR") : "-"}
-                      </TableCell>
-                      <TableCell className="text-xs">{lp?.name || lp?.slug || "-"}</TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={r.is_active}
-                          onCheckedChange={() => toggleActive(r.id, r.is_active)}
-                        />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button size="sm" variant="ghost" onClick={() => openEdit(r)}>
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            if (confirm("Remover esta oportunidade?")) remove(r.id);
-                          }}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </TableCell>
+          <Card className="border-border/60">
+            <CardContent className="p-0">
+              {isLoading ? (
+                <div className="p-8 text-sm text-muted-foreground">Carregando…</div>
+              ) : filtered.length === 0 ? (
+                <EmptyState
+                  icon={Sparkles}
+                  title="Nada por aqui"
+                  description="Crie um card manual ou use o assistente."
+                  actionLabel="Novo"
+                  onAction={openNew}
+                />
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-16">#</TableHead>
+                      <TableHead>Título</TableHead>
+                      <TableHead>Categoria</TableHead>
+                      <TableHead>LP</TableHead>
+                      <TableHead className="w-16">Ativo</TableHead>
+                      <TableHead className="w-20 text-right"></TableHead>
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {filtered.map((r: LpOpportunityRow) => {
+                      const lp = lps.find((l: any) => l.id === r.landing_page_id);
+                      const overLimit =
+                        r.campanha_id && (activeCountByCampaign.get(r.campanha_id) || 0) > 3;
+                      const isHighlight = todaysHighlights.includes(r.id);
+                      return (
+                        <TableRow key={r.id} className={isHighlight ? "bg-primary/[0.03]" : ""}>
+                          <TableCell className="text-muted-foreground text-xs">
+                            <div className="flex items-center gap-1">
+                              {isHighlight && <Star className="w-3 h-3 text-amber-500 fill-amber-500" />}
+                              {r.sort_order}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium text-sm flex items-center gap-2">
+                              {r.title}
+                              {r.badge && <Badge variant="secondary" className="text-[10px] font-normal">{r.badge}</Badge>}
+                              {overLimit && (
+                                <span title="Mais de 3 ativos nesta campanha">
+                                  <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                                </span>
+                              )}
+                            </div>
+                            {r.subtitle && (
+                              <div className="text-xs text-muted-foreground truncate max-w-md">{r.subtitle}</div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-[10px] font-normal">
+                              {CATEGORIES.find((c) => c.value === r.category)?.label || r.category}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{lp?.name || lp?.slug || "—"}</TableCell>
+                          <TableCell>
+                            <Switch
+                              checked={r.is_active}
+                              onCheckedChange={() => toggleActive(r.id, r.is_active)}
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => openEdit(r)}>
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                              onClick={() => {
+                                if (confirm("Remover?")) remove(r.id);
+                              }}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-3xl p-0 gap-0 max-h-[92vh] overflow-hidden flex flex-col">
