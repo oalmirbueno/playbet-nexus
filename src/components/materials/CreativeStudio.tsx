@@ -307,7 +307,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                         whiteSpace: "pre-wrap",
                         wordBreak: "break-word",
                         cursor: "text",
-                        containerType: "inline-size",
+                      
                       }}
                     >
                       {L.text}
