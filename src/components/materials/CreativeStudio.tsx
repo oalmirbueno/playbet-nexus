@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Download, Loader2, RefreshCw, Sparkles, Copy, Check, Trash2,
   AlignLeft, AlignCenter, AlignRight, Type, Image as ImageIcon,
-  ChevronUp, ChevronDown, Save, Undo2, MousePointer2,
+  ChevronUp, ChevronDown, Save, Undo2, MousePointer2, ImageDown, Package,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
