@@ -1,15 +1,4 @@
-import { Sparkles } from "lucide-react";
-
-const GAME_VISUALS: Record<string, { label: string; mark: string }> = {
-  "fortune-tiger": { label: "Fortune Tiger", mark: "🐯" },
-  aviator: { label: "Aviator", mark: "✈️" },
-  mines: { label: "Mines", mark: "💎" },
-  "sweet-bonanza": { label: "Sweet Bonanza", mark: "🍬" },
-  "gates-of-olympus": { label: "Gates of Olympus", mark: "⚡" },
-  spaceman: { label: "Spaceman", mark: "🚀" },
-  plinko: { label: "Plinko", mark: "●" },
-  jetx: { label: "JetX", mark: "🛩️" },
-};
+import { ImageIcon } from "lucide-react";
 
 const sizeClass = {
   sm: "w-8 h-8 text-base",
@@ -40,14 +29,23 @@ export default function GameArtwork({
     );
   }
 
-  const visual = GAME_VISUALS[String(slug || "")] ?? null;
+  const initials = String(name || slug || "JG")
+    .split(/\s+|-/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "JG";
+
   return (
     <div
-      className={`${sizeClass[size]} rounded-md border border-warning/30 bg-warning/10 flex items-center justify-center shadow-sm`}
+      className={`${sizeClass[size]} rounded-md border border-border/60 bg-secondary/60 flex items-center justify-center shadow-sm overflow-hidden`}
       role="img"
-      aria-label={name || visual?.label || "Jogo em alta"}
+      aria-label={name || "Jogo em alta sem imagem"}
     >
-      {visual ? <span className="leading-none">{visual.mark}</span> : <Sparkles size={size === "sm" ? 12 : 15} className="text-warning" />}
+      <span className="flex flex-col items-center justify-center gap-0.5 leading-none text-muted-foreground">
+        <ImageIcon size={size === "sm" ? 10 : 12} strokeWidth={1.7} />
+        <span className="text-[8px] font-semibold tracking-normal">{initials}</span>
+      </span>
     </div>
   );
 }
