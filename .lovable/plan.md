@@ -1,98 +1,84 @@
-# Link de Afiliado Inteligente — Detecção + Jogos Hypados + Distribuição
+# Squad Management Workspace
 
-## Objetivo
-Transformar o modal "Novo Link de Afiliado" em uma engine inteligente que:
-1. **Detecta automaticamente** plataforma e tipo (odds/cassino/esportes) a partir da URL colada.
-2. **Enriquece o link** com metadata: tipo de jogo, categoria, motivo (ex: "Fortune Tiger — hype alto essa semana").
-3. **Sugere top 5 jogos hypados** daquela casa/categoria, com ícones, prioridade 1–5.
-4. **Dispara automaticamente** o pacote (link + jogos + motivo) para o influenciador e o gerente, com views separadas (gerente vê controles extras).
-5. Permite **múltiplos links repetidos** para o mesmo influenciador na mesma LP, diferenciados por contexto (jogo/campanha/motivo).
+Turn each squad card into a full management console. Click a squad → dedicated screen with roster, goals, cascading distribution, and admin tools. Director-only for squad/manager goals; manager+ for influencer distribution and troubleshooting.
 
----
+## 1. Navigation
+- `SquadsTab` cards become clickable → route `/pessoas/squads/:squadId` (new `SquadDetail.tsx` page).
+- Header: squad color badge, name, director, manager, active influencers count, monthly goal progress bar (BRL realized vs goal).
 
-## 1. Detecção automática de plataforma + tipo
+## 2. Sections in the Squad screen
 
-Ao colar a URL no campo **"3. Cole o link de afiliado"**, dispara em background:
+**a) Meta & Distribuição (top card)**
+- Fields: `monthly_goal` (squad), `manager_goal` (gerente do squad).
+- "Distribuir meta" button splits `monthly_goal` across active influencers. Modes:
+  - Igual (default)
+  - Ponderada por performance dos últimos 30 dias (revenue proporcional)
+  - Manual (editar cada linha antes de salvar)
+- Visible/editable only if director (own squads) or admin.
 
-- **Match de domínio** contra `platforms.domain_patterns` (novo campo `text[]` — ex: `['estrelabetpartners.com', 'go.aff.estrelabet']`). Se casar → autopreenche Plataforma + Conta padrão.
-- **Detecção de categoria** por análise de URL/path + query params (ex: `/casino/`, `/sports/`, `/aviator`, `?game=fortune-tiger`). Regras vivem em `src/lib/linkIntelligence.ts` (heurísticas) + tabela `platform_game_hints` para override manual.
-- **Estado visual**: badge "Detectado: Estrela Bet · Cassino · Fortune Tiger" abaixo do input. Se ambíguo → dropdown com sugestões ranqueadas.
+**b) Roster de Influencers (tabela)**
+- Colunas: avatar/nome, categoria, meta individual (`monthly_goal_brl`), realizado 30d, % atingido, status, ações.
+- Inline edit da meta individual (manager+).
+- Ações por linha:
+  - Ver perfil → drawer `InfluencerQuickProfile` (dados, contatos, links, últimas notificações).
+  - Enviar link de redefinição de senha (dispara `admin-user-manage` reset).
+  - Reenviar convite (se sem `auth_user_id`).
+  - Marcar link quebrado / desativar link → abre lista dos `tracking_links` do influencer com toggle `is_active` e botão "regenerar slug".
+  - Remover do squad.
 
-Remove o warning atual "Plataforma não reconhecida" e substitui por feedback ativo (loading spinner → resultado).
+**c) Gerente & Diretor (side card)**
+- Trocar gerente (dropdown de managers existentes, respeita hierarquia).
+- Trocar diretor responsável.
+- Badge "Sócio" se manager for sócia (Camile) → mostra `compensation_mode = socio_only` como somente-leitura.
 
----
+**d) Notas & histórico**
+- Notas do squad (já existe).
+- Timeline curto: últimas 10 alterações (goals, membros entrando/saindo) via `commercial_card_history` filtrado + nova tabela leve `squad_activity`.
 
-## 2. Contexto do link (por que + de onde)
+## 3. RBAC
+- Director/admin: editar `monthly_goal`, `manager_goal`, distribuir meta, trocar gerente/diretor.
+- Manager do squad: editar metas individuais, disparar reset, desativar links.
+- Influencer/visualizacao: sem acesso à rota.
+- Enforcement via `useAuth` + RLS policies existentes (`is_admin`, `current_manager_squad_id`).
 
-Novos campos no form (colapsáveis, autopreenchidos quando possível):
+## 4. Backend
 
-- **Tipo** (auto): `casino | sports | odds | live | crash | slots | other` — chip clicável para corrigir.
-- **Jogo/Evento específico** (auto quando detectável, ex: Fortune Tiger, Copa 2026 — Brasil x Argentina).
-- **Motivo/Hype** (auto-sugerido via LLM leve): "Aviator com RTP alto essa semana" / "Odds inflacionadas Brasileirão". Editável.
+### Schema (migration)
+- `squads`: add `manager_goal_brl numeric`, `goal_distribution_mode text default 'equal'` (`equal|weighted|manual`), `goal_last_distributed_at timestamptz`.
+- `influencers`: ensure `monthly_goal_brl numeric` exists (add if missing).
+- `squad_activity` table: `id, squad_id, actor_user_id, action, payload jsonb, created_at`. Grants + RLS (`is_admin` or same squad manager).
 
-Estes viram colunas em `tracking_links`: `game_slug`, `game_name`, `game_icon_url`, `link_category`, `hype_reason`.
+### RPC
+- `distribute_squad_goal(_squad_id uuid, _mode text, _overrides jsonb)` — SECURITY DEFINER. Recalcula `monthly_goal_brl` de cada influencer ativo do squad; grava `squad_activity`.
+- `request_influencer_password_reset(_influencer_id uuid)` — thin wrapper que valida permissão e chama edge function `admin-user-manage` via service role.
 
----
+### Edge function
+- Reuse `admin-user-manage` (already exists) for password reset — add `action: 'send_reset_link'` if missing.
 
-## 3. Top 5 jogos hypados por casa
+## 5. Files to create / edit
 
-Nova aba dentro do modal: **"Jogos recomendados desta casa"** (aparece após detecção da plataforma).
+Create:
+- `src/pages/SquadDetail.tsx`
+- `src/components/squads/SquadGoalCard.tsx`
+- `src/components/squads/SquadRosterTable.tsx`
+- `src/components/squads/InfluencerQuickProfile.tsx` (Sheet)
+- `src/components/squads/InfluencerLinksManager.tsx`
+- `src/components/squads/GoalDistributionDialog.tsx`
+- `src/hooks/useSquadDetail.ts`
 
-- Fonte de dados: tabela `platform_hyped_games` (id, platform_id, game_name, game_slug, icon_url, category, priority 1–5, hype_score, updated_at, is_active).
-- Popular via **edge function `hyped-games-refresh`** que:
-  - Roda 1x/dia via cron.
-  - Para cada plataforma ativa, chama LLM (Lovable AI Gateway, modelo grátis) com prompt: "Quais os 5 jogos mais em alta no Brasil em [Estrela Bet] categoria [cassino] em [mês]? Retorne JSON: nome, slug, categoria, motivo do hype, prioridade 1–5."
-  - Busca ícone: primeiro tenta `platform.icon_base_url + slug + .png`; fallback para asset genérico por categoria.
-- UI: grid 5 cards com ícone + nome + badge "Prioridade 1" + motivo curto. Cada card tem botão **"Gerar link para este jogo"** que clona o link atual injetando `?game=<slug>` e cria um novo `tracking_link` filho vinculado ao original (`parent_link_id`).
+Edit:
+- `src/components/people/SquadsTab.tsx` — card `onClick` → navigate.
+- `src/App.tsx` — add route.
+- `src/integrations/supabase/types.ts` — auto after migration.
 
----
+## 6. UX notes
+- Layout: 12-col grid; header + 3 cards on desktop, stacked on tablet/mobile (same responsive rules as Pipeline overhaul).
+- Empty states para squad sem influencers ("Adicionar do pipeline aprovado").
+- Toasts em cada ação + optimistic update via React Query.
+- Confirm dialogs para reset de senha, remoção, desativação de link.
 
-## 4. Distribuição automática (influenciador + gerente)
+## 7. Out of scope (esta iteração)
+- Meta anual, histórico gráfico longo, exportação — ficam para próxima.
+- Editor visual de LP dentro do squad.
 
-Ao salvar o link (função `notify_new_tracking_link`, trigger AFTER INSERT em `tracking_links`):
-
-- Cria 2 notificações via `notify_target()`:
-  - **Influenciador** (`/portal/links`): "Novo link pronto: {game_name} · {platform} — {hype_reason}"
-  - **Gerente do influenciador** (`/gerente/links`): mesma msg + CTA "Enviar para o grupo" + botão "Ver jogos hypados".
-- Painel do influenciador (`PortalLinks`): card destaque com o link + top 5 jogos recomendados daquela casa, prontos para copiar (formato: link + emoji + hype).
-- Painel do gerente (`GerenteLinks`): mesmo card + controles extras: reordenar prioridade, marcar "já enviei no grupo", agendar reenvio, ver quais influenciadores da squad ainda não receberam.
-
----
-
-## 5. Links repetidos por influenciador
-
-- Remove a restrição atual de "link duplicado" quando `game_slug` ou `hype_reason` diferem.
-- `tracking_links` ganha índice único parcial: `(influencer_id, platform_account_id, landing_page_id, game_slug)` em vez do atual sem `game_slug`.
-- UI: se detectar duplicata exata (mesmo jogo), oferece "Reutilizar existente" ou "Criar variação" (força novo `sub1`).
-
----
-
-## Detalhes técnicos
-
-**Migração (uma só):**
-- `platforms`: `domain_patterns text[]`, `icon_base_url text`.
-- `tracking_links`: `game_slug`, `game_name`, `game_icon_url`, `link_category`, `hype_reason`, `parent_link_id uuid REFERENCES tracking_links(id)`.
-- Nova tabela `platform_hyped_games` com GRANTs + RLS (leitura pública autenticada, escrita só service_role).
-- Trigger `notify_new_tracking_link` AFTER INSERT.
-- Ajuste do índice único de duplicidade.
-
-**Edge functions:**
-- `hyped-games-refresh` (nova): cron diário + botão manual "Atualizar jogos" no admin.
-- Reaproveita `Lovable AI Gateway` (secret já existe, sem custo p/ modelo Gemini free).
-
-**Frontend:**
-- `src/lib/linkIntelligence.ts` — detecção domínio/categoria/jogo.
-- `TrackingLinkForm.tsx` — refactor: detecção reativa on-paste, painel de jogos hypados, campos de contexto.
-- `PortalLinks.tsx` + `GerenteLinks.tsx` — nova seção "Recém-criados com jogos hypados".
-- `PortalNotificationBell` já existe, só recebe o novo tipo `new_tracking_link`.
-
-**Sem quebras:** links antigos continuam funcionando (campos novos são nullable). Sistema de tracking/postback intocado.
-
----
-
-## Escopo entregue nesta rodada
-Vou implementar em 3 passos, esperando aprovação da migração antes do código que depende do schema:
-
-1. **Migração** (schema + trigger + RLS + GRANTs).
-2. **Edge function `hyped-games-refresh`** + secret check.
-3. **Frontend**: detecção inteligente no modal + painel de jogos + distribuição para portais.
+Confirmar para eu implementar (migração + telas em uma leva).
