@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CheckCircle2, ArrowRight, Loader2, Plus, Sparkles, Wand2, Flame } from "lucide-react";
+import { CheckCircle2, ArrowRight, Loader2, Plus, Sparkles, Wand2, Flame, RefreshCw } from "lucide-react";
 import type { TrackingLinkRow } from "@/services/trackingService";
 import { landingPageInstanceService } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
@@ -141,6 +141,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
   const qc = useQueryClient();
   const [creatingInstance, setCreatingInstance] = useState(false);
   const [batchApplying, setBatchApplying] = useState(false);
+  const [refreshingHype, setRefreshingHype] = useState(false);
 
   // ── Link intelligence: auto-detect platform/category/game from pasted URL ──
   const detection = useMemo(
@@ -198,11 +199,28 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
         .eq("platform_id", currentPlatformId as string)
         .eq("is_active", true)
         .order("priority", { ascending: true })
-        .limit(5);
+        .limit(20);
       if (error) throw error;
       return data ?? [];
     },
   });
+
+  const refreshHypedGames = async () => {
+    if (!currentPlatformId) return;
+    setRefreshingHype(true);
+    try {
+      const { error } = await supabase.functions.invoke("hyped-games-refresh", {
+        body: { platform_id: currentPlatformId },
+      });
+      if (error) throw error;
+      await qc.invalidateQueries({ queryKey: ["platform_hyped_games", currentPlatformId] });
+      toast({ title: "Jogos atualizados", description: "Top jogos e logos reais recarregados." });
+    } catch (e: any) {
+      toast({ title: "Falha ao atualizar", description: e?.message || "Tente novamente.", variant: "destructive" });
+    } finally {
+      setRefreshingHype(false);
+    }
+  };
 
   const applyHypedGame = (g: any) => {
     setForm(p => ({
