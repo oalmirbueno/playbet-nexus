@@ -651,24 +651,74 @@ export default function Influencers() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!confirmDelete} onOpenChange={() => setConfirmDelete(null)}>
+      <Dialog open={!!confirmDelete} onOpenChange={(o) => { if (!o) { setConfirmDelete(null); setConfirmDeleteText(""); } }}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Apagar Influencer</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Apagar <strong>{confirmDelete?.name}</strong> permanentemente? Esta ação não pode ser desfeita.</p>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 size={16} /> Apagar influencer
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2.5 text-[11px] text-destructive/90 leading-relaxed">
+              Ação permanente. Todo o histórico de <strong>{confirmDelete?.name}</strong> será removido. Lembre que novos cadastros devem passar pelo <strong>pipeline comercial</strong> — apague apenas duplicatas ou erros de entrada.
+              {confirmDelete && duplicateInfIds.has(confirmDelete.id) && (
+                <span className="block mt-1.5 font-medium">⚠ Este registro está marcado como duplicado.</span>
+              )}
+            </div>
+            <div>
+              <label className="text-[11px] text-muted-foreground">Digite <span className="font-mono text-foreground">{confirmDelete?.name}</span> para confirmar</label>
+              <input
+                autoFocus
+                value={confirmDeleteText}
+                onChange={(e) => setConfirmDeleteText(e.target.value)}
+                className="mt-1 w-full h-9 rounded-md border border-border bg-background px-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-destructive/50"
+                placeholder={confirmDelete?.name ?? ""}
+              />
+            </div>
+          </div>
           <DialogFooter>
-            <button className="btn-ghost" onClick={() => setConfirmDelete(null)}>Cancelar</button>
-            <button className="btn-primary bg-destructive hover:bg-destructive/90" onClick={async () => { if (confirmDelete) { await removeInf(confirmDelete.id); setConfirmDelete(null); } }}>Apagar</button>
+            <button className="btn-ghost" onClick={() => { setConfirmDelete(null); setConfirmDeleteText(""); }}>Cancelar</button>
+            <button
+              className="btn-primary bg-destructive hover:bg-destructive/90 disabled:opacity-40 disabled:cursor-not-allowed"
+              disabled={!confirmDelete || confirmDeleteText.trim() !== (confirmDelete?.name ?? "").trim()}
+              onClick={async () => { if (confirmDelete) { await removeInf(confirmDelete.id); setConfirmDelete(null); setConfirmDeleteText(""); } }}
+            >Apagar definitivamente</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!confirmDeleteMgr} onOpenChange={() => setConfirmDeleteMgr(null)}>
+      <Dialog open={!!confirmDeleteMgr} onOpenChange={(o) => { if (!o) { setConfirmDeleteMgr(null); setConfirmDeleteMgrText(""); } }}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Apagar Gerente</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Apagar o gerente <strong>{confirmDeleteMgr?.name}</strong> e dissociar seu time? Os influencers ficarão sem time.</p>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 size={16} /> Apagar gerente
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2.5 text-[11px] text-destructive/90 leading-relaxed">
+              Ação permanente. Os influencers ligados a <strong>{confirmDeleteMgr?.name}</strong> ficarão sem gerente. Todo cadastro novo deve vir pelo <strong>pipeline comercial</strong> — apague só duplicatas ou entradas erradas.
+              {confirmDeleteMgr && duplicateMgrIds.has(confirmDeleteMgr.id) && (
+                <span className="block mt-1.5 font-medium">⚠ Este gerente está marcado como duplicado.</span>
+              )}
+            </div>
+            <div>
+              <label className="text-[11px] text-muted-foreground">Digite <span className="font-mono text-foreground">{confirmDeleteMgr?.name}</span> para confirmar</label>
+              <input
+                autoFocus
+                value={confirmDeleteMgrText}
+                onChange={(e) => setConfirmDeleteMgrText(e.target.value)}
+                className="mt-1 w-full h-9 rounded-md border border-border bg-background px-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-destructive/50"
+                placeholder={confirmDeleteMgr?.name ?? ""}
+              />
+            </div>
+          </div>
           <DialogFooter>
-            <button className="btn-ghost" onClick={() => setConfirmDeleteMgr(null)}>Cancelar</button>
-            <button className="btn-primary bg-destructive hover:bg-destructive/90" onClick={async () => { if (confirmDeleteMgr) { await removeMgr(confirmDeleteMgr.id); setConfirmDeleteMgr(null); } }}>Apagar</button>
+            <button className="btn-ghost" onClick={() => { setConfirmDeleteMgr(null); setConfirmDeleteMgrText(""); }}>Cancelar</button>
+            <button
+              className="btn-primary bg-destructive hover:bg-destructive/90 disabled:opacity-40 disabled:cursor-not-allowed"
+              disabled={!confirmDeleteMgr || confirmDeleteMgrText.trim() !== (confirmDeleteMgr?.name ?? "").trim()}
+              onClick={async () => { if (confirmDeleteMgr) { await removeMgr(confirmDeleteMgr.id); setConfirmDeleteMgr(null); setConfirmDeleteMgrText(""); } }}
+            >Apagar definitivamente</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
