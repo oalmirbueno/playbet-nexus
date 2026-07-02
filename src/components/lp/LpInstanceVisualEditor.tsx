@@ -137,6 +137,9 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
   const [gameSlugs, setGameSlugs] = useState<string[]>([]);
   const [availableGames, setAvailableGames] = useState<any[]>([]);
   const [previewKey, setPreviewKey] = useState(0);
+  const [basePage, setBasePage] = useState<{ name: string | null; domain: string | null; route: string | null; slug: string | null } | null>(null);
+  const [previewTab, setPreviewTab] = useState<"generated" | "catalog">("generated");
+
 
   useEffect(() => {
     if (!open || !instanceId) return;
