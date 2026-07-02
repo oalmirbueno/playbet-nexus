@@ -108,7 +108,7 @@ describe("InfluencerLanding - Com LP end-to-end", () => {
     );
 
     // LP renders the CTA after resolving the instance
-    const cta = await waitFor(() => screen.getByRole("button", { name: /cadastrar agora/i }));
+    const cta = await waitFor(() => screen.getByRole("button", { name: /acessar oportunidades/i }));
     expect(cta).toBeEnabled();
 
     // Click CTA → window.location.href should become the affiliate URL with sub1/sub2/sub3
