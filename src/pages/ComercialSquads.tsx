@@ -30,17 +30,20 @@ export default function ComercialSquads() {
   const [influencers, setInfluencers] = useState<Influencer[]>([]);
   const [socios, setSocios] = useState<Socio[]>([]);
   const [counts, setCounts] = useState<Record<string, number>>({});
+  const [mgrSquads, setMgrSquads] = useState<Record<string, string[]>>({}); // manager_id -> squad_ids[]
+  const [squadMgrs, setSquadMgrs] = useState<Record<string, string[]>>({}); // squad_id -> manager_ids[]
   const [openSquad, setOpenSquad] = useState(false);
   const [openMgr, setOpenMgr] = useState(false);
   const [openDir, setOpenDir] = useState(false);
 
   async function load() {
-    const [s, m, d, infl, so] = await Promise.all([
+    const [s, m, d, infl, so, ms] = await Promise.all([
       supabase.from("squads").select("*").eq("is_active", true).order("name"),
       supabase.from("managers").select("*").eq("is_active", true).order("name"),
       supabase.from("directors").select("*").eq("is_active", true).order("name"),
       supabase.from("influencers").select("id,name,slug,manager_id").eq("is_active", true).order("name"),
       supabase.from("socios").select("id,nome").order("nome"),
+      supabase.from("manager_squads").select("manager_id,squad_id"),
     ]);
     if (s.data) setSquads(s.data as Squad[]);
     if (m.data) setManagers(m.data as Manager[]);
@@ -52,6 +55,14 @@ export default function ComercialSquads() {
       if (i.manager_id) c[i.manager_id] = (c[i.manager_id] ?? 0) + 1;
     });
     setCounts(c);
+    const byMgr: Record<string, string[]> = {};
+    const bySq: Record<string, string[]> = {};
+    (ms.data ?? []).forEach((row: { manager_id: string; squad_id: string }) => {
+      (byMgr[row.manager_id] ??= []).push(row.squad_id);
+      (bySq[row.squad_id] ??= []).push(row.manager_id);
+    });
+    setMgrSquads(byMgr);
+    setSquadMgrs(bySq);
   }
   useEffect(() => { load(); }, []);
 
