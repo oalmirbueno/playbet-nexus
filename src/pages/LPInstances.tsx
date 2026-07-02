@@ -9,6 +9,7 @@ import { toast } from "@/hooks/use-toast";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import ExportDropdown from "@/components/ExportDropdown";
 import QuickLinkDialog from "@/components/QuickLinkDialog";
+import LpInstanceVisualEditor from "@/components/lp/LpInstanceVisualEditor";
 import { findPresetByName, buildPostbackUrlForEvent } from "@/config/platformPresets";
 
 type EditingState = {
