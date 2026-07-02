@@ -356,6 +356,9 @@ export default function InfluencerLanding() {
   const hypeTitle: string | null = instanceCtx?.hype_copy?.title ?? null;
   const hypeSub: string | null = instanceCtx?.hype_copy?.subtitle ?? null;
   const ctaLabel: string = instanceCtx?.hype_copy?.cta_label || "Cadastrar Agora";
+  const communityCta = instanceCtx?.hype_copy?.community_cta;
+  const smartOdds: Array<{ event_name: string; market_name: string; odd_label?: string | null; badge?: string | null; starts_at?: string | null }> =
+    Array.isArray(instanceCtx?.hype_copy?.smart_odds) ? instanceCtx.hype_copy.smart_odds : [];
 
   const primaryGame = gameArts[0];
   const displayGames = mode === "single_game" && primaryGame ? [primaryGame] : gameArts;
