@@ -707,6 +707,51 @@ export type Database = {
         }
         Relationships: []
       }
+      directors: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          is_active: boolean
+          monthly_goal: number | null
+          name: string
+          notes: string | null
+          pix_key: string | null
+          pix_key_type: string | null
+          slug: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          monthly_goal?: number | null
+          name: string
+          notes?: string | null
+          pix_key?: string | null
+          pix_key_type?: string | null
+          slug: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          monthly_goal?: number | null
+          name?: string
+          notes?: string | null
+          pix_key?: string | null
+          pix_key_type?: string | null
+          slug?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       game_platforms: {
         Row: {
           game_id: string
@@ -1276,16 +1321,20 @@ export type Database = {
           career_label: string | null
           career_level: number
           commission_percent: number | null
+          compensation_mode: Database["public"]["Enums"]["manager_compensation_mode"]
           created_at: string
           id: string
+          influencer_id: string | null
           is_active: boolean
           monthly_goal: number | null
           name: string
           notes: string | null
+          origin_type: Database["public"]["Enums"]["manager_origin_type"]
           pix_key: string | null
           pix_key_type: string | null
           share_url: string | null
           slug: string
+          socio_id: string | null
           squad_id: string | null
           team_color: string
           team_name: string
@@ -1295,16 +1344,20 @@ export type Database = {
           career_label?: string | null
           career_level?: number
           commission_percent?: number | null
+          compensation_mode?: Database["public"]["Enums"]["manager_compensation_mode"]
           created_at?: string
           id?: string
+          influencer_id?: string | null
           is_active?: boolean
           monthly_goal?: number | null
           name: string
           notes?: string | null
+          origin_type?: Database["public"]["Enums"]["manager_origin_type"]
           pix_key?: string | null
           pix_key_type?: string | null
           share_url?: string | null
           slug: string
+          socio_id?: string | null
           squad_id?: string | null
           team_color?: string
           team_name: string
@@ -1314,22 +1367,40 @@ export type Database = {
           career_label?: string | null
           career_level?: number
           commission_percent?: number | null
+          compensation_mode?: Database["public"]["Enums"]["manager_compensation_mode"]
           created_at?: string
           id?: string
+          influencer_id?: string | null
           is_active?: boolean
           monthly_goal?: number | null
           name?: string
           notes?: string | null
+          origin_type?: Database["public"]["Enums"]["manager_origin_type"]
           pix_key?: string | null
           pix_key_type?: string | null
           share_url?: string | null
           slug?: string
+          socio_id?: string | null
           squad_id?: string | null
           team_color?: string
           team_name?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "managers_influencer_id_fkey"
+            columns: ["influencer_id"]
+            isOneToOne: false
+            referencedRelation: "influencers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "managers_socio_id_fkey"
+            columns: ["socio_id"]
+            isOneToOne: false
+            referencedRelation: "socios"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "managers_squad_id_fkey"
             columns: ["squad_id"]
@@ -1950,6 +2021,7 @@ export type Database = {
         Row: {
           color: string
           created_at: string
+          director_id: string | null
           id: string
           is_active: boolean
           manager_id: string | null
@@ -1961,6 +2033,7 @@ export type Database = {
         Insert: {
           color?: string
           created_at?: string
+          director_id?: string | null
           id?: string
           is_active?: boolean
           manager_id?: string | null
@@ -1972,6 +2045,7 @@ export type Database = {
         Update: {
           color?: string
           created_at?: string
+          director_id?: string | null
           id?: string
           is_active?: boolean
           manager_id?: string | null
@@ -1981,6 +2055,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "squads_director_id_fkey"
+            columns: ["director_id"]
+            isOneToOne: false
+            referencedRelation: "directors"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "squads_manager_fk"
             columns: ["manager_id"]
@@ -2888,6 +2969,8 @@ export type Database = {
         | "analise"
         | "aprovado"
         | "concluido"
+      manager_compensation_mode: "manager" | "socio_only" | "influencer_only"
+      manager_origin_type: "influencer" | "socio" | "standalone"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3042,6 +3125,8 @@ export const Constants = {
         "aprovado",
         "concluido",
       ],
+      manager_compensation_mode: ["manager", "socio_only", "influencer_only"],
+      manager_origin_type: ["influencer", "socio", "standalone"],
     },
   },
 } as const
