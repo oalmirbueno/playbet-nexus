@@ -434,12 +434,14 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-1rem)] sm:w-[95vw] max-w-2xl max-h-[92vh] overflow-y-auto p-4 sm:p-6 rounded-xl">
+      <DialogContent className="w-[calc(100vw-1rem)] sm:w-[calc(100vw-2rem)] max-w-3xl max-h-[92vh] overflow-y-auto overflow-x-hidden p-4 sm:p-6 rounded-xl">
         <DialogHeader>
           <DialogTitle className="text-base">{form.id ? "Editar link" : "Novo link"}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 py-1">
+        <div className="space-y-5 py-1 min-w-0">
+
+
           {/* 1. Influencer */}
           <div className="space-y-1.5">
             <Step n={1} label="Influencer" />
@@ -510,14 +512,15 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
 
             {/* Visual confirmation of resolved affiliate link */}
             {selectedInstance && (
-              <div className="flex items-center gap-2 text-[10px] text-foreground px-2 py-1.5 rounded bg-primary/5 border border-primary/15">
+              <div className="flex items-center gap-2 text-[10px] text-foreground px-2 py-1.5 rounded bg-primary/5 border border-primary/15 min-w-0">
                 <CheckCircle2 size={11} className="text-primary shrink-0" />
-                <span className="text-muted-foreground">CTA da LP:</span>
-                <code className="font-mono truncate" title={selectedInstance.affiliate_link}>
+                <span className="text-muted-foreground shrink-0">CTA da LP:</span>
+                <code className="font-mono truncate min-w-0 flex-1" title={selectedInstance.affiliate_link}>
                   {selectedInstance.affiliate_link || <em className="not-italic text-muted-foreground">vazio - preencha abaixo</em>}
                 </code>
               </div>
             )}
+
 
             {/* Inline create instance for LPs not yet linked to this influencer */}
             {form.influencer_id && lpsWithoutInstance.length > 0 && (
@@ -558,7 +561,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
 
           {/* 4. Affiliate link + auto sub1/sub2/sub3 */}
           {form.platform_account_id && (
-            <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+            <div className="space-y-3 rounded-lg border border-primary/20 bg-primary/5 p-3 min-w-0">
               <div className="flex items-center justify-between">
                 <Step n={4} label="Link de afiliado (destino do CTA)" />
                 <span className="text-[9px] uppercase tracking-wider text-primary/80 font-semibold">
@@ -703,7 +706,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
                   Parâmetro de atribuição (escolha o equivalente na casa)
                 </Label>
-                <div className="grid grid-cols-[1fr_140px] gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px] gap-2">
                   <Select value={form.click_id_param_name} onValueChange={v => set("click_id_param_name", v)}>
                     <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -747,11 +750,12 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
               </div>
 
               {trackedAffiliateUrl && form.base_url && (
-                <div className="flex items-start gap-1.5 text-[10px] pt-1 border-t border-border/40">
+                <div className="flex items-start gap-1.5 text-[10px] pt-1 border-t border-border/40 min-w-0">
                   <span className="text-[9px] uppercase tracking-wider text-muted-foreground mt-0.5 shrink-0">CTA →</span>
-                  <code className="font-mono break-all text-muted-foreground">{trackedAffiliateUrl}</code>
+                  <code className="font-mono break-all text-muted-foreground min-w-0 flex-1">{trackedAffiliateUrl}</code>
                 </div>
               )}
+
             </div>
           )}
 
