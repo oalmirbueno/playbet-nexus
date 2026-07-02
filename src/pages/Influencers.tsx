@@ -72,6 +72,7 @@ export default function Influencers() {
   const [editingInf, setEditingInf] = useState<InfEdit | null>(null);
   const [confirmDeactivate, setConfirmDeactivate] = useState<InfluencerRow | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<InfluencerRow | null>(null);
+  const [confirmDeleteText, setConfirmDeleteText] = useState("");
   const [quickLinkFor, setQuickLinkFor] = useState<string | null>(null);
 
   // Manager state
@@ -79,6 +80,7 @@ export default function Influencers() {
   const [mgrModalOpen, setMgrModalOpen] = useState(false);
   const [editingMgr, setEditingMgr] = useState<MgrEdit | null>(null);
   const [confirmDeleteMgr, setConfirmDeleteMgr] = useState<ManagerRow | null>(null);
+  const [confirmDeleteMgrText, setConfirmDeleteMgrText] = useState("");
 
   // ── Derived ───────────────────────────────────────────────────────
   const managersById = useMemo(() => {
@@ -126,6 +128,30 @@ export default function Influencers() {
     const q = mgrSearch.toLowerCase();
     return m.name.toLowerCase().includes(q) || m.team_name.toLowerCase().includes(q) || m.slug.toLowerCase().includes(q);
   }), [managers, mgrSearch]);
+
+  const norm = (s: string) => (s || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const duplicateInfIds = useMemo(() => {
+    const byName = new Map<string, string[]>();
+    influencers.forEach((i: any) => {
+      const k = norm(i.name);
+      if (!k) return;
+      byName.set(k, [...(byName.get(k) ?? []), i.id]);
+    });
+    const dup = new Set<string>();
+    byName.forEach(ids => { if (ids.length > 1) ids.forEach(id => dup.add(id)); });
+    return dup;
+  }, [influencers]);
+  const duplicateMgrIds = useMemo(() => {
+    const byName = new Map<string, string[]>();
+    managers.forEach((m: ManagerRow) => {
+      const k = norm(m.name);
+      if (!k) return;
+      byName.set(k, [...(byName.get(k) ?? []), m.id]);
+    });
+    const dup = new Set<string>();
+    byName.forEach(ids => { if (ids.length > 1) ids.forEach(id => dup.add(id)); });
+    return dup;
+  }, [managers]);
 
   const activeCount = influencers.filter((i: any) => i.is_active).length;
   const totalFollowers = influencers.reduce((s: number, i: any) => s + (i.followers || 0), 0);
@@ -328,6 +354,9 @@ export default function Influencers() {
                                     {inf.name.charAt(0).toUpperCase()}
                                   </div>
                                   <span className="font-medium hover:text-accent transition-colors">{inf.name}</span>
+                                  {duplicateInfIds.has(inf.id) && (
+                                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 border border-amber-500/30 font-medium" title="Existe outra pessoa com este nome">Duplicado</span>
+                                  )}
                                 </div>
                               </td>
                               <td className="text-accent text-xs">{inf.instagram || "-"}</td>
@@ -396,6 +425,9 @@ export default function Influencers() {
                           <span className="w-2 h-2 rounded-full" style={{ background: m.team_color }} />
                           <p className="text-sm font-semibold truncate">{m.team_name}</p>
                           {!m.is_active && <span className="badge-danger text-[9px]">Inativo</span>}
+                          {duplicateMgrIds.has(m.id) && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 border border-amber-500/30 font-medium" title="Existe outro gerente com este nome">Duplicado</span>
+                          )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1 truncate">Gerente · {m.name}</p>
                         <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{m.slug}</p>
@@ -619,24 +651,74 @@ export default function Influencers() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!confirmDelete} onOpenChange={() => setConfirmDelete(null)}>
+      <Dialog open={!!confirmDelete} onOpenChange={(o) => { if (!o) { setConfirmDelete(null); setConfirmDeleteText(""); } }}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Apagar Influencer</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Apagar <strong>{confirmDelete?.name}</strong> permanentemente? Esta ação não pode ser desfeita.</p>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 size={16} /> Apagar influencer
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2.5 text-[11px] text-destructive/90 leading-relaxed">
+              Ação permanente. Todo o histórico de <strong>{confirmDelete?.name}</strong> será removido. Lembre que novos cadastros devem passar pelo <strong>pipeline comercial</strong> — apague apenas duplicatas ou erros de entrada.
+              {confirmDelete && duplicateInfIds.has(confirmDelete.id) && (
+                <span className="block mt-1.5 font-medium">⚠ Este registro está marcado como duplicado.</span>
+              )}
+            </div>
+            <div>
+              <label className="text-[11px] text-muted-foreground">Digite <span className="font-mono text-foreground">{confirmDelete?.name}</span> para confirmar</label>
+              <input
+                autoFocus
+                value={confirmDeleteText}
+                onChange={(e) => setConfirmDeleteText(e.target.value)}
+                className="mt-1 w-full h-9 rounded-md border border-border bg-background px-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-destructive/50"
+                placeholder={confirmDelete?.name ?? ""}
+              />
+            </div>
+          </div>
           <DialogFooter>
-            <button className="btn-ghost" onClick={() => setConfirmDelete(null)}>Cancelar</button>
-            <button className="btn-primary bg-destructive hover:bg-destructive/90" onClick={async () => { if (confirmDelete) { await removeInf(confirmDelete.id); setConfirmDelete(null); } }}>Apagar</button>
+            <button className="btn-ghost" onClick={() => { setConfirmDelete(null); setConfirmDeleteText(""); }}>Cancelar</button>
+            <button
+              className="btn-primary bg-destructive hover:bg-destructive/90 disabled:opacity-40 disabled:cursor-not-allowed"
+              disabled={!confirmDelete || confirmDeleteText.trim() !== (confirmDelete?.name ?? "").trim()}
+              onClick={async () => { if (confirmDelete) { await removeInf(confirmDelete.id); setConfirmDelete(null); setConfirmDeleteText(""); } }}
+            >Apagar definitivamente</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!confirmDeleteMgr} onOpenChange={() => setConfirmDeleteMgr(null)}>
+      <Dialog open={!!confirmDeleteMgr} onOpenChange={(o) => { if (!o) { setConfirmDeleteMgr(null); setConfirmDeleteMgrText(""); } }}>
         <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Apagar Gerente</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">Apagar o gerente <strong>{confirmDeleteMgr?.name}</strong> e dissociar seu time? Os influencers ficarão sem time.</p>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 size={16} /> Apagar gerente
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 p-2.5 text-[11px] text-destructive/90 leading-relaxed">
+              Ação permanente. Os influencers ligados a <strong>{confirmDeleteMgr?.name}</strong> ficarão sem gerente. Todo cadastro novo deve vir pelo <strong>pipeline comercial</strong> — apague só duplicatas ou entradas erradas.
+              {confirmDeleteMgr && duplicateMgrIds.has(confirmDeleteMgr.id) && (
+                <span className="block mt-1.5 font-medium">⚠ Este gerente está marcado como duplicado.</span>
+              )}
+            </div>
+            <div>
+              <label className="text-[11px] text-muted-foreground">Digite <span className="font-mono text-foreground">{confirmDeleteMgr?.name}</span> para confirmar</label>
+              <input
+                autoFocus
+                value={confirmDeleteMgrText}
+                onChange={(e) => setConfirmDeleteMgrText(e.target.value)}
+                className="mt-1 w-full h-9 rounded-md border border-border bg-background px-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-destructive/50"
+                placeholder={confirmDeleteMgr?.name ?? ""}
+              />
+            </div>
+          </div>
           <DialogFooter>
-            <button className="btn-ghost" onClick={() => setConfirmDeleteMgr(null)}>Cancelar</button>
-            <button className="btn-primary bg-destructive hover:bg-destructive/90" onClick={async () => { if (confirmDeleteMgr) { await removeMgr(confirmDeleteMgr.id); setConfirmDeleteMgr(null); } }}>Apagar</button>
+            <button className="btn-ghost" onClick={() => { setConfirmDeleteMgr(null); setConfirmDeleteMgrText(""); }}>Cancelar</button>
+            <button
+              className="btn-primary bg-destructive hover:bg-destructive/90 disabled:opacity-40 disabled:cursor-not-allowed"
+              disabled={!confirmDeleteMgr || confirmDeleteMgrText.trim() !== (confirmDeleteMgr?.name ?? "").trim()}
+              onClick={async () => { if (confirmDeleteMgr) { await removeMgr(confirmDeleteMgr.id); setConfirmDeleteMgr(null); setConfirmDeleteMgrText(""); } }}
+            >Apagar definitivamente</button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
