@@ -765,6 +765,34 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
               <Button onClick={() => exportPng("all")} disabled={rendering} variant="secondary" className="w-full h-9 text-sm">
                 <Sparkles className="w-4 h-4 mr-2" /> Kit completo (4 formatos)
               </Button>
+
+              <div className="pt-2 mt-1 border-t border-border/40 space-y-1.5">
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground px-0.5">
+                  Ativos isolados
+                </Label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <Button
+                    onClick={downloadGameArt}
+                    disabled={!link.gameIconUrl}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-[11px] px-2"
+                    title="Baixa apenas a imagem original do jogo, sem edição"
+                  >
+                    <ImageDown className="w-3.5 h-3.5 mr-1.5" /> Logo do jogo
+                  </Button>
+                  <Button
+                    onClick={downloadPlaybetLogo}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-[11px] px-2"
+                    title="Baixa a logo Playbet em PNG"
+                  >
+                    <Package className="w-3.5 h-3.5 mr-1.5" /> Logo Playbet
+                  </Button>
+                </div>
+              </div>
+
               <Button onClick={() => setRenderKey(k => k + 1)} variant="ghost" size="sm" className="w-full h-8 text-xs text-muted-foreground">
                 <RefreshCw className="w-3.5 h-3.5 mr-2" /> Regenerar fundo
               </Button>
