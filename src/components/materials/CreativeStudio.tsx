@@ -260,6 +260,25 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     toast.success("Layout restaurado");
   };
 
+  const applyTpl = (templateId: string) => {
+    if (!link) return;
+    const next = applyTemplate(templateId, {
+      format,
+      gameName: link.gameName,
+      gameImageUrl: link.gameIconUrl,
+      platformName: link.platformName,
+      hypeReason: link.hypeReason,
+      cta: "JOGUE AGORA →",
+      handle: handle || (link.shortUrl ? link.shortUrl.replace(/^https?:\/\//, "") : ""),
+    });
+    setLayers(next);
+    setSelectedId(null);
+    setEditingTextId(null);
+    setDirty(true);
+    const name = CREATIVE_TEMPLATES.find(t => t.id === templateId)?.name ?? "Template";
+    toast.success(`Template aplicado: ${name}`);
+  };
+
   const saveLayout = async () => {
     if (!link) return;
     setSavingLayout(true);
