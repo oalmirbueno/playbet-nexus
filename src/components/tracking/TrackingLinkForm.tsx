@@ -512,14 +512,15 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
 
             {/* Visual confirmation of resolved affiliate link */}
             {selectedInstance && (
-              <div className="flex items-center gap-2 text-[10px] text-foreground px-2 py-1.5 rounded bg-primary/5 border border-primary/15">
+              <div className="flex items-center gap-2 text-[10px] text-foreground px-2 py-1.5 rounded bg-primary/5 border border-primary/15 min-w-0">
                 <CheckCircle2 size={11} className="text-primary shrink-0" />
-                <span className="text-muted-foreground">CTA da LP:</span>
-                <code className="font-mono truncate" title={selectedInstance.affiliate_link}>
+                <span className="text-muted-foreground shrink-0">CTA da LP:</span>
+                <code className="font-mono truncate min-w-0 flex-1" title={selectedInstance.affiliate_link}>
                   {selectedInstance.affiliate_link || <em className="not-italic text-muted-foreground">vazio - preencha abaixo</em>}
                 </code>
               </div>
             )}
+
 
             {/* Inline create instance for LPs not yet linked to this influencer */}
             {form.influencer_id && lpsWithoutInstance.length > 0 && (
