@@ -139,12 +139,32 @@ export default function TrackingLinks() {
   };
   const openEdit = (l: TrackingLinkRow) => { setEditing(formFromRow(l)); setModalOpen(true); };
 
+  const handleDelete = async (l: TrackingLinkRow) => {
+    const label = l.tracking_code || l.base_url || "este link";
+    if (!window.confirm(`Remover ${label}?\nEsta ação não pode ser desfeita.`)) return;
+    try {
+      await remove(l.id);
+      toast({ title: "Link removido" });
+    } catch (e: any) {
+      toast({
+        title: "Não foi possível remover",
+        description: e?.message || "Verifique dependências (materiais/LP) vinculados ao link.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleSave = async (form: FormState) => {
     const { id, ...payload } = form;
     const cleaned: any = { ...payload };
     Object.keys(cleaned).forEach(k => { if (cleaned[k] === "") cleaned[k] = null; });
-    if (id) await update(id, cleaned); else await create(cleaned);
-    setModalOpen(false);
+    try {
+      if (id) await update(id, cleaned); else await create(cleaned);
+      toast({ title: id ? "Link atualizado" : "Link criado" });
+      setModalOpen(false);
+    } catch (e: any) {
+      toast({ title: "Erro ao salvar", description: e?.message || "Tente novamente", variant: "destructive" });
+    }
   };
 
   const handleWizardComplete = async (payload: any) => {
@@ -451,7 +471,7 @@ export default function TrackingLinks() {
                               <Button variant="ghost" size="icon" className="h-7 w-7" title="Editar" onClick={() => openEdit(l)}>
                                 <Pencil size={13} />
                               </Button>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" title="Remover" onClick={() => remove(l.id)}>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" title="Remover" onClick={() => handleDelete(l)}>
                                 <Trash2 size={13} />
                               </Button>
                             </div>
@@ -545,7 +565,7 @@ export default function TrackingLinks() {
                             <Button variant="ghost" size="icon" className="h-7 w-7" title="Editar" onClick={() => openEdit(l)}>
                               <Pencil size={13} />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" title="Remover" onClick={() => remove(l.id)}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" title="Remover" onClick={() => handleDelete(l)}>
                               <Trash2 size={13} />
                             </Button>
                           </div>

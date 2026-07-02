@@ -434,7 +434,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xl max-h-[92vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-1rem)] sm:w-[95vw] max-w-2xl max-h-[92vh] overflow-y-auto p-4 sm:p-6 rounded-xl">
         <DialogHeader>
           <DialogTitle className="text-base">{form.id ? "Editar link" : "Novo link"}</DialogTitle>
         </DialogHeader>
