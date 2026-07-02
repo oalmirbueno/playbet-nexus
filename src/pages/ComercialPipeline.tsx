@@ -57,6 +57,7 @@ interface Card {
   city: string | null;
   uf: string | null;
   squad_id: string | null;
+  squad_ids: string[] | null;
   manager_id: string | null;
   checklist_progress: number;
   stage_moved_at: string;
