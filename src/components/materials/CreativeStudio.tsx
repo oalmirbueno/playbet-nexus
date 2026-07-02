@@ -458,6 +458,21 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     } finally { setRendering(false); }
   };
 
+  const downloadGameArt = async () => {
+    if (!link?.gameIconUrl) { toast.error("Este link não tem arte do jogo"); return; }
+    try {
+      await downloadRawAsset(link.gameIconUrl, `${slugify(link.gameName || "jogo")}-arte`);
+      toast.success("Arte do jogo baixada");
+    } catch (e) { toast.error("Falha ao baixar arte", { description: (e as Error).message }); }
+  };
+
+  const downloadPlaybetLogo = async () => {
+    try {
+      await downloadRawAsset(playbetLogo, "playbet-logo");
+      toast.success("Logo Playbet baixada");
+    } catch (e) { toast.error("Falha ao baixar logo", { description: (e as Error).message }); }
+  };
+
   const copyLink = async () => {
     if (!link?.shortUrl) return;
     try {
