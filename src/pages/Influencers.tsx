@@ -129,6 +129,30 @@ export default function Influencers() {
     return m.name.toLowerCase().includes(q) || m.team_name.toLowerCase().includes(q) || m.slug.toLowerCase().includes(q);
   }), [managers, mgrSearch]);
 
+  const norm = (s: string) => (s || "").trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const duplicateInfIds = useMemo(() => {
+    const byName = new Map<string, string[]>();
+    influencers.forEach((i: any) => {
+      const k = norm(i.name);
+      if (!k) return;
+      byName.set(k, [...(byName.get(k) ?? []), i.id]);
+    });
+    const dup = new Set<string>();
+    byName.forEach(ids => { if (ids.length > 1) ids.forEach(id => dup.add(id)); });
+    return dup;
+  }, [influencers]);
+  const duplicateMgrIds = useMemo(() => {
+    const byName = new Map<string, string[]>();
+    managers.forEach((m: ManagerRow) => {
+      const k = norm(m.name);
+      if (!k) return;
+      byName.set(k, [...(byName.get(k) ?? []), m.id]);
+    });
+    const dup = new Set<string>();
+    byName.forEach(ids => { if (ids.length > 1) ids.forEach(id => dup.add(id)); });
+    return dup;
+  }, [managers]);
+
   const activeCount = influencers.filter((i: any) => i.is_active).length;
   const totalFollowers = influencers.reduce((s: number, i: any) => s + (i.followers || 0), 0);
   const totalTeams = new Set(managers.map((m: ManagerRow) => m.team_name)).size;
