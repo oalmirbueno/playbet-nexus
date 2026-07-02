@@ -391,14 +391,30 @@ function NewManagerDialog({
           )}
 
           <div className="space-y-1.5">
-            <Label>Squad</Label>
-            <Select value={squadId} onValueChange={setSquadId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Sem squad</SelectItem>
-                {squads.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center justify-between">
+              <Label>Squads sob responsabilidade</Label>
+              <span className={`text-[10px] font-medium uppercase tracking-wider ${hierarchyMeta.tone}`}>
+                {squadIds.length} · {hierarchyMeta.label}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5 max-h-40 overflow-y-auto rounded-md border border-border/60 p-1.5">
+              {squads.map(s => {
+                const checked = squadIds.includes(s.id);
+                return (
+                  <label key={s.id} className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs cursor-pointer transition-colors ${checked ? "bg-primary/10 border border-primary/40" : "hover:bg-secondary/40 border border-transparent"}`}>
+                    <input type="checkbox" checked={checked} onChange={() => toggleSquad(s.id)} className="accent-primary" />
+                    <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: s.color }} />
+                    <span className="truncate">{s.name}</span>
+                  </label>
+                );
+              })}
+              {squads.length === 0 && (
+                <p className="col-span-2 text-[11px] text-muted-foreground p-2">Crie um squad primeiro.</p>
+              )}
+            </div>
+            <p className="text-[10px] text-muted-foreground leading-relaxed">
+              1–2 = <span className="text-emerald-500">Gerente</span> · 3–4 = <span className="text-indigo-500">Gerente Diretor</span> · 5+ = <span className="text-fuchsia-500">Diretor de Squads</span>
+            </p>
           </div>
         </div>
         <DialogFooter>
