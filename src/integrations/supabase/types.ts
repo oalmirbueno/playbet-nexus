@@ -2969,6 +2969,8 @@ export type Database = {
         | "analise"
         | "aprovado"
         | "concluido"
+        | "standby"
+        | "desqualificado"
       manager_compensation_mode: "manager" | "socio_only" | "influencer_only"
       manager_origin_type: "influencer" | "socio" | "standalone"
     }
@@ -3124,6 +3126,8 @@ export const Constants = {
         "analise",
         "aprovado",
         "concluido",
+        "standby",
+        "desqualificado",
       ],
       manager_compensation_mode: ["manager", "socio_only", "influencer_only"],
       manager_origin_type: ["influencer", "socio", "standalone"],
