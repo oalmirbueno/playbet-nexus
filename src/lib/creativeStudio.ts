@@ -835,6 +835,32 @@ export function downloadCreative(rendered: RenderedCreative, filename: string) {
   setTimeout(() => URL.revokeObjectURL(url), 5_000);
 }
 
+/**
+ * Download a raw asset (game art, brand logo, etc.) by URL. Routes through the
+ * image-proxy so external CDNs don't break CORS/downloads. Preserves original
+ * extension when detectable, otherwise defaults to .png.
+ */
+export async function downloadRawAsset(url: string, filename: string): Promise<void> {
+  if (!url) throw new Error("URL vazia");
+  const src = proxyUrl(url);
+  const res = await fetch(src, { credentials: "omit" });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const blob = await res.blob();
+  const type = blob.type || "image/png";
+  const extFromType = type.split("/")[1]?.split(";")[0] || "png";
+  const extFromUrl = url.split("?")[0].split("#")[0].match(/\.(png|jpe?g|webp|gif|svg|avif)$/i)?.[1]?.toLowerCase();
+  const ext = extFromUrl || extFromType || "png";
+  const safe = filename.replace(/\.(png|jpe?g|webp|gif|svg|avif)$/i, "");
+  const objUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objUrl;
+  a.download = `${safe}.${ext}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(objUrl), 5_000);
+}
+
 export function slugify(s: string): string {
   return (s || "criativo")
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
