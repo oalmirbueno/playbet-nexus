@@ -456,34 +456,49 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
                   )}
                 </div>
 
-                {hypedGames.length > 0 && (
+                {(hypedGames.length > 0 || currentPlatformId) && (
                   <div className="space-y-1.5">
                     <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                       <Flame size={11} className="text-warning" />
-                      <span className="font-semibold text-warning uppercase tracking-wider">Top 5 da casa</span>
+                      <span className="font-semibold text-warning uppercase tracking-wider">Jogos em alta</span>
+                      {hypedGames.length > 0 && <span className="text-muted-foreground">· {hypedGames.length}</span>}
+                      <button
+                        type="button"
+                        onClick={refreshHypedGames}
+                        disabled={refreshingHype || !currentPlatformId}
+                        className="ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-border/60 bg-background/50 hover:bg-secondary text-[9px] font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
+                        title="Buscar novos jogos e logos reais da casa"
+                      >
+                        {refreshingHype ? <Loader2 size={9} className="animate-spin" /> : <RefreshCw size={9} />}
+                        {refreshingHype ? "Atualizando" : "Atualizar"}
+                      </button>
                     </div>
-                    <div className="grid grid-cols-5 gap-1.5">
-                      {hypedGames.map((g: any) => {
-                        const selected = gameSlug === g.game_slug;
-                        return (
-                          <button
-                            key={g.id}
-                            type="button"
-                            onClick={() => applyHypedGame(g)}
-                            className={`min-w-0 rounded-md border p-1.5 text-center transition ${selected ? "border-warning/60 bg-warning/10" : "border-border/50 bg-background/50 hover:border-warning/40"}`}
-                            title={g.hype_reason || g.game_name}
-                          >
-                            <div className="flex justify-center mb-1 relative">
-                              <GameArtwork slug={g.game_slug} name={g.game_name} iconUrl={g.icon_url} size="sm" />
-                              <span className="absolute -top-1 left-1/2 -translate-x-5 text-[8px] font-bold bg-warning text-warning-foreground rounded-full w-3.5 h-3.5 flex items-center justify-center">
-                                {g.priority}
-                              </span>
-                            </div>
-                            <span className="block text-[9px] font-medium leading-tight truncate">{g.game_name}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                    {hypedGames.length > 0 ? (
+                      <div className="invisible-scroll flex gap-1.5 overflow-x-auto snap-x pb-1 -mx-0.5 px-0.5">
+                        {hypedGames.map((g: any) => {
+                          const selected = gameSlug === g.game_slug;
+                          return (
+                            <button
+                              key={g.id}
+                              type="button"
+                              onClick={() => applyHypedGame(g)}
+                              className={`snap-start shrink-0 w-[72px] rounded-md border p-1.5 text-center transition ${selected ? "border-warning/60 bg-warning/10" : "border-border/50 bg-background/50 hover:border-warning/40"}`}
+                              title={g.hype_reason || g.game_name}
+                            >
+                              <div className="flex justify-center mb-1 relative">
+                                <GameArtwork slug={g.game_slug} name={g.game_name} iconUrl={g.icon_url} size="md" />
+                                <span className="absolute -top-1 -right-1 text-[8px] font-bold bg-warning text-warning-foreground rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                                  {g.priority}
+                                </span>
+                              </div>
+                              <span className="block text-[9px] font-medium leading-tight truncate">{g.game_name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-muted-foreground italic">Nenhum jogo em alta cadastrado para esta casa. Clique em Atualizar.</p>
+                    )}
                   </div>
                 )}
 
