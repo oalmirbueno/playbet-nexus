@@ -434,12 +434,13 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-1rem)] sm:w-[95vw] max-w-2xl max-h-[92vh] overflow-y-auto p-4 sm:p-6 rounded-xl">
+      <DialogContent className="w-[calc(100vw-1rem)] sm:w-[calc(100vw-2rem)] max-w-4xl max-h-[92vh] overflow-y-auto overflow-x-hidden p-4 sm:p-6 rounded-xl">
         <DialogHeader>
           <DialogTitle className="text-base">{form.id ? "Editar link" : "Novo link"}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-5 py-1">
+        <div className="space-y-5 py-1 min-w-0 md:grid md:grid-cols-2 md:gap-5 md:space-y-0">
+
           {/* 1. Influencer */}
           <div className="space-y-1.5">
             <Step n={1} label="Influencer" />
