@@ -21,17 +21,17 @@ export function detectLpMode({ linkCategory, gameSlug, extraGameSlugs }: LpModeI
 }
 
 export const LP_MODE_LABELS: Record<LpMode, string> = {
-  single_game: "Jogo único",
-  multi_game: "Vários jogos",
-  odds: "Odds / partidas",
-  catalog: "Catálogo completo",
+  catalog: "LP padrão",
+  single_game: "LP gerada · jogo único",
+  multi_game: "LP gerada · vários jogos",
+  odds: "LP odds / partidas",
 };
 
 export const LP_MODE_HINTS: Record<LpMode, string> = {
-  single_game: "Hero com a arte do jogo e CTA direto.",
+  catalog: "Modelo normal com CTA de oportunidades.",
+  single_game: "Modelo direto com arte real do jogo.",
   multi_game: "Grade de jogos com CTA por card.",
   odds: "Cartelas de partidas e mercados.",
-  catalog: "Todos os jogos ativos da casa.",
 };
 
 export const DEFAULT_SECTIONS: Array<{ id: string; label: string; enabled: boolean }> = [
@@ -45,14 +45,33 @@ export const DEFAULT_SECTIONS: Array<{ id: string; label: string; enabled: boole
 
 export function defaultLayoutConfig(mode: LpMode) {
   const sections = DEFAULT_SECTIONS.map((s) => ({ ...s }));
-  if (mode === "odds") {
-    const idx = sections.findIndex((s) => s.id === "odds");
-    if (idx !== -1) sections[idx].enabled = true;
-    const g = sections.findIndex((s) => s.id === "games");
-    if (g !== -1) sections[g].enabled = false;
-  }
+  const features = sections.findIndex((s) => s.id === "features");
+  const games = sections.findIndex((s) => s.id === "games");
+  const odds = sections.findIndex((s) => s.id === "odds");
+
   if (mode === "catalog") {
-    // uses games section as full catalog
+    if (features !== -1) sections[features].enabled = false;
+    if (games !== -1) sections[games].enabled = true;
+    if (odds !== -1) sections[odds].enabled = false;
   }
+
+  if (mode === "single_game") {
+    if (features !== -1) sections[features].enabled = true;
+    if (games !== -1) sections[games].enabled = false;
+    if (odds !== -1) sections[odds].enabled = false;
+  }
+
+  if (mode === "multi_game") {
+    if (features !== -1) sections[features].enabled = true;
+    if (games !== -1) sections[games].enabled = true;
+    if (odds !== -1) sections[odds].enabled = false;
+  }
+
+  if (mode === "odds") {
+    if (odds !== -1) sections[odds].enabled = true;
+    if (games !== -1) sections[games].enabled = false;
+    if (features !== -1) sections[features].enabled = false;
+  }
+
   return { sections, mode };
 }

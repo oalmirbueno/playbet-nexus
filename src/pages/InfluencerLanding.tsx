@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Gamepad2, ArrowRight, Zap, Gift, Users, Copy } from "lucide-react";
+import { ArrowRight, Zap, Gift, Users, Copy } from "lucide-react";
 import logo from "@/assets/logo.png";
 
 type LoadState = "loading" | "ready" | "not_found" | "inactive" | "no_domain";
@@ -132,12 +132,12 @@ function GameImage({
   fallbackClassName: string;
   iconSize?: number;
 }) {
-  const [src, setSrc] = useState(() => art?.icon_url || null);
-  const [failedDirect, setFailedDirect] = useState(false);
+  const [src, setSrc] = useState(() => proxiedImageUrl(art?.icon_url) || art?.icon_url || null);
+  const [failedProxy, setFailedProxy] = useState(false);
 
   useEffect(() => {
-    setSrc(art?.icon_url || null);
-    setFailedDirect(false);
+    setSrc(proxiedImageUrl(art?.icon_url) || art?.icon_url || null);
+    setFailedProxy(false);
   }, [art?.icon_url]);
 
   if (src) {
@@ -148,10 +148,9 @@ function GameImage({
         className={className}
         loading="lazy"
         onError={() => {
-          const proxy = proxiedImageUrl(art?.icon_url);
-          if (!failedDirect && proxy && proxy !== src) {
-            setFailedDirect(true);
-            setSrc(proxy);
+          if (!failedProxy && art?.icon_url && art.icon_url !== src) {
+            setFailedProxy(true);
+            setSrc(art.icon_url);
             return;
           }
           setSrc(null);
@@ -176,6 +175,21 @@ export default function InfluencerLanding() {
   const [instanceCtx, setInstanceCtx] = useState<InstanceContext | null>(null);
   const [gameArts, setGameArts] = useState<GameArt[]>([]);
   const [clicking, setClicking] = useState(false);
+
+  useEffect(() => {
+    const id = "lp-public-scrollbar-style";
+    if (document.getElementById(id)) return;
+    const style = document.createElement("style");
+    style.id = id;
+    style.textContent = `
+      html, body { background: #0a0a0f !important; color-scheme: dark !important; scrollbar-width: thin !important; scrollbar-color: rgba(16,185,129,.5) transparent !important; }
+      ::-webkit-scrollbar { width: 4px !important; height: 4px !important; background: transparent !important; }
+      ::-webkit-scrollbar-track, ::-webkit-scrollbar-track-piece { background: transparent !important; border: 0 !important; box-shadow: none !important; }
+      ::-webkit-scrollbar-thumb { background: rgba(16,185,129,.48) !important; border-radius: 999px !important; border: 0 !important; box-shadow: none !important; min-height: 40px !important; }
+      ::-webkit-scrollbar-button, ::-webkit-scrollbar-corner { width: 0 !important; height: 0 !important; display: none !important; background: transparent !important; }
+    `;
+    document.head.appendChild(style);
+  }, []);
 
   useEffect(() => {
     if (!slug) { setState("not_found"); return; }
@@ -488,15 +502,30 @@ export default function InfluencerLanding() {
   const hypeTitle: string | null = instanceCtx?.hype_copy?.title ?? null;
   const hypeSub: string | null = instanceCtx?.hype_copy?.subtitle ?? null;
   const bonusOffer = instanceCtx?.hype_copy?.bonus_offer;
-  const ctaLabel: string = bonusOffer?.cta_label || instanceCtx?.hype_copy?.cta_label || "Acessar oportunidades";
   const communityCta = instanceCtx?.hype_copy?.community_cta;
   const smartOdds: Array<{ event_name: string; market_name: string; odd_label?: string | null; badge?: string | null; starts_at?: string | null }> =
     Array.isArray(instanceCtx?.hype_copy?.smart_odds) ? instanceCtx.hype_copy.smart_odds : [];
 
   const primaryGame = gameArts[0];
+  const isCatalogMode = mode === "catalog";
+  const isGeneratedMode = !isCatalogMode;
   const displayGames = mode === "single_game" && primaryGame ? [primaryGame] : gameArts;
-  const heroTitle = hypeTitle || primaryGame?.name || "Oferta oficial";
-  const heroSubtitle = hypeSub || (primaryGame ? "Bônus ativo para jogar agora." : "Bônus oficial e acesso rápido.");
+  const heroGame = isGeneratedMode ? primaryGame : null;
+  const defaultCta = isCatalogMode
+    ? "Acessar oportunidades"
+    : mode === "odds"
+      ? "Apostar agora"
+      : bonusOffer?.enabled && bonusOffer?.code
+        ? "Resgatar bônus"
+        : primaryGame?.name
+          ? `Jogar ${primaryGame.name}`
+          : "Jogar agora";
+  const configuredCta: string | null = bonusOffer?.cta_label || instanceCtx?.hype_copy?.cta_label || null;
+  const ctaLabel: string = isGeneratedMode && configuredCta?.toLowerCase().trim() === "acessar oportunidades"
+    ? defaultCta
+    : configuredCta || defaultCta;
+  const heroTitle = hypeTitle || (isCatalogMode ? "Oportunidades PlayBet" : primaryGame?.name || "Oferta oficial");
+  const heroSubtitle = hypeSub || (isCatalogMode ? "Acesso rápido às melhores oportunidades." : "Oferta ativa para jogar agora.");
   const copyBonusCode = async () => {
     if (!bonusOffer?.code) return;
     try { await navigator.clipboard.writeText(bonusOffer.code); } catch {}
@@ -504,18 +533,18 @@ export default function InfluencerLanding() {
 
   // ── Ready ──
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white overflow-x-hidden">
+    <div className="min-h-screen bg-[#0a0a0f] text-white overflow-x-hidden lp-public-page">
       {isSectionOn("hero") && (
         <header className="relative pt-8 pb-14 px-6">
           <div className="absolute inset-0 bg-gradient-to-b from-emerald-600/10 via-transparent to-transparent pointer-events-none" />
           <div className="max-w-xl mx-auto relative z-10 text-center">
             <img src={logo} alt="PlayBet" className="h-16 mx-auto mb-8 opacity-90" />
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium mb-6">
-              <Zap size={12} /> {mode === "odds" ? "Odds oficiais" : "Oferta oficial"}
+              <Zap size={12} /> {mode === "odds" ? "Odds oficiais" : isCatalogMode ? "Oportunidades" : "Oferta oficial"}
             </div>
-            {primaryGame && (
+            {heroGame && (
               <GameImage
-                art={primaryGame}
+                art={heroGame}
                 className="w-24 h-24 rounded-2xl mx-auto mb-5 object-cover shadow-xl shadow-emerald-500/20"
                 fallbackClassName="w-24 h-24 rounded-2xl mx-auto mb-5 bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center shadow-xl shadow-emerald-500/10"
                 iconSize={28}
@@ -541,7 +570,7 @@ export default function InfluencerLanding() {
         </header>
       )}
 
-      {isSectionOn("features") && (bonusOffer?.enabled || primaryGame) && (
+      {isGeneratedMode && isSectionOn("features") && (bonusOffer?.enabled || primaryGame) && (
         <section className="px-6 pb-14">
           <div className="max-w-md mx-auto">
             <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-b from-emerald-500/[0.08] to-white/[0.02] p-6">
@@ -596,11 +625,12 @@ export default function InfluencerLanding() {
                   onClick={handleCTA}
                   className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 flex flex-col items-center gap-2 hover:border-emerald-500/30 transition"
                 >
-                  {g.icon_url ? (
-                    <img src={g.icon_url} alt={g.name} className="w-14 h-14 rounded-lg object-cover" />
-                  ) : (
-                    <Gamepad2 size={24} className="text-emerald-400/60" />
-                  )}
+                  <GameImage
+                    art={g}
+                    className="w-14 h-14 rounded-lg object-cover"
+                    fallbackClassName="w-14 h-14 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center"
+                    iconSize={20}
+                  />
                   <span className="text-xs font-medium">{g.name}</span>
                 </button>
               ))}
