@@ -9,6 +9,8 @@ import { Sparkles, Search, ImageIcon, Wand2, Layers, ExternalLink, Copy, Pencil,
 import { toast } from "sonner";
 import LpInstanceVisualEditor from "@/components/lp/LpInstanceVisualEditor";
 import { LP_MODE_LABELS, type LpMode } from "@/lib/lpMode";
+import { buildLpBaseUrl } from "@/lib/lpPublicUrl";
+import { buildPublicLpUrl } from "@/lib/trackingUrl";
 
 interface Row {
   id: string;
@@ -23,6 +25,7 @@ interface Row {
   tracking_code: string | null;
   platform_account_id: string | null;
   influencer_id: string | null;
+  campanha_id?: string | null;
   landing_page_instance_id: string | null;
   created_at: string;
   platform_name?: string | null;
@@ -31,6 +34,7 @@ interface Row {
   lp_slug?: string | null;
   lp_domain?: string | null;
   lp_name?: string | null;
+  lp_route?: string | null;
 }
 
 interface Props {
@@ -40,7 +44,10 @@ interface Props {
   showInfluencer?: boolean;
 }
 
-import { buildLpPublicUrl as buildPublicUrl } from "@/lib/lpPublicUrl";
+function buildRowShareUrl(row: Row): string | null {
+  if (row.lp_mode === "catalog") return buildLpBaseUrl(row.lp_domain, row.lp_route);
+  return buildPublicLpUrl(row.lp_domain, row.lp_slug, row.influencer_id || "", row.campanha_id || "") || buildLpBaseUrl(row.lp_domain, row.lp_route);
+}
 
 export function LinkLpGrid({ influencerId, managerId, title = "LP por link", showInfluencer = false }: Props) {
   const [rows, setRows] = useState<Row[]>([]);
@@ -61,7 +68,7 @@ export function LinkLpGrid({ influencerId, managerId, title = "LP por link", sho
           .from("tracking_links")
           .select(`
             id, game_name, game_icon_url, game_slug, link_category, hype_reason, hype_priority,
-            short_url, base_url, tracking_code, platform_account_id, influencer_id,
+            short_url, base_url, tracking_code, platform_account_id, influencer_id, campanha_id,
             landing_page_instance_id, created_at
           `)
           .eq("is_demo", false)
@@ -110,7 +117,7 @@ export function LinkLpGrid({ influencerId, managerId, title = "LP por link", sho
         if (lpiIds.length) {
           const { data: lpis } = await supabase
             .from("landing_page_instances")
-            .select("id, lp_mode, slug, landing_pages(name, domain)")
+            .select("id, lp_mode, slug, landing_pages(name, domain, route)")
             .in("id", lpiIds);
           const lpiMap = new Map((lpis ?? []).map((l: any) => [l.id, l]));
           rowsData = rowsData.map(r => {
@@ -121,6 +128,7 @@ export function LinkLpGrid({ influencerId, managerId, title = "LP por link", sho
               lp_slug: lpi?.slug ?? null,
               lp_name: lpi?.landing_pages?.name ?? null,
               lp_domain: lpi?.landing_pages?.domain ?? null,
+              lp_route: lpi?.landing_pages?.route ?? null,
             };
           });
         }
@@ -159,12 +167,12 @@ export function LinkLpGrid({ influencerId, managerId, title = "LP por link", sho
   const openEditor = (r: Row) => {
     if (!r.landing_page_instance_id) return;
     setEditorInstanceId(r.landing_page_instance_id);
-    setEditorPublicUrl(buildPublicUrl(r.lp_domain, r.lp_slug));
+  setEditorPublicUrl(buildRowShareUrl(r));
     setEditorOpen(true);
   };
 
   const copyLink = async (r: Row) => {
-    const url = buildPublicUrl(r.lp_domain, r.lp_slug);
+    const url = buildRowShareUrl(r);
     if (!url) return toast.error("LP sem slug público");
     try {
       await navigator.clipboard.writeText(url);
@@ -263,7 +271,7 @@ function FilterChip({ active, children, onClick }: { active: boolean; children: 
 function LinkLpCard({
   row, onEdit, onCopy, showInfluencer,
 }: { row: Row; onEdit: () => void; onCopy: () => void; showInfluencer?: boolean }) {
-  const publicUrl = buildPublicUrl(row.lp_domain, row.lp_slug);
+  const publicUrl = buildRowShareUrl(row);
   const modeLabel = row.lp_mode ? (LP_MODE_LABELS[row.lp_mode as LpMode] || row.lp_mode) : "Auto";
   return (
     <div

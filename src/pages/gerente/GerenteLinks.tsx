@@ -55,7 +55,7 @@ export default function GerenteLinks() {
 
     const [{ data: rawLinks }, { data: metrics }] = await Promise.all([
       supabase.from("tracking_links")
-        .select("id, tracking_code, status, created_at, base_url, final_url, short_url, click_id_param_name, landing_page_instance_id, landing_page_id, platform_account_id, influencer_id, game_name, game_icon_url, link_category, hype_reason, hype_priority")
+        .select("id, tracking_code, status, created_at, base_url, final_url, short_url, click_id_param_name, landing_page_instance_id, landing_page_id, platform_account_id, influencer_id, campanha_id, game_name, game_icon_url, link_category, hype_reason, hype_priority")
         .in("influencer_id", infIds).eq("is_demo", false)
         .order("hype_priority", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: false }),
@@ -65,14 +65,20 @@ export default function GerenteLinks() {
     ]);
 
     const lpiIds = (rawLinks ?? []).map(l => l.landing_page_instance_id).filter(Boolean) as string[];
-    const lpIds = (rawLinks ?? []).map(l => l.landing_page_id).filter(Boolean) as string[];
+    let lpIds = (rawLinks ?? []).map(l => l.landing_page_id).filter(Boolean) as string[];
     const paIds = (rawLinks ?? []).map(l => l.platform_account_id).filter(Boolean) as string[];
 
-    const [{ data: instances }, { data: lps }, { data: accs }] = await Promise.all([
-      lpiIds.length ? supabase.from("landing_page_instances").select("id, slug, landing_page_id").in("id", lpiIds) : Promise.resolve({ data: [] as any[] }),
-      lpIds.length ? supabase.from("landing_pages").select("id, name, domain").in("id", lpIds) : Promise.resolve({ data: [] as any[] }),
+    const [{ data: instances }, { data: accs }] = await Promise.all([
+      lpiIds.length ? supabase.from("landing_page_instances").select("id, slug, lp_mode, landing_page_id").in("id", lpiIds) : Promise.resolve({ data: [] as any[] }),
       paIds.length ? supabase.from("platform_accounts").select("id, nome_conta, platform_id, platforms(name)").in("id", paIds) : Promise.resolve({ data: [] as any[] }),
     ]);
+    lpIds = Array.from(new Set([
+      ...lpIds,
+      ...(instances ?? []).map((i: any) => i.landing_page_id).filter(Boolean),
+    ]));
+    const { data: lps } = lpIds.length
+      ? await supabase.from("landing_pages").select("id, name, domain, route").in("id", lpIds)
+      : { data: [] as any[] };
     const instMap = new Map((instances ?? []).map((i: any) => [i.id, i]));
     const lpMap = new Map((lps ?? []).map((l: any) => [l.id, l]));
     const accMap = new Map((accs ?? []).map((a: any) => [a.id, a]));
@@ -94,10 +100,14 @@ export default function GerenteLinks() {
       const inf: any = infMap.get(l.influencer_id);
       const share = resolveShareUrl({
         lpDomain: lp?.domain ?? null,
+        lpRoute: lp?.route ?? null,
+        lpMode: inst?.lp_mode ?? null,
         instanceSlug: inst?.slug ?? null,
         affiliateBaseUrl: l.final_url || l.base_url,
         clickIdParamName: l.click_id_param_name,
         sub1: l.tracking_code,
+        sub2: l.influencer_id || "",
+        sub3: l.campanha_id || "",
       });
       return {
         id: l.id,

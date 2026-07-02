@@ -10,6 +10,7 @@ import { landingPageInstanceService } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
 import { Link2, CheckCircle2, Plus, Sparkles, Copy, Flame, Wand2, RefreshCw, Loader2 } from "lucide-react";
 import { buildPublicLpUrl, buildTrackedAffiliateUrl } from "@/lib/trackingUrl";
+import { buildLpBaseUrl } from "@/lib/lpPublicUrl";
 import { detectFromUrl, CATEGORY_LABELS, inferAttributionParam, type LinkCategory } from "@/lib/linkIntelligence";
 import GameArtwork from "@/components/tracking/GameArtwork";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -217,12 +218,13 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   //  · Without LP → affiliate URL directly with sub1/sub2/sub3
   const finalUrl = useMemo(() => {
     if (landingPageId) {
+      if ((resolvedInstance as any)?.lp_mode === "catalog") return buildLpBaseUrl(selectedLP?.domain, selectedLP?.route);
       const slug = plannedInstanceSlug || (selectedInfluencer as any)?.slug || "";
       const lp = buildPublicLpUrl(selectedLP?.domain, slug, influencerId || "", campanhaId || "");
       if (lp) return lp;
     }
     return trackedAffiliateUrl;
-  }, [landingPageId, selectedLP, plannedInstanceSlug, selectedInfluencer, influencerId, campanhaId, trackedAffiliateUrl]);
+  }, [landingPageId, resolvedInstance, selectedLP, plannedInstanceSlug, selectedInfluencer, influencerId, campanhaId, trackedAffiliateUrl]);
 
   const trackingCode = useMemo(() => subid || `link-${Date.now().toString(36)}`, [subid]);
 

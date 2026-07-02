@@ -207,6 +207,8 @@ export default function TrackingLinks() {
     const inf: any = l.influencer_id ? infMap.get(l.influencer_id) : null;
     const url = resolveShareUrl({
       lpDomain: lp?.domain,
+      lpRoute: lp?.route,
+      lpMode: inst?.lp_mode,
       instanceSlug: inst?.slug,
       affiliateBaseUrl: l.base_url || "",
       clickIdParamName: l.click_id_param_name || "sub1",
@@ -218,7 +220,7 @@ export default function TrackingLinks() {
   };
 
   const copyLink = (l: TrackingLinkRow) => {
-    const url = l.short_url || buildFinalUrl(l);
+    const url = buildFinalUrl(l) || l.short_url;
     navigator.clipboard.writeText(url);
     setCopiedId(l.id);
     toast({ title: "Link copiado", description: url });
@@ -422,7 +424,7 @@ export default function TrackingLinks() {
                         const lp: any = l.landing_page_id ? lpMap.get(l.landing_page_id) : null;
                         const incomplete = isIncomplete(l);
                         const dup = isDuplicate(l);
-                        const url = l.short_url || buildFinalUrl(l);
+                        const url = buildFinalUrl(l) || l.short_url;
                         return (
                           <div key={l.id} className={`px-4 py-2.5 flex items-center gap-3 ${incomplete ? "bg-destructive/5" : ""}`}>
                             <div className="min-w-0 flex-1">
@@ -547,7 +549,7 @@ export default function TrackingLinks() {
                           </div>
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground max-w-[180px] truncate font-mono">
-                          {l.short_url || buildFinalUrl(l)}
+                          {buildFinalUrl(l) || l.short_url}
                         </TableCell>
                         <TableCell>
                           <Badge variant={l.status === "active" || !l.status ? "default" : "secondary"} className="text-[10px]">

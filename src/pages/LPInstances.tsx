@@ -26,9 +26,10 @@ const emptyEditing: EditingState = {
   landing_page_id: "", influencer_id: "", slug: "", affiliate_link: "", notes: "", is_active: true,
 };
 
-import { buildLpPublicUrl } from "@/lib/lpPublicUrl";
-function buildPublicUrl(domain: string | null, slug: string) {
-  return buildLpPublicUrl(domain, slug) ?? "";
+import { buildLpBaseUrl, buildLpPublicUrl } from "@/lib/lpPublicUrl";
+function buildPublicUrl(inst: LandingPageInstanceRow, lp?: any) {
+  if ((inst as any).lp_mode === "catalog") return buildLpBaseUrl(lp?.domain, lp?.route);
+  return buildLpPublicUrl(lp?.domain, inst.slug) ?? "";
 }
 
 export default function LPInstances() {
@@ -50,6 +51,7 @@ export default function LPInstances() {
 
   const getLPName = (id: string) => landingPages.find(l => l.id === id)?.name || "-";
   const getLPDomain = (id: string) => landingPages.find(l => l.id === id)?.domain || "";
+  const getLP = (id: string) => landingPages.find(l => l.id === id) as any;
   const getLPPlatformId = (id: string) => landingPages.find(l => l.id === id)?.platform_id || null;
   const getInfluencerName = (id: string) => influencers.find(i => i.id === id)?.name || "-";
   const getPlatformName = (id: string) => platforms.find(p => p.id === id)?.name || "";
@@ -147,7 +149,7 @@ export default function LPInstances() {
   };
 
   const copyUrl = (inst: LandingPageInstanceRow) => {
-    const url = buildPublicUrl(getLPDomain(inst.landing_page_id), inst.slug);
+    const url = buildPublicUrl(inst, getLP(inst.landing_page_id));
     navigator.clipboard.writeText(url);
     toast({ title: "URL pública copiada!", description: url });
   };
@@ -198,12 +200,12 @@ export default function LPInstances() {
     id: inst.id, lp_base: getLPName(inst.landing_page_id),
     dominio: getLPDomain(inst.landing_page_id), influencer: getInfluencerName(inst.influencer_id),
     slug: inst.slug, affiliate_link: inst.affiliate_link,
-    url_publica: buildPublicUrl(getLPDomain(inst.landing_page_id), inst.slug),
+    url_publica: buildPublicUrl(inst, getLP(inst.landing_page_id)),
     status: inst.is_active ? "Ativo" : "Inativo",
   }));
 
   const selectedLP = editing ? landingPages.find(l => l.id === editing.landing_page_id) : null;
-  const generatedUrl = editing && selectedLP ? buildPublicUrl(selectedLP.domain, editing.slug) : "";
+  const generatedUrl = editing && selectedLP ? buildLpPublicUrl(selectedLP.domain, editing.slug) || "" : "";
 
   if (isLoading) {
     return (
@@ -289,7 +291,7 @@ export default function LPInstances() {
             {filtered.length === 0 ? (
               <tr><td colSpan={8} className="text-center text-muted-foreground py-8">Nenhuma instância encontrada</td></tr>
             ) : filtered.map(inst => {
-              const pubUrl = buildPublicUrl(getLPDomain(inst.landing_page_id), inst.slug);
+              const pubUrl = buildPublicUrl(inst, getLP(inst.landing_page_id));
               return (
                 <tr key={inst.id}>
                   <td className="font-medium text-xs">{getLPName(inst.landing_page_id)}</td>
@@ -332,14 +334,14 @@ export default function LPInstances() {
                 <div><span className="text-xs text-muted-foreground">Influencer</span><p>{getInfluencerName(previewOpen.influencer_id)}</p></div>
                 <div><span className="text-xs text-muted-foreground">Slug</span><p className="font-mono text-accent">{previewOpen.slug}</p></div>
                 <div className="col-span-2"><span className="text-xs text-muted-foreground">Affiliate Link</span><p className="font-mono text-xs text-accent break-all">{previewOpen.affiliate_link}</p></div>
-                <div className="col-span-2"><span className="text-xs text-muted-foreground">URL Pública Final</span><p className="font-mono text-xs text-accent break-all">{buildPublicUrl(getLPDomain(previewOpen.landing_page_id), previewOpen.slug)}</p></div>
+                <div className="col-span-2"><span className="text-xs text-muted-foreground">URL Pública Final</span><p className="font-mono text-xs text-accent break-all">{buildPublicUrl(previewOpen, getLP(previewOpen.landing_page_id))}</p></div>
                 <div><span className="text-xs text-muted-foreground">Status</span><p><span className={previewOpen.is_active ? "badge-success" : "badge-warning"}>{previewOpen.is_active ? "Ativo" : "Inativo"}</span></p></div>
                 {previewOpen.notes && <div className="col-span-2"><span className="text-xs text-muted-foreground">Observações</span><p className="text-xs">{previewOpen.notes}</p></div>}
               </div>
               <div className="border border-dashed border-border rounded-lg p-6 text-center text-muted-foreground bg-secondary/20">
                 <ExternalLink size={24} className="mx-auto mb-2 opacity-30" />
                 <p className="text-sm">Preview da Landing Page</p>
-                <a href={buildPublicUrl(getLPDomain(previewOpen.landing_page_id), previewOpen.slug)} target="_blank" rel="noopener noreferrer" className="text-xs text-accent underline mt-1 inline-block">Abrir URL pública →</a>
+                <a href={buildPublicUrl(previewOpen, getLP(previewOpen.landing_page_id))} target="_blank" rel="noopener noreferrer" className="text-xs text-accent underline mt-1 inline-block">Abrir URL pública →</a>
               </div>
             </div>
           )}
@@ -608,7 +610,7 @@ export default function LPInstances() {
         open={!!visualEditorFor}
         onOpenChange={(v) => { if (!v) setVisualEditorFor(null); }}
         instanceId={visualEditorFor?.id || null}
-        publicUrl={visualEditorFor ? buildPublicUrl(getLPDomain(visualEditorFor.landing_page_id), visualEditorFor.slug) : null}
+        publicUrl={visualEditorFor ? buildPublicUrl(visualEditorFor, getLP(visualEditorFor.landing_page_id)) : null}
       />
     </div>
   );

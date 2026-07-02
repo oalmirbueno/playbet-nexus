@@ -113,6 +113,7 @@ const TRACKING_ROLES = [
  *   sub3 = campanha    → criativo / campanha de origem
  */
 import { buildPublicLpUrl, buildTrackedAffiliateUrl } from "@/lib/trackingUrl";
+import { buildLpBaseUrl } from "@/lib/lpPublicUrl";
 
 export const buildTrackedUrl = buildTrackedAffiliateUrl;
 
@@ -398,6 +399,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
   // the affiliate URL (which is stored on the LP instance).
   const publicLpUrl = useMemo(() => {
     if (!useLp) return "";
+    if ((selectedInstance as any)?.lp_mode === "catalog") return buildLpBaseUrl(selectedLP?.domain, selectedLP?.route);
     return buildPublicLpUrl(selectedLP?.domain, selectedInstance?.slug, sub2Value, sub3Value);
   }, [useLp, selectedLP, selectedInstance, sub2Value, sub3Value]);
 
