@@ -119,6 +119,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     if (error) return null;
     const layout = (data?.meta as any)?.studioLayout;
     if (!layout || !Array.isArray(layout.layers)) return null;
+    if (layout.version !== 3) return null;
     return {
       layers: layout.layers,
       style: (layout.style ?? data?.style ?? "hype") as CreativeStyle,
