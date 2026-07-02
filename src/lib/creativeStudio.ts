@@ -266,8 +266,8 @@ export async function renderCreative(input: CreativeInput): Promise<RenderedCrea
     } else {
       await drawHype(ctx, size, input, gameImg, logoImg, brandAccent);
     }
-  } else {
-    // Still draw the branded chrome: logo + platform pill.
+  } else if (!input.hideAutoArt) {
+    // Still draw the branded chrome: logo + platform pill (only when auto art isn't overridden).
     const pad = Math.round(Math.min(size.w, size.h) * 0.055);
     drawLogo(ctx, logoImg, pad, pad, Math.round(size.w * 0.24));
     if (input.platformName) {
@@ -275,9 +275,9 @@ export async function renderCreative(input: CreativeInput): Promise<RenderedCrea
     }
   }
 
-  // Custom text layers on top
+  // Custom layers on top (text + image)
   if (input.layers && input.layers.length) {
-    drawTextLayers(ctx, size, input.layers);
+    await drawLayers(ctx, size, input.layers);
   }
 
   const dataUrl = canvas.toDataURL("image/png");
