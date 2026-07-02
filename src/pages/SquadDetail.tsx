@@ -377,7 +377,7 @@ export default function SquadDetail() {
                             <IconBtn title="Perfil" onClick={() => setProfileId(r.id)}><Edit3 size={12} /></IconBtn>
                             <IconBtn title="Links do influenciador" onClick={() => setLinksOfId(r.id)}><Link2 size={12} /></IconBtn>
                             {canManage && (
-                              <IconBtn title="Enviar reset de senha" onClick={() => sendPasswordReset(r.email ?? null)}>
+                              <IconBtn title="Enviar reset de senha" onClick={() => sendPasswordReset(r.id)}>
                                 <KeyRound size={12} />
                               </IconBtn>
                             )}
