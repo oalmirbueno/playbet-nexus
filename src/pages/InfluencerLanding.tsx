@@ -142,10 +142,11 @@ export default function InfluencerLanding() {
       });
       // Prefer the link's selected official asset for its game; fallback to the platform catalog for the rest.
       if (linkIcon) {
+        const catalogIcon = byName.get(linkIcon.slug);
         byName.set(linkIcon.slug, {
-          ...byName.get(linkIcon.slug),
+          ...(catalogIcon || {}),
           ...linkIcon,
-          icon_url: linkIcon.icon_url || byName.get(linkIcon.slug)?.icon_url || null,
+          icon_url: linkIcon.icon_url || catalogIcon?.icon_url || null,
         });
       }
       const arts = slugs.map((s) => byName.get(s) ?? { slug: s, name: s.replace(/-/g, " "), icon_url: null });
