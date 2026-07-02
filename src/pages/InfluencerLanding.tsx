@@ -113,16 +113,22 @@ export default function InfluencerLanding() {
     if (!slug) { setState("not_found"); return; }
 
     const hydrateGameArts = async (landingPageId: string | null, slugs: string[]) => {
-      if (!slugs || slugs.length === 0) { setGameArts([]); return; }
-      let platformId: string | null = null;
-      // Try to derive platform via tracking_links → platform_accounts
+      // Always try to enrich with the link's own game_icon_url as canonical fallback
       const { data: tl } = await supabase
         .from("tracking_links")
-        .select("platform_account_id, platform_accounts(platform_id)")
+        .select("game_slug, game_name, game_icon_url, platform_account_id, platform_accounts(platform_id)")
         .eq("landing_page_id", landingPageId ?? "")
         .limit(1)
         .maybeSingle();
-      platformId = (tl as any)?.platform_accounts?.platform_id ?? null;
+      const linkIcon: GameArt | null = (tl as any)?.game_slug
+        ? { slug: (tl as any).game_slug, name: (tl as any).game_name || (tl as any).game_slug, icon_url: (tl as any).game_icon_url || null }
+        : null;
+      const platformId: string | null = (tl as any)?.platform_accounts?.platform_id ?? null;
+
+      if (!slugs || slugs.length === 0) {
+        setGameArts(linkIcon ? [linkIcon] : []);
+        return;
+      }
 
       const q = supabase
         .from("platform_hyped_games")
@@ -135,9 +141,14 @@ export default function InfluencerLanding() {
           byName.set(g.game_slug, { slug: g.game_slug, name: g.game_name, icon_url: g.icon_url });
         }
       });
+      // Prefer platform_hyped_games icon; fallback to link's own icon for the matching slug
+      if (linkIcon && !byName.get(linkIcon.slug)?.icon_url) {
+        byName.set(linkIcon.slug, linkIcon);
+      }
       const arts = slugs.map((s) => byName.get(s) ?? { slug: s, name: s.replace(/-/g, " "), icon_url: null });
       setGameArts(arts);
     };
+
 
 
     if (!slug) { setState("not_found"); return; }
@@ -418,21 +429,27 @@ export default function InfluencerLanding() {
 
       {isSectionOn("features") && (
         <section className="px-6 pb-16">
-          <div className="max-w-xl mx-auto grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[
-              { icon: Trophy, title: "Bônus de Boas-Vindas", desc: "Ganhe bônus no primeiro depósito" },
-              { icon: Shield, title: "100% Seguro", desc: "Plataforma regulamentada e confiável" },
-              { icon: Gift, title: "Saques Rápidos", desc: "Receba seus ganhos via PIX em minutos" },
-            ].map((f) => (
-              <div key={f.title} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-5 text-center">
-                <f.icon size={24} className="text-emerald-400 mx-auto mb-3" />
-                <h3 className="text-sm font-semibold mb-1">{f.title}</h3>
-                <p className="text-xs text-gray-500">{f.desc}</p>
-              </div>
-            ))}
+          <div className="max-w-xl mx-auto">
+            <h2 className="text-center text-[11px] uppercase tracking-[0.18em] text-emerald-400/80 font-semibold mb-5">
+              Ofertas oficiais
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                { icon: Trophy, title: "Bônus de boas-vindas", desc: "Ganho no 1º depósito" },
+                { icon: Shield, title: "100% seguro", desc: "Plataforma regulamentada" },
+                { icon: Gift, title: "Saque via PIX", desc: "Em minutos, sem burocracia" },
+              ].map((f) => (
+                <div key={f.title} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 text-center">
+                  <f.icon size={22} className="text-emerald-400 mx-auto mb-2" />
+                  <h3 className="text-sm font-semibold mb-0.5">{f.title}</h3>
+                  <p className="text-[11px] text-gray-500">{f.desc}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
       )}
+
 
       {isSectionOn("games") && mode !== "odds" && (
         <section className="px-6 pb-16">
@@ -548,20 +565,19 @@ export default function InfluencerLanding() {
 
       {isSectionOn("cta") && (
         <section className="px-6 pb-16">
-          <div className="max-w-xl mx-auto bg-gradient-to-r from-emerald-600/20 to-emerald-500/10 border border-emerald-500/20 rounded-2xl p-8 text-center">
-            <Star size={28} className="text-emerald-400 mx-auto mb-3" />
-            <h2 className="text-xl font-bold mb-2">Não perca essa oportunidade</h2>
-            <p className="text-sm text-gray-400 mb-5">Cadastre-se agora e comece a jogar com bônus exclusivo.</p>
+          <div className="max-w-xl mx-auto text-center">
             <button
               onClick={handleCTA}
               disabled={clicking || !hasLink}
-              className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-8 py-3 rounded-xl text-sm transition-all shadow-lg shadow-emerald-500/25 active:scale-[0.97]"
+              className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-8 py-3.5 rounded-xl text-base transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-400/30 active:scale-[0.97]"
             >
-              {clicking ? "Redirecionando..." : "Quero Meu Bônus"} <ArrowRight size={16} />
+              {clicking ? "Redirecionando..." : ctaLabel} <ArrowRight size={18} />
             </button>
+            <p className="text-[11px] text-gray-500 mt-3">Cadastro rápido · Jogue com responsabilidade · 18+</p>
           </div>
         </section>
       )}
+
 
       {isSectionOn("footer") && (
         <footer className="border-t border-white/[0.06] py-6 px-6 text-center">
