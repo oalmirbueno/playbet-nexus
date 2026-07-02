@@ -24,7 +24,7 @@ type SectionDef = { id: string; label?: string; enabled: boolean };
 
 const SECTION_LABELS: Record<string, string> = {
   hero: "Hero",
-  features: "Benefícios",
+  features: "Ofertas oficiais (card)",
   games: "Jogos",
   odds: "Odds/Partidas",
   community: "Comunidade",

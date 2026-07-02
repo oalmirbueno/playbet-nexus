@@ -396,6 +396,7 @@ export default function InfluencerLanding() {
   const displayGames = mode === "single_game" && primaryGame ? [primaryGame] : gameArts;
   const heroTitle = hypeTitle || primaryGame?.name || "Oferta oficial";
   const heroSubtitle = hypeSub || (primaryGame ? "Bônus ativo para jogar agora." : "Bônus oficial e acesso rápido.");
+  const showGameArt = !!primaryGame?.icon_url;
   const copyBonusCode = async () => {
     if (!bonusOffer?.code) return;
     try { await navigator.clipboard.writeText(bonusOffer.code); } catch {}
@@ -405,54 +406,27 @@ export default function InfluencerLanding() {
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white overflow-x-hidden">
       {isSectionOn("hero") && (
-        <header className="relative pt-8 pb-16 px-6">
+        <header className="relative pt-8 pb-14 px-6">
           <div className="absolute inset-0 bg-gradient-to-b from-emerald-600/10 via-transparent to-transparent pointer-events-none" />
           <div className="max-w-xl mx-auto relative z-10 text-center">
-            <img src={logo} alt="PlayBet" className="h-20 mx-auto mb-10 opacity-90" />
+            <img src={logo} alt="PlayBet" className="h-16 mx-auto mb-8 opacity-90" />
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium mb-6">
               <Zap size={12} /> {mode === "odds" ? "Odds oficiais" : "Oferta oficial"}
             </div>
-            {mode === "single_game" && primaryGame ? (
-              <>
-                {primaryGame.icon_url ? (
-                  <img
-                    src={primaryGame.icon_url}
-                    alt={primaryGame.name}
-                    className="w-28 h-28 rounded-2xl mx-auto mb-5 object-cover shadow-xl shadow-emerald-500/20"
-                  />
-                ) : (
-                  <Gamepad2 size={80} className="text-emerald-400/60 mx-auto mb-5" />
-                )}
-                <h1 className="text-3xl sm:text-4xl font-extrabold leading-tight mb-3">
-                  {heroTitle}
-                </h1>
-              </>
-            ) : (
-              <h1 className="text-3xl sm:text-4xl font-extrabold leading-tight mb-4">
-                {heroTitle || (
-                  <>
-                    Jogue nos melhores<br />
-                    <span className="text-emerald-400">jogos de aposta</span> do Brasil
-                  </>
-                )}
-              </h1>
+            {showGameArt && (
+              <img
+                src={primaryGame!.icon_url!}
+                alt={primaryGame!.name}
+                className="w-24 h-24 rounded-2xl mx-auto mb-5 object-cover shadow-xl shadow-emerald-500/20"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+              />
             )}
-            <p className="text-gray-400 text-sm sm:text-base max-w-md mx-auto mb-8">
+            <h1 className="text-3xl sm:text-4xl font-extrabold leading-tight mb-3">
+              {heroTitle}
+            </h1>
+            <p className="text-gray-400 text-sm sm:text-base max-w-md mx-auto mb-7">
               {heroSubtitle}
             </p>
-            {bonusOffer?.enabled && (bonusOffer.title || bonusOffer.code) && (
-              <div className="max-w-sm mx-auto mb-5 rounded-2xl border border-emerald-500/25 bg-emerald-500/10 p-3">
-                <div className="flex items-center justify-center gap-2 text-sm font-bold text-emerald-300">
-                  <Gift size={16} /> {bonusOffer.title || "Bônus ativo"}
-                </div>
-                {bonusOffer.code && (
-                  <button onClick={copyBonusCode} className="mt-2 inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.06] px-3 py-1.5 font-mono text-sm font-bold tracking-wider">
-                    {bonusOffer.code} <Copy size={13} />
-                  </button>
-                )}
-                {bonusOffer.note && <p className="mt-2 text-[11px] text-gray-400">{bonusOffer.note}</p>}
-              </div>
-            )}
             <button
               onClick={handleCTA}
               disabled={clicking || !hasLink}
@@ -467,28 +441,48 @@ export default function InfluencerLanding() {
         </header>
       )}
 
-      {isSectionOn("features") && (
-        <section className="px-6 pb-16">
-          <div className="max-w-xl mx-auto">
-            <h2 className="text-center text-[11px] uppercase tracking-[0.18em] text-emerald-400/80 font-semibold mb-5">
-              Ofertas oficiais
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {[
-                { icon: Gift, title: bonusOffer?.title || "Bônus ativo", desc: bonusOffer?.code ? `Código ${bonusOffer.code}` : "Oferta disponível" },
-                { icon: Trophy, title: mode === "odds" ? "Odds" : "Jogo", desc: primaryGame?.name || "Selecionado" },
-                { icon: Shield, title: "PIX", desc: "Saque rápido" },
-              ].map((f) => (
-                <div key={f.title} className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 text-center">
-                  <f.icon size={22} className="text-emerald-400 mx-auto mb-2" />
-                  <h3 className="text-sm font-semibold mb-0.5">{f.title}</h3>
-                  <p className="text-[11px] text-gray-500">{f.desc}</p>
+      {isSectionOn("features") && (bonusOffer?.enabled || primaryGame) && (
+        <section className="px-6 pb-14">
+          <div className="max-w-md mx-auto">
+            <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-b from-emerald-500/[0.08] to-white/[0.02] p-6">
+              <div className="flex items-center gap-4">
+                {showGameArt ? (
+                  <img
+                    src={primaryGame!.icon_url!}
+                    alt={primaryGame!.name}
+                    className="w-14 h-14 rounded-xl object-cover shrink-0"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center shrink-0">
+                    <Gift size={22} className="text-emerald-400" />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="text-[10px] uppercase tracking-[0.16em] text-emerald-400/80 font-semibold mb-0.5">
+                    Oferta oficial
+                  </p>
+                  <h3 className="text-base font-bold truncate">
+                    {bonusOffer?.title || primaryGame?.name || "Bônus ativo"}
+                  </h3>
                 </div>
-              ))}
+              </div>
+              {bonusOffer?.enabled && bonusOffer.code && (
+                <button
+                  onClick={copyBonusCode}
+                  className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] hover:bg-white/[0.08] px-4 py-3 font-mono text-sm font-bold tracking-widest transition"
+                >
+                  {bonusOffer.code} <Copy size={14} />
+                </button>
+              )}
+              {bonusOffer?.note && (
+                <p className="mt-3 text-[11px] text-gray-500 text-center">{bonusOffer.note}</p>
+              )}
             </div>
           </div>
         </section>
       )}
+
 
 
       {isSectionOn("games") && mode !== "odds" && (
