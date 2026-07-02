@@ -112,15 +112,23 @@ export default function InfluencerLanding() {
   useEffect(() => {
     if (!slug) { setState("not_found"); return; }
 
-    const hydrateGameArts = async (landingPageId: string | null, instanceId: string | null, slugs: string[]) => {
+    const hydrateGameArts = async (
+      landingPageId: string | null,
+      instanceId: string | null,
+      slugs: string[],
+      fallback?: { game_slug?: string | null; game_name?: string | null; game_icon_url?: string | null },
+    ) => {
       // Always try to enrich with the link's own game_icon_url as canonical fallback
       let tlQuery = supabase
         .from("tracking_links")
         .select("game_slug, game_name, game_icon_url, platform_account_id, platform_accounts(platform_id)");
       tlQuery = instanceId ? tlQuery.eq("landing_page_instance_id", instanceId) : tlQuery.eq("landing_page_id", landingPageId ?? "");
       const { data: tl } = await tlQuery.limit(1).maybeSingle();
-      const linkIcon: GameArt | null = (tl as any)?.game_slug
-        ? { slug: (tl as any).game_slug, name: (tl as any).game_name || (tl as any).game_slug, icon_url: (tl as any).game_icon_url || null }
+      const fallbackSlug = fallback?.game_slug || (tl as any)?.game_slug;
+      const fallbackName = fallback?.game_name || (tl as any)?.game_name || fallbackSlug;
+      const fallbackIcon = fallback?.game_icon_url || (tl as any)?.game_icon_url || null;
+      const linkIcon: GameArt | null = fallbackSlug
+        ? { slug: fallbackSlug, name: fallbackName || fallbackSlug, icon_url: fallbackIcon }
         : null;
       const platformId: string | null = (tl as any)?.platform_accounts?.platform_id ?? null;
 
@@ -234,7 +242,11 @@ export default function InfluencerLanding() {
           layout_config: (instance as any).layout_config,
           hype_copy: (instance as any).hype_copy,
         });
-        await hydrateGameArts(lpBase.id, instance.id, (instance as any).game_slugs || []);
+        await hydrateGameArts(lpBase.id, instance.id, (instance as any).game_slugs || [], {
+          game_slug: (instance as any).hype_copy?.game_slug,
+          game_name: (instance as any).hype_copy?.game_name,
+          game_icon_url: (instance as any).hype_copy?.game_icon_url,
+        });
         await finalize(instance.affiliate_link, instance.influencer_id, inf?.name || "", instance.id, instance.landing_page_id);
         return;
       }
@@ -261,7 +273,11 @@ export default function InfluencerLanding() {
           layout_config: (instance as any).layout_config,
           hype_copy: (instance as any).hype_copy,
         });
-        await hydrateGameArts(instance.landing_page_id, instance.id, (instance as any).game_slugs || []);
+        await hydrateGameArts(instance.landing_page_id, instance.id, (instance as any).game_slugs || [], {
+          game_slug: (instance as any).hype_copy?.game_slug,
+          game_name: (instance as any).hype_copy?.game_name,
+          game_icon_url: (instance as any).hype_copy?.game_icon_url,
+        });
         await finalize(instance.affiliate_link, instance.influencer_id, inf?.name || "", instance.id, instance.landing_page_id);
         return;
       }
