@@ -296,7 +296,7 @@ function NewManagerDialog({
 }) {
   const { toast } = useToast();
   const [personKey, setPersonKey] = useState<string>("");
-  const [squadId, setSquadId] = useState("none");
+  const [squadIds, setSquadIds] = useState<string[]>([]);
 
   const usedInfluencerIds = useMemo(() => new Set(existingManagers.map(m => m.influencer_id).filter(Boolean) as string[]), [existingManagers]);
   const usedSocioIds = useMemo(() => new Set(existingManagers.map(m => m.socio_id).filter(Boolean) as string[]), [existingManagers]);
@@ -309,25 +309,39 @@ function NewManagerDialog({
     return null;
   }, [personKey, socios, influencers]);
 
+  const hierarchyMeta =
+    squadIds.length >= 5 ? { label: "Diretor de Squads", tone: "text-fuchsia-500" }
+    : squadIds.length >= 3 ? { label: "Gerente Diretor", tone: "text-indigo-500" }
+    : { label: "Gerente", tone: "text-emerald-500" };
+
+  function toggleSquad(id: string) {
+    setSquadIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
+
   async function save() {
     if (!selected) return toast({ title: "Selecione uma pessoa", variant: "destructive" });
     const baseName = selected.name.trim();
     const slug = baseName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + Math.random().toString(36).slice(2, 6);
-    const { error } = await supabase.from("managers").insert({
+    const { data: inserted, error } = await supabase.from("managers").insert({
       name: baseName,
       slug,
       team_name: baseName,
-      squad_id: squadId === "none" ? null : squadId,
+      squad_id: squadIds[0] ?? null,
       influencer_id: selected.type === "influencer" ? selected.id : null,
       socio_id: selected.type === "socio" ? selected.id : null,
-    });
-    if (error) return toast({ title: "Erro", description: error.message, variant: "destructive" });
-    setPersonKey(""); setSquadId("none"); onOpenChange(false); onCreated();
+    }).select("id").single();
+    if (error || !inserted) return toast({ title: "Erro", description: error?.message ?? "falha", variant: "destructive" });
+    if (squadIds.length > 0) {
+      await supabase.from("manager_squads").insert(
+        squadIds.map(sid => ({ manager_id: inserted.id, squad_id: sid }))
+      );
+    }
+    setPersonKey(""); setSquadIds([]); onOpenChange(false); onCreated();
     toast({
-      title: "Gerente criado",
+      title: `${hierarchyMeta.label} criado`,
       description: selected.type === "socio"
-        ? "Sócio vinculado como gerente — remuneração apenas via sócio (não recebe comissão de gerente)."
-        : "Influenciador promovido a gerente.",
+        ? "Sócio vinculado — remuneração apenas via sócio (não recebe comissão de gerente)."
+        : `${squadIds.length} squad${squadIds.length === 1 ? "" : "s"} sob responsabilidade.`,
     });
   }
 
