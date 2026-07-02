@@ -208,7 +208,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
           setCopy(prev => ({
             title: prev.title || gname || prev.title,
             subtitle: prev.subtitle || hype || adaptiveSubtitle(m, gname, pName),
-            cta_label: prev.cta_label || categoryCta(cat, gname),
+            cta_label: prev.cta_label || ctaForMode(m, cat, gname),
           }));
           setCommunity(prev => ({
             enabled: prev.enabled,
@@ -221,7 +221,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
             title: prev.title || (isBonusCategory(cat) ? `Bônus ${gname || "exclusivo"}` : "Oferta oficial"),
             code: prev.code,
             note: prev.note || "Use no cadastro.",
-            cta_label: prev.cta_label || categoryCta(cat, gname),
+            cta_label: prev.cta_label || ctaForMode(m, cat, gname),
           }));
         }
 
