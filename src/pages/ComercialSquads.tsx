@@ -25,6 +25,7 @@ interface Influencer { id: string; name: string; slug: string; manager_id: strin
 interface Socio { id: string; nome: string }
 
 export default function ComercialSquads() {
+  const nav = useNavigate();
   const [squads, setSquads] = useState<Squad[]>([]);
   const [managers, setManagers] = useState<Manager[]>([]);
   const [directors, setDirectors] = useState<Director[]>([]);
