@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Gamepad2, Shield, ArrowRight, Zap, Trophy, Gift, Users, Copy } from "lucide-react";
+import { Gamepad2, ArrowRight, Zap, Gift, Users, Copy } from "lucide-react";
 import logo from "@/assets/logo.png";
 
 type LoadState = "loading" | "ready" | "not_found" | "inactive" | "no_domain";
@@ -99,6 +99,74 @@ interface GameArt {
   icon_url: string | null;
 }
 
+const SUPABASE_URL = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_SUPABASE_URL ?? "";
+
+function proxiedImageUrl(url?: string | null) {
+  if (!url) return null;
+  if (url.startsWith("data:") || url.startsWith("blob:") || url.startsWith("/")) return url;
+  if (!SUPABASE_URL) return url;
+  return `${SUPABASE_URL}/functions/v1/image-proxy?url=${encodeURIComponent(url)}`;
+}
+
+function normalizeSlug(value?: string | null) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function compactUnique(values: Array<string | null | undefined>) {
+  return Array.from(new Set(values.map(normalizeSlug).filter(Boolean)));
+}
+
+function GameImage({
+  art,
+  className,
+  fallbackClassName,
+  iconSize = 22,
+}: {
+  art?: GameArt | null;
+  className: string;
+  fallbackClassName: string;
+  iconSize?: number;
+}) {
+  const [src, setSrc] = useState(() => art?.icon_url || null);
+  const [failedDirect, setFailedDirect] = useState(false);
+
+  useEffect(() => {
+    setSrc(art?.icon_url || null);
+    setFailedDirect(false);
+  }, [art?.icon_url]);
+
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt={art?.name || "Jogo"}
+        className={className}
+        loading="lazy"
+        onError={() => {
+          const proxy = proxiedImageUrl(art?.icon_url);
+          if (!failedDirect && proxy && proxy !== src) {
+            setFailedDirect(true);
+            setSrc(proxy);
+            return;
+          }
+          setSrc(null);
+        }}
+      />
+    );
+  }
+
+  return (
+    <div className={fallbackClassName} role="img" aria-label={art?.name || "Jogo sem imagem"}>
+      <Gift size={iconSize} className="text-emerald-400" />
+    </div>
+  );
+}
+
 export default function InfluencerLanding() {
   const { slug: pathSlug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
@@ -116,36 +184,67 @@ export default function InfluencerLanding() {
       landingPageId: string | null,
       instanceId: string | null,
       slugs: string[],
-      fallback?: { game_slug?: string | null; game_name?: string | null; game_icon_url?: string | null },
+      fallback?: { game_slug?: string | null; game_name?: string | null; game_icon_url?: string | null; source_tracking_link_id?: string | null },
     ) => {
-      // Always try to enrich with the link's own game_icon_url as canonical fallback
-      let tlQuery = supabase
+      // Always prefer the LP source link; old instances can have several links and the first one may not carry artwork.
+      let tl: any = null;
+      if (fallback?.source_tracking_link_id) {
+        const { data } = await supabase
+          .from("tracking_links")
+          .select("game_slug, game_name, game_icon_url, platform_account_id, platform_accounts(platform_id)")
+          .eq("id", fallback.source_tracking_link_id)
+          .maybeSingle();
+        tl = data;
+      }
+
+      if (!tl) {
+        let tlQuery = supabase
         .from("tracking_links")
         .select("game_slug, game_name, game_icon_url, platform_account_id, platform_accounts(platform_id)");
-      tlQuery = instanceId ? tlQuery.eq("landing_page_instance_id", instanceId) : tlQuery.eq("landing_page_id", landingPageId ?? "");
-      const { data: tl } = await tlQuery.limit(1).maybeSingle();
-      const fallbackSlug = fallback?.game_slug || (tl as any)?.game_slug;
-      const fallbackName = fallback?.game_name || (tl as any)?.game_name || fallbackSlug;
-      const fallbackIcon = fallback?.game_icon_url || (tl as any)?.game_icon_url || null;
+        tlQuery = instanceId ? tlQuery.eq("landing_page_instance_id", instanceId) : tlQuery.eq("landing_page_id", landingPageId ?? "");
+        const { data } = await tlQuery.order("updated_at", { ascending: false }).limit(1).maybeSingle();
+        tl = data;
+      }
+
+      const fallbackSlug = normalizeSlug(fallback?.game_slug || tl?.game_slug);
+      const fallbackName = fallback?.game_name || tl?.game_name || fallbackSlug;
+      const fallbackIcon = fallback?.game_icon_url || tl?.game_icon_url || null;
+      const effectiveSlugs = compactUnique([...(slugs || []), fallbackSlug]);
       const linkIcon: GameArt | null = fallbackSlug
         ? { slug: fallbackSlug, name: fallbackName || fallbackSlug, icon_url: fallbackIcon }
         : null;
-      const platformId: string | null = (tl as any)?.platform_accounts?.platform_id ?? null;
+      const platformId: string | null = tl?.platform_accounts?.platform_id ?? null;
 
-      if (!slugs || slugs.length === 0) {
-        setGameArts(linkIcon ? [linkIcon] : []);
+      if (effectiveSlugs.length === 0) {
+        setGameArts([]);
         return;
       }
 
-      const q = supabase
+      let catalog: any[] = [];
+      const baseQuery = supabase
         .from("platform_hyped_games")
         .select("game_slug, game_name, icon_url, platform_id")
-        .in("game_slug", slugs);
-      const { data } = platformId ? await q.eq("platform_id", platformId) : await q;
+        .in("game_slug", effectiveSlugs);
+      const { data } = platformId ? await baseQuery.eq("platform_id", platformId) : await baseQuery;
+      catalog = data ?? [];
+
+      // If the platform-specific catalog has no image yet, reuse any official asset already known for this game slug.
+      const missingIcon = effectiveSlugs.some((slug) => !catalog.some((g: any) => g.game_slug === slug && g.icon_url));
+      if (missingIcon) {
+        const { data: globalCatalog } = await supabase
+          .from("platform_hyped_games")
+          .select("game_slug, game_name, icon_url, platform_id")
+          .in("game_slug", effectiveSlugs)
+          .not("icon_url", "is", null);
+        catalog = [...catalog, ...(globalCatalog ?? [])];
+      }
+
       const byName = new Map<string, GameArt>();
-      (data ?? []).forEach((g: any) => {
-        if (!byName.has(g.game_slug)) {
-          byName.set(g.game_slug, { slug: g.game_slug, name: g.game_name, icon_url: g.icon_url });
+      catalog.forEach((g: any) => {
+        const key = normalizeSlug(g.game_slug);
+        const current = byName.get(key);
+        if (!current || (!current.icon_url && g.icon_url)) {
+          byName.set(key, { slug: key, name: g.game_name || key.replace(/-/g, " "), icon_url: g.icon_url });
         }
       });
       // Prefer the link's selected official asset for its game; fallback to the platform catalog for the rest.
@@ -157,7 +256,7 @@ export default function InfluencerLanding() {
           icon_url: linkIcon.icon_url || catalogIcon?.icon_url || null,
         });
       }
-      const arts = slugs.map((s) => byName.get(s) ?? { slug: s, name: s.replace(/-/g, " "), icon_url: null });
+      const arts = effectiveSlugs.map((s) => byName.get(s) ?? { slug: s, name: s.replace(/-/g, " "), icon_url: null });
       setGameArts(arts);
     };
 
@@ -246,6 +345,7 @@ export default function InfluencerLanding() {
           game_slug: (instance as any).hype_copy?.game_slug,
           game_name: (instance as any).hype_copy?.game_name,
           game_icon_url: (instance as any).hype_copy?.game_icon_url,
+          source_tracking_link_id: (instance as any).source_tracking_link_id,
         });
         await finalize(instance.affiliate_link, instance.influencer_id, inf?.name || "", instance.id, instance.landing_page_id);
         return;
@@ -277,6 +377,7 @@ export default function InfluencerLanding() {
           game_slug: (instance as any).hype_copy?.game_slug,
           game_name: (instance as any).hype_copy?.game_name,
           game_icon_url: (instance as any).hype_copy?.game_icon_url,
+          source_tracking_link_id: (instance as any).source_tracking_link_id,
         });
         await finalize(instance.affiliate_link, instance.influencer_id, inf?.name || "", instance.id, instance.landing_page_id);
         return;
@@ -396,7 +497,6 @@ export default function InfluencerLanding() {
   const displayGames = mode === "single_game" && primaryGame ? [primaryGame] : gameArts;
   const heroTitle = hypeTitle || primaryGame?.name || "Oferta oficial";
   const heroSubtitle = hypeSub || (primaryGame ? "Bônus ativo para jogar agora." : "Bônus oficial e acesso rápido.");
-  const showGameArt = !!primaryGame?.icon_url;
   const copyBonusCode = async () => {
     if (!bonusOffer?.code) return;
     try { await navigator.clipboard.writeText(bonusOffer.code); } catch {}
@@ -413,12 +513,12 @@ export default function InfluencerLanding() {
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium mb-6">
               <Zap size={12} /> {mode === "odds" ? "Odds oficiais" : "Oferta oficial"}
             </div>
-            {showGameArt && (
-              <img
-                src={primaryGame!.icon_url!}
-                alt={primaryGame!.name}
+            {primaryGame && (
+              <GameImage
+                art={primaryGame}
                 className="w-24 h-24 rounded-2xl mx-auto mb-5 object-cover shadow-xl shadow-emerald-500/20"
-                onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                fallbackClassName="w-24 h-24 rounded-2xl mx-auto mb-5 bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center shadow-xl shadow-emerald-500/10"
+                iconSize={28}
               />
             )}
             <h1 className="text-3xl sm:text-4xl font-extrabold leading-tight mb-3">
@@ -446,18 +546,11 @@ export default function InfluencerLanding() {
           <div className="max-w-md mx-auto">
             <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-b from-emerald-500/[0.08] to-white/[0.02] p-6">
               <div className="flex items-center gap-4">
-                {showGameArt ? (
-                  <img
-                    src={primaryGame!.icon_url!}
-                    alt={primaryGame!.name}
-                    className="w-14 h-14 rounded-xl object-cover shrink-0"
-                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
-                  />
-                ) : (
-                  <div className="w-14 h-14 rounded-xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center shrink-0">
-                    <Gift size={22} className="text-emerald-400" />
-                  </div>
-                )}
+                <GameImage
+                  art={primaryGame}
+                  className="w-14 h-14 rounded-xl object-cover shrink-0"
+                  fallbackClassName="w-14 h-14 rounded-xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center shrink-0"
+                />
                 <div className="min-w-0 flex-1 text-left">
                   <p className="text-[10px] uppercase tracking-[0.16em] text-emerald-400/80 font-semibold mb-0.5">
                     Oferta oficial
