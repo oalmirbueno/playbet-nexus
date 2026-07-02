@@ -134,6 +134,20 @@ export default function SquadDetail() {
 
   const { squad, roster, perf, managers, directors, activity, invalidateAll } = useSquadDetail(squadId);
 
+  // Available squads for the header switcher (RLS filters for managers automatically).
+  const availableSquads = useQuery({
+    queryKey: ["squad-switcher-list"],
+    queryFn: async () => {
+      const { data, error } = await db
+        .from("squads")
+        .select("id,name,color")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return (data ?? []) as { id: string; name: string; color: string }[];
+    },
+  });
+
   const [distributeOpen, setDistributeOpen] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
   const [linksOfId, setLinksOfId] = useState<string | null>(null);
