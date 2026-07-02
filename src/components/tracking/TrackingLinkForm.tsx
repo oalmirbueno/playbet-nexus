@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CheckCircle2, ArrowRight, Loader2, Plus, Sparkles, Wand2, Flame } from "lucide-react";
+import { CheckCircle2, ArrowRight, Loader2, Plus, Sparkles, Wand2, Flame, RefreshCw } from "lucide-react";
 import type { TrackingLinkRow } from "@/services/trackingService";
 import { landingPageInstanceService } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
@@ -141,6 +141,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
   const qc = useQueryClient();
   const [creatingInstance, setCreatingInstance] = useState(false);
   const [batchApplying, setBatchApplying] = useState(false);
+  const [refreshingHype, setRefreshingHype] = useState(false);
 
   // ── Link intelligence: auto-detect platform/category/game from pasted URL ──
   const detection = useMemo(
@@ -198,11 +199,28 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
         .eq("platform_id", currentPlatformId as string)
         .eq("is_active", true)
         .order("priority", { ascending: true })
-        .limit(5);
+        .limit(20);
       if (error) throw error;
       return data ?? [];
     },
   });
+
+  const refreshHypedGames = async () => {
+    if (!currentPlatformId) return;
+    setRefreshingHype(true);
+    try {
+      const { error } = await supabase.functions.invoke("hyped-games-refresh", {
+        body: { platform_id: currentPlatformId },
+      });
+      if (error) throw error;
+      await qc.invalidateQueries({ queryKey: ["platform_hyped_games", currentPlatformId] });
+      toast({ title: "Jogos atualizados", description: "Top jogos e logos reais recarregados." });
+    } catch (e: any) {
+      toast({ title: "Falha ao atualizar", description: e?.message || "Tente novamente.", variant: "destructive" });
+    } finally {
+      setRefreshingHype(false);
+    }
+  };
 
   const applyHypedGame = (g: any) => {
     setForm(p => ({
@@ -618,51 +636,65 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
               )}
 
               {/* Jogos hypados da casa */}
-              {currentPlatformId && hypedGames.length > 0 && (
+              {currentPlatformId && (
                 <div className="rounded-md border border-orange-500/25 bg-orange-500/5 p-2.5 space-y-2">
                   <div className="flex items-center gap-1.5 text-[10px] flex-wrap">
                     <Flame size={11} className="text-orange-400" />
-                    <span className="uppercase tracking-wider font-semibold text-orange-400">Top 5 jogos em alta</span>
-                    <span className="text-muted-foreground">nesta casa · clique para aplicar</span>
-                    {!form.id && (
+                    <span className="uppercase tracking-wider font-semibold text-orange-400">Jogos em alta</span>
+                    {hypedGames.length > 0 && <span className="text-muted-foreground">· {hypedGames.length} · clique para aplicar</span>}
+                    <button
+                      type="button"
+                      onClick={refreshHypedGames}
+                      disabled={refreshingHype}
+                      className="ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded border border-orange-500/40 bg-orange-500/10 text-orange-300 hover:bg-orange-500/20 text-[9px] font-medium disabled:opacity-60"
+                      title="Buscar top jogos e logos reais desta casa"
+                    >
+                      {refreshingHype ? <Loader2 size={9} className="animate-spin" /> : <RefreshCw size={9} />}
+                      {refreshingHype ? "Atualizando" : "Atualizar"}
+                    </button>
+                    {!form.id && hypedGames.length > 0 && (
                       <button
                         type="button"
                         onClick={applyAllHypedBatch}
                         disabled={batchApplying}
-                        className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded border border-orange-500/40 bg-orange-500/10 text-orange-300 hover:bg-orange-500/20 text-[10px] font-semibold disabled:opacity-60"
-                        title="Cria 1 link para cada jogo do Top 5, preenchendo prioridade e motivo do hype"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-orange-500/40 bg-orange-500/10 text-orange-300 hover:bg-orange-500/20 text-[10px] font-semibold disabled:opacity-60"
+                        title="Cria 1 link para cada jogo em alta"
                       >
                         {batchApplying ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />}
-                        {batchApplying ? "Criando…" : `Aplicar todos em lote (${hypedGames.length})`}
+                        {batchApplying ? "Criando…" : `Lote (${hypedGames.length})`}
                       </button>
                     )}
                   </div>
-                  <div className="grid grid-cols-5 gap-1.5">
-                    {hypedGames.map((g: any) => {
-                      const selected = form.game_slug === g.game_slug;
-                      return (
-                        <button
-                          key={g.id}
-                          type="button"
-                          onClick={() => applyHypedGame(g)}
-                          className={`group flex flex-col items-center gap-1 rounded-md border p-1.5 text-center transition ${
-                            selected
-                              ? "border-orange-500/60 bg-orange-500/10"
-                              : "border-border/50 bg-background/40 hover:border-orange-500/40 hover:bg-orange-500/5"
-                          }`}
-                          title={g.hype_reason || g.game_name}
-                        >
-                          <div className="relative">
-                            <GameArtwork slug={g.game_slug} name={g.game_name} iconUrl={g.icon_url} size="sm" />
-                            <span className="absolute -top-1 -left-1 text-[8px] font-bold bg-orange-500 text-black rounded-full w-3.5 h-3.5 flex items-center justify-center">
-                              {g.priority}
-                            </span>
-                          </div>
-                          <span className="text-[9px] font-medium truncate w-full leading-tight">{g.game_name}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  {hypedGames.length > 0 ? (
+                    <div className="invisible-scroll flex gap-1.5 overflow-x-auto snap-x pb-1 -mx-0.5 px-0.5">
+                      {hypedGames.map((g: any) => {
+                        const selected = form.game_slug === g.game_slug;
+                        return (
+                          <button
+                            key={g.id}
+                            type="button"
+                            onClick={() => applyHypedGame(g)}
+                            className={`snap-start shrink-0 w-[76px] flex flex-col items-center gap-1 rounded-md border p-1.5 text-center transition ${
+                              selected
+                                ? "border-orange-500/60 bg-orange-500/10"
+                                : "border-border/50 bg-background/40 hover:border-orange-500/40 hover:bg-orange-500/5"
+                            }`}
+                            title={g.hype_reason || g.game_name}
+                          >
+                            <div className="relative">
+                              <GameArtwork slug={g.game_slug} name={g.game_name} iconUrl={g.icon_url} size="md" />
+                              <span className="absolute -top-1 -right-1 text-[8px] font-bold bg-orange-500 text-black rounded-full w-3.5 h-3.5 flex items-center justify-center">
+                                {g.priority}
+                              </span>
+                            </div>
+                            <span className="text-[9px] font-medium truncate w-full leading-tight">{g.game_name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-muted-foreground italic">Nenhum jogo cadastrado. Clique em Atualizar para buscar do catálogo da casa.</p>
+                  )}
                 </div>
               )}
 
