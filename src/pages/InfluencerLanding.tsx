@@ -112,6 +112,36 @@ export default function InfluencerLanding() {
   useEffect(() => {
     if (!slug) { setState("not_found"); return; }
 
+    const hydrateGameArts = async (landingPageId: string | null, slugs: string[]) => {
+      if (!slugs || slugs.length === 0) { setGameArts([]); return; }
+      let platformId: string | null = null;
+      // Try to derive platform via tracking_links → platform_accounts
+      const { data: tl } = await supabase
+        .from("tracking_links")
+        .select("platform_account_id, platform_accounts(platform_id)")
+        .eq("landing_page_id", landingPageId ?? "")
+        .limit(1)
+        .maybeSingle();
+      platformId = (tl as any)?.platform_accounts?.platform_id ?? null;
+
+      const q = supabase
+        .from("platform_hyped_games")
+        .select("game_slug, game_name, icon_url, platform_id")
+        .in("game_slug", slugs);
+      const { data } = platformId ? await q.eq("platform_id", platformId) : await q;
+      const byName = new Map<string, GameArt>();
+      (data ?? []).forEach((g: any) => {
+        if (!byName.has(g.game_slug)) {
+          byName.set(g.game_slug, { slug: g.game_slug, name: g.game_name, icon_url: g.icon_url });
+        }
+      });
+      const arts = slugs.map((s) => byName.get(s) ?? { slug: s, name: s.replace(/-/g, " "), icon_url: null });
+      setGameArts(arts);
+    };
+
+
+    if (!slug) { setState("not_found"); return; }
+
     (async () => {
       const hostname = window.location.hostname;
       const clickId = generateClickId();
