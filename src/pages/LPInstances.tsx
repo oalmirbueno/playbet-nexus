@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Edit, Copy, Eye, XCircle, CheckCircle, Search, ExternalLink, AlertTriangle, Link2, Radio, Zap } from "lucide-react";
+import { Plus, Edit, Copy, Eye, XCircle, CheckCircle, Search, ExternalLink, AlertTriangle, Link2, Radio, Zap, Wand2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useLandingPageInstances, useLandingPages, useInfluencers, usePlatforms } from "@/hooks/useSupabaseQuery";
