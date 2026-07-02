@@ -216,9 +216,9 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   //  · With LP → public LP URL (visitors hit the LP, click CTA, then get the affiliate)
   //  · Without LP → affiliate URL directly with sub1/sub2/sub3
   const finalUrl = useMemo(() => {
-    if (landingPageId && selectedLP?.domain) {
+    if (landingPageId) {
       const slug = plannedInstanceSlug || (selectedInfluencer as any)?.slug || "";
-      const lp = buildPublicLpUrl(selectedLP.domain, slug, influencerId || "", campanhaId || "");
+      const lp = buildPublicLpUrl(selectedLP?.domain, slug, influencerId || "", campanhaId || "");
       if (lp) return lp;
     }
     return trackedAffiliateUrl;

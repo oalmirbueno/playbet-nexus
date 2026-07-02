@@ -12,6 +12,7 @@ import { ArrowUp, ArrowDown, RefreshCw, ExternalLink, Loader2, Wand2, Users, Spa
 import { LP_MODE_LABELS, defaultLayoutConfig, type LpMode } from "@/lib/lpMode";
 import GameArtwork from "@/components/tracking/GameArtwork";
 import { suggestThreeOptions, computeOpportunityScore } from "@/lib/opportunityEngine";
+import { buildPublicLpUrl } from "@/lib/trackingUrl";
 
 interface Props {
   open: boolean;
@@ -178,14 +179,24 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         });
         setSmartOdds(Array.isArray(hc.smart_odds) ? hc.smart_odds : []);
 
-        // Load tracking link linked to this instance (source of truth for game/hype)
-        const { data: tl } = await supabase
+        // Load tracking link linked to this instance (source of truth for game/hype).
+        // Prefer the live instance relation, but fall back to source_tracking_link_id
+        // so already registered LPs keep working even if an older sync missed the FK.
+        let { data: tl } = await supabase
           .from("tracking_links")
           .select("id, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, platform_account_id, platform_accounts(platform_id, platforms(name))")
           .eq("landing_page_instance_id", instanceId)
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
+        if (!tl && (inst as any).source_tracking_link_id) {
+          const { data: sourceTl } = await supabase
+            .from("tracking_links")
+            .select("id, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, platform_account_id, platform_accounts(platform_id, platforms(name))")
+            .eq("id", (inst as any).source_tracking_link_id)
+            .maybeSingle();
+          tl = sourceTl;
+        }
         setLink(tl);
         const platformId = (tl as any)?.platform_accounts?.platform_id;
         const pName = (tl as any)?.platform_accounts?.platforms?.name || null;
@@ -452,7 +463,74 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         } as any)
         .eq("id", instanceId);
       if (error) throw new Error(error.message);
-      toast({ title: "LP salva", description: "Preview e link públicos atualizados." });
+
+      // Keep the already registered LP instance and only refresh the public share URLs
+      // of tracking links that point to it. This preserves the LP base/domain and
+      // avoids creating or "eliminating" the page when switching between modes.
+      let lpDomain: string | null = null;
+      if (instance?.landing_page_id) {
+        const { data: lp } = await supabase
+          .from("landing_pages")
+          .select("domain")
+          .eq("id", instance.landing_page_id)
+          .maybeSingle();
+        lpDomain = (lp as any)?.domain || null;
+      }
+
+      const { data: linkedTrackingLinks } = await supabase
+        .from("tracking_links")
+        .select("id, influencer_id, campanha_id")
+        .eq("landing_page_instance_id", instanceId);
+
+      let linksToSync = ((linkedTrackingLinks || []) as any[]);
+      if (!linksToSync.length && instance?.source_tracking_link_id) {
+        const { data: sourceTl } = await supabase
+          .from("tracking_links")
+          .select("id, influencer_id, campanha_id")
+          .eq("id", instance.source_tracking_link_id)
+          .maybeSingle();
+        if (sourceTl) linksToSync = [sourceTl as any];
+      }
+
+      const shareUrls = linksToSync
+        .map((tl) => buildPublicLpUrl(
+          lpDomain,
+          instance?.slug,
+          tl.influencer_id || instance?.influencer_id || "",
+          tl.campanha_id || "",
+        ))
+        .filter(Boolean);
+
+      await Promise.all(
+        linksToSync.map((tl, idx) => supabase
+          .from("tracking_links")
+          .update({
+            landing_page_id: instance?.landing_page_id || null,
+            landing_page_instance_id: instanceId,
+            final_url: shareUrls[idx] || null,
+            use_lp: true,
+            lp_auto_generated: true,
+          } as any)
+          .eq("id", tl.id)),
+      );
+
+      const publicShareUrl = shareUrls[0] || buildPublicLpUrl(lpDomain, instance?.slug, instance?.influencer_id || "", "") || publicUrl || "";
+      if (publicShareUrl) {
+        try { await navigator.clipboard.writeText(publicShareUrl); } catch {}
+      }
+
+      setInstance((prev: any) => prev ? {
+        ...prev,
+        lp_mode: mode,
+        game_slugs: gameSlugs,
+        layout_config: layoutConfig,
+        hype_copy,
+      } : prev);
+
+      toast({
+        title: "LP salva",
+        description: publicShareUrl ? "Página preservada e link de divulgação atualizado." : "Página preservada e preview atualizado.",
+      });
       setPreviewKey((k) => k + 1);
     } catch (e: any) {
       toast({ title: "Erro ao salvar", description: e?.message, variant: "destructive" });

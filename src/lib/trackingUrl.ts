@@ -10,6 +10,8 @@
  *  - Otherwise, the shared URL is the affiliate URL itself with sub1/2/3.
  */
 
+import { DEFAULT_LP_DOMAIN } from "@/lib/lpPublicUrl";
+
 export function appendParam(url: string, name: string, value: string): string {
   if (!url || !value) return url;
   try {
@@ -42,8 +44,10 @@ export function buildPublicLpUrl(
   sub2: string,
   sub3: string,
 ): string {
-  if (!lpDomain || !instanceSlug) return "";
-  const base = lpDomain.replace(/\/+$/, "");
+  if (!instanceSlug) return "";
+  const raw = (lpDomain && lpDomain.trim()) || DEFAULT_LP_DOMAIN;
+  let base = raw.replace(/\/+$/, "");
+  if (!/^https?:\/\//i.test(base)) base = `https://${base}`;
   let url = appendParam(base, "ref", instanceSlug);
   if (sub2) url = appendParam(url, "sub2", sub2);
   if (sub3) url = appendParam(url, "sub3", sub3);

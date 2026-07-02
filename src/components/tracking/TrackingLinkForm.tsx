@@ -251,9 +251,10 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
 
     setBatchApplying(true);
     try {
-      // Persist affiliate URL on the LP instance once (Com LP)
-      if (useLp && selectedInstance && selectedInstance.affiliate_link !== form.base_url) {
-        await landingPageInstanceService.update(selectedInstance.id, { affiliate_link: form.base_url });
+      // Persist the tracked deep affiliate URL on the LP instance once (Com LP).
+      // Never store the public LP URL here, otherwise the CTA can loop back into the LP.
+      if (useLp && selectedInstance && selectedInstance.affiliate_link !== trackedAffiliateUrl) {
+        await landingPageInstanceService.update(selectedInstance.id, { affiliate_link: trackedAffiliateUrl });
         await qc.invalidateQueries({ queryKey: ["landing_page_instances"] });
       }
 
@@ -415,10 +416,11 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
     && (useLp ? !!form.landing_page_instance_id : true);
 
   const handleSave = async () => {
-    // Persist the affiliate URL on the LP instance so the LP CTA can use it (Com LP only).
-    if (useLp && selectedInstance && form.base_url && selectedInstance.affiliate_link !== form.base_url) {
+    // Persist the tracked deep affiliate URL on the LP instance so the LP CTA can use it (Com LP only).
+    // A instância continua sendo a página cadastrada; o link público é salvo em final_url.
+    if (useLp && selectedInstance && form.base_url && selectedInstance.affiliate_link !== trackedAffiliateUrl) {
       try {
-        await landingPageInstanceService.update(selectedInstance.id, { affiliate_link: form.base_url });
+        await landingPageInstanceService.update(selectedInstance.id, { affiliate_link: trackedAffiliateUrl });
         await qc.invalidateQueries({ queryKey: ["landing_page_instances"] });
       } catch (e: any) {
         toast({ title: "Erro ao salvar link no botão da LP", description: e.message, variant: "destructive" });
