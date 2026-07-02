@@ -425,6 +425,9 @@ export default function Influencers() {
                           <span className="w-2 h-2 rounded-full" style={{ background: m.team_color }} />
                           <p className="text-sm font-semibold truncate">{m.team_name}</p>
                           {!m.is_active && <span className="badge-danger text-[9px]">Inativo</span>}
+                          {duplicateMgrIds.has(m.id) && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 border border-amber-500/30 font-medium" title="Existe outro gerente com este nome">Duplicado</span>
+                          )}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1 truncate">Gerente · {m.name}</p>
                         <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{m.slug}</p>
