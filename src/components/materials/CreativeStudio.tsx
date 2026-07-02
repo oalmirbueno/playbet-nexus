@@ -233,12 +233,12 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     dragRef.current = { id: layer.id, mode: "move", startX: e.clientX, startY: e.clientY, l0: layer };
   };
 
-  const onResizePointerDown = (e: React.PointerEvent, layer: Layer, corner: DragState extends { corner: infer C } ? C : never) => {
+  const onResizePointerDown = (e: React.PointerEvent, layer: Layer, corner: "br" | "bl" | "tr" | "tl") => {
     e.preventDefault();
     e.stopPropagation();
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
     setSelectedId(layer.id);
-    dragRef.current = { id: layer.id, mode: "resize", corner: corner as "br" | "bl" | "tr" | "tl", startX: e.clientX, startY: e.clientY, l0: layer };
+    dragRef.current = { id: layer.id, mode: "resize", corner, startX: e.clientX, startY: e.clientY, l0: layer };
   };
 
   const onStagePointerMove = (e: React.PointerEvent) => {
