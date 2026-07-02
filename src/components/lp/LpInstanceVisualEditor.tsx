@@ -109,7 +109,7 @@ function adaptiveSubtitle(mode: LpMode, gameName?: string | null, platformName?:
     return `Oferta ativa${gameName ? ` para ${gameName}` : ""}${platformName ? ` na ${platformName}` : ""}.`;
   if (mode === "multi_game")
     return "Jogos em alta com ofertas oficiais.";
-  return "Bônus oficial e acesso rápido.";
+  return "Acesso rápido às melhores oportunidades.";
 }
 
 export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId, publicUrl }: Props) {
@@ -206,7 +206,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
           const hype = (tl as any).hype_reason;
           const cat = (tl as any).link_category;
           setCopy(prev => ({
-            title: prev.title || gname || prev.title,
+            title: prev.title || titleForMode(m, gname),
             subtitle: prev.subtitle || hype || adaptiveSubtitle(m, gname, pName),
             cta_label: prev.cta_label || ctaForMode(m, cat, gname),
           }));
@@ -371,7 +371,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
     const nextCta = ctaForMode(nextMode, link?.link_category, gname);
     setSections(ensureCommunitySection(defaultLayoutConfig(nextMode).sections));
     setCopy((prev) => ({
-      title: prev.title && prev.title !== "Oferta oficial" && prev.title !== "Oportunidades PlayBet" ? prev.title : titleForMode(nextMode, gname),
+      title: titleForMode(nextMode, gname),
       subtitle: adaptiveSubtitle(nextMode, gname, platformName),
       cta_label: nextCta,
     }));
