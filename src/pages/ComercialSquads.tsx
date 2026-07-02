@@ -222,17 +222,41 @@ function SquadDirectorPicker({ squad, directors, onChanged }: { squad: Squad; di
   );
 }
 
-function NewDirectorDialog({ open, onOpenChange, onCreated }: { open: boolean; onOpenChange: (v: boolean) => void; onCreated: () => void }) {
+function NewDirectorDialog({
+  open, onOpenChange, socios, managers, influencers, existingDirectors, onCreated,
+}: {
+  open: boolean; onOpenChange: (v: boolean) => void;
+  socios: Socio[]; managers: Manager[]; influencers: Influencer[];
+  existingDirectors: Director[];
+  onCreated: () => void;
+}) {
   const { toast } = useToast();
-  const [name, setName] = useState("");
+  const [personKey, setPersonKey] = useState<string>("");
   const [color, setColor] = useState("#6366f1");
   const [title, setTitle] = useState("Diretor de Squads");
+
+  const usedNames = useMemo(
+    () => new Set(existingDirectors.map(d => d.name.trim().toLowerCase())),
+    [existingDirectors],
+  );
+
+  const selectedName = useMemo(() => {
+    if (!personKey) return "";
+    const [type, id] = personKey.split(":");
+    if (type === "socio") return socios.find(s => s.id === id)?.nome ?? "";
+    if (type === "manager") return managers.find(m => m.id === id)?.name ?? "";
+    if (type === "influencer") return influencers.find(i => i.id === id)?.name ?? "";
+    return "";
+  }, [personKey, socios, managers, influencers]);
+
   async function save() {
-    if (!name.trim()) return toast({ title: "Nome obrigatório", variant: "destructive" });
-    const slug = name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + Math.random().toString(36).slice(2, 6);
-    const { error } = await supabase.from("directors").insert({ name: name.trim(), slug, title, color });
+    const name = selectedName.trim();
+    if (!name) return toast({ title: "Escolha uma pessoa", variant: "destructive" });
+    if (usedNames.has(name.toLowerCase())) return toast({ title: "Já existe diretor com este nome", variant: "destructive" });
+    const slug = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") + "-" + Math.random().toString(36).slice(2, 6);
+    const { error } = await supabase.from("directors").insert({ name, slug, title, color });
     if (error) return toast({ title: "Erro", description: error.message, variant: "destructive" });
-    setName(""); onOpenChange(false); onCreated();
+    setPersonKey(""); onOpenChange(false); onCreated();
     toast({ title: "Diretor criado" });
   }
   return (
@@ -243,14 +267,49 @@ function NewDirectorDialog({ open, onOpenChange, onCreated }: { open: boolean; o
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="font-display">Novo diretor</DialogTitle>
-          <DialogDescription>Cargo acima de gerente. Cuida de vários squads.</DialogDescription>
+          <DialogDescription>Escolha a pessoa que assumirá o cargo — nada de digitar nome à mão.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div className="space-y-1.5"><Label>Nome</Label><Input value={name} onChange={e => setName(e.target.value)} /></div>
+          <div className="space-y-1.5">
+            <Label>Pessoa</Label>
+            <Select value={personKey} onValueChange={setPersonKey}>
+              <SelectTrigger><SelectValue placeholder="Escolher sócio, gerente ou influenciador" /></SelectTrigger>
+              <SelectContent>
+                <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">Sócios</div>
+                {socios.map(s => (
+                  <SelectItem key={`socio-${s.id}`} value={`socio:${s.id}`}>
+                    👑 {s.nome} <span className="text-muted-foreground">· sócio</span>
+                  </SelectItem>
+                ))}
+                {socios.length === 0 && (
+                  <div className="px-2 py-1 text-[11px] text-muted-foreground">Nenhum sócio cadastrado</div>
+                )}
+                <div className="px-2 py-1 mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">Gerentes</div>
+                {managers.map(m => (
+                  <SelectItem key={`manager-${m.id}`} value={`manager:${m.id}`}>
+                    {m.name} <span className="text-muted-foreground">· gerente</span>
+                  </SelectItem>
+                ))}
+                {managers.length === 0 && (
+                  <div className="px-2 py-1 text-[11px] text-muted-foreground">Nenhum gerente cadastrado</div>
+                )}
+                <div className="px-2 py-1 mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">Influenciadores</div>
+                {influencers.map(i => (
+                  <SelectItem key={`inf-${i.id}`} value={`influencer:${i.id}`}>{i.name}</SelectItem>
+                ))}
+                {influencers.length === 0 && (
+                  <div className="px-2 py-1 text-[11px] text-muted-foreground">Nenhum influenciador cadastrado</div>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-1.5"><Label>Cargo</Label><Input value={title} onChange={e => setTitle(e.target.value)} /></div>
           <div className="space-y-1.5"><Label>Cor</Label><Input type="color" value={color} onChange={e => setColor(e.target.value)} className="h-10 w-20" /></div>
         </div>
-        <DialogFooter><Button onClick={save}>Criar</Button></DialogFooter>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button onClick={save} disabled={!personKey}>Criar diretor</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
