@@ -517,6 +517,7 @@ export type Database = {
           social_profiles: Json | null
           source: string | null
           squad_id: string | null
+          squad_ids: string[]
           stage: Database["public"]["Enums"]["commercial_stage"]
           stage_moved_at: string
           tags: string[] | null
@@ -557,6 +558,7 @@ export type Database = {
           social_profiles?: Json | null
           source?: string | null
           squad_id?: string | null
+          squad_ids?: string[]
           stage?: Database["public"]["Enums"]["commercial_stage"]
           stage_moved_at?: string
           tags?: string[] | null
@@ -597,6 +599,7 @@ export type Database = {
           social_profiles?: Json | null
           source?: string | null
           squad_id?: string | null
+          squad_ids?: string[]
           stage?: Database["public"]["Enums"]["commercial_stage"]
           stage_moved_at?: string
           tags?: string[] | null
@@ -1316,6 +1319,39 @@ export type Database = {
           },
         ]
       }
+      manager_squads: {
+        Row: {
+          created_at: string
+          manager_id: string
+          squad_id: string
+        }
+        Insert: {
+          created_at?: string
+          manager_id: string
+          squad_id: string
+        }
+        Update: {
+          created_at?: string
+          manager_id?: string
+          squad_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manager_squads_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "managers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "manager_squads_squad_id_fkey"
+            columns: ["squad_id"]
+            isOneToOne: false
+            referencedRelation: "squads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       managers: {
         Row: {
           career_label: string | null
@@ -1323,6 +1359,7 @@ export type Database = {
           commission_percent: number | null
           compensation_mode: Database["public"]["Enums"]["manager_compensation_mode"]
           created_at: string
+          hierarchy_role: Database["public"]["Enums"]["manager_hierarchy_role"]
           id: string
           influencer_id: string | null
           is_active: boolean
@@ -1346,6 +1383,7 @@ export type Database = {
           commission_percent?: number | null
           compensation_mode?: Database["public"]["Enums"]["manager_compensation_mode"]
           created_at?: string
+          hierarchy_role?: Database["public"]["Enums"]["manager_hierarchy_role"]
           id?: string
           influencer_id?: string | null
           is_active?: boolean
@@ -1369,6 +1407,7 @@ export type Database = {
           commission_percent?: number | null
           compensation_mode?: Database["public"]["Enums"]["manager_compensation_mode"]
           created_at?: string
+          hierarchy_role?: Database["public"]["Enums"]["manager_hierarchy_role"]
           id?: string
           influencer_id?: string | null
           is_active?: boolean
@@ -2941,6 +2980,10 @@ export type Database = {
         Returns: string
       }
       pick_manager_for_squad: { Args: { _squad_id: string }; Returns: string }
+      recalc_manager_hierarchy: {
+        Args: { _manager_id: string }
+        Returns: undefined
+      }
       release_available_withdrawal_cycles: { Args: never; Returns: number }
       validate_api_key: { Args: { _key: string }; Returns: boolean }
     }
@@ -2972,6 +3015,7 @@ export type Database = {
         | "standby"
         | "desqualificado"
       manager_compensation_mode: "manager" | "socio_only" | "influencer_only"
+      manager_hierarchy_role: "gerente" | "gerente_diretor" | "diretor_squads"
       manager_origin_type: "influencer" | "socio" | "standalone"
     }
     CompositeTypes: {
@@ -3130,6 +3174,7 @@ export const Constants = {
         "desqualificado",
       ],
       manager_compensation_mode: ["manager", "socio_only", "influencer_only"],
+      manager_hierarchy_role: ["gerente", "gerente_diretor", "diretor_squads"],
       manager_origin_type: ["influencer", "socio", "standalone"],
     },
   },
