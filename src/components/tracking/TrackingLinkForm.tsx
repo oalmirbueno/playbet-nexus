@@ -544,6 +544,30 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
               </div>
             )}
 
+            {/* LP mode picker — pick the page style; the affiliate link auto-pulls */}
+            {selectedInstance && (
+              <div className="rounded-lg border border-border bg-secondary/30 p-2 space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Modelo da LP</span>
+                  <div className="inline-flex rounded-md border border-border bg-background p-0.5 text-[10px] font-medium">
+                    <button
+                      type="button"
+                      onClick={() => setLpModeOverride("catalog")}
+                      className={`px-2 py-1 rounded ${effectiveLpMode === "catalog" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    >LP padrão</button>
+                    <button
+                      type="button"
+                      onClick={() => canUseGenerated && setLpModeOverride(detectedLpMode === "catalog" ? "single_game" : detectedLpMode)}
+                      disabled={!canUseGenerated}
+                      title={canUseGenerated ? "" : "Selecione um jogo para habilitar"}
+                      className={`px-2 py-1 rounded ${effectiveLpMode !== "catalog" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"} ${!canUseGenerated ? "opacity-40 cursor-not-allowed" : ""}`}
+                    >LP gerada</button>
+                  </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground">{LP_MODE_HINTS[effectiveLpMode]} · {LP_MODE_LABELS[effectiveLpMode]}</p>
+              </div>
+            )}
+
 
             {/* Inline create instance for LPs not yet linked to this influencer */}
             {form.influencer_id && lpsWithoutInstance.length > 0 && (
