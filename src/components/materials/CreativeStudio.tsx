@@ -740,6 +740,10 @@ function TextInspector({ layer, onChange }: { layer: TextLayer; onChange: (p: Pa
           options={WEIGHTS.map(w => [String(w), String(w)] as [string, string])} />
       </div>
       <SliderField label="Tamanho" value={layer.fontSizePct} min={1} max={24} step={0.1} suffix="%" onChange={(v) => onChange({ fontSizePct: v })} />
+      <div className="grid grid-cols-2 gap-2">
+        <SliderField label="X" value={layer.xPct} min={0} max={100 - layer.widthPct} step={0.5} suffix="%" onChange={(v) => onChange({ xPct: v })} />
+        <SliderField label="Y" value={layer.yPct} min={0} max={95} step={0.5} suffix="%" onChange={(v) => onChange({ yPct: v })} />
+      </div>
       <SliderField label="Largura" value={layer.widthPct} min={10} max={100} step={1} suffix="%" onChange={(v) => onChange({ widthPct: v })} />
       <SliderField label="Entrelinhas" value={layer.lineHeight ?? 1.05} min={0.8} max={2} step={0.05} onChange={(v) => onChange({ lineHeight: v })} />
       <ColorField label="Cor do texto" value={layer.color} onChange={(v) => onChange({ color: v })} />
@@ -785,6 +789,10 @@ function TextInspector({ layer, onChange }: { layer: TextLayer; onChange: (p: Pa
 function ImageInspector({ layer, onChange }: { layer: ImageLayer; onChange: (p: Partial<ImageLayer>) => void }) {
   return (
     <div className="space-y-3 pt-3 border-t border-border/60">
+      <div className="grid grid-cols-2 gap-2">
+        <SliderField label="X" value={layer.xPct} min={0} max={100 - layer.widthPct} step={0.5} suffix="%" onChange={(v) => onChange({ xPct: v })} />
+        <SliderField label="Y" value={layer.yPct} min={0} max={100 - layer.heightPct} step={0.5} suffix="%" onChange={(v) => onChange({ yPct: v })} />
+      </div>
       <SliderField label="Largura" value={layer.widthPct} min={5} max={100} step={1} suffix="%" onChange={(v) => onChange({ widthPct: v })} />
       <SliderField label="Altura" value={layer.heightPct} min={5} max={100} step={1} suffix="%" onChange={(v) => onChange({ heightPct: v })} />
       <SliderField label="Arredondamento" value={layer.radiusPct ?? 0} min={0} max={50} step={1} suffix="%" onChange={(v) => onChange({ radiusPct: v })} />
