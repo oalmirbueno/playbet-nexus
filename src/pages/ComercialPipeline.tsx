@@ -29,9 +29,9 @@ import { ptBR } from "date-fns/locale";
 
 type Stage =
   | "em_contato" | "respondeu" | "checklist" | "cadastro"
-  | "analise" | "aprovado" | "concluido";
+  | "analise" | "aprovado" | "concluido" | "standby" | "desqualificado";
 
-const STAGES: { id: Stage; label: string; accent: string }[] = [
+const STAGES: { id: Stage; label: string; accent: string; tone?: "danger" | "muted" }[] = [
   { id: "em_contato", label: "Em contato", accent: "from-slate-500/20 to-slate-500/0" },
   { id: "respondeu", label: "Respondeu", accent: "from-sky-500/20 to-sky-500/0" },
   { id: "checklist", label: "Checklist", accent: "from-violet-500/20 to-violet-500/0" },
@@ -39,6 +39,8 @@ const STAGES: { id: Stage; label: string; accent: string }[] = [
   { id: "analise", label: "Análise", accent: "from-amber-500/20 to-amber-500/0" },
   { id: "aprovado", label: "Aprovado", accent: "from-emerald-500/20 to-emerald-500/0" },
   { id: "concluido", label: "Concluído", accent: "from-primary/30 to-primary/0" },
+  { id: "standby", label: "Standby (futuro)", accent: "from-zinc-500/25 to-zinc-500/0", tone: "muted" },
+  { id: "desqualificado", label: "Desqualificado", accent: "from-red-500/25 to-red-500/0", tone: "danger" },
 ];
 
 interface Card {
@@ -166,12 +168,12 @@ export default function ComercialPipeline() {
 
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div
-          className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden sm:overflow-x-hidden sm:overflow-y-auto xl:overflow-x-auto xl:overflow-y-hidden px-3 sm:px-4 md:px-5 xl:px-6 py-4 xl:py-5 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch] snap-x snap-mandatory sm:snap-none"
+          className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden px-3 sm:px-4 md:px-5 xl:px-6 py-4 xl:py-5 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch] snap-x snap-mandatory xl:snap-none"
           style={{ scrollbarColor: "hsl(var(--border)) transparent" }}
         >
-          <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:flex gap-3 md:gap-4 min-w-max sm:min-w-0 h-full sm:h-auto xl:h-full pb-2">
+          <div className="flex gap-3 md:gap-4 h-full pb-2 w-max">
             {STAGES.map(stage => (
-              <div key={stage.id} className="snap-start sm:snap-align-none min-w-0">
+              <div key={stage.id} className="snap-start xl:snap-align-none">
                 <Column
                   stage={stage}
                   cards={byStage[stage.id] ?? []}
@@ -201,7 +203,7 @@ export default function ComercialPipeline() {
 }
 
 function Column({ stage, cards, squads, managers, loading, onOpen }: {
-  stage: { id: Stage; label: string; accent: string };
+  stage: { id: Stage; label: string; accent: string; tone?: "danger" | "muted" };
   cards: Card[];
   squads: Squad[];
   managers: Manager[];
@@ -209,23 +211,31 @@ function Column({ stage, cards, squads, managers, loading, onOpen }: {
   onOpen: (c: Card) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
+  const borderTone =
+    stage.tone === "danger" ? "border-red-500/40" :
+    stage.tone === "muted" ? "border-zinc-500/40" :
+    "border-border/60";
+  const labelTone =
+    stage.tone === "danger" ? "text-red-500" :
+    stage.tone === "muted" ? "text-zinc-400" :
+    "text-foreground/90";
   return (
     <div
       ref={setNodeRef}
       data-pipeline-column="true"
-      className={`w-[82vw] sm:w-full xl:w-[280px] 2xl:w-[300px] flex-shrink-0 flex flex-col rounded-xl border border-border/60 bg-card/40 backdrop-blur transition-colors min-h-[164px] sm:min-h-[168px] xl:min-h-0 ${
+      className={`w-[82vw] sm:w-[300px] xl:w-[280px] 2xl:w-[300px] flex-shrink-0 flex flex-col rounded-xl border ${borderTone} bg-card/40 backdrop-blur transition-colors h-full ${
         isOver ? "ring-2 ring-primary/40 bg-card/70" : ""
       }`}
     >
-      <div className={`px-3 py-2.5 rounded-t-xl bg-gradient-to-b ${stage.accent} border-b border-border/40 sticky top-0`}>
+      <div className={`px-3 py-2.5 rounded-t-xl bg-gradient-to-b ${stage.accent} border-b ${borderTone} sticky top-0`}>
         <div className="flex items-center justify-between">
-          <span className="text-[11px] md:text-xs font-display font-semibold uppercase tracking-wider text-foreground/90 truncate">
+          <span className={`text-[11px] md:text-xs font-display font-semibold uppercase tracking-wider truncate ${labelTone}`}>
             {stage.label}
           </span>
           <Badge variant="secondary" className="text-[10px] h-5 px-1.5 shrink-0 ml-2">{cards.length}</Badge>
         </div>
       </div>
-      <div className="flex-1 p-2 space-y-2 min-h-[108px] max-h-[calc(100dvh-250px)] sm:max-h-[280px] lg:max-h-[320px] xl:max-h-[calc(100dvh-250px)] overflow-y-auto [scrollbar-width:thin] overscroll-contain">
+      <div className="flex-1 p-2 space-y-2 min-h-[140px] overflow-y-auto [scrollbar-width:thin] overscroll-contain">
         {loading && <div className="text-xs text-muted-foreground p-3">Carregando...</div>}
         {!loading && cards.length === 0 && (
           <div className="text-xs text-muted-foreground/70 p-4 text-center border border-dashed border-border/40 rounded-lg">
