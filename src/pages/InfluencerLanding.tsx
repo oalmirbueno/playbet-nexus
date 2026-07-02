@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Gamepad2, Star, Shield, ArrowRight, Zap, Trophy, Gift } from "lucide-react";
+import { Gamepad2, Star, Shield, ArrowRight, Zap, Trophy, Gift, Users } from "lucide-react";
 import logo from "@/assets/logo.png";
 
 type LoadState = "loading" | "ready" | "not_found" | "inactive" | "no_domain";
