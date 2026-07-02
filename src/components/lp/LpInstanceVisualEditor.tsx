@@ -5,11 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { ArrowUp, ArrowDown, RefreshCw, ExternalLink, Loader2, Wand2 } from "lucide-react";
+import { ArrowUp, ArrowDown, RefreshCw, ExternalLink, Loader2, Wand2, Users, Sparkles, TrendingUp } from "lucide-react";
 import { LP_MODE_LABELS, LP_MODE_HINTS, defaultLayoutConfig, type LpMode } from "@/lib/lpMode";
 import GameArtwork from "@/components/tracking/GameArtwork";
+import { suggestThreeOptions, computeOpportunityScore } from "@/lib/opportunityEngine";
 
 interface Props {
   open: boolean;
@@ -25,14 +27,52 @@ const SECTION_LABELS: Record<string, string> = {
   features: "Benefícios",
   games: "Jogos",
   odds: "Odds/Partidas",
+  community: "Comunidade",
   cta: "CTA final",
   footer: "Rodapé",
 };
+
+interface SmartOdd {
+  event_id?: string | null;
+  event_name: string;
+  market_name: string;
+  odd_label?: string | null;
+  badge?: string | null;
+  starts_at?: string | null;
+  score?: number;
+  reason?: string;
+}
+
+interface CommunityCta {
+  enabled: boolean;
+  label: string;
+  url: string;
+  note?: string;
+}
+
+function categoryCta(category: string | null | undefined, gameName?: string | null): string {
+  const cat = (category || "").toLowerCase();
+  if (["odds", "sports", "sportsbook", "esportes"].includes(cat)) return "Apostar agora";
+  if (["crash", "slots", "casino", "live"].includes(cat)) return gameName ? `Jogar ${gameName}` : "Jogar agora";
+  return "Jogar agora";
+}
+
+function adaptiveSubtitle(mode: LpMode, gameName?: string | null, platformName?: string | null): string {
+  if (mode === "odds")
+    return "Odds selecionadas pela curadoria PlayBet — foco em mercados simples e valor real.";
+  if (mode === "single_game")
+    return `Bônus e cashback ativos hoje em ${gameName || "jogos selecionados"}${platformName ? ` na ${platformName}` : ""}.`;
+  if (mode === "multi_game")
+    return "Seleção quente da semana — jogos com maior conversão dos influencers PlayBet.";
+  return "Cadastro rápido, saques via PIX e catálogo completo.";
+}
 
 export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId, publicUrl }: Props) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [instance, setInstance] = useState<any>(null);
+  const [link, setLink] = useState<any>(null);
+  const [platformName, setPlatformName] = useState<string | null>(null);
   const [mode, setMode] = useState<LpMode>("catalog");
   const [sections, setSections] = useState<SectionDef[]>([]);
   const [copy, setCopy] = useState<{ title: string; subtitle: string; cta_label: string }>({
@@ -40,6 +80,15 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
     subtitle: "",
     cta_label: "",
   });
+  const [community, setCommunity] = useState<CommunityCta>({
+    enabled: true,
+    label: "",
+    url: "",
+    note: "",
+  });
+  const [smartOdds, setSmartOdds] = useState<SmartOdd[]>([]);
+  const [oddsCandidates, setOddsCandidates] = useState<SmartOdd[]>([]);
+  const [pickingOdds, setPickingOdds] = useState(false);
   const [gameSlugs, setGameSlugs] = useState<string[]>([]);
   const [availableGames, setAvailableGames] = useState<any[]>([]);
   const [previewKey, setPreviewKey] = useState(0);
@@ -60,26 +109,62 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         setMode(m);
         setGameSlugs(((inst as any).game_slugs as string[]) || []);
         const lc = (inst as any).layout_config;
-        setSections(
-          Array.isArray(lc?.sections) && lc.sections.length > 0
-            ? lc.sections
-            : defaultLayoutConfig(m).sections
-        );
+        const rawSections: SectionDef[] = Array.isArray(lc?.sections) && lc.sections.length > 0
+          ? lc.sections : defaultLayoutConfig(m).sections;
+        // Ensure community section always exists
+        const withCommunity = rawSections.some(s => s.id === "community")
+          ? rawSections
+          : [...rawSections.slice(0, rawSections.findIndex(s => s.id === "cta") + 1 || rawSections.length),
+             { id: "community", label: "Comunidade", enabled: true },
+             ...rawSections.slice(rawSections.findIndex(s => s.id === "cta") + 1 || rawSections.length)];
+        setSections(withCommunity);
+
         const hc = (inst as any).hype_copy || {};
         setCopy({
           title: hc.title || "",
           subtitle: hc.subtitle || "",
           cta_label: hc.cta_label || "",
         });
+        setCommunity({
+          enabled: hc.community_cta?.enabled ?? true,
+          label: hc.community_cta?.label || "",
+          url: hc.community_cta?.url || "",
+          note: hc.community_cta?.note || "",
+        });
+        setSmartOdds(Array.isArray(hc.smart_odds) ? hc.smart_odds : []);
 
-        // Load available hyped games from platform linked via tracking_link
+        // Load tracking link linked to this instance (source of truth for game/hype)
         const { data: tl } = await supabase
           .from("tracking_links")
-          .select("platform_account_id, platform_accounts(platform_id)")
+          .select("id, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, platform_account_id, platform_accounts(platform_id, platforms(name))")
           .eq("landing_page_instance_id", instanceId)
+          .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
+        setLink(tl);
         const platformId = (tl as any)?.platform_accounts?.platform_id;
+        const pName = (tl as any)?.platform_accounts?.platforms?.name || null;
+        setPlatformName(pName);
+
+        // Adaptive auto-fill for empty copy fields
+        const autoFlag = hc.auto !== false;
+        if (tl) {
+          const gname = (tl as any).game_name;
+          const hype = (tl as any).hype_reason;
+          const cat = (tl as any).link_category;
+          setCopy(prev => ({
+            title: prev.title || gname || prev.title,
+            subtitle: prev.subtitle || hype || adaptiveSubtitle(m, gname, pName),
+            cta_label: prev.cta_label || categoryCta(cat, gname),
+          }));
+          setCommunity(prev => ({
+            enabled: prev.enabled,
+            label: prev.label || (gname ? `Entrar na comunidade de ${gname}` : "Entrar na comunidade PlayBet"),
+            url: prev.url,
+            note: prev.note || (gname ? `Grupo VIP com dicas e horários quentes de ${gname}` : "Grupo VIP com dicas diárias"),
+          }));
+        }
+
         if (platformId) {
           const { data: games } = await supabase
             .from("platform_hyped_games")
@@ -90,11 +175,81 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         } else {
           setAvailableGames([]);
         }
+
+        // Load odds candidates when mode = odds
+        if (m === "odds") {
+          await loadOddsCandidates(platformId);
+        }
       } finally {
         setLoading(false);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, instanceId]);
+
+  const loadOddsCandidates = async (platformId?: string | null) => {
+    setPickingOdds(true);
+    try {
+      const { data: events } = await supabase
+        .from("lp_events")
+        .select("id, sport, league, home_team, away_team, starts_at")
+        .eq("is_active", true)
+        .gte("starts_at", new Date().toISOString())
+        .order("starts_at", { ascending: true })
+        .limit(20);
+      const evIds = (events || []).map(e => e.id);
+      let sigsMap = new Map<string, any[]>();
+      if (evIds.length) {
+        const { data: sigs } = await supabase
+          .from("lp_signals")
+          .select("id, event_id, market_name, market_type, odd_label, confidence, source_name, source_channel, house_url, platform_id")
+          .in("event_id", evIds)
+          .eq("status", "novo");
+        (sigs || []).forEach((s: any) => {
+          if (!s.event_id) return;
+          if (platformId && s.platform_id && s.platform_id !== platformId) return;
+          const arr = sigsMap.get(s.event_id) || [];
+          arr.push(s);
+          sigsMap.set(s.event_id, arr);
+        });
+      }
+
+      const scored: SmartOdd[] = [];
+      (events || []).forEach((ev: any) => {
+        const sigs = sigsMap.get(ev.id) || [];
+        const options = suggestThreeOptions({ event: ev, signals: sigs as any });
+        options.forEach(opt => {
+          const score = computeOpportunityScore({
+            market_type: opt.market_type,
+            odd_label: opt.odd_label,
+            platform_id: platformId || null,
+            starts_at: ev.starts_at,
+            signal_confidence: opt.signal_confidence,
+            destination_url: "https://placeholder",
+          });
+          scored.push({
+            event_id: ev.id,
+            event_name: `${ev.home_team} × ${ev.away_team}`,
+            market_name: opt.market_name || opt.title,
+            odd_label: opt.odd_label || null,
+            badge: opt.badge,
+            starts_at: ev.starts_at,
+            score,
+            reason: opt.recommendation_reason,
+          });
+        });
+      });
+      // Best opportunities first: score desc, then odds numeric desc if present
+      scored.sort((a, b) => {
+        if ((b.score || 0) !== (a.score || 0)) return (b.score || 0) - (a.score || 0);
+        const ao = parseFloat(a.odd_label || "0"); const bo = parseFloat(b.odd_label || "0");
+        return bo - ao;
+      });
+      setOddsCandidates(scored.slice(0, 12));
+    } finally {
+      setPickingOdds(false);
+    }
+  };
 
   const move = (idx: number, dir: -1 | 1) => {
     setSections((prev) => {
@@ -112,26 +267,61 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
   const toggleGame = (slug: string) =>
     setGameSlugs((prev) => (prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]));
 
+  const applyAdaptiveCopy = () => {
+    const gname = link?.game_name;
+    setCopy({
+      title: gname || copy.title || "",
+      subtitle: link?.hype_reason || adaptiveSubtitle(mode, gname, platformName),
+      cta_label: categoryCta(link?.link_category, gname),
+    });
+    setCommunity(prev => ({
+      ...prev,
+      label: gname ? `Entrar na comunidade de ${gname}` : "Entrar na comunidade PlayBet",
+      note: gname ? `Grupo VIP com dicas e horários quentes de ${gname}` : "Grupo VIP com dicas diárias",
+    }));
+    toast({ title: "Copy adaptativa aplicada", description: "Preencheu a partir do jogo e categoria do link." });
+  };
+
+  const pickTopOdds = (n = 3) => {
+    setSmartOdds(oddsCandidates.slice(0, n));
+    toast({ title: `Top ${n} odds inteligentes selecionadas`, description: "Curadoria por score + proximidade + confiança do sinal." });
+  };
+
+  const toggleOdd = (o: SmartOdd) => {
+    setSmartOdds(prev => {
+      const key = `${o.event_id}|${o.market_name}`;
+      const exists = prev.some(p => `${p.event_id}|${p.market_name}` === key);
+      return exists ? prev.filter(p => `${p.event_id}|${p.market_name}` !== key) : [...prev, o];
+    });
+  };
+
   const handleSave = async () => {
     if (!instanceId) return;
     setSaving(true);
     try {
-      const layoutConfig = {
-        mode,
-        sections,
-        updated_at: new Date().toISOString(),
+      const layoutConfig = { mode, sections, updated_at: new Date().toISOString() };
+      const hype_copy: any = {
+        title: copy.title || null,
+        subtitle: copy.subtitle || null,
+        cta_label: copy.cta_label || null,
+        community_cta: {
+          enabled: community.enabled,
+          label: community.label || null,
+          url: community.url || null,
+          note: community.note || null,
+        },
+        category: link?.link_category || null,
+        auto: false,
       };
+      if (mode === "odds" && smartOdds.length) hype_copy.smart_odds = smartOdds;
+
       const { error } = await supabase
         .from("landing_page_instances")
         .update({
           lp_mode: mode,
           game_slugs: gameSlugs,
           layout_config: layoutConfig,
-          hype_copy: {
-            title: copy.title || null,
-            subtitle: copy.subtitle || null,
-            cta_label: copy.cta_label || null,
-          },
+          hype_copy,
         } as any)
         .eq("id", instanceId);
       if (error) throw new Error(error.message);
@@ -157,13 +347,18 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
           <DialogTitle className="flex items-center gap-2">
             <Wand2 size={16} className="text-primary" />
             Editor visual da LP
+            {link?.game_name && (
+              <Badge variant="outline" className="text-[10px] font-normal ml-1">
+                {link.game_name}{platformName ? ` · ${platformName}` : ""}
+              </Badge>
+            )}
           </DialogTitle>
           <p className="text-[11px] text-muted-foreground">
             Modo, seções, copy e jogos ficam sincronizados com o link — preview ao lado atualiza ao salvar.
           </p>
         </DialogHeader>
 
-        <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[360px_1fr] overflow-hidden">
+        <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[380px_1fr] overflow-hidden">
           <div className="overflow-y-auto border-r px-5 py-4 space-y-5">
             {loading ? (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -173,7 +368,12 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
               <>
                 <div>
                   <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Modo da LP</Label>
-                  <Select value={mode} onValueChange={(v) => setMode(v as LpMode)}>
+                  <Select value={mode} onValueChange={(v) => {
+                    setMode(v as LpMode);
+                    if (v === "odds" && oddsCandidates.length === 0) {
+                      loadOddsCandidates((link as any)?.platform_accounts?.platform_id);
+                    }
+                  }}>
                     <SelectTrigger className="h-9 text-xs mt-1">
                       <SelectValue />
                     </SelectTrigger>
@@ -187,10 +387,22 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                 </div>
 
                 <div>
-                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Copy</Label>
+                  <div className="flex items-center justify-between mb-1">
+                    <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Copy</Label>
+                    {link && (
+                      <button
+                        type="button"
+                        onClick={applyAdaptiveCopy}
+                        className="text-[10px] inline-flex items-center gap-1 text-primary hover:underline"
+                        title="Preencher a partir do jogo/categoria do link"
+                      >
+                        <Sparkles size={10} /> Auto do link
+                      </button>
+                    )}
+                  </div>
                   <Input
-                    className="h-8 text-xs mt-1"
-                    placeholder="Título (opcional)"
+                    className="h-8 text-xs"
+                    placeholder="Título (jogo ou headline)"
                     value={copy.title}
                     onChange={(e) => setCopy({ ...copy, title: e.target.value })}
                   />
@@ -202,11 +414,108 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                   />
                   <Input
                     className="h-8 text-xs mt-1"
-                    placeholder="Rótulo do CTA (ex: Jogar agora)"
+                    placeholder="Rótulo do CTA"
                     value={copy.cta_label}
                     onChange={(e) => setCopy({ ...copy, cta_label: e.target.value })}
                   />
                 </div>
+
+                {/* Community CTA */}
+                <div className="rounded-md border border-border/60 bg-secondary/20 p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Users size={13} className="text-primary" />
+                    <Label className="text-[10px] uppercase tracking-wider text-muted-foreground flex-1">
+                      Acesso à comunidade
+                    </Label>
+                    <Switch checked={community.enabled} onCheckedChange={(v) => setCommunity({ ...community, enabled: v })} />
+                  </div>
+                  <Input
+                    className="h-8 text-xs"
+                    placeholder="Rótulo (ex: Entrar na comunidade de Fortune Tiger)"
+                    value={community.label}
+                    onChange={(e) => setCommunity({ ...community, label: e.target.value })}
+                    disabled={!community.enabled}
+                  />
+                  <Input
+                    className="h-8 text-xs"
+                    placeholder="Link do grupo (WhatsApp, Telegram, Discord)"
+                    value={community.url}
+                    onChange={(e) => setCommunity({ ...community, url: e.target.value })}
+                    disabled={!community.enabled}
+                  />
+                  <Input
+                    className="h-8 text-xs"
+                    placeholder="Nota curta (opcional)"
+                    value={community.note}
+                    onChange={(e) => setCommunity({ ...community, note: e.target.value })}
+                    disabled={!community.enabled}
+                  />
+                </div>
+
+                {/* Smart Odds */}
+                {mode === "odds" && (
+                  <div className="rounded-md border border-border/60 bg-secondary/20 p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp size={13} className="text-primary" />
+                      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground flex-1">
+                        Odds inteligentes
+                      </Label>
+                      <button
+                        type="button"
+                        onClick={() => loadOddsCandidates((link as any)?.platform_accounts?.platform_id)}
+                        className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+                      >
+                        <RefreshCw size={10} className={pickingOdds ? "animate-spin" : ""} /> Atualizar
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">
+                      Ranqueadas por score de curadoria PlayBet (mercado simples, proximidade, confiança de sinal, odd em destaque).
+                    </p>
+                    <div className="flex gap-1.5">
+                      <Button size="sm" variant="secondary" className="h-7 text-[10px] flex-1"
+                        onClick={() => pickTopOdds(3)} disabled={!oddsCandidates.length}>
+                        <Sparkles className="w-3 h-3" /> Top 3 automático
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 text-[10px]" onClick={() => setSmartOdds([])}>
+                        Limpar
+                      </Button>
+                    </div>
+                    <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
+                      {pickingOdds && oddsCandidates.length === 0 ? (
+                        <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                          <Loader2 size={10} className="animate-spin" /> Analisando eventos e sinais…
+                        </div>
+                      ) : oddsCandidates.length === 0 ? (
+                        <div className="text-[10px] text-muted-foreground">
+                          Nenhum evento futuro cadastrado. Cadastre em <strong>Oportunidades LP → Eventos Sports</strong>.
+                        </div>
+                      ) : (
+                        oddsCandidates.map((o) => {
+                          const key = `${o.event_id}|${o.market_name}`;
+                          const picked = smartOdds.some(p => `${p.event_id}|${p.market_name}` === key);
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => toggleOdd(o)}
+                              className={`w-full text-left rounded border p-2 transition ${picked ? "border-primary bg-primary/10" : "border-border/50 bg-background/40 hover:border-primary/40"}`}
+                            >
+                              <div className="flex items-center justify-between gap-2 mb-0.5">
+                                <span className="text-[11px] font-medium truncate">{o.event_name}</span>
+                                <Badge variant="outline" className="text-[9px] shrink-0">{o.score}</Badge>
+                              </div>
+                              <div className="flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
+                                <span className="truncate">{o.market_name}</span>
+                                {o.odd_label && <span className="text-emerald-500 font-semibold">{o.odd_label}</span>}
+                              </div>
+                              {o.badge && <span className="text-[9px] text-primary/80">{o.badge}</span>}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Seções</Label>
