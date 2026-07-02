@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -107,6 +108,7 @@ function adaptiveSubtitle(mode: LpMode, gameName?: string | null, platformName?:
 }
 
 export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId, publicUrl }: Props) {
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [instance, setInstance] = useState<any>(null);
@@ -525,18 +527,21 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
             ))
         .filter(Boolean);
 
-      await Promise.all(
+      const syncResults = await Promise.all(
         linksToSync.map((tl, idx) => supabase
           .from("tracking_links")
           .update({
             landing_page_id: instance?.landing_page_id || null,
             landing_page_instance_id: instanceId,
+            lp_mode: effectiveMode,
             final_url: shareUrls[idx] || null,
             use_lp: true,
             lp_auto_generated: true,
           } as any)
           .eq("id", tl.id)),
       );
+      const syncError = syncResults.find((r: any) => r?.error)?.error;
+      if (syncError) throw new Error(syncError.message);
 
       const publicShareUrl = shareUrls[0]
         || (effectiveMode === "catalog"
@@ -557,6 +562,13 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         layout_config: layoutConfig,
         hype_copy,
       } : prev);
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["landing_page_instances"] }),
+        queryClient.invalidateQueries({ queryKey: ["tracking_links"] }),
+        queryClient.refetchQueries({ queryKey: ["landing_page_instances"], type: "active" }),
+        queryClient.refetchQueries({ queryKey: ["tracking_links"], type: "active" }),
+      ]);
 
       toast({
         title: "LP salva",
@@ -896,7 +908,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
               <div className="inline-flex rounded-md border border-border/60 bg-background/40 p-0.5">
                 <button
                   type="button"
-                  onClick={() => handleModeChange("catalog")}
+                  onClick={() => setPreviewTab("catalog")}
                   disabled={!catalogPreviewSrc}
                   className={`px-2.5 py-1 text-[10px] font-medium rounded transition ${previewTab === "catalog" ? "bg-primary/15 text-foreground" : "text-muted-foreground hover:text-foreground"} disabled:opacity-40 disabled:cursor-not-allowed`}
                   title={basePage?.name ? `LP padrão · ${basePage.name}` : "LP padrão cadastrada"}
@@ -905,7 +917,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                 </button>
                 <button
                   type="button"
-                  onClick={() => mode === "catalog" ? handleModeChange("single_game") : setPreviewTab("generated")}
+                  onClick={() => setPreviewTab("generated")}
                   disabled={!generatedPreviewSrc}
                   className={`px-2.5 py-1 text-[10px] font-medium rounded transition ${previewTab === "generated" ? "bg-primary/15 text-foreground" : "text-muted-foreground hover:text-foreground"} disabled:opacity-40 disabled:cursor-not-allowed`}
                 >
