@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   renderCreative, downloadCreative, slugify, defaultLayersFor,
-  FORMAT_SIZES,
+  FORMAT_SIZES, CREATIVE_TEMPLATES, applyTemplate,
   type CreativeFormat, type CreativeStyle, type CreativeInput, type RenderedCreative,
   type Layer, type TextLayer, type ImageLayer,
 } from "@/lib/creativeStudio";
