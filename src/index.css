@@ -217,10 +217,36 @@
 }
 
 /* ── Scrollbars ──────────────────────────────── */
+/* Global: modern, ultra-thin, nearly transparent — becomes visible on hover */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(0 0% 100% / 0.06) transparent;
+}
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+*::-webkit-scrollbar-thumb {
+  background-color: hsl(0 0% 100% / 0.06);
+  border-radius: 999px;
+  transition: background-color 200ms ease;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(0 0% 100% / 0.28);
+}
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Explicitly hidden scrollbars (horizontal game strips, sidebars) */
 .invisible-scroll::-webkit-scrollbar,
-.sidebar-scroll::-webkit-scrollbar {
-  width: 0px;
-  height: 0px;
+.sidebar-scroll::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar {
+  width: 0;
+  height: 0;
   display: none;
 }
 .invisible-scroll,
@@ -229,42 +255,21 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-.scrollbar-none::-webkit-scrollbar { width: 0; height: 0; display: none; }
 
-/* Minimal overlay scrollbar - 3px hairline, fades in on hover/scroll */
+/* Main app scroll: identical to global but reserved so future overrides are easy */
 .main-scroll {
   scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-  transition: scrollbar-color 220ms ease;
+  scrollbar-color: hsl(0 0% 100% / 0.08) transparent;
 }
-.main-scroll:hover,
-.main-scroll:focus-within {
-  scrollbar-color: hsl(0 0% 100% / 0.14) transparent;
-}
-.main-scroll::-webkit-scrollbar {
-  width: 3px;
-  height: 3px;
-}
-.main-scroll::-webkit-scrollbar-track {
-  background: transparent;
-  border: none;
-}
+.main-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
 .main-scroll::-webkit-scrollbar-thumb {
-  background-color: transparent;
+  background-color: hsl(0 0% 100% / 0.08);
   border-radius: 999px;
-  transition: background-color 220ms ease;
-}
-.main-scroll:hover::-webkit-scrollbar-thumb,
-.main-scroll:focus-within::-webkit-scrollbar-thumb,
-.main-scroll:active::-webkit-scrollbar-thumb {
-  background-color: hsl(0 0% 100% / 0.18);
 }
 .main-scroll::-webkit-scrollbar-thumb:hover {
   background-color: hsl(0 0% 100% / 0.32);
 }
-.main-scroll::-webkit-scrollbar-corner {
-  background: transparent;
-}
+
 
 /* ── Chart Overrides ─────────────────────────── */
 .recharts-default-tooltip {

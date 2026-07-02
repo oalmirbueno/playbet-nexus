@@ -70,26 +70,33 @@ async function fetchHypedGames(platformName: string): Promise<HypedGame[]> {
   })).filter((g: HypedGame) => g.game_name && g.game_slug);
 }
 
-// ── 2. Firecrawl: real image candidates ────────────────────────────────────
-const IMG_EXT = /\.(png|jpe?g|webp)(\?|$)/i;
-const NOISY_HOSTS = /(gravatar|googleusercontent\/a\/|w3\.org|schema\.org|fonts\.g|favicon|sprite|placeholder|blank)/i;
-// Provider CDNs where the *real* game logos live (highest trust)
-const PROVIDER_CDN = /(ppgames\.net|pragmaticplay\.net|pragmatic-partner|pgsoft-games|pg-soft|pgsoft\.com|spribe\.co|evolution\.com|playson\.com|habanero|hacksawgaming|relaxgaming|redtigergaming|netent|isoftbet|nolimitcity|bgaming|smartsoft|turbogames|gaming1)/i;
-// Editorial/review sites that host clean game logos
-const EDITORIAL_HOSTS = /(casino\.guru|slottracker|slotcatalog|askgamblers|casinomeister|slotsjudge|bigwinboard|slotsmate)/i;
+// ── 2. Firecrawl v2 image search — real logos from provider CDNs & editorial ──
+const NOISY_HOSTS = /(gravatar|w3\.org|schema\.org|fonts\.g|favicon|sprite|placeholder|blank\.png|1x1\.png|pixel\.gif)/i;
+const PROVIDER_CDN = /(pgsoft\.com|ppgames\.net|pragmaticplay\.net|pragmatic-partner|pgsoft-games|pg-soft|spribe\.co|evolution\.com|playson\.com|habanero|hacksawgaming|relaxgaming|redtigergaming|netent|isoftbet|nolimitcity|bgaming|smartsoft|turbogames|gaming1|elbet|caleta|onetouch|wazdan|betsoft|yggdrasil|quickspin|thunderkick|push-gaming|blueprint|microgaming)/i;
+const EDITORIAL_HOSTS = /(casino\.guru|slottracker|slotcatalog|askgamblers|casinomeister|slotsjudge|bigwinboard|slotsmate|vegasslotsonline|slotsup|casino\.org)/i;
 
-interface ImgCandidate { url: string; score: number; matches_slug: boolean; source?: string; }
+interface ImgCandidate {
+  url: string;
+  score: number;
+  matches_slug: boolean;
+  source?: string;
+  width?: number;
+  height?: number;
+  title?: string;
+}
 
 async function firecrawlImageCandidates(gameName: string, providerHint: string | undefined, limit = 8): Promise<ImgCandidate[]> {
   if (!FIRECRAWL_KEY) return [];
   const cleanName = gameName.replace(/["']/g, "");
-  // Two focused queries — one provider-CDN-biased, one editorial-biased
+  const provider = providerHint || "";
+  // Two queries: exact provider-tagged, and editorial fallback
   const queries = [
-    `${cleanName} ${providerHint || ""} slot logo png transparent`.trim(),
-    `${cleanName} ${providerHint || ""} game icon site:pragmaticplay.net OR site:pgsoft.com OR site:spribe.co OR site:casino.guru`.trim(),
+    `${cleanName} ${provider} slot logo`.trim(),
+    `${cleanName} ${provider} game icon square`.trim(),
   ];
 
   const needle = slugify(gameName).replace(/-/g, "");
+  const providerNeedle = slugify(provider).replace(/-/g, "");
   const seen = new Set<string>();
   const out: ImgCandidate[] = [];
 
@@ -98,50 +105,52 @@ async function firecrawlImageCandidates(gameName: string, providerHint: string |
       const res = await fetch("https://api.firecrawl.dev/v2/search", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${FIRECRAWL_KEY}` },
-        body: JSON.stringify({
-          query: q,
-          limit: 5,
-          scrapeOptions: { formats: ["links"], onlyMainContent: true },
-        }),
+        body: JSON.stringify({ query: q, limit: 8, sources: ["images"] }),
       });
       if (!res.ok) continue;
       const j = await res.json().catch(() => null);
-      const results: any[] = j?.data ?? j?.web ?? [];
+      const images: any[] = j?.data?.images ?? [];
 
-      for (const r of results) {
-        const links: string[] = Array.isArray(r?.links) ? r.links : Array.isArray(r?.data?.links) ? r.data.links : [];
-        for (const url of links) {
-          if (typeof url !== "string" || seen.has(url)) continue;
-          if (!IMG_EXT.test(url) || NOISY_HOSTS.test(url)) continue;
-          seen.add(url);
+      for (const img of images) {
+        const url: string | undefined = img?.imageUrl;
+        if (!url || typeof url !== "string" || seen.has(url)) continue;
+        if (NOISY_HOSTS.test(url)) continue;
+        seen.add(url);
 
-          const urlSlug = slugify(url).replace(/-/g, "");
-          const matches_slug = urlSlug.includes(needle);
-          const isProviderCdn = PROVIDER_CDN.test(url);
-          const isEditorial = EDITORIAL_HOSTS.test(url);
-          // Score: provider CDN (real logo) > editorial > generic; slug match doubles it
-          let score = 1;
-          if (isProviderCdn) score += 4;
-          else if (isEditorial) score += 2;
-          if (matches_slug) score += 3;
-          // Prefer sensible sized thumbnails (game_pic, thumb, logo)
-          if (/(game_pic|thumb|logo|icon|square)/i.test(url)) score += 1;
-          // Penalize massive banners / hero art
-          if (/(banner|hero|background|bg[-_])/i.test(url)) score -= 2;
+        const width = Number(img?.imageWidth ?? 0);
+        const height = Number(img?.imageHeight ?? 0);
+        // Too small? probably a badge — skip if we have data
+        if (width && width < 180) continue;
 
-          out.push({
-            url,
-            matches_slug,
-            score,
-            source: isProviderCdn ? "provider_cdn" : isEditorial ? "editorial" : "web",
-          });
+        const urlSlug = slugify(url).replace(/-/g, "");
+        const titleSlug = slugify(img?.title || "").replace(/-/g, "");
+        const matches_slug = urlSlug.includes(needle) || titleSlug.includes(needle);
+        const isProviderCdn = PROVIDER_CDN.test(url);
+        const isEditorial = EDITORIAL_HOSTS.test(url);
+        const providerMatch = !!providerNeedle && (urlSlug.includes(providerNeedle) || titleSlug.includes(providerNeedle));
+
+        let score = 1;
+        if (isProviderCdn) score += 5;
+        else if (isEditorial) score += 3;
+        if (matches_slug) score += 4;
+        if (providerMatch) score += 2;
+        // Prefer near-square aspect (real game logos are square)
+        if (width && height) {
+          const ar = width / height;
+          if (ar >= 0.85 && ar <= 1.2) score += 2;
+          if (width >= 400) score += 1;
         }
+        if (/(banner|hero|background|bg[-_]|cover)/i.test(url)) score -= 3;
+        if (/(thumb|logo|icon|square|game_pic|artwork)/i.test(url)) score += 1;
+
+        out.push({ url, matches_slug, score, source: isProviderCdn ? "provider_cdn" : isEditorial ? "editorial" : "web", width, height, title: img?.title });
       }
-    } catch { /* ignore query failure */ }
+    } catch { /* ignore */ }
   }
 
   return out.sort((a, b) => b.score - a.score).slice(0, limit);
 }
+
 
 // ── Persistence helper ─────────────────────────────────────────────────────
 async function upsertPlatform(
