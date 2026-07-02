@@ -55,6 +55,7 @@ interface SavedState {
   style: CreativeStyle;
   editorMode: boolean;
   updatedAt: number;
+  cloudSaved?: boolean;
 }
 
 function loadState(linkId: string, fmt: CreativeFormat): SavedState | null {
@@ -122,6 +123,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       style: (layout.style ?? data?.style ?? "hype") as CreativeStyle,
       editorMode: true,
       updatedAt: Date.parse(data?.updated_at ?? "") || layout.updatedAt || Date.now(),
+      cloudSaved: true,
     };
   }, []);
 
@@ -137,12 +139,14 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       const databaseSaved = await loadDatabaseState(link.id, format);
       if (cancelled) return;
       const localSaved = loadState(link.id, format);
-      const saved = databaseSaved ?? localSaved;
+      const saved = localSaved && databaseSaved
+        ? (localSaved.updatedAt > databaseSaved.updatedAt ? localSaved : databaseSaved)
+        : (databaseSaved ?? localSaved);
       if (saved) {
         setLayers(saved.layers);
         setStyle(saved.style);
         setSavedAt(saved.updatedAt);
-        setDirty(false);
+        setDirty(!saved.cloudSaved);
       } else {
         setLayers(seedLayers(format));
         setSavedAt(null);
@@ -157,7 +161,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
   useEffect(() => {
     if (!link || !open) return;
     const t = setTimeout(() => {
-      saveState(link.id, format, { layers, style, editorMode, updatedAt: Date.now() });
+      saveState(link.id, format, { layers, style, editorMode, updatedAt: Date.now(), cloudSaved: false });
     }, 300);
     return () => clearTimeout(t);
   }, [layers, style, editorMode, link?.id, format, open]);
@@ -261,7 +265,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     if (!link) return;
     setSavingLayout(true);
     const now = Date.now();
-    const snapshot: SavedState = { layers, style, editorMode: true, updatedAt: now };
+    const snapshot: SavedState = { layers, style, editorMode: true, updatedAt: now, cloudSaved: false };
     saveState(link.id, format, snapshot);
 
     try {
@@ -326,6 +330,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
 
       setSavedAt(now);
       setDirty(false);
+      saveState(link.id, format, { ...snapshot, cloudSaved: true });
       toast.success("Layout salvo");
     } catch (e) {
       toast.error("Salvo só neste navegador", { description: (e as Error).message });
