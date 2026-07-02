@@ -510,7 +510,7 @@ export default function InfluencerLanding() {
   const isCatalogMode = mode === "catalog";
   const isGeneratedMode = !isCatalogMode;
   const displayGames = mode === "single_game" && primaryGame ? [primaryGame] : gameArts;
-  const heroGame = isGeneratedMode ? primaryGame : null;
+  const heroGame = primaryGame || null;
   const defaultCta = isCatalogMode
     ? "Acessar oportunidades"
     : mode === "odds"
@@ -717,7 +717,7 @@ export default function InfluencerLanding() {
         </section>
       )}
 
-      {isSectionOn("cta") && (
+      {isSectionOn("cta") && !isSectionOn("hero") && (
         <section className="px-6 pb-16">
           <div className="max-w-xl mx-auto text-center">
             <button

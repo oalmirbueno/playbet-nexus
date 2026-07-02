@@ -533,7 +533,6 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
           .update({
             landing_page_id: instance?.landing_page_id || null,
             landing_page_instance_id: instanceId,
-            lp_mode: effectiveMode,
             final_url: shareUrls[idx] || null,
             use_lp: true,
             lp_auto_generated: true,
