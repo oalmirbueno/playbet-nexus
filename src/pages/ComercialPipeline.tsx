@@ -203,7 +203,7 @@ export default function ComercialPipeline() {
 }
 
 function Column({ stage, cards, squads, managers, loading, onOpen }: {
-  stage: { id: Stage; label: string; accent: string };
+  stage: { id: Stage; label: string; accent: string; tone?: "danger" | "muted" };
   cards: Card[];
   squads: Squad[];
   managers: Manager[];
@@ -211,23 +211,31 @@ function Column({ stage, cards, squads, managers, loading, onOpen }: {
   onOpen: (c: Card) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.id });
+  const borderTone =
+    stage.tone === "danger" ? "border-red-500/40" :
+    stage.tone === "muted" ? "border-zinc-500/40" :
+    "border-border/60";
+  const labelTone =
+    stage.tone === "danger" ? "text-red-500" :
+    stage.tone === "muted" ? "text-zinc-400" :
+    "text-foreground/90";
   return (
     <div
       ref={setNodeRef}
       data-pipeline-column="true"
-      className={`w-[82vw] sm:w-full xl:w-[280px] 2xl:w-[300px] flex-shrink-0 flex flex-col rounded-xl border border-border/60 bg-card/40 backdrop-blur transition-colors min-h-[164px] sm:min-h-[168px] xl:min-h-0 ${
+      className={`w-[82vw] sm:w-[300px] xl:w-[280px] 2xl:w-[300px] flex-shrink-0 flex flex-col rounded-xl border ${borderTone} bg-card/40 backdrop-blur transition-colors h-full ${
         isOver ? "ring-2 ring-primary/40 bg-card/70" : ""
       }`}
     >
-      <div className={`px-3 py-2.5 rounded-t-xl bg-gradient-to-b ${stage.accent} border-b border-border/40 sticky top-0`}>
+      <div className={`px-3 py-2.5 rounded-t-xl bg-gradient-to-b ${stage.accent} border-b ${borderTone} sticky top-0`}>
         <div className="flex items-center justify-between">
-          <span className="text-[11px] md:text-xs font-display font-semibold uppercase tracking-wider text-foreground/90 truncate">
+          <span className={`text-[11px] md:text-xs font-display font-semibold uppercase tracking-wider truncate ${labelTone}`}>
             {stage.label}
           </span>
           <Badge variant="secondary" className="text-[10px] h-5 px-1.5 shrink-0 ml-2">{cards.length}</Badge>
         </div>
       </div>
-      <div className="flex-1 p-2 space-y-2 min-h-[108px] max-h-[calc(100dvh-250px)] sm:max-h-[280px] lg:max-h-[320px] xl:max-h-[calc(100dvh-250px)] overflow-y-auto [scrollbar-width:thin] overscroll-contain">
+      <div className="flex-1 p-2 space-y-2 min-h-[140px] overflow-y-auto [scrollbar-width:thin] overscroll-contain">
         {loading && <div className="text-xs text-muted-foreground p-3">Carregando...</div>}
         {!loading && cards.length === 0 && (
           <div className="text-xs text-muted-foreground/70 p-4 text-center border border-dashed border-border/40 rounded-lg">
