@@ -171,10 +171,36 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
             .select("id, game_slug, game_name, icon_url, priority")
             .eq("platform_id", platformId)
             .order("priority", { ascending: false });
-          setAvailableGames(games || []);
+          const merged = [...(games || [])];
+          // Ensure the link's own game shows up (with its real icon) even if not hyped yet
+          const lg = (tl as any)?.game_slug;
+          if (lg && !merged.some(g => g.game_slug === lg)) {
+            merged.unshift({
+              id: `link-${lg}`,
+              game_slug: lg,
+              game_name: (tl as any).game_name || lg,
+              icon_url: (tl as any).game_icon_url || null,
+              priority: 999,
+            } as any);
+          }
+          setAvailableGames(merged);
+        } else if ((tl as any)?.game_slug) {
+          setAvailableGames([{
+            id: `link-${(tl as any).game_slug}`,
+            game_slug: (tl as any).game_slug,
+            game_name: (tl as any).game_name || (tl as any).game_slug,
+            icon_url: (tl as any).game_icon_url || null,
+            priority: 999,
+          }]);
         } else {
           setAvailableGames([]);
         }
+
+        // If instance has no games yet but the link declares one, seed it automatically
+        if ((!((inst as any).game_slugs) || ((inst as any).game_slugs as string[]).length === 0) && (tl as any)?.game_slug) {
+          setGameSlugs([(tl as any).game_slug]);
+        }
+
 
         // Load odds candidates when mode = odds
         if (m === "odds") {
