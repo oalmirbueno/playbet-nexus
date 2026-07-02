@@ -23,6 +23,7 @@ type Edit = {
 const empty: Edit = { name: "", color: COLORS[0], manager_id: null, monthly_goal: null, notes: "" };
 
 export default function SquadsTab() {
+  const nav = useNavigate();
   const { data: squads, create, update, remove, isCreating, isUpdating } = useSquads();
   const { data: managers } = useManagers();
   const { data: influencers } = useInfluencers();
@@ -80,18 +81,28 @@ export default function SquadsTab() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {grouped.map((s: any) => (
-            <div key={s.id} className="rounded-lg border border-border bg-card p-4 hover:border-primary/40 transition-colors">
+            <div
+              key={s.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => nav(`/pessoas/squads/${s.id}`)}
+              onKeyDown={(e) => { if (e.key === "Enter") nav(`/pessoas/squads/${s.id}`); }}
+              className="group text-left rounded-lg border border-border bg-card p-4 hover:border-primary/60 hover:shadow-sm transition-all cursor-pointer"
+            >
               <div className="flex items-start justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-2.5 h-10 rounded-sm shrink-0" style={{ backgroundColor: s.color }} />
                   <div className="min-w-0">
-                    <h3 className="text-[14px] font-semibold truncate">{s.name}</h3>
+                    <h3 className="text-[14px] font-semibold truncate flex items-center gap-1.5">
+                      {s.name}
+                      <ArrowRight size={12} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </h3>
                     <p className="text-[11px] text-muted-foreground truncate">
                       {s.manager ? `Gerente: ${s.manager.name}` : "Sem gerente"}
                     </p>
                   </div>
                 </div>
-                <div className="flex gap-1 shrink-0">
+                <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                   <button onClick={() => { setEdit({ id: s.id, name: s.name, color: s.color, manager_id: s.manager_id, monthly_goal: s.monthly_goal, notes: s.notes || "" }); setOpen(true); }} className="p-1.5 rounded hover:bg-secondary text-muted-foreground hover:text-foreground"><Edit2 size={12} /></button>
                   <button onClick={async () => { if (confirm("Remover squad?")) await remove(s.id); }} className="p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"><Trash2 size={12} /></button>
                 </div>
