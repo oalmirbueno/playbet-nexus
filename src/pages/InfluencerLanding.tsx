@@ -652,7 +652,7 @@ export default function InfluencerLanding() {
           <div className="max-w-xl mx-auto">
             <div className="text-center mb-6">
               <h2 className="text-xl font-bold mb-2">Odds do dia</h2>
-              <p className="text-sm text-gray-400">Curadoria PlayBet — mercados simples e valor real</p>
+              <p className="text-sm text-gray-400">Opções em destaque com mercado simples e valor real</p>
             </div>
             {smartOdds.length > 0 ? (
               <div className="space-y-2">
