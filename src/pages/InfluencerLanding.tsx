@@ -183,6 +183,13 @@ export default function InfluencerLanding() {
           .eq("id", instance.influencer_id)
           .maybeSingle();
 
+        setInstanceCtx({
+          lp_mode: (instance as any).lp_mode,
+          game_slugs: (instance as any).game_slugs,
+          layout_config: (instance as any).layout_config,
+          hype_copy: (instance as any).hype_copy,
+        });
+        await hydrateGameArts(lpBase.id, (instance as any).game_slugs || []);
         await finalize(instance.affiliate_link, instance.influencer_id, inf?.name || "", instance.id, instance.landing_page_id);
         return;
       }
@@ -203,6 +210,13 @@ export default function InfluencerLanding() {
           .eq("id", instance.influencer_id)
           .maybeSingle();
 
+        setInstanceCtx({
+          lp_mode: (instance as any).lp_mode,
+          game_slugs: (instance as any).game_slugs,
+          layout_config: (instance as any).layout_config,
+          hype_copy: (instance as any).hype_copy,
+        });
+        await hydrateGameArts(null, (instance as any).game_slugs || []);
         await finalize(instance.affiliate_link, instance.influencer_id, inf?.name || "", instance.id, instance.landing_page_id);
         return;
       }
