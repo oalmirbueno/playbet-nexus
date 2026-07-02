@@ -16,7 +16,7 @@ import type { TrackingEventRow } from "@/services/trackingService";
 import { useToast } from "@/hooks/use-toast";
 
 const CANONICAL_EVENTS = [
-  "click", "registration", "ftd", "deposit", "redeposit",
+  "lp_view", "click", "registration", "ftd", "deposit", "redeposit",
   "revenue", "withdrawable_revenue", "app_install", "qualified_player",
 ];
 
@@ -66,12 +66,28 @@ export default function TrackingEvents() {
     return accounts.find(a => a.id === id)?.nome_conta || id.slice(0, 8);
   };
 
-  const stats = useMemo(() => ({
-    total: filteredEvents.length,
-    duplicates: filteredEvents.filter(e => e.is_duplicate).length,
-    noClickId: filteredEvents.filter(e => !e.click_id && e.canonical_event_name !== "click").length,
-    totalAmount: filteredEvents.reduce((s, e) => s + (e.amount || 0), 0),
-  }), [filteredEvents]);
+  const stats = useMemo(() => {
+    const visits = filteredEvents.filter(e => e.canonical_event_name === "lp_view");
+    const outboundClicks = filteredEvents.filter(e => e.canonical_event_name === "click");
+    const conversions = filteredEvents.filter(e =>
+      !["lp_view", "click"].includes(e.canonical_event_name)
+    );
+    const uniqueVisitors = new Set(visits.map(e => e.click_id).filter(Boolean)).size;
+    const uniqueClickIds = new Set(outboundClicks.map(e => e.click_id).filter(Boolean)).size;
+    const ctr = visits.length > 0 ? (outboundClicks.length / visits.length) * 100 : 0;
+    return {
+      total: filteredEvents.length,
+      visits: visits.length,
+      uniqueVisitors,
+      outboundClicks: outboundClicks.length,
+      uniqueClickIds,
+      ctr,
+      conversions: conversions.length,
+      duplicates: filteredEvents.filter(e => e.is_duplicate).length,
+      noClickId: filteredEvents.filter(e => !e.click_id && !["click", "lp_view"].includes(e.canonical_event_name)).length,
+      totalAmount: filteredEvents.reduce((s, e) => s + (e.amount || 0), 0),
+    };
+  }, [filteredEvents]);
 
   const clearFilters = () => {
     setPlatformFilter("all"); setEventFilter("all");
@@ -97,25 +113,44 @@ export default function TrackingEvents() {
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-3">
-        <Card><CardContent className="py-3 px-4 text-center">
-          <p className="text-[10px] font-medium text-muted-foreground uppercase">Total</p>
-          <p className="text-lg font-bold">{stats.total}</p>
-        </CardContent></Card>
-        <Card><CardContent className="py-3 px-4 text-center">
-          <p className="text-[10px] font-medium text-muted-foreground uppercase">Duplicados</p>
-          <p className="text-lg font-bold text-yellow-500">{stats.duplicates}</p>
-        </CardContent></Card>
-        <Card><CardContent className="py-3 px-4 text-center">
-          <p className="text-[10px] font-medium text-muted-foreground uppercase">Sem click_id</p>
-          <p className="text-lg font-bold text-orange-500">{stats.noClickId}</p>
-        </CardContent></Card>
-        <Card><CardContent className="py-3 px-4 text-center">
-          <p className="text-[10px] font-medium text-muted-foreground uppercase">Valor Total</p>
-          <p className="text-lg font-bold">{fmt(stats.totalAmount)}</p>
-        </CardContent></Card>
+      {/* Funnel stats — separação clara entre visita, clique de saída e conversão */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card
+          className={`cursor-pointer transition-all ${eventFilter === "lp_view" ? "ring-2 ring-primary" : "hover:border-primary/40"}`}
+          onClick={() => setEventFilter(eventFilter === "lp_view" ? "all" : "lp_view")}
+        >
+          <CardContent className="py-3 px-4">
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Visitas · lp_view</p>
+            <p className="text-2xl font-bold text-blue-500 leading-tight">{stats.visits}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">{stats.uniqueVisitors} únicos</p>
+          </CardContent>
+        </Card>
+        <Card
+          className={`cursor-pointer transition-all ${eventFilter === "click" ? "ring-2 ring-primary" : "hover:border-primary/40"}`}
+          onClick={() => setEventFilter(eventFilter === "click" ? "all" : "click")}
+        >
+          <CardContent className="py-3 px-4">
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Cliques de saída · click</p>
+            <p className="text-2xl font-bold text-emerald-500 leading-tight">{stats.outboundClicks}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">CTR {stats.ctr.toFixed(1)}%</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-3 px-4">
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Conversões</p>
+            <p className="text-2xl font-bold text-foreground leading-tight">{stats.conversions}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">registro · FTD · depósito</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="py-3 px-4">
+            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Valor total</p>
+            <p className="text-2xl font-bold leading-tight">{fmt(stats.totalAmount)}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">{stats.duplicates} dup · {stats.noClickId} sem CID</p>
+          </CardContent>
+        </Card>
       </div>
+
 
       {/* Filters */}
       <Card>
@@ -202,7 +237,20 @@ export default function TrackingEvents() {
                       <TableCell className="text-xs">{getPlatformName(ev.platform_id)}</TableCell>
                       <TableCell className="text-xs">{getAccountName(ev.platform_account_id)}</TableCell>
                       <TableCell className="font-mono text-xs">{ev.raw_event_name}</TableCell>
-                      <TableCell><Badge variant="secondary" className="text-[10px]">{ev.canonical_event_name}</Badge></TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="secondary"
+                          className={`text-[10px] ${
+                            ev.canonical_event_name === "lp_view"
+                              ? "bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30"
+                              : ev.canonical_event_name === "click"
+                              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                              : ""
+                          }`}
+                        >
+                          {ev.canonical_event_name}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="font-mono text-[10px] text-muted-foreground max-w-[100px] truncate">{ev.transaction_id || "-"}</TableCell>
                       <TableCell className="font-mono text-[10px] text-muted-foreground max-w-[100px] truncate">{ev.click_id || "-"}</TableCell>
                       <TableCell className="text-right">{ev.amount ? fmt(ev.amount) : "-"}</TableCell>
