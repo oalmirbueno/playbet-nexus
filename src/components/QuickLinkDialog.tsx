@@ -270,7 +270,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
 
       const useLp = !!landingPageId;
 
-      await createLink({
+      const createdLink: any = await createLink({
         influencer_id: influencerId,
         platform_account_id: finalAccountId,
         landing_page_id: landingPageId || null,
@@ -290,11 +290,35 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
         status: "active",
       } as any);
 
+      // ── Sync: LP config + Materiais (fire-and-forget, non-blocking) ──
+      const linkId = createdLink?.id;
+      if (linkId) {
+        Promise.allSettled([
+          useLp
+            ? supabase.functions.invoke("lp-autoconfigure", {
+                body: {
+                  tracking_link_id: linkId,
+                  extra_game_slugs: extraGameSlugs,
+                  hype_copy: { subtitle: hypeReason || null },
+                },
+              })
+            : Promise.resolve(null),
+          supabase.functions.invoke("materials-autogenerate", {
+            body: { tracking_link_id: linkId },
+          }),
+        ]).then(() => {
+          qc.invalidateQueries({ queryKey: ["landing_page_instances"] });
+          qc.invalidateQueries({ queryKey: ["link_materials"] });
+        });
+      }
+
       try { await navigator.clipboard.writeText(finalUrl); } catch {}
 
       toast({
         title: "Link cadastrado",
-        description: useLp ? "Link da landing page copiado." : "Link copiado. Postback ativo.",
+        description: useLp
+          ? "LP e materiais estão sincronizando em segundo plano."
+          : "Link copiado · materiais gerando em segundo plano.",
       });
       onOpenChange(false);
     } catch (err: any) {
