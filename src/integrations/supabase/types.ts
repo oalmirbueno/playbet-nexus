@@ -835,6 +835,7 @@ export type Database = {
           is_active: boolean | null
           is_demo: boolean
           manager_id: string | null
+          monthly_goal_brl: number | null
           name: string
           notes: string | null
           slug: string
@@ -855,6 +856,7 @@ export type Database = {
           is_active?: boolean | null
           is_demo?: boolean
           manager_id?: string | null
+          monthly_goal_brl?: number | null
           name: string
           notes?: string | null
           slug: string
@@ -875,6 +877,7 @@ export type Database = {
           is_active?: boolean | null
           is_demo?: boolean
           manager_id?: string | null
+          monthly_goal_brl?: number | null
           name?: string
           notes?: string | null
           slug?: string
@@ -2056,13 +2059,51 @@ export type Database = {
         }
         Relationships: []
       }
+      squad_activity: {
+        Row: {
+          action: string
+          actor_user_id: string | null
+          created_at: string
+          id: string
+          payload: Json
+          squad_id: string
+        }
+        Insert: {
+          action: string
+          actor_user_id?: string | null
+          created_at?: string
+          id?: string
+          payload?: Json
+          squad_id: string
+        }
+        Update: {
+          action?: string
+          actor_user_id?: string | null
+          created_at?: string
+          id?: string
+          payload?: Json
+          squad_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "squad_activity_squad_id_fkey"
+            columns: ["squad_id"]
+            isOneToOne: false
+            referencedRelation: "squads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       squads: {
         Row: {
           color: string
           created_at: string
           director_id: string | null
+          goal_distribution_mode: string
+          goal_last_distributed_at: string | null
           id: string
           is_active: boolean
+          manager_goal_brl: number | null
           manager_id: string | null
           monthly_goal: number | null
           name: string
@@ -2073,8 +2114,11 @@ export type Database = {
           color?: string
           created_at?: string
           director_id?: string | null
+          goal_distribution_mode?: string
+          goal_last_distributed_at?: string | null
           id?: string
           is_active?: boolean
+          manager_goal_brl?: number | null
           manager_id?: string | null
           monthly_goal?: number | null
           name: string
@@ -2085,8 +2129,11 @@ export type Database = {
           color?: string
           created_at?: string
           director_id?: string | null
+          goal_distribution_mode?: string
+          goal_last_distributed_at?: string | null
           id?: string
           is_active?: boolean
+          manager_goal_brl?: number | null
           manager_id?: string | null
           monthly_goal?: number | null
           name?: string
@@ -2958,6 +3005,10 @@ export type Database = {
       current_influencer_id: { Args: never; Returns: string }
       current_manager_id: { Args: never; Returns: string }
       current_manager_squad_id: { Args: never; Returns: string }
+      distribute_squad_goal: {
+        Args: { _mode?: string; _overrides?: Json; _squad_id: string }
+        Returns: Json
+      }
       generate_api_key: { Args: { _name?: string }; Returns: Json }
       has_role: {
         Args: {
