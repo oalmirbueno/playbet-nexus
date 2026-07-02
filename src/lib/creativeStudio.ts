@@ -446,10 +446,6 @@ function drawTextLayer(ctx: CanvasRenderingContext2D, size: CreativeSize, L: Tex
   }
   ctx.restore();
 }
-    }
-    ctx.restore();
-  }
-}
 
 /* ────────────────────────── styles ────────────────────────── */
 
