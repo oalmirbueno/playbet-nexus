@@ -129,6 +129,7 @@ function AdminRoutes() {
         <Route path="/tracking/events" element={<TrackingEvents />} />
         <Route path="/tracking/snapshots" element={<TrackingSnapshots />} />
         <Route path="/tracking/links" element={<TrackingLinks />} />
+        <Route path="/materiais" element={<Materiais />} />
         <Route path="/tracking/reconciliacao" element={<Reconciliacao />} />
         <Route path="/comercial" element={<ComercialPipeline />} />
         <Route path="/comercial/squads" element={<ComercialSquads />} />
@@ -145,6 +146,7 @@ function PortalRoutes() {
       <Routes>
         <Route path="/portal" element={<PortalHome />} />
         <Route path="/portal/links" element={<PortalLinks />} />
+        <Route path="/portal/materiais" element={<PortalMateriais />} />
         <Route path="/portal/financeiro" element={<PortalFinanceiro />} />
         <Route path="/portal/saques" element={<PortalSaques />} />
         <Route path="/portal/perfil" element={<PortalPerfil />} />
@@ -162,6 +164,7 @@ function ManagerRoutes() {
         <Route path="/gerente/ranking" element={<GerenteRanking />} />
         <Route path="/gerente/influenciadores" element={<GerenteInfluenciadores />} />
         <Route path="/gerente/links" element={<GerenteLinks />} />
+        <Route path="/gerente/materiais" element={<GerenteMateriais />} />
         <Route path="/gerente/oportunidades" element={<GerenteOportunidades />} />
         <Route path="/gerente/financeiro" element={<GerenteFinanceiro />} />
         <Route path="/gerente/saques" element={<GerenteSaques />} />
