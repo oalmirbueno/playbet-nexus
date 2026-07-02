@@ -44,6 +44,7 @@ export default function LPInstances() {
   const [previewOpen, setPreviewOpen] = useState<LandingPageInstanceRow | null>(null);
   const [postbackOpen, setPostbackOpen] = useState<LandingPageInstanceRow | null>(null);
   const [quickLinkFor, setQuickLinkFor] = useState<LandingPageInstanceRow | null>(null);
+  const [visualEditorFor, setVisualEditorFor] = useState<LandingPageInstanceRow | null>(null);
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [filterLP, setFilterLP] = useState("Todos");
