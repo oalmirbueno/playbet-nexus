@@ -12,6 +12,22 @@ import playbetLogo from "@/assets/logo-mark.png";
 export type CreativeFormat = "feed" | "story" | "landscape" | "square_wa";
 export type CreativeStyle = "hype" | "minimal" | "editorial";
 
+export interface TextLayer {
+  id: string;
+  text: string;               // may contain \n
+  xPct: number;               // 0-100 (left edge of box)
+  yPct: number;               // 0-100 (top edge of box)
+  widthPct: number;           // 10-100
+  fontSizePct: number;        // % of canvas width (e.g. 8 → 0.08 * w)
+  color: string;              // hex
+  weight: 400 | 500 | 600 | 700 | 800 | 900;
+  align: "left" | "center" | "right";
+  family: "display" | "sans" | "grotesk";
+  uppercase?: boolean;
+  shadow?: boolean;
+  lineHeight?: number;        // multiplier (default 1.05)
+}
+
 export interface CreativeInput {
   format: CreativeFormat;
   style: CreativeStyle;
@@ -24,6 +40,10 @@ export interface CreativeInput {
   handle?: string; // @influencer or short link
   shortUrl?: string;
   hypeReason?: string | null;
+  /** When true, auto text (headline/hype/cta/handle) is not drawn — use `layers` instead. */
+  hideAutoText?: boolean;
+  /** Custom text layers rendered on top of the artwork. */
+  layers?: TextLayer[];
 }
 
 export interface CreativeSize { w: number; h: number; label: string; }
