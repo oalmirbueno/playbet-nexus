@@ -54,7 +54,7 @@ const OFFER_CTAS = ["Resgatar oferta", "Ativar bônus", "Quero participar"];
 const GUIDE_CTAS = ["Ler guia", "Saiba mais"];
 
 const CASINO_TYPES = ["slot", "crash", "roleta", "ao vivo", "mines", "blackjack", "destaque"];
-const CASINO_BADGES = ["Jogo em destaque", "Novidade", "Cassino em alta", "Oferta oficial"];
+const CASINO_BADGES = ["Em destaque", "Novidade", "Cassino em alta", "Oferta oficial"];
 
 const MEDIA_TYPES: Array<{ v: string; label: string }> = [
   { v: "image", label: "Imagem" },
@@ -206,10 +206,10 @@ export function OpportunityWizard({
     if (mode === "sports") {
       title = evento || "Aposta sugerida";
       subtitle = [mercado, casa].filter(Boolean).join(" · ");
-      badge = odd ? `Odd ${odd}` : "Odd em destaque";
+      badge = odd ? `Odd ${odd}` : "Em destaque";
       cta = sportsCta;
     } else if (mode === "casino") {
-      title = gameName || "Jogo em destaque";
+      title = gameName || "Em destaque";
       subtitle = [provider, gameType, casa].filter(Boolean).join(" · ");
       badge = casinoBadge;
       cta = casinoCta;
@@ -274,7 +274,7 @@ export function OpportunityWizard({
       title = evento || detected.suggestedTitle;
       subtitle = mercado || detected.suggestedSubtitle;
       cta = sportsCta;
-      badge = odd ? `Odd ${odd}` : "Odd em destaque";
+      badge = odd ? `Odd ${odd}` : "Em destaque";
       event_name = evento || null;
       market_name = mercado || null;
       odd_label = odd || null;
