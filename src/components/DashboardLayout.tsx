@@ -93,12 +93,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm md:hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* ── Sidebar ──────────────────────────── */}
       <aside
-        className={`group/sidebar fixed z-50 inset-y-0 left-0 flex flex-col transition-[width,transform] duration-300 ease-out md:translate-x-0 md:static md:shrink-0 border-r border-sidebar-border/70 backdrop-blur-xl ${
+        className={`group/sidebar fixed z-50 inset-y-0 left-0 flex flex-col transition-[width,transform] duration-300 ease-out lg:translate-x-0 lg:static lg:shrink-0 border-r border-sidebar-border/70 backdrop-blur-xl ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         } ${sidebarCollapsed ? "w-[68px]" : "w-[248px]"}`}
         style={{
@@ -109,7 +109,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Floating collapse pill (desktop) */}
         <button
           onClick={() => setSidebarCollapsed((c) => !c)}
-          className="hidden md:flex absolute -right-3 top-[24px] z-50 h-6 w-6 items-center justify-center rounded-full border border-sidebar-border bg-card text-muted-foreground hover:text-primary hover:border-primary/50 hover:shadow-[0_0_0_4px_hsl(var(--primary)/0.14)] transition-all duration-200"
+          className="hidden lg:flex absolute -right-3 top-[24px] z-50 h-6 w-6 items-center justify-center rounded-full border border-sidebar-border bg-card text-muted-foreground hover:text-primary hover:border-primary/50 hover:shadow-[0_0_0_4px_hsl(var(--primary)/0.14)] transition-all duration-200"
           title={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
           aria-label={sidebarCollapsed ? "Expandir menu" : "Recolher menu"}
         >
@@ -120,7 +120,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <div className={`flex items-center ${sidebarCollapsed ? "justify-center px-2" : "justify-between px-5"} h-[64px] border-b border-sidebar-border/60 shrink-0`}>
           {!sidebarCollapsed && <img src={logo} alt="PlayBet" className="h-20 opacity-95" />}
           {sidebarCollapsed && <img src={logo} alt="PlayBet" className="h-10 w-10 object-contain opacity-95" />}
-          <button className="md:hidden text-sidebar-foreground hover:text-foreground transition-colors" onClick={() => setSidebarOpen(false)}>
+          <button className="lg:hidden text-sidebar-foreground hover:text-foreground transition-colors" onClick={() => setSidebarOpen(false)}>
             <X size={16} />
           </button>
         </div>
@@ -196,12 +196,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* ── Main ─────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
         <PreviewBanner />
-        <header className="h-[56px] border-b border-border/60 flex items-center px-4 md:px-6 gap-3 md:gap-4 bg-background/70 backdrop-blur-xl sticky top-0 z-30 shrink-0">
+        <header className="h-[56px] border-b border-border/60 flex items-center px-3 sm:px-4 lg:px-6 gap-2 sm:gap-3 lg:gap-4 bg-background/70 backdrop-blur-xl sticky top-0 z-30 shrink-0">
 
-          <button className="md:hidden text-muted-foreground hover:text-foreground transition-colors" onClick={() => setSidebarOpen(true)}>
+          <button className="lg:hidden text-muted-foreground hover:text-foreground transition-colors" onClick={() => setSidebarOpen(true)}>
             <Menu size={17} />
           </button>
-          <div className="hidden md:flex items-center gap-2.5 bg-secondary/40 hover:bg-secondary/60 border border-border/60 hover:border-primary/30 rounded-lg px-3.5 py-[7px] flex-1 max-w-sm cursor-pointer transition-all duration-200" onClick={() => setSearchOpen(true)}>
+          <div className="hidden lg:flex items-center gap-2.5 bg-secondary/40 hover:bg-secondary/60 border border-border/60 hover:border-primary/30 rounded-lg px-3.5 py-[7px] flex-1 max-w-sm cursor-pointer transition-all duration-200" onClick={() => setSearchOpen(true)}>
             <Search size={13} className="text-muted-foreground shrink-0" />
             <span className="text-[13px] text-muted-foreground flex-1">Buscar módulo, influencer, jogo...</span>
             <kbd className="hidden lg:inline-flex items-center gap-0.5 text-[10px] text-muted-foreground bg-background/80 border border-border rounded px-1.5 py-0.5 font-mono">
@@ -223,7 +223,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto invisible-scroll main-scroll animate-fade-in">{children}</main>
+        <main className="flex-1 p-4 md:p-6 xl:p-8 overflow-y-auto invisible-scroll main-scroll animate-fade-in">{children}</main>
       </div>
 
       <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
