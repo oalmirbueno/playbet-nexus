@@ -68,14 +68,6 @@ function isBonusCategory(category: string | null | undefined): boolean {
   return ["bonus", "bônus", "promo", "oferta", "offer", "cupom", "codigo", "código"].includes(cat);
 }
 
-function categoryCta(category: string | null | undefined, gameName?: string | null): string {
-  const cat = (category || "").toLowerCase();
-  if (isBonusCategory(cat)) return "Resgatar bônus";
-  if (["odds", "sports", "sportsbook", "esportes"].includes(cat)) return "Apostar agora";
-  if (["crash", "slots", "casino", "live"].includes(cat)) return gameName ? `Jogar ${gameName}` : "Jogar agora";
-  return "Acessar oportunidades";
-}
-
 function ctaForMode(lpMode: LpMode, category: string | null | undefined, gameName?: string | null): string {
   if (lpMode === "catalog") return "Acessar oportunidades";
   if (lpMode === "odds") return "Apostar agora";

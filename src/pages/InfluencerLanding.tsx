@@ -132,12 +132,12 @@ function GameImage({
   fallbackClassName: string;
   iconSize?: number;
 }) {
-  const [src, setSrc] = useState(() => art?.icon_url || null);
-  const [failedDirect, setFailedDirect] = useState(false);
+  const [src, setSrc] = useState(() => proxiedImageUrl(art?.icon_url) || art?.icon_url || null);
+  const [failedProxy, setFailedProxy] = useState(false);
 
   useEffect(() => {
-    setSrc(art?.icon_url || null);
-    setFailedDirect(false);
+    setSrc(proxiedImageUrl(art?.icon_url) || art?.icon_url || null);
+    setFailedProxy(false);
   }, [art?.icon_url]);
 
   if (src) {
@@ -148,10 +148,9 @@ function GameImage({
         className={className}
         loading="lazy"
         onError={() => {
-          const proxy = proxiedImageUrl(art?.icon_url);
-          if (!failedDirect && proxy && proxy !== src) {
-            setFailedDirect(true);
-            setSrc(proxy);
+          if (!failedProxy && art?.icon_url && art.icon_url !== src) {
+            setFailedProxy(true);
+            setSrc(art.icon_url);
             return;
           }
           setSrc(null);
