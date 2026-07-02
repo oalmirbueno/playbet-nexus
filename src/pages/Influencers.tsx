@@ -354,6 +354,9 @@ export default function Influencers() {
                                     {inf.name.charAt(0).toUpperCase()}
                                   </div>
                                   <span className="font-medium hover:text-accent transition-colors">{inf.name}</span>
+                                  {duplicateInfIds.has(inf.id) && (
+                                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 border border-amber-500/30 font-medium" title="Existe outra pessoa com este nome">Duplicado</span>
+                                  )}
                                 </div>
                               </td>
                               <td className="text-accent text-xs">{inf.instagram || "-"}</td>
