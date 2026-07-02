@@ -8,11 +8,11 @@ import { useInfluencers, useLandingPages, useLandingPageInstances, usePlatforms,
 import { usePlatformAccounts, useTrackingLinks } from "@/hooks/useTrackingData";
 import { landingPageInstanceService } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
-import { Link2, CheckCircle2, Plus, Sparkles, Copy, Flame, Wand2 } from "lucide-react";
+import { Link2, CheckCircle2, Plus, Sparkles, Copy, Flame, Wand2, RefreshCw, Loader2 } from "lucide-react";
 import { buildPublicLpUrl, buildTrackedAffiliateUrl } from "@/lib/trackingUrl";
 import { detectFromUrl, CATEGORY_LABELS, inferAttributionParam, type LinkCategory } from "@/lib/linkIntelligence";
 import GameArtwork from "@/components/tracking/GameArtwork";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Props {
@@ -130,6 +130,9 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
     if (detection.gameName) setGameName(detection.gameName);
   }, [detection.category, detection.gameSlug, detection.gameName]);
 
+  const qc = useQueryClient();
+  const [refreshingHype, setRefreshingHype] = useState(false);
+
   const { data: hypedGames = [] } = useQuery({
     queryKey: ["quick_platform_hyped_games", currentPlatformId],
     enabled: !!currentPlatformId,
@@ -140,11 +143,28 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
         .eq("platform_id", currentPlatformId)
         .eq("is_active", true)
         .order("priority", { ascending: true })
-        .limit(5);
+        .limit(20);
       if (error) throw error;
       return data ?? [];
     },
   });
+
+  const refreshHypedGames = async () => {
+    if (!currentPlatformId) return;
+    setRefreshingHype(true);
+    try {
+      const { error } = await supabase.functions.invoke("hyped-games-refresh", {
+        body: { platform_id: currentPlatformId },
+      });
+      if (error) throw error;
+      await qc.invalidateQueries({ queryKey: ["quick_platform_hyped_games", currentPlatformId] });
+      toast({ title: "Jogos atualizados", description: "Top jogos e logos recarregados." });
+    } catch (e: any) {
+      toast({ title: "Falha ao atualizar", description: e?.message || "Tente novamente.", variant: "destructive" });
+    } finally {
+      setRefreshingHype(false);
+    }
+  };
 
   const applyHypedGame = (g: any) => {
     setGameSlug(g.game_slug || "");
