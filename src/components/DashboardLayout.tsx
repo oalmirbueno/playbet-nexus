@@ -208,6 +208,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Command size={9} />K
             </kbd>
           </div>
+          <button
+            className="lg:hidden ml-auto p-2 rounded-lg hover:bg-secondary/60 text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => setSearchOpen(true)}
+            aria-label="Buscar"
+            title="Buscar (⌘K)"
+          >
+            <Search size={15} />
+          </button>
           <div className="ml-auto flex items-center gap-2">
             <NotificationPanel />
             <div className="h-5 w-px bg-border/60 mx-1" />
