@@ -395,14 +395,27 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
   // sub3 = campanha_id (UUID). Automático quando campanha selecionada.
   const sub3Value = form.campanha_id || "";
 
+  // LP mode: user picks between the registered "LP padrão" (catalog) and the
+  // auto-generated "LP gerada" seeded from the game context. Detects the
+  // sensible default from the current link, but always respects manual overrides.
+  const detectedLpMode = useMemo<LpMode>(
+    () => detectLpMode({ linkCategory: form.link_category, gameSlug: form.game_slug }),
+    [form.link_category, form.game_slug],
+  );
+  const instanceMode = ((selectedInstance as any)?.lp_mode ?? null) as LpMode | null;
+  const [lpModeOverride, setLpModeOverride] = useState<LpMode | null>(instanceMode);
+  useEffect(() => { setLpModeOverride(instanceMode); }, [selectedInstance?.id, instanceMode]);
+  const effectiveLpMode: LpMode = lpModeOverride ?? instanceMode ?? detectedLpMode;
+  const canUseGenerated = !!(form.game_slug || form.game_name);
+
   // The link the influencer shares = the LP public URL (NOT the affiliate URL).
   // Visitors land on the LP, click the CTA, and only then get redirected to
   // the affiliate URL (which is stored on the LP instance).
   const publicLpUrl = useMemo(() => {
     if (!useLp) return "";
-    if ((selectedInstance as any)?.lp_mode === "catalog") return buildLpBaseUrl(selectedLP?.domain, selectedLP?.route);
+    if (effectiveLpMode === "catalog") return buildLpBaseUrl(selectedLP?.domain, selectedLP?.route);
     return buildPublicLpUrl(selectedLP?.domain, selectedInstance?.slug, sub2Value, sub3Value);
-  }, [useLp, selectedLP, selectedInstance, sub2Value, sub3Value]);
+  }, [useLp, effectiveLpMode, selectedLP, selectedInstance, sub2Value, sub3Value]);
 
   // The deep affiliate URL with attribution params - used by the LP CTA, not shared directly.
   const trackedAffiliateUrl = useMemo(
@@ -419,15 +432,20 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
     && (useLp ? !!form.landing_page_instance_id : true);
 
   const handleSave = async () => {
-    // Persist the tracked deep affiliate URL on the LP instance so the LP CTA can use it (Com LP only).
-    // A instância continua sendo a página cadastrada; o link público é salvo em final_url.
-    if (useLp && selectedInstance && form.base_url && selectedInstance.affiliate_link !== trackedAffiliateUrl) {
-      try {
-        await landingPageInstanceService.update(selectedInstance.id, { affiliate_link: trackedAffiliateUrl });
-        await qc.invalidateQueries({ queryKey: ["landing_page_instances"] });
-      } catch (e: any) {
-        toast({ title: "Erro ao salvar link no botão da LP", description: e.message, variant: "destructive" });
-        return;
+    // Persist affiliate link + chosen LP mode on the instance so the LP CTA and
+    // the public URL always match what the influencer sees in the form.
+    if (useLp && selectedInstance && form.base_url) {
+      const patch: Record<string, any> = {};
+      if (selectedInstance.affiliate_link !== trackedAffiliateUrl) patch.affiliate_link = trackedAffiliateUrl;
+      if (instanceMode !== effectiveLpMode) patch.lp_mode = effectiveLpMode;
+      if (Object.keys(patch).length > 0) {
+        try {
+          await landingPageInstanceService.update(selectedInstance.id, patch);
+          await qc.invalidateQueries({ queryKey: ["landing_page_instances"] });
+        } catch (e: any) {
+          toast({ title: "Erro ao salvar LP", description: e.message, variant: "destructive" });
+          return;
+        }
       }
     }
     // Sem LP: drop instance/LP refs so the saved tracking_link reflects mode.
