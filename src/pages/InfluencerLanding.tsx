@@ -470,16 +470,78 @@ export default function InfluencerLanding() {
 
       {isSectionOn("odds") && mode === "odds" && (
         <section className="px-6 pb-16">
-          <div className="max-w-xl mx-auto text-center">
-            <h2 className="text-xl font-bold mb-2">Odds do dia</h2>
-            <p className="text-sm text-gray-400 mb-6">Aposte agora nas melhores odds</p>
-            <button
-              onClick={handleCTA}
-              className="w-full max-w-md mx-auto bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-6 hover:bg-emerald-500/15 transition"
-            >
-              <p className="text-sm text-gray-300 mb-2">Confira as partidas ao vivo</p>
-              <p className="text-2xl font-extrabold text-emerald-400">Ver Odds →</p>
-            </button>
+          <div className="max-w-xl mx-auto">
+            <div className="text-center mb-6">
+              <h2 className="text-xl font-bold mb-2">Odds do dia</h2>
+              <p className="text-sm text-gray-400">Curadoria PlayBet — mercados simples e valor real</p>
+            </div>
+            {smartOdds.length > 0 ? (
+              <div className="space-y-2">
+                {smartOdds.map((o, i) => (
+                  <button
+                    key={i}
+                    onClick={handleCTA}
+                    className="w-full text-left bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] hover:border-emerald-500/40 rounded-xl p-4 transition-all group"
+                  >
+                    <div className="flex items-center justify-between gap-3 mb-1">
+                      <span className="text-sm font-semibold truncate">{o.event_name}</span>
+                      {o.odd_label && (
+                        <span className="text-emerald-400 font-extrabold text-lg tabular-nums shrink-0">{o.odd_label}</span>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between gap-2 text-xs text-gray-400">
+                      <span className="truncate">{o.market_name}</span>
+                      {o.badge && <span className="text-[10px] uppercase tracking-wider text-emerald-400/80">{o.badge}</span>}
+                    </div>
+                    {o.starts_at && (
+                      <p className="text-[10px] text-gray-500 mt-1">
+                        {new Date(o.starts_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    )}
+                  </button>
+                ))}
+                <button
+                  onClick={handleCTA}
+                  className="w-full mt-3 bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3 rounded-xl transition"
+                >
+                  Apostar agora →
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleCTA}
+                className="w-full max-w-md mx-auto block bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-6 hover:bg-emerald-500/15 transition"
+              >
+                <p className="text-sm text-gray-300 mb-2">Confira as partidas ao vivo</p>
+                <p className="text-2xl font-extrabold text-emerald-400">Ver Odds →</p>
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+
+      {isSectionOn("community") && communityCta?.enabled && communityCta?.label && (
+        <section className="px-6 pb-16">
+          <div className="max-w-xl mx-auto bg-white/[0.03] border border-white/[0.08] rounded-2xl p-6 text-center">
+            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500/15 border border-emerald-500/30 mb-3">
+              <Users size={22} className="text-emerald-400" />
+            </div>
+            <h3 className="text-lg font-bold mb-1">{communityCta.label}</h3>
+            {communityCta.note && (
+              <p className="text-xs text-gray-400 mb-4 max-w-sm mx-auto">{communityCta.note}</p>
+            )}
+            {communityCta.url ? (
+              <a
+                href={communityCta.url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.12] px-6 py-2.5 rounded-xl text-sm font-semibold transition"
+              >
+                Entrar no grupo <ArrowRight size={14} />
+              </a>
+            ) : (
+              <p className="text-[11px] text-gray-500">Link do grupo em configuração pelo influenciador.</p>
+            )}
           </div>
         </section>
       )}
