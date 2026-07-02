@@ -700,7 +700,7 @@ function InfluencerLinksSheet({ influencerId, onClose, canManage }: {
     enabled: !!influencerId,
     queryFn: async () => {
       const { data } = await db.from("tracking_links")
-        .select("id,name,short_url,base_url,is_active,game_name,link_category,updated_at,is_broken")
+        .select("id,short_url,base_url,is_active,game_name,link_category,updated_at")
         .eq("influencer_id", influencerId)
         .order("updated_at", { ascending: false });
       return data ?? [];
@@ -712,12 +712,6 @@ function InfluencerLinksSheet({ influencerId, onClose, canManage }: {
     if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
     else qc.invalidateQueries({ queryKey: ["influencer-tracking-links", influencerId] });
   };
-
-  const markBroken = async (id: string, curr: boolean) => {
-    const { error } = await db.from("tracking_links").update({ is_broken: !curr }).eq("id", id);
-    if (error) {
-      // column may not exist — fallback to deactivating
-      toast({ title: "Marcando como inativo", variant: "default" });
       await toggle(id, true);
     } else {
       qc.invalidateQueries({ queryKey: ["influencer-tracking-links", influencerId] });
