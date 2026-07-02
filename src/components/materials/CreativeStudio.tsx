@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   renderCreative, downloadCreative, slugify, defaultLayersFor,
-  FORMAT_SIZES, STYLE_LABEL,
+  FORMAT_SIZES,
   type CreativeFormat, type CreativeStyle, type CreativeInput, type RenderedCreative,
   type Layer, type TextLayer, type ImageLayer,
 } from "@/lib/creativeStudio";
@@ -15,7 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Download, Loader2, RefreshCw, Sparkles, Copy, Check, Plus, Trash2,
+  Download, Loader2, RefreshCw, Sparkles, Copy, Check, Trash2,
   AlignLeft, AlignCenter, AlignRight, Type, Image as ImageIcon,
   ChevronUp, ChevronDown, Save, Undo2, MousePointer2,
 } from "lucide-react";
@@ -39,8 +39,6 @@ interface Props {
 }
 
 const FORMATS: CreativeFormat[] = ["feed", "story", "landscape", "square_wa"];
-const STYLES: CreativeStyle[] = ["hype", "minimal", "editorial"];
-
 const FAMILY_CSS: Record<TextLayer["family"], string> = {
   display: '"Archivo Black","Inter",sans-serif',
   sans: '"Inter",system-ui,sans-serif',
@@ -662,21 +660,6 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                 ))}
               </div>
             </div>
-
-            {!editorMode && (
-              <div className="space-y-2">
-                <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Estilo</Label>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {STYLES.map(s => (
-                    <button key={s} onClick={() => setStyle(s)}
-                      className={cn("text-[11px] px-2 py-2 rounded-md border transition-all",
-                        style === s ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:text-foreground hover:border-border")}>
-                      {STYLE_LABEL[s]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
 
             <>
               <div className="flex items-center justify-between">
