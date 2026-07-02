@@ -130,7 +130,8 @@ export default function ComercialSquads() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {squads.map(squad => {
-            const sqMgrs = managers.filter(m => m.squad_id === squad.id);
+            const sqMgrIds = squadMgrs[squad.id] ?? [];
+            const sqMgrs = managers.filter(m => sqMgrIds.includes(m.id) || m.squad_id === squad.id);
             const director = directors.find(d => d.id === squad.director_id) || null;
             return (
               <Card key={squad.id} className="p-4 space-y-3 border-border/60 hover:border-primary/40 transition-colors">
@@ -147,27 +148,38 @@ export default function ComercialSquads() {
                   {sqMgrs.length === 0 && (
                     <div className="text-xs text-muted-foreground py-2">Sem gerentes vinculados</div>
                   )}
-                  {sqMgrs.map(m => (
-                    <div key={m.id} className="flex items-center justify-between text-sm py-1.5 px-2 rounded bg-secondary/40">
-                      <span className="flex items-center gap-2 min-w-0">
-                        <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        <span className="truncate">{m.name}</span>
-                        {m.origin_type === "socio" && (
-                          <Badge className="h-4 px-1.5 text-[9px] gap-0.5 bg-amber-500/15 text-amber-600 border-amber-500/30 hover:bg-amber-500/20">
-                            <Crown className="h-2.5 w-2.5" /> Sócio
+                  {sqMgrs.map(m => {
+                    const totalSquads = mgrSquads[m.id]?.length ?? (m.squad_id ? 1 : 0);
+                    const hierarchy = m.hierarchy_role ?? (totalSquads >= 5 ? "diretor_squads" : totalSquads >= 3 ? "gerente_diretor" : "gerente");
+                    const hierarchyMeta =
+                      hierarchy === "diretor_squads" ? { label: "Diretor de Squads", cls: "bg-fuchsia-500/15 text-fuchsia-600 border-fuchsia-500/30" }
+                      : hierarchy === "gerente_diretor" ? { label: "Gerente Diretor", cls: "bg-indigo-500/15 text-indigo-500 border-indigo-500/30" }
+                      : { label: "Gerente", cls: "bg-emerald-500/15 text-emerald-600 border-emerald-500/30" };
+                    return (
+                      <div key={m.id} className="flex items-center justify-between text-sm py-1.5 px-2 rounded bg-secondary/40">
+                        <span className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                          <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span className="truncate">{m.name}</span>
+                          <Badge className={`h-4 px-1.5 text-[9px] font-medium border ${hierarchyMeta.cls} hover:${hierarchyMeta.cls}`}>
+                            {hierarchyMeta.label} · {totalSquads}
                           </Badge>
-                        )}
-                        {m.origin_type === "influencer" && (
-                          <Badge variant="outline" className="h-4 px-1.5 text-[9px] gap-0.5">
-                            <Sparkles className="h-2.5 w-2.5" /> Influencer
-                          </Badge>
-                        )}
-                      </span>
-                      <Badge variant="outline" className="text-[10px] font-normal shrink-0">
-                        {counts[m.id] ?? 0} infl.
-                      </Badge>
-                    </div>
-                  ))}
+                          {m.origin_type === "socio" && (
+                            <Badge className="h-4 px-1.5 text-[9px] gap-0.5 bg-amber-500/15 text-amber-600 border-amber-500/30 hover:bg-amber-500/20">
+                              <Crown className="h-2.5 w-2.5" /> Sócio
+                            </Badge>
+                          )}
+                          {m.origin_type === "influencer" && (
+                            <Badge variant="outline" className="h-4 px-1.5 text-[9px] gap-0.5">
+                              <Sparkles className="h-2.5 w-2.5" /> Influencer
+                            </Badge>
+                          )}
+                        </span>
+                        <Badge variant="outline" className="text-[10px] font-normal shrink-0">
+                          {counts[m.id] ?? 0} infl.
+                        </Badge>
+                      </div>
+                    );
+                  })}
                 </div>
               </Card>
             );
