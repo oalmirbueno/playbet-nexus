@@ -231,6 +231,7 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
 function toStudioLink(r: Row): CreativeStudioLink {
   return {
     id: r.id,
+    influencerId: r.influencer_id,
     gameName: r.game_name,
     gameIconUrl: r.game_icon_url,
     platformName: r.platform_name,
