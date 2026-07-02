@@ -113,16 +113,22 @@ export default function InfluencerLanding() {
     if (!slug) { setState("not_found"); return; }
 
     const hydrateGameArts = async (landingPageId: string | null, slugs: string[]) => {
-      if (!slugs || slugs.length === 0) { setGameArts([]); return; }
-      let platformId: string | null = null;
-      // Try to derive platform via tracking_links → platform_accounts
+      // Always try to enrich with the link's own game_icon_url as canonical fallback
       const { data: tl } = await supabase
         .from("tracking_links")
-        .select("platform_account_id, platform_accounts(platform_id)")
+        .select("game_slug, game_name, game_icon_url, platform_account_id, platform_accounts(platform_id)")
         .eq("landing_page_id", landingPageId ?? "")
         .limit(1)
         .maybeSingle();
-      platformId = (tl as any)?.platform_accounts?.platform_id ?? null;
+      const linkIcon: GameArt | null = (tl as any)?.game_slug
+        ? { slug: (tl as any).game_slug, name: (tl as any).game_name || (tl as any).game_slug, icon_url: (tl as any).game_icon_url || null }
+        : null;
+      const platformId: string | null = (tl as any)?.platform_accounts?.platform_id ?? null;
+
+      if (!slugs || slugs.length === 0) {
+        setGameArts(linkIcon ? [linkIcon] : []);
+        return;
+      }
 
       const q = supabase
         .from("platform_hyped_games")
@@ -135,9 +141,14 @@ export default function InfluencerLanding() {
           byName.set(g.game_slug, { slug: g.game_slug, name: g.game_name, icon_url: g.icon_url });
         }
       });
+      // Prefer platform_hyped_games icon; fallback to link's own icon for the matching slug
+      if (linkIcon && !byName.get(linkIcon.slug)?.icon_url) {
+        byName.set(linkIcon.slug, linkIcon);
+      }
       const arts = slugs.map((s) => byName.get(s) ?? { slug: s, name: s.replace(/-/g, " "), icon_url: null });
       setGameArts(arts);
     };
+
 
 
     if (!slug) { setState("not_found"); return; }
