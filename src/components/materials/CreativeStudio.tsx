@@ -255,9 +255,9 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
               className="relative shadow-2xl rounded-lg overflow-hidden bg-black select-none"
               style={{
                 aspectRatio: `${size.w} / ${size.h}`,
-                width: size.h > size.w ? `min(${Math.round(62 * (size.w / size.h))}vh, 90%)` : "min(62vh * (aspect), 100%)",
+                width: `min(100%, calc(68vh * ${size.w / size.h}))`,
                 maxHeight: "68vh",
-                maxWidth: "100%",
+                containerType: "inline-size",
               }}
             >
               {rendering && (
