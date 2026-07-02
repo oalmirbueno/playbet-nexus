@@ -309,7 +309,9 @@ export default function InfluencerLanding() {
       ) => {
         const tl = await findTrackingLink(instanceId, influencerId);
         const paramName = tl?.click_id_param_name || "sub1";
-        const outboundAffiliate = affiliateLink || tl?.base_url || tl?.short_url || "";
+        const fallbackOpportunity = await findOpportunityDestination(instanceId, landingPageId);
+        const outboundAffiliate =
+          affiliateLink || (tl as any)?.base_url || (tl as any)?.short_url || (tl as any)?.final_url || fallbackOpportunity || "";
 
         setResolved({
           affiliate_link: outboundAffiliate,
