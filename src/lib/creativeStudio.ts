@@ -12,6 +12,22 @@ import playbetLogo from "@/assets/logo-mark.png";
 export type CreativeFormat = "feed" | "story" | "landscape" | "square_wa";
 export type CreativeStyle = "hype" | "minimal" | "editorial";
 
+export interface TextLayer {
+  id: string;
+  text: string;               // may contain \n
+  xPct: number;               // 0-100 (left edge of box)
+  yPct: number;               // 0-100 (top edge of box)
+  widthPct: number;           // 10-100
+  fontSizePct: number;        // % of canvas width (e.g. 8 → 0.08 * w)
+  color: string;              // hex
+  weight: 400 | 500 | 600 | 700 | 800 | 900;
+  align: "left" | "center" | "right";
+  family: "display" | "sans" | "grotesk";
+  uppercase?: boolean;
+  shadow?: boolean;
+  lineHeight?: number;        // multiplier (default 1.05)
+}
+
 export interface CreativeInput {
   format: CreativeFormat;
   style: CreativeStyle;
@@ -24,6 +40,10 @@ export interface CreativeInput {
   handle?: string; // @influencer or short link
   shortUrl?: string;
   hypeReason?: string | null;
+  /** When true, auto text (headline/hype/cta/handle) is not drawn — use `layers` instead. */
+  hideAutoText?: boolean;
+  /** Custom text layers rendered on top of the artwork. */
+  layers?: TextLayer[];
 }
 
 export interface CreativeSize { w: number; h: number; label: string; }
@@ -212,13 +232,27 @@ export async function renderCreative(input: CreativeInput): Promise<RenderedCrea
     ctx.restore();
   }
 
-  // Style-specific layouts
-  if (input.style === "minimal") {
-    await drawMinimal(ctx, size, input, gameImg, logoImg, brandAccent);
-  } else if (input.style === "editorial") {
-    await drawEditorial(ctx, size, input, gameImg, logoImg, brandAccent);
+  // Style-specific layouts (skipped when the user is driving custom text layers)
+  if (!input.hideAutoText) {
+    if (input.style === "minimal") {
+      await drawMinimal(ctx, size, input, gameImg, logoImg, brandAccent);
+    } else if (input.style === "editorial") {
+      await drawEditorial(ctx, size, input, gameImg, logoImg, brandAccent);
+    } else {
+      await drawHype(ctx, size, input, gameImg, logoImg, brandAccent);
+    }
   } else {
-    await drawHype(ctx, size, input, gameImg, logoImg, brandAccent);
+    // Still draw the branded chrome: logo + platform pill.
+    const pad = Math.round(Math.min(size.w, size.h) * 0.055);
+    drawLogo(ctx, logoImg, pad, pad, Math.round(size.w * 0.24));
+    if (input.platformName) {
+      drawPill(ctx, size.w - pad, pad + 12, input.platformName.toUpperCase(), brandAccent, "right");
+    }
+  }
+
+  // Custom text layers on top
+  if (input.layers && input.layers.length) {
+    drawTextLayers(ctx, size, input.layers);
   }
 
   const dataUrl = canvas.toDataURL("image/png");
@@ -226,6 +260,92 @@ export async function renderCreative(input: CreativeInput): Promise<RenderedCrea
     canvas.toBlob((b) => resolve(b!), "image/png", 0.95)
   );
   return { canvas, dataUrl, blob, size };
+}
+
+/* ────────────────────────── text layers ────────────────────────── */
+
+const FAMILY_STACK: Record<TextLayer["family"], string> = {
+  display: '"Archivo Black", "Inter", sans-serif',
+  sans:    '"Inter", system-ui, sans-serif',
+  grotesk: '"Space Grotesk", "Inter", sans-serif',
+};
+
+export function defaultLayersFor(input: Pick<CreativeInput, "gameName" | "hypeReason" | "cta" | "handle" | "format">): TextLayer[] {
+  const vertical = FORMAT_SIZES[input.format].h >= FORMAT_SIZES[input.format].w * 1.2;
+  const headline = (input.gameName || "Novo jogo em alta");
+  const layers: TextLayer[] = [
+    {
+      id: crypto.randomUUID(),
+      text: headline,
+      xPct: 6, yPct: vertical ? 62 : 40,
+      widthPct: vertical ? 88 : 55,
+      fontSizePct: vertical ? 10 : 7.5,
+      color: "#FFFFFF", weight: 900, align: "left",
+      family: "display", uppercase: true, shadow: true, lineHeight: 1.02,
+    },
+  ];
+  if (input.hypeReason) {
+    layers.push({
+      id: crypto.randomUUID(),
+      text: input.hypeReason,
+      xPct: 6, yPct: vertical ? 58 : 36,
+      widthPct: 60, fontSizePct: 2.8,
+      color: "#FFC72C", weight: 700, align: "left",
+      family: "grotesk", uppercase: true, shadow: false, lineHeight: 1.1,
+    });
+  }
+  layers.push({
+    id: crypto.randomUUID(),
+    text: input.cta || "JOGUE AGORA →",
+    xPct: 6, yPct: 86,
+    widthPct: 60, fontSizePct: 3.8,
+    color: "#0B0F1E", weight: 800, align: "left",
+    family: "sans", uppercase: true, shadow: false, lineHeight: 1.1,
+  });
+  if (input.handle) {
+    layers.push({
+      id: crypto.randomUUID(),
+      text: input.handle,
+      xPct: 6, yPct: 94,
+      widthPct: 60, fontSizePct: 2.2,
+      color: "#FFFFFFCC", weight: 600, align: "left",
+      family: "grotesk", uppercase: false, shadow: false, lineHeight: 1,
+    });
+  }
+  return layers;
+}
+
+function drawTextLayers(ctx: CanvasRenderingContext2D, size: CreativeSize, layers: TextLayer[]) {
+  const { w, h } = size;
+  for (const L of layers) {
+    const fontPx = Math.max(10, (L.fontSizePct / 100) * w);
+    const boxW = (L.widthPct / 100) * w;
+    const x = (L.xPct / 100) * w;
+    const y = (L.yPct / 100) * h;
+    const text = L.uppercase ? L.text.toUpperCase() : L.text;
+    ctx.save();
+    ctx.font = `${L.weight} ${fontPx}px ${FAMILY_STACK[L.family]}`;
+    ctx.fillStyle = L.color;
+    ctx.textBaseline = "top";
+    ctx.textAlign = L.align;
+    if (L.shadow) {
+      ctx.shadowColor = "rgba(0,0,0,0.55)";
+      ctx.shadowBlur = fontPx * 0.18;
+    }
+    // Split by explicit newlines first, then word-wrap each paragraph.
+    const paragraphs = text.split(/\n/);
+    const lh = (L.lineHeight ?? 1.05) * fontPx;
+    let cursorY = y;
+    for (const p of paragraphs) {
+      const lines = p.length ? wrapText(ctx, p, boxW, 12) : [""];
+      for (const ln of lines) {
+        const anchorX = L.align === "center" ? x + boxW / 2 : L.align === "right" ? x + boxW : x;
+        ctx.fillText(ln, anchorX, cursorY);
+        cursorY += lh;
+      }
+    }
+    ctx.restore();
+  }
 }
 
 /* ────────────────────────── styles ────────────────────────── */
