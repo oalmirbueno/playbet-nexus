@@ -191,10 +191,6 @@ export function LinkLpGrid({ influencerId, managerId, title = "LP por link", sho
               <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
               <Badge variant="secondary" className="text-[10px]">automático</Badge>
             </div>
-            <p className="text-xs text-muted-foreground max-w-2xl">
-              Cada tracking link ganha uma landing page pronta — hero, jogos, copy e destino sincronizados com o link.
-              Clique em <strong>Editar LP</strong> para abrir o editor visual com preview em tempo real.
-            </p>
           </div>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Layers className="w-3.5 h-3.5" /> {rows.length} link{rows.length === 1 ? "" : "s"}
@@ -233,9 +229,6 @@ export function LinkLpGrid({ influencerId, managerId, title = "LP por link", sho
           <div className="border border-dashed border-border/60 rounded-lg p-8 text-center">
             <Globe className="w-8 h-8 mx-auto text-muted-foreground opacity-40 mb-2" />
             <p className="text-sm font-medium">Nenhum link com LP vinculada ainda</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Ao criar um tracking link com landing page, ele aparece aqui automaticamente.
-            </p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
