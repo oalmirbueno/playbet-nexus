@@ -145,20 +145,20 @@ export default function ComercialPipeline() {
   const totalCards = filtered.length;
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4 px-4 md:px-6 py-3 md:py-4 border-b border-border/60 bg-background/70 backdrop-blur-xl sticky top-0 z-10">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden">
+      <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3 px-3 sm:px-4 md:px-5 xl:px-6 py-3 xl:py-4 border-b border-border/60 bg-background/70 backdrop-blur-xl sticky top-0 z-10 shrink-0">
         <div className="min-w-0">
-          <h1 className="text-lg md:text-2xl font-display font-semibold tracking-tight">Pipeline comercial</h1>
-          <p className="text-xs md:text-sm text-muted-foreground mt-0.5 hidden sm:block">
+          <h1 className="text-xl md:text-2xl font-display font-semibold tracking-tight">Pipeline comercial</h1>
+          <p className="text-xs md:text-sm text-muted-foreground mt-0.5 hidden sm:block max-w-[48rem]">
             Captação, qualificação e ativação de afiliados · {stageCount} estágios · {totalCards} cards
           </p>
         </div>
-        <div className="flex items-center gap-2 w-full md:w-auto">
+        <div className="flex items-center gap-2 w-full xl:w-auto">
           <Input
             placeholder="Buscar candidato, handle ou nicho..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="flex-1 md:w-64 lg:w-72 h-9"
+            className="min-w-0 flex-1 xl:w-72 h-9"
           />
           <NewCardDialog open={newOpen} onOpenChange={setNewOpen} onCreated={load} />
         </div>
@@ -166,12 +166,12 @@ export default function ComercialPipeline() {
 
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div
-          className="flex-1 overflow-x-auto overflow-y-hidden px-4 md:px-6 py-4 md:py-5 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch] snap-x snap-mandatory md:snap-none"
+          className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden sm:overflow-x-hidden sm:overflow-y-auto xl:overflow-x-auto xl:overflow-y-hidden px-3 sm:px-4 md:px-5 xl:px-6 py-4 xl:py-5 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch] snap-x snap-mandatory sm:snap-none"
           style={{ scrollbarColor: "hsl(var(--border)) transparent" }}
         >
-          <div className="flex gap-3 md:gap-4 min-w-max h-full pb-2">
+          <div className="flex sm:grid sm:grid-cols-2 lg:grid-cols-3 xl:flex gap-3 md:gap-4 min-w-max sm:min-w-0 h-full sm:h-auto xl:h-full pb-2">
             {STAGES.map(stage => (
-              <div key={stage.id} className="snap-start md:snap-align-none">
+              <div key={stage.id} className="snap-start sm:snap-align-none min-w-0">
                 <Column
                   stage={stage}
                   cards={byStage[stage.id] ?? []}
@@ -212,7 +212,8 @@ function Column({ stage, cards, squads, managers, loading, onOpen }: {
   return (
     <div
       ref={setNodeRef}
-      className={`w-[78vw] xs:w-[64vw] sm:w-[300px] md:w-[264px] lg:w-[280px] xl:w-[300px] flex-shrink-0 flex flex-col rounded-xl border border-border/60 bg-card/40 backdrop-blur transition-colors ${
+      data-pipeline-column="true"
+      className={`w-[82vw] sm:w-full xl:w-[280px] 2xl:w-[300px] flex-shrink-0 flex flex-col rounded-xl border border-border/60 bg-card/40 backdrop-blur transition-colors min-h-[164px] sm:min-h-[168px] xl:min-h-0 ${
         isOver ? "ring-2 ring-primary/40 bg-card/70" : ""
       }`}
     >
@@ -224,7 +225,7 @@ function Column({ stage, cards, squads, managers, loading, onOpen }: {
           <Badge variant="secondary" className="text-[10px] h-5 px-1.5 shrink-0 ml-2">{cards.length}</Badge>
         </div>
       </div>
-      <div className="flex-1 p-2 space-y-2 min-h-[120px] max-h-[calc(100vh-220px)] overflow-y-auto [scrollbar-width:thin] overscroll-contain">
+      <div className="flex-1 p-2 space-y-2 min-h-[108px] max-h-[calc(100dvh-250px)] sm:max-h-[280px] lg:max-h-[320px] xl:max-h-[calc(100dvh-250px)] overflow-y-auto [scrollbar-width:thin] overscroll-contain">
         {loading && <div className="text-xs text-muted-foreground p-3">Carregando...</div>}
         {!loading && cards.length === 0 && (
           <div className="text-xs text-muted-foreground/70 p-4 text-center border border-dashed border-border/40 rounded-lg">
