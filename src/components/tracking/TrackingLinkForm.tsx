@@ -413,7 +413,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
   const publicLpUrl = useMemo(() => {
     if (!useLp) return "";
     return buildPublicLpUrl(selectedLP?.domain, selectedInstance?.slug, sub2Value, sub3Value, selectedLP?.route, sub1Value);
-  }, [useLp, effectiveLpMode, selectedLP, selectedInstance, sub2Value, sub3Value]);
+  }, [useLp, effectiveLpMode, selectedLP, selectedInstance, sub1Value, sub2Value, sub3Value]);
 
   // The deep affiliate URL with attribution params - used by the LP CTA, not shared directly.
   const trackedAffiliateUrl = useMemo(

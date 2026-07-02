@@ -32,7 +32,7 @@ describe("trackingUrl - Com LP", () => {
       sub2: "inf-uuid",
       sub3: "camp-uuid",
     });
-    expect(url).toBe("https://oportunidades.playbet.app.br/?ref=camilly&sub2=inf-uuid&sub3=camp-uuid");
+    expect(url).toBe("https://oportunidades.playbet.app.br/?ref=camilly&sub1=camilly&sub2=inf-uuid&sub3=camp-uuid");
     expect(url.includes("lkrh.pro")).toBe(false);
   });
 
