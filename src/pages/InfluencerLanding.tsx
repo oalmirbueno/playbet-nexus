@@ -61,32 +61,46 @@ async function findLPBaseByHostname(hostname: string) {
   return null;
 }
 
-/** Find tracking_link for a given instance or influencer */
+/** Find tracking_link for a given instance or influencer (any status; prefer active) */
 async function findTrackingLink(instanceId: string | null, influencerId: string) {
-  // Priority 1: by instance
   if (instanceId) {
     const { data } = await supabase
       .from("tracking_links")
-      .select("id, click_id_param_name, base_url, short_url, campanha_id")
+      .select("id, click_id_param_name, base_url, short_url, final_url, campanha_id, status")
       .eq("landing_page_instance_id", instanceId)
-      .eq("status", "active")
+      .order("status", { ascending: true }) // active < paused alphabetically
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
     if (data) return data;
   }
 
-  // Priority 2: by influencer
   const { data } = await supabase
     .from("tracking_links")
-    .select("id, click_id_param_name, base_url, short_url, campanha_id")
+    .select("id, click_id_param_name, base_url, short_url, final_url, campanha_id, status")
     .eq("influencer_id", influencerId)
-    .eq("status", "active")
+    .order("status", { ascending: true })
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
   return data || null;
+}
+
+/** Fallback: get any opportunity destination for the instance/influencer */
+async function findOpportunityDestination(instanceId: string | null, landingPageId: string | null) {
+  if (!landingPageId && !instanceId) return null;
+  const query = supabase
+    .from("lp_opportunities")
+    .select("destination_url")
+    .eq("is_active", true)
+    .not("destination_url", "is", null)
+    .order("sort_order", { ascending: false })
+    .limit(1);
+  const { data } = landingPageId
+    ? await query.eq("landing_page_id", landingPageId).maybeSingle()
+    : await query.maybeSingle();
+  return data?.destination_url || null;
 }
 
 interface InstanceContext {
