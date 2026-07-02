@@ -57,6 +57,7 @@ interface Card {
   city: string | null;
   uf: string | null;
   squad_id: string | null;
+  squad_ids: string[] | null;
   manager_id: string | null;
   checklist_progress: number;
   stage_moved_at: string;
@@ -475,11 +476,14 @@ function CardDetailSheet({ card, squads, managers, onClose, onUpdated }: {
   const [answers, setAnswers] = useState<Record<string, ChecklistAnswer>>({});
   const [notes, setNotes] = useState("");
   const [squadId, setSquadId] = useState<string>("none");
+  const [squadIds, setSquadIds] = useState<string[]>([]);
+  const isManagerCard = card?.role_type === "gerente";
 
   useEffect(() => {
     if (!card) return;
     setNotes(card.notes ?? "");
     setSquadId(card.squad_id ?? "none");
+    setSquadIds(card.squad_ids ?? (card.squad_id ? [card.squad_id] : []));
     (async () => {
       if (!card.id) return;
       // load template items via card's template_id, or active
@@ -526,7 +530,13 @@ function CardDetailSheet({ card, squads, managers, onClose, onUpdated }: {
 
   async function saveMeta() {
     const payload: Record<string, unknown> = { notes };
-    payload.squad_id = squadId === "none" ? null : squadId;
+    if (isManagerCard) {
+      payload.squad_ids = squadIds;
+      payload.squad_id = squadIds[0] ?? null;
+    } else {
+      payload.squad_id = squadId === "none" ? null : squadId;
+      payload.squad_ids = [];
+    }
     const { error } = await supabase.from("commercial_pipeline_cards").update(payload).eq("id", card.id);
     if (error) {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
@@ -535,6 +545,16 @@ function CardDetailSheet({ card, squads, managers, onClose, onUpdated }: {
     toast({ title: "Salvo" });
     onUpdated();
   }
+
+  function toggleSquad(id: string) {
+    setSquadIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  }
+
+  const hierarchyFromCount = (n: number) =>
+    n >= 5 ? { label: "Diretor de Squads", tone: "text-fuchsia-500" }
+    : n >= 3 ? { label: "Gerente Diretor", tone: "text-indigo-500" }
+    : { label: "Gerente", tone: "text-emerald-500" };
+
 
   return (
     <Sheet open={!!card} onOpenChange={v => !v && onClose()}>
@@ -565,25 +585,61 @@ function CardDetailSheet({ card, squads, managers, onClose, onUpdated }: {
               <Progress value={pct} className="h-1.5" />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs">Squad</Label>
-                <Select value={squadId} onValueChange={setSquadId}>
-                  <SelectTrigger><SelectValue placeholder="Sem squad" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Sem squad</SelectItem>
-                    {squads.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+            {isManagerCard ? (
+              <div className="rounded-lg border border-indigo-500/30 bg-indigo-500/5 p-3 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-indigo-500" /> Squads sob responsabilidade
+                  </Label>
+                  {(() => {
+                    const h = hierarchyFromCount(squadIds.length);
+                    return (
+                      <span className={`text-[10px] font-medium uppercase tracking-wider ${h.tone}`}>
+                        {squadIds.length} squad{squadIds.length === 1 ? "" : "s"} · {h.label}
+                      </span>
+                    );
+                  })()}
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {squads.map(s => {
+                    const checked = squadIds.includes(s.id);
+                    return (
+                      <label key={s.id} className={`flex items-center gap-2 px-2 py-1.5 rounded border text-xs cursor-pointer transition-colors ${checked ? "border-indigo-500/60 bg-indigo-500/10" : "border-border/60 hover:bg-secondary/40"}`}>
+                        <Checkbox checked={checked} onCheckedChange={() => toggleSquad(s.id)} />
+                        <span className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: s.color }} />
+                        <span className="truncate">{s.name}</span>
+                      </label>
+                    );
+                  })}
+                  {squads.length === 0 && (
+                    <p className="col-span-2 text-[11px] text-muted-foreground">Nenhum squad criado ainda.</p>
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                  Hierarquia automática: <span className="text-emerald-500">1–2 gerente</span> · <span className="text-indigo-500">3–4 gerente diretor</span> · <span className="text-fuchsia-500">5+ diretor de squads</span>.
+                </p>
               </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs">Gerente atribuído</Label>
-                <Input
-                  disabled
-                  value={managers.find(m => m.id === card.manager_id)?.name ?? "Atribuído ao mover para Aprovado"}
-                />
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Squad</Label>
+                  <Select value={squadId} onValueChange={setSquadId}>
+                    <SelectTrigger><SelectValue placeholder="Sem squad" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem squad</SelectItem>
+                      {squads.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Gerente atribuído</Label>
+                  <Input
+                    disabled
+                    value={managers.find(m => m.id === card.manager_id)?.name ?? "Atribuído ao mover para Aprovado"}
+                  />
+                </div>
               </div>
-            </div>
+            )}
 
             {Object.entries(groups).map(([group, list]) => (
               <div key={group} className="space-y-2">
