@@ -134,6 +134,20 @@ export default function SquadDetail() {
 
   const { squad, roster, perf, managers, directors, activity, invalidateAll } = useSquadDetail(squadId);
 
+  // Available squads for the header switcher (RLS filters for managers automatically).
+  const availableSquads = useQuery({
+    queryKey: ["squad-switcher-list"],
+    queryFn: async () => {
+      const { data, error } = await db
+        .from("squads")
+        .select("id,name,color")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return (data ?? []) as { id: string; name: string; color: string }[];
+    },
+  });
+
   const [distributeOpen, setDistributeOpen] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
   const [linksOfId, setLinksOfId] = useState<string | null>(null);
@@ -241,11 +255,40 @@ export default function SquadDetail() {
       {/* Breadcrumb / back */}
       <div className="border-b border-border">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 flex items-center gap-2 text-xs">
-          <button onClick={() => nav("/pessoas")} className="text-muted-foreground hover:text-foreground flex items-center gap-1">
-            <ArrowLeft size={12} /> Pessoas
+          <button
+            onClick={() => nav(-1)}
+            className="text-muted-foreground hover:text-foreground flex items-center gap-1 rounded px-1.5 py-1 hover:bg-secondary/60"
+            title="Voltar"
+          >
+            <ArrowLeft size={12} /> Voltar
+          </button>
+          <span className="text-border">·</span>
+          <button onClick={() => nav("/pessoas")} className="text-muted-foreground hover:text-foreground">
+            Pessoas
           </button>
           <ChevronRight size={12} className="text-muted-foreground" />
-          <span className="text-foreground font-medium">{s.name}</span>
+          <span className="text-foreground font-medium truncate">{s.name}</span>
+
+          {(availableSquads.data?.length ?? 0) > 1 && (
+            <div className="ml-auto flex items-center gap-2">
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground hidden sm:inline">Trocar squad</span>
+              <Select value={squadId} onValueChange={(v) => v && v !== squadId && nav(`/pessoas/squads/${v}`)}>
+                <SelectTrigger className="h-8 w-[200px] text-xs">
+                  <SelectValue placeholder="Selecionar squad" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableSquads.data!.map((opt) => (
+                    <SelectItem key={opt.id} value={opt.id} className="text-xs">
+                      <span className="inline-flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-sm" style={{ backgroundColor: opt.color }} />
+                        {opt.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
       </div>
 

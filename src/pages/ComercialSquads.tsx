@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Users, Briefcase, Crown, Shield, Sparkles } from "lucide-react";
+import { Plus, Users, Briefcase, Crown, Shield, Sparkles, ArrowRight } from "lucide-react";
 
 interface Squad { id: string; name: string; color: string; is_active: boolean; director_id: string | null }
 interface Manager {
@@ -24,6 +25,7 @@ interface Influencer { id: string; name: string; slug: string; manager_id: strin
 interface Socio { id: string; nome: string }
 
 export default function ComercialSquads() {
+  const nav = useNavigate();
   const [squads, setSquads] = useState<Squad[]>([]);
   const [managers, setManagers] = useState<Manager[]>([]);
   const [directors, setDirectors] = useState<Director[]>([]);
@@ -142,13 +144,23 @@ export default function ComercialSquads() {
             const sqMgrs = managers.filter(m => sqMgrIds.includes(m.id) || m.squad_id === squad.id);
             const director = directors.find(d => d.id === squad.director_id) || null;
             return (
-              <Card key={squad.id} className="p-4 space-y-3 border-border/60 hover:border-primary/40 transition-colors">
+              <Card
+                key={squad.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => nav(`/pessoas/squads/${squad.id}`)}
+                onKeyDown={(e) => { if (e.key === "Enter") nav(`/pessoas/squads/${squad.id}`); }}
+                className="group p-4 space-y-3 border-border/60 hover:border-primary/60 hover:shadow-sm transition-all cursor-pointer"
+              >
                 <div className="flex items-center gap-2">
                   <div className="h-3 w-3 rounded-full shrink-0" style={{ background: squad.color }} />
-                  <h3 className="font-display font-semibold flex-1 truncate">{squad.name}</h3>
+                  <h3 className="font-display font-semibold flex-1 truncate flex items-center gap-1.5">
+                    {squad.name}
+                    <ArrowRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </h3>
                   <Badge variant="secondary" className="text-[10px]">{sqMgrs.length} gerentes</Badge>
                 </div>
-                <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                <div className="text-[11px] text-muted-foreground flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                   <Shield className="h-3 w-3" />
                   {director ? <span className="truncate">{director.name}</span> : <SquadDirectorPicker squad={squad} directors={directors} onChanged={load} />}
                 </div>
