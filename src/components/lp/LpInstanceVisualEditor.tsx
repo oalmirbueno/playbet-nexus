@@ -555,9 +555,8 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
     }
   };
 
-  const previewSrc = useMemo(() => {
-    // Prefer a same-origin preview so we always render the LATEST code and our thin scrollbars apply.
-    // Extract the LP slug from the public URL (?ref=slug) and load the local /i/:slug route.
+  const generatedPreviewSrc = useMemo(() => {
+    // Same-origin preview of the generated instance so latest code + thin scrollbars apply.
     let localSlug: string | null = null;
     if (publicUrl) {
       try {
@@ -572,13 +571,31 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         if (m) localSlug = decodeURIComponent(m[1]);
       }
     }
-    if (localSlug) {
-      return `${window.location.origin}/i/${localSlug}?_preview=${previewKey}`;
-    }
+    if (!localSlug && instance?.slug) localSlug = instance.slug;
+    if (localSlug) return `${window.location.origin}/i/${localSlug}?_preview=${previewKey}`;
     if (!publicUrl) return null;
     const sep = publicUrl.includes("?") ? "&" : "?";
     return `${publicUrl}${sep}_preview=${previewKey}`;
-  }, [publicUrl, previewKey]);
+  }, [publicUrl, previewKey, instance?.slug]);
+
+  const catalogPreviewSrc = useMemo(() => {
+    if (!basePage) return null;
+    const rawDomain = (basePage.domain || "").trim();
+    const domain = rawDomain
+      ? (/^https?:\/\//i.test(rawDomain) ? rawDomain : `https://${rawDomain}`)
+      : "https://oportunidades.playbet.app.br";
+    const base = domain.replace(/\/+$/, "");
+    const route = basePage.route && basePage.route !== "/" ? basePage.route : "";
+    const path = route.startsWith("/") || !route ? route : `/${route}`;
+    const sep = path.includes("?") ? "&" : "?";
+    return `${base}${path}${sep}_preview=${previewKey}`;
+  }, [basePage, previewKey]);
+
+  const activePreviewSrc = previewTab === "catalog" ? catalogPreviewSrc : generatedPreviewSrc;
+  const activeExternalUrl = previewTab === "catalog"
+    ? (catalogPreviewSrc ? catalogPreviewSrc.split("?")[0] : null)
+    : publicUrl;
+
 
 
   return (
