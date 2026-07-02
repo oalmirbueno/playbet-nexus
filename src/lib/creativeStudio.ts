@@ -268,8 +268,10 @@ export async function renderCreative(input: CreativeInput): Promise<RenderedCrea
     } else {
       await drawHype(ctx, size, input, gameImg, logoImg, brandAccent);
     }
-  } else if (!input.hideAutoArt) {
-    // Still draw the branded chrome: logo + platform pill (only when auto art isn't overridden).
+  } else if (input.hideAutoArt) {
+    // Editor mode: draw a rich decorative background instead of a flat blur.
+    drawEditorBackdrop(ctx, size, brandAccent);
+  } else {
     const pad = Math.round(Math.min(size.w, size.h) * 0.055);
     drawLogo(ctx, logoImg, pad, pad, Math.round(size.w * 0.24));
     if (input.platformName) {
@@ -287,6 +289,39 @@ export async function renderCreative(input: CreativeInput): Promise<RenderedCrea
     canvas.toBlob((b) => resolve(b!), "image/png", 0.95)
   );
   return { canvas, dataUrl, blob, size };
+}
+
+/* ────────────────────────── editor backdrop ────────────────────────── */
+
+function drawEditorBackdrop(ctx: CanvasRenderingContext2D, size: CreativeSize, accent: string) {
+  const { w, h } = size;
+  const g = ctx.createLinearGradient(0, 0, w, h);
+  g.addColorStop(0, "#050B1E");
+  g.addColorStop(0.55, "#0A1740");
+  g.addColorStop(1, "#050B1E");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+
+  const blob1 = ctx.createRadialGradient(w * 0.15, h * 0.2, 0, w * 0.15, h * 0.2, Math.max(w, h) * 0.55);
+  blob1.addColorStop(0, hexToRgba(accent, 0.55));
+  blob1.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = blob1; ctx.fillRect(0, 0, w, h);
+
+  const blob2 = ctx.createRadialGradient(w * 0.85, h * 0.85, 0, w * 0.85, h * 0.85, Math.max(w, h) * 0.6);
+  blob2.addColorStop(0, hexToRgba(BRAND.yellow, 0.28));
+  blob2.addColorStop(1, "rgba(0,0,0,0)");
+  ctx.fillStyle = blob2; ctx.fillRect(0, 0, w, h);
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,255,255,0.035)"; ctx.lineWidth = 1;
+  const step = Math.round(Math.min(w, h) / 24);
+  for (let x = 0; x < w; x += step) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+  for (let y = 0; y < h; y += step) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+  ctx.restore();
+
+  const shade = ctx.createLinearGradient(0, h * 0.55, 0, h);
+  shade.addColorStop(0, "rgba(0,0,0,0)");
+  shade.addColorStop(1, "rgba(0,0,0,0.75)");
+  ctx.fillStyle = shade; ctx.fillRect(0, h * 0.55, w, h * 0.45);
 }
 
 /* ────────────────────────── text layers ────────────────────────── */
@@ -804,4 +839,392 @@ export function slugify(s: string): string {
   return (s || "criativo")
     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 60);
+}
+
+/* ────────────────────────── template catalog ────────────────────────── */
+
+export interface CreativeTemplate {
+  id: string;
+  name: string;
+  tagline: string;
+  accent: string;      // preview swatch
+  build: (input: TemplateInput) => Layer[];
+}
+
+export interface TemplateInput {
+  format: CreativeFormat;
+  gameName?: string | null;
+  gameImageUrl?: string | null;
+  platformName?: string | null;
+  hypeReason?: string | null;
+  cta?: string;
+  handle?: string;
+}
+
+const nid = () => (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : Math.random().toString(36).slice(2));
+
+function fmtDims(fmt: CreativeFormat) {
+  const s = FORMAT_SIZES[fmt];
+  return { vertical: s.h >= s.w * 1.2, landscape: s.w > s.h * 1.3, square: Math.abs(s.w - s.h) < 20 };
+}
+
+/** Neon hype — bold display headline with glowing hero art. */
+const tplHypeNeon: CreativeTemplate = {
+  id: "hype-neon",
+  name: "Hype Neon",
+  tagline: "Manchete gigante + brilho amarelo",
+  accent: "#FFC72C",
+  build: ({ format, gameName, gameImageUrl, platformName, hypeReason, cta, handle }) => {
+    const { vertical, landscape } = fmtDims(format);
+    const layers: Layer[] = [
+      { kind: "image", id: nid(), src: PLAYBET_LOGO_SRC, label: "Logo Playbet",
+        xPct: 6, yPct: vertical ? 4 : 6, widthPct: vertical ? 26 : 22, heightPct: vertical ? 5 : 7,
+        radiusPct: 0, opacity: 1, fit: "contain" },
+    ];
+    if (platformName) layers.push({
+      kind: "text", id: nid(), text: platformName,
+      xPct: vertical ? 56 : 60, yPct: vertical ? 5.5 : 7.5,
+      widthPct: vertical ? 38 : 34, fontSizePct: vertical ? 2.6 : 2,
+      color: "#0B0F1E", weight: 800, align: "right", family: "grotesk",
+      uppercase: true, lineHeight: 1, bgColor: "#FFC72C", bgPadPct: 60, bgRadiusPct: 50,
+    });
+    if (gameImageUrl) layers.push({
+      kind: "image", id: nid(), src: gameImageUrl, label: "Arte do jogo",
+      xPct: vertical ? 14 : landscape ? 55 : 44,
+      yPct: vertical ? 18 : landscape ? 15 : 18,
+      widthPct: vertical ? 72 : landscape ? 40 : 52,
+      heightPct: vertical ? 42 : landscape ? 72 : 54,
+      radiusPct: 8, opacity: 1, fit: "cover", glow: "#FFC72C",
+    });
+    layers.push({
+      kind: "text", id: nid(), text: (gameName || "Novo drop").toUpperCase(),
+      xPct: 6, yPct: vertical ? 66 : landscape ? 40 : 74,
+      widthPct: vertical ? 88 : landscape ? 46 : 88,
+      fontSizePct: vertical ? 11 : landscape ? 8 : 7,
+      color: "#FFFFFF", weight: 900, align: "left", family: "display",
+      uppercase: true, shadow: true, lineHeight: 1,
+    });
+    if (hypeReason) layers.push({
+      kind: "text", id: nid(), text: hypeReason,
+      xPct: 6, yPct: vertical ? 62 : landscape ? 34 : 70,
+      widthPct: 70, fontSizePct: 2.6,
+      color: "#FFC72C", weight: 700, align: "left", family: "grotesk", uppercase: true, lineHeight: 1,
+    });
+    layers.push({
+      kind: "text", id: nid(), text: cta || "JOGUE AGORA →",
+      xPct: 6, yPct: vertical ? 88 : landscape ? 80 : 90,
+      widthPct: vertical ? 60 : 50, fontSizePct: vertical ? 3.6 : 3.4,
+      color: "#0B0F1E", weight: 800, align: "left", family: "sans", uppercase: true,
+      lineHeight: 1.1, bgColor: "#FFC72C", bgPadPct: 60, bgRadiusPct: 50,
+    });
+    if (handle) layers.push({
+      kind: "text", id: nid(), text: handle,
+      xPct: 6, yPct: vertical ? 95 : 96, widthPct: 60, fontSizePct: 2,
+      color: "#FFFFFFCC", weight: 600, align: "left", family: "grotesk", lineHeight: 1,
+    });
+    return layers;
+  },
+};
+
+/** Editorial magazine — image band + serif-like block. */
+const tplEditorial: CreativeTemplate = {
+  id: "editorial",
+  name: "Editorial",
+  tagline: "Capa de revista, tipografia refinada",
+  accent: "#1E5FD9",
+  build: ({ format, gameName, gameImageUrl, platformName, hypeReason, cta, handle }) => {
+    const { vertical } = fmtDims(format);
+    const layers: Layer[] = [];
+    if (gameImageUrl) layers.push({
+      kind: "image", id: nid(), src: gameImageUrl, label: "Capa",
+      xPct: 0, yPct: 0, widthPct: 100, heightPct: vertical ? 62 : 55,
+      radiusPct: 0, opacity: 1, fit: "cover", brightness: 0.85,
+    });
+    layers.push({
+      kind: "image", id: nid(), src: PLAYBET_LOGO_SRC, label: "Logo",
+      xPct: 6, yPct: 5, widthPct: 22, heightPct: 5,
+      radiusPct: 0, opacity: 1, fit: "contain",
+    });
+    if (platformName) layers.push({
+      kind: "text", id: nid(), text: `— ${platformName} · edição`,
+      xPct: 6, yPct: vertical ? 66 : 60, widthPct: 88, fontSizePct: 2,
+      color: "#FFC72C", weight: 700, align: "left", family: "grotesk", uppercase: true, lineHeight: 1,
+    });
+    layers.push({
+      kind: "text", id: nid(), text: gameName || "Novo capítulo",
+      xPct: 6, yPct: vertical ? 70 : 66, widthPct: 88,
+      fontSizePct: vertical ? 9 : 6,
+      color: "#FFFFFF", weight: 900, align: "left", family: "display", uppercase: true, lineHeight: 0.98,
+    });
+    if (hypeReason) layers.push({
+      kind: "text", id: nid(), text: hypeReason,
+      xPct: 6, yPct: vertical ? 84 : 80, widthPct: 78, fontSizePct: 2.4,
+      color: "#FFFFFFCC", weight: 500, align: "left", family: "grotesk", lineHeight: 1.3,
+    });
+    layers.push({
+      kind: "text", id: nid(), text: cta || "Jogue agora →",
+      xPct: 6, yPct: vertical ? 92 : 90, widthPct: 60, fontSizePct: 2.6,
+      color: "#FFC72C", weight: 800, align: "left", family: "sans", uppercase: true, lineHeight: 1,
+    });
+    if (handle) layers.push({
+      kind: "text", id: nid(), text: handle,
+      xPct: 70, yPct: vertical ? 92 : 90, widthPct: 24, fontSizePct: 1.8,
+      color: "#FFFFFF77", weight: 500, align: "right", family: "grotesk", lineHeight: 1,
+    });
+    return layers;
+  },
+};
+
+/** Minimal card — centered card with restrained type. */
+const tplMinimal: CreativeTemplate = {
+  id: "minimal",
+  name: "Minimal Card",
+  tagline: "Muito espaço, foco na arte",
+  accent: "#FFFFFF",
+  build: ({ format, gameName, gameImageUrl, platformName, cta, handle }) => {
+    const { vertical } = fmtDims(format);
+    const layers: Layer[] = [
+      { kind: "image", id: nid(), src: PLAYBET_LOGO_SRC, label: "Logo",
+        xPct: 42, yPct: 6, widthPct: 16, heightPct: 4, radiusPct: 0, opacity: 0.9, fit: "contain" },
+    ];
+    if (gameImageUrl) layers.push({
+      kind: "image", id: nid(), src: gameImageUrl, label: "Arte",
+      xPct: vertical ? 15 : 30, yPct: vertical ? 22 : 20,
+      widthPct: vertical ? 70 : 40, heightPct: vertical ? 40 : 55,
+      radiusPct: 10, opacity: 1, fit: "cover",
+    });
+    if (platformName) layers.push({
+      kind: "text", id: nid(), text: `${platformName}  ·  em alta`,
+      xPct: 10, yPct: vertical ? 66 : 78, widthPct: 80, fontSizePct: 1.8,
+      color: "#FFFFFF77", weight: 600, align: "center", family: "grotesk", uppercase: true, lineHeight: 1,
+    });
+    layers.push({
+      kind: "text", id: nid(), text: gameName || "Novo jogo",
+      xPct: 6, yPct: vertical ? 70 : 82, widthPct: 88,
+      fontSizePct: vertical ? 7 : 4.6,
+      color: "#FFFFFF", weight: 800, align: "center", family: "sans", uppercase: false, lineHeight: 1,
+    });
+    layers.push({
+      kind: "text", id: nid(), text: cta || "Jogar agora →",
+      xPct: 20, yPct: vertical ? 84 : 90, widthPct: 60, fontSizePct: 2.4,
+      color: "#FFC72C", weight: 700, align: "center", family: "grotesk", uppercase: true, lineHeight: 1,
+    });
+    if (handle) layers.push({
+      kind: "text", id: nid(), text: handle,
+      xPct: 20, yPct: vertical ? 92 : 94, widthPct: 60, fontSizePct: 1.6,
+      color: "#FFFFFF55", weight: 500, align: "center", family: "grotesk", lineHeight: 1,
+    });
+    return layers;
+  },
+};
+
+/** Cutout Poster — massive display over full-bleed art. */
+const tplCutoutPoster: CreativeTemplate = {
+  id: "cutout-poster",
+  name: "Cutout Poster",
+  tagline: "Tipo cortando a arte, pôster de show",
+  accent: "#FF3D71",
+  build: ({ format, gameName, gameImageUrl, platformName, cta, handle }) => {
+    const { vertical } = fmtDims(format);
+    const layers: Layer[] = [];
+    if (gameImageUrl) layers.push({
+      kind: "image", id: nid(), src: gameImageUrl, label: "Fundo",
+      xPct: 0, yPct: 0, widthPct: 100, heightPct: 100,
+      radiusPct: 0, opacity: 1, fit: "cover", brightness: 0.7,
+    });
+    layers.push({
+      kind: "image", id: nid(), src: PLAYBET_LOGO_SRC, label: "Logo",
+      xPct: 6, yPct: 5, widthPct: 22, heightPct: 5,
+      radiusPct: 0, opacity: 1, fit: "contain",
+    });
+    layers.push({
+      kind: "text", id: nid(), text: (gameName || "Play").toUpperCase(),
+      xPct: 3, yPct: vertical ? 30 : 22, widthPct: 94,
+      fontSizePct: vertical ? 22 : 16,
+      color: "#FFC72C", weight: 900, align: "center", family: "display",
+      uppercase: true, shadow: true, lineHeight: 0.9,
+    });
+    if (platformName) layers.push({
+      kind: "text", id: nid(), text: platformName,
+      xPct: 3, yPct: vertical ? 62 : 58, widthPct: 94, fontSizePct: 3,
+      color: "#FFFFFF", weight: 700, align: "center", family: "grotesk",
+      uppercase: true, shadow: true, lineHeight: 1,
+    });
+    layers.push({
+      kind: "text", id: nid(), text: cta || "JOGUE AGORA",
+      xPct: 20, yPct: vertical ? 88 : 86, widthPct: 60, fontSizePct: vertical ? 3.4 : 3,
+      color: "#0B0F1E", weight: 900, align: "center", family: "sans", uppercase: true,
+      lineHeight: 1, bgColor: "#FFC72C", bgPadPct: 70, bgRadiusPct: 50,
+    });
+    if (handle) layers.push({
+      kind: "text", id: nid(), text: handle,
+      xPct: 3, yPct: vertical ? 95 : 94, widthPct: 94, fontSizePct: 1.8,
+      color: "#FFFFFFAA", weight: 500, align: "center", family: "grotesk", lineHeight: 1,
+    });
+    return layers;
+  },
+};
+
+/** Split Duo — arte 50/50 texto, card premium. */
+const tplSplit: CreativeTemplate = {
+  id: "split-duo",
+  name: "Split Duo",
+  tagline: "Metade arte, metade manifesto",
+  accent: "#2DD4A8",
+  build: ({ format, gameName, gameImageUrl, platformName, hypeReason, cta, handle }) => {
+    const { vertical } = fmtDims(format);
+    const layers: Layer[] = [];
+    if (gameImageUrl) layers.push({
+      kind: "image", id: nid(), src: gameImageUrl, label: "Arte",
+      xPct: vertical ? 0 : 50, yPct: 0,
+      widthPct: vertical ? 100 : 50, heightPct: vertical ? 50 : 100,
+      radiusPct: 0, opacity: 1, fit: "cover",
+    });
+    layers.push({
+      kind: "image", id: nid(), src: PLAYBET_LOGO_SRC, label: "Logo",
+      xPct: vertical ? 6 : 6, yPct: vertical ? 54 : 8,
+      widthPct: 22, heightPct: 5, radiusPct: 0, opacity: 1, fit: "contain",
+    });
+    if (platformName) layers.push({
+      kind: "text", id: nid(), text: platformName,
+      xPct: vertical ? 6 : 6, yPct: vertical ? 60 : 18,
+      widthPct: 30, fontSizePct: 2.2,
+      color: "#0B0F1E", weight: 800, align: "left", family: "grotesk",
+      uppercase: true, lineHeight: 1, bgColor: "#2DD4A8", bgPadPct: 60, bgRadiusPct: 50,
+    });
+    layers.push({
+      kind: "text", id: nid(), text: gameName || "Sua próxima jogada",
+      xPct: vertical ? 6 : 6, yPct: vertical ? 66 : 28,
+      widthPct: vertical ? 88 : 42,
+      fontSizePct: vertical ? 8 : 5.4,
+      color: "#FFFFFF", weight: 900, align: "left", family: "display", uppercase: true, lineHeight: 1,
+    });
+    if (hypeReason) layers.push({
+      kind: "text", id: nid(), text: hypeReason,
+      xPct: vertical ? 6 : 6, yPct: vertical ? 82 : 60,
+      widthPct: vertical ? 88 : 42, fontSizePct: 2.2,
+      color: "#FFFFFFAA", weight: 500, align: "left", family: "grotesk", lineHeight: 1.3,
+    });
+    layers.push({
+      kind: "text", id: nid(), text: cta || "Jogar agora →",
+      xPct: vertical ? 6 : 6, yPct: vertical ? 90 : 82,
+      widthPct: vertical ? 60 : 42, fontSizePct: 2.6,
+      color: "#0B0F1E", weight: 800, align: "left", family: "sans", uppercase: true,
+      lineHeight: 1, bgColor: "#FFC72C", bgPadPct: 60, bgRadiusPct: 50,
+    });
+    if (handle) layers.push({
+      kind: "text", id: nid(), text: handle,
+      xPct: vertical ? 6 : 6, yPct: vertical ? 96 : 92,
+      widthPct: 42, fontSizePct: 1.6,
+      color: "#FFFFFF77", weight: 500, align: "left", family: "grotesk", lineHeight: 1,
+    });
+    return layers;
+  },
+};
+
+/** Ticker Bar — barra inferior de notícia. */
+const tplTicker: CreativeTemplate = {
+  id: "ticker",
+  name: "Breaking Ticker",
+  tagline: "Barra estilo breaking news",
+  accent: "#EF4444",
+  build: ({ format, gameName, gameImageUrl, platformName, cta, handle }) => {
+    const { vertical } = fmtDims(format);
+    const layers: Layer[] = [];
+    if (gameImageUrl) layers.push({
+      kind: "image", id: nid(), src: gameImageUrl, label: "Arte",
+      xPct: 0, yPct: 0, widthPct: 100, heightPct: 100,
+      radiusPct: 0, opacity: 1, fit: "cover", brightness: 0.75,
+    });
+    layers.push({
+      kind: "image", id: nid(), src: PLAYBET_LOGO_SRC, label: "Logo",
+      xPct: 6, yPct: 5, widthPct: 22, heightPct: 5, radiusPct: 0, opacity: 1, fit: "contain",
+    });
+    layers.push({
+      kind: "text", id: nid(), text: "AO VIVO",
+      xPct: 78, yPct: 6, widthPct: 16, fontSizePct: 1.8,
+      color: "#FFFFFF", weight: 800, align: "center", family: "grotesk",
+      uppercase: true, lineHeight: 1, bgColor: "#EF4444", bgPadPct: 60, bgRadiusPct: 40,
+    });
+    layers.push({
+      kind: "text", id: nid(), text: (gameName || "Novo jogo em alta").toUpperCase(),
+      xPct: 6, yPct: vertical ? 72 : 66, widthPct: 88,
+      fontSizePct: vertical ? 8 : 6,
+      color: "#FFFFFF", weight: 900, align: "left", family: "display",
+      uppercase: true, shadow: true, lineHeight: 1,
+    });
+    if (platformName) layers.push({
+      kind: "text", id: nid(), text: `${platformName} · ${cta || "jogue agora"}`,
+      xPct: 0, yPct: vertical ? 92 : 90, widthPct: 100, fontSizePct: 2.4,
+      color: "#0B0F1E", weight: 800, align: "center", family: "grotesk",
+      uppercase: true, lineHeight: 1.6, bgColor: "#FFC72C", bgPadPct: 40, bgRadiusPct: 0,
+    });
+    if (handle) layers.push({
+      kind: "text", id: nid(), text: handle,
+      xPct: 6, yPct: vertical ? 97 : 96, widthPct: 88, fontSizePct: 1.5,
+      color: "#FFFFFF88", weight: 500, align: "center", family: "grotesk", lineHeight: 1,
+    });
+    return layers;
+  },
+};
+
+/** Neon Grid — futurista, com pílulas duplas. */
+const tplNeonGrid: CreativeTemplate = {
+  id: "neon-grid",
+  name: "Neon Grid",
+  tagline: "Futurista com pílulas neon",
+  accent: "#A78BFA",
+  build: ({ format, gameName, gameImageUrl, platformName, hypeReason, cta, handle }) => {
+    const { vertical } = fmtDims(format);
+    const layers: Layer[] = [
+      { kind: "image", id: nid(), src: PLAYBET_LOGO_SRC, label: "Logo",
+        xPct: 6, yPct: 5, widthPct: 22, heightPct: 5, radiusPct: 0, opacity: 1, fit: "contain" },
+    ];
+    if (gameImageUrl) layers.push({
+      kind: "image", id: nid(), src: gameImageUrl, label: "Arte",
+      xPct: vertical ? 12 : 32, yPct: vertical ? 16 : 14,
+      widthPct: vertical ? 76 : 36, heightPct: vertical ? 44 : 58,
+      radiusPct: 50, opacity: 1, fit: "cover", glow: "#A78BFA",
+    });
+    if (platformName) layers.push({
+      kind: "text", id: nid(), text: platformName,
+      xPct: 6, yPct: vertical ? 64 : 78, widthPct: 30, fontSizePct: 1.8,
+      color: "#A78BFA", weight: 700, align: "center", family: "grotesk",
+      uppercase: true, lineHeight: 1, bgColor: "#1A0B3D", bgPadPct: 60, bgRadiusPct: 50,
+    });
+    if (hypeReason) layers.push({
+      kind: "text", id: nid(), text: hypeReason,
+      xPct: 40, yPct: vertical ? 64 : 78, widthPct: 30, fontSizePct: 1.8,
+      color: "#FFC72C", weight: 700, align: "center", family: "grotesk",
+      uppercase: true, lineHeight: 1, bgColor: "#3D2A0B", bgPadPct: 60, bgRadiusPct: 50,
+    });
+    layers.push({
+      kind: "text", id: nid(), text: (gameName || "Novo drop").toUpperCase(),
+      xPct: 6, yPct: vertical ? 72 : 84,
+      widthPct: 88, fontSizePct: vertical ? 8 : 5,
+      color: "#FFFFFF", weight: 900, align: "center", family: "display",
+      uppercase: true, shadow: true, lineHeight: 1,
+    });
+    layers.push({
+      kind: "text", id: nid(), text: cta || "JOGAR AGORA →",
+      xPct: 20, yPct: vertical ? 88 : 92, widthPct: 60, fontSizePct: 2.6,
+      color: "#0B0F1E", weight: 800, align: "center", family: "sans",
+      uppercase: true, lineHeight: 1, bgColor: "#A78BFA", bgPadPct: 70, bgRadiusPct: 50,
+    });
+    if (handle) layers.push({
+      kind: "text", id: nid(), text: handle,
+      xPct: 20, yPct: vertical ? 95 : 97, widthPct: 60, fontSizePct: 1.5,
+      color: "#FFFFFF77", weight: 500, align: "center", family: "grotesk", lineHeight: 1,
+    });
+    return layers;
+  },
+};
+
+export const CREATIVE_TEMPLATES: CreativeTemplate[] = [
+  tplHypeNeon, tplEditorial, tplMinimal, tplCutoutPoster, tplSplit, tplTicker, tplNeonGrid,
+];
+
+export function applyTemplate(id: string, input: TemplateInput): Layer[] {
+  const t = CREATIVE_TEMPLATES.find(x => x.id === id) ?? tplHypeNeon;
+  return t.build(input);
 }

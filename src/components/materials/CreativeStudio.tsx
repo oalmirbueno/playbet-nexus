@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   renderCreative, downloadCreative, slugify, defaultLayersFor,
-  FORMAT_SIZES,
+  FORMAT_SIZES, CREATIVE_TEMPLATES, applyTemplate,
   type CreativeFormat, type CreativeStyle, type CreativeInput, type RenderedCreative,
   type Layer, type TextLayer, type ImageLayer,
 } from "@/lib/creativeStudio";
@@ -258,6 +258,25 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     setSelectedId(null);
     setEditingTextId(null);
     toast.success("Layout restaurado");
+  };
+
+  const applyTpl = (templateId: string) => {
+    if (!link) return;
+    const next = applyTemplate(templateId, {
+      format,
+      gameName: link.gameName,
+      gameImageUrl: link.gameIconUrl,
+      platformName: link.platformName,
+      hypeReason: link.hypeReason,
+      cta: "JOGUE AGORA →",
+      handle: handle || (link.shortUrl ? link.shortUrl.replace(/^https?:\/\//, "") : ""),
+    });
+    setLayers(next);
+    setSelectedId(null);
+    setEditingTextId(null);
+    setDirty(true);
+    const name = CREATIVE_TEMPLATES.find(t => t.id === templateId)?.name ?? "Template";
+    toast.success(`Template aplicado: ${name}`);
   };
 
   const saveLayout = async () => {
@@ -637,6 +656,29 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
 
           {/* Controls */}
           <div className="border-t md:border-t-0 md:border-l border-border/60 p-4 space-y-4 overflow-y-auto scrollbar-thin">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Templates</Label>
+                <span className="text-[10px] text-muted-foreground">{CREATIVE_TEMPLATES.length} prontos</span>
+              </div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {CREATIVE_TEMPLATES.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => applyTpl(t.id)}
+                    className="group text-left rounded-md border border-border/60 hover:border-primary/70 hover:bg-primary/5 transition-all p-2 flex flex-col gap-1"
+                    title={t.tagline}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full ring-1 ring-border/60" style={{ background: t.accent }} />
+                      <span className="text-[11px] font-semibold text-foreground truncate">{t.name}</span>
+                    </div>
+                    <span className="text-[9.5px] text-muted-foreground leading-tight line-clamp-2">{t.tagline}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Formato</Label>
               <div className="grid grid-cols-2 gap-1.5">
