@@ -717,7 +717,7 @@ export default function InfluencerLanding() {
         </section>
       )}
 
-      {isSectionOn("cta") && (
+      {isSectionOn("cta") && !isSectionOn("hero") && (
         <section className="px-6 pb-16">
           <div className="max-w-xl mx-auto text-center">
             <button
