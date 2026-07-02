@@ -337,12 +337,12 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        <DialogContent className="max-w-md flex flex-col max-h-[90vh] p-0">
+          <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
             <DialogTitle className="flex items-center gap-2"><Link2 size={16} className="text-primary" /> Novo Link de Afiliado</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-3 py-2">
+          <div className="space-y-3 py-2 px-6 overflow-y-auto flex-1 min-h-0">
             {/* 1. INFLUENCER */}
             <div>
               <div className="flex items-center justify-between mb-1">
