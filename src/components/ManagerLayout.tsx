@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Trophy, Users, Link2, Sparkles, Wallet, User, LogOut } from "lucide-react";
+import { LayoutDashboard, Trophy, Users, Link2, Sparkles, Wallet, User, LogOut, Wand2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import PreviewBanner from "@/components/PreviewBanner";
 import LiveSyncBadge from "@/components/LiveSyncBadge";
@@ -12,6 +12,7 @@ const items = [
   { label: "Ranking", icon: Trophy, path: "/gerente/ranking" },
   { label: "Time", icon: Users, path: "/gerente/influenciadores" },
   { label: "Links", icon: Link2, path: "/gerente/links" },
+  { label: "Materiais", icon: Wand2, path: "/gerente/materiais" },
   { label: "Ganhos", icon: Wallet, path: "/gerente/financeiro" },
   { label: "Ofertas", icon: Sparkles, path: "/gerente/oportunidades" },
   { label: "Perfil", icon: User, path: "/gerente/perfil" },
@@ -62,7 +63,7 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
 
       <main className="flex-1 p-4 md:p-8 pb-24 md:pb-8 max-w-7xl w-full mx-auto animate-fade-in">{children}</main>
 
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl grid grid-cols-7">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl grid grid-cols-8">
         {items.map((it) => {
           const active = location.pathname === it.path;
           return (

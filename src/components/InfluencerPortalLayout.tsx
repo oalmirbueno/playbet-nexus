@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Link2, Wallet, DollarSign, User, LogOut } from "lucide-react";
+import { LayoutDashboard, Link2, Wallet, DollarSign, User, LogOut, Wand2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import PreviewBanner from "@/components/PreviewBanner";
 import { PortalNotificationBell } from "@/components/PortalNotificationBell";
@@ -8,6 +8,7 @@ import logo from "@/assets/logo.png";
 const items = [
   { label: "Painel", icon: LayoutDashboard, path: "/portal" },
   { label: "Meus links", icon: Link2, path: "/portal/links" },
+  { label: "Materiais", icon: Wand2, path: "/portal/materiais" },
   { label: "Financeiro", icon: DollarSign, path: "/portal/financeiro" },
   { label: "Saques", icon: Wallet, path: "/portal/saques" },
   { label: "Perfil", icon: User, path: "/portal/perfil" },
@@ -62,7 +63,7 @@ export default function InfluencerPortalLayout({ children }: { children: React.R
       <main className="flex-1 p-4 md:p-8 pb-24 md:pb-8 max-w-6xl w-full mx-auto animate-fade-in">{children}</main>
 
       {/* Mobile bottom tabs */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl grid grid-cols-5">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl grid grid-cols-6">
         {items.map((it) => {
           const active = location.pathname === it.path;
           return (
