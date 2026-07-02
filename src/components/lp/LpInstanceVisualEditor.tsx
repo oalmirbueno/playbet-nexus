@@ -153,8 +153,21 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
           .maybeSingle();
         if (!inst) { toast({ title: "Instância não encontrada", variant: "destructive" }); return; }
         setInstance(inst);
+        // Load the registered "LP padrão" (landing_pages) so we can preview it side by side.
+        if ((inst as any).landing_page_id) {
+          const { data: lp } = await supabase
+            .from("landing_pages")
+            .select("name, domain, route, slug")
+            .eq("id", (inst as any).landing_page_id)
+            .maybeSingle();
+          if (lp) setBasePage({ name: (lp as any).name, domain: (lp as any).domain, route: (lp as any).route, slug: (lp as any).slug });
+          else setBasePage(null);
+        } else {
+          setBasePage(null);
+        }
         const m: LpMode = ((inst as any).lp_mode as LpMode) || "catalog";
         setMode(m);
+
         setGameSlugs(((inst as any).game_slugs as string[]) || []);
         const lc = (inst as any).layout_config;
         const rawSections: SectionDef[] = Array.isArray(lc?.sections) && lc.sections.length > 0
