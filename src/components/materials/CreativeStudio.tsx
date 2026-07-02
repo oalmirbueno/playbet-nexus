@@ -159,12 +159,12 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
 
   // Auto-save (debounced)
   useEffect(() => {
-    if (!link || !open) return;
+    if (!link || !open || !dirty) return;
     const t = setTimeout(() => {
       saveState(link.id, format, { layers, style, editorMode, updatedAt: Date.now(), cloudSaved: false });
     }, 300);
     return () => clearTimeout(t);
-  }, [layers, style, editorMode, link?.id, format, open]);
+  }, [layers, style, editorMode, link?.id, format, open, dirty]);
 
   const baseInput = useMemo<CreativeInput | null>(() => {
     if (!link) return null;
@@ -198,17 +198,14 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
   const size = FORMAT_SIZES[format];
 
   /* ─────────── layer ops ─────────── */
-  const updateLayer = <T extends Layer>(id: string, patch: Partial<T>) =>
-    setLayers(ls => {
-      setDirty(true);
-      return ls.map(l => l.id === id ? ({ ...l, ...patch } as Layer) : l);
-    });
+  const updateLayer = <T extends Layer>(id: string, patch: Partial<T>) => {
+    setDirty(true);
+    setLayers(ls => ls.map(l => l.id === id ? ({ ...l, ...patch } as Layer) : l));
+  };
 
   const deleteLayer = (id: string) => {
-    setLayers(ls => {
-      setDirty(true);
-      return ls.filter(l => l.id !== id);
-    });
+    setDirty(true);
+    setLayers(ls => ls.filter(l => l.id !== id));
     if (selectedId === id) setSelectedId(null);
     if (editingTextId === id) setEditingTextId(null);
   };
@@ -221,9 +218,9 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       if (j < 0 || j >= ls.length) return ls;
       const next = [...ls];
       [next[idx], next[j]] = [next[j], next[idx]];
-      setDirty(true);
       return next;
     });
+    setDirty(true);
   };
 
   const addTextLayer = () => {
