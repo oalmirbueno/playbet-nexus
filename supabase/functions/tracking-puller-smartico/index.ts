@@ -56,7 +56,9 @@ async function tryFetch(url: URL, headers: HeadersInit) {
   const text = await res.text();
   let json: any = null;
   try { json = text ? JSON.parse(text) : null; } catch { /* non-json */ }
-  return { ok: res.ok, status: res.status, text, json };
+  // Smartico returns HTTP 200 with { errCode, message } on auth/label failures.
+  const bodyError = json && typeof json === "object" && (json.errCode || json.error || json.err) && !Array.isArray(json.data ?? json.rows ?? json.result);
+  return { ok: res.ok && !bodyError, status: res.status, text, json };
 }
 
 async function fetchReport(apiKey: string, labelId: string | null, dateFrom: string, dateTo: string) {
