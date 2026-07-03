@@ -78,6 +78,8 @@ function saveState(linkId: string, fmt: CreativeFormat, s: SavedState) {
 }
 
 export function CreativeStudio({ open, onOpenChange, link }: Props) {
+  const { data: brandCtx } = useLinkBrand(link?.id ?? null);
+
   const [style, setStyle] = useState<CreativeStyle>("hype");
   const [format, setFormat] = useState<CreativeFormat>("feed");
   const [editorMode, setEditorMode] = useState(true);
