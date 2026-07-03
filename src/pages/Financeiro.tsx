@@ -26,7 +26,7 @@ export default function Financeiro() {
     range, isLoading,
     caixaRealizado, revenueTracking, diff,
     saquesInPeriod, rankingInfluencers, rankingStreamers, rankingGerentes,
-    platforms, distribution,
+    platforms, distribution, trackingTotals,
   } = useFinanceiroData({ period, platformId: platformId === "all" ? null : platformId });
 
   return (
@@ -60,6 +60,11 @@ export default function Financeiro() {
           revenue={revenueTracking}
           diff={diff}
           periodLabel={range.label}
+          revShare={trackingTotals.revShare}
+          cpa={trackingTotals.cpa}
+          deposits={trackingTotals.depositsTotal}
+          registrations={trackingTotals.registrations}
+          ftd={trackingTotals.ftd}
         />
       )}
 
