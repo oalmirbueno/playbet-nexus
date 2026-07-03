@@ -13,6 +13,7 @@ import PeriodFilter from "@/components/financeiro/PeriodFilter";
 import KpiDuo from "@/components/financeiro/KpiDuo";
 import RankingTable from "@/components/financeiro/RankingTable";
 import SaquesTab from "@/components/financeiro/SaquesTab";
+import PlatformBreakdown from "@/components/financeiro/PlatformBreakdown";
 import DistributionCard from "@/components/DistributionCard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -37,7 +38,7 @@ export default function Financeiro() {
   const {
     range, isLoading,
     caixaRealizado, revenueTracking, diff,
-    saquesInPeriod, rankingInfluencers, rankingStreamers, rankingGerentes,
+    saquesInPeriod, rankingInfluencers, rankingStreamers, rankingGerentes, rankingPlatforms,
     platforms, distribution, trackingTotals,
   } = useFinanceiroData({ period, platformId: platformId === "all" ? null : platformId });
 
@@ -108,8 +109,14 @@ export default function Financeiro() {
       )}
 
       <Tabs value={activeTab} onValueChange={(v) => setParam("tab", v)}>
-        <TabsList className="flex md:grid md:grid-cols-5 md:w-auto md:inline-grid w-full justify-start">
+        <TabsList className="flex md:grid md:grid-cols-6 md:w-auto md:inline-grid w-full justify-start">
           <TabsTrigger value="distribuicao">Distribuição</TabsTrigger>
+          <TabsTrigger value="plataformas">
+            Plataformas
+            {rankingPlatforms.length > 0 && (
+              <span className="ml-2 text-[10px] text-muted-foreground">{rankingPlatforms.length}</span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="influencers">
             Influencers
             {rankingInfluencers.length > 0 && (
@@ -143,6 +150,11 @@ export default function Financeiro() {
             sourceLabel={`Rev + CPA · ${range.label.toLowerCase()}`}
           />
         </TabsContent>
+
+        <TabsContent value="plataformas" className="mt-6">
+          <PlatformBreakdown rows={rankingPlatforms} periodLabel={range.label} />
+        </TabsContent>
+
 
         <TabsContent value="influencers" className="mt-6">
           <RankingTable
