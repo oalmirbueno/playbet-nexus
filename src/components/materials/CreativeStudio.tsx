@@ -101,16 +101,26 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
 
   const seedLayers = useCallback((fmt: CreativeFormat, withImages = true): Layer[] => {
     if (!link) return [];
+    const brand = brandCtx?.brand ?? null;
     return defaultLayersFor({
       gameName: link.gameName,
       hypeReason: link.hypeReason,
       cta: "JOGUE AGORA →",
       handle: link.handle || (link.shortUrl ? link.shortUrl.replace(/^https?:\/\//, "") : ""),
       format: fmt,
-      platformName: link.platformName,
+      platformName: brand?.name || link.platformName,
       gameImageUrl: link.gameIconUrl,
-    }, { includeImages: withImages });
-  }, [link]);
+    }, {
+      includeImages: withImages,
+      brand: brand ? {
+        logoSrc: brand.logos.mark || brand.logos.wordmark || brand.logos.lockup,
+        badgeBg: brand.palette.primary,
+        sealSrc: brand.seal?.horizontal.light,
+        sealLabel: brand.seal?.alt,
+      } : undefined,
+    });
+  }, [link, brandCtx?.brand?.key]);
+
 
   const loadDatabaseState = useCallback(async (linkId: string, fmt: CreativeFormat): Promise<SavedState | null> => {
     const { data, error } = await supabase
