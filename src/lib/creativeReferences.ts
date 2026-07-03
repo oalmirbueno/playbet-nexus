@@ -18,6 +18,9 @@ export interface LayoutSlot {
     | "team-crest-away"    // brasão time visitante
     | "league-badge"       // logo da liga/competição
     | "odd-value"          // valor da odd (2.15, +150, etc)
+    | "odd-label"          // rótulo da odd ("Vitória do mandante", "Over 2.5", etc)
+    | "vs-divider"         // "VS" tipográfico entre times
+    | "match-info"         // data/hora/estádio ("Sáb 18:30 · Allianz")
     | "cta"
     | "headline"
     | "subhead";
@@ -27,6 +30,7 @@ export interface LayoutSlot {
   heightPct?: number;
   align?: "left" | "center" | "right";
 }
+
 
 export interface CreativeReference {
   id: string;
@@ -44,29 +48,66 @@ export const CREATIVE_REFERENCES: CreativeReference[] = [
   {
     id: "odds-duel",
     category: "odds",
-    label: "Duelo de Odds",
-    description: "Confronto direto entre dois times, brasões grandes, odd destacada no centro.",
+    label: "Duelo de Odds (Feed)",
+    description: "Confronto direto: brasões grandes lado a lado, VS central, liga acima, odd em destaque abaixo.",
     formats: ["feed", "square_wa"],
-    sourceHint: "Baixar brasões oficiais em PNG transparente. Se tiver screenshot da odd real na plataforma, colar como hero-art.",
+    sourceHint: "Use o botão “Buscar clube” para puxar o brasão oficial em PNG. Se tiver screenshot da odd real, cole em ‘Arte principal’ como bônus.",
     slots: [
-      { role: "team-crest-home", xPct: 8,  yPct: 30, widthPct: 28, heightPct: 28 },
-      { role: "team-crest-away", xPct: 64, yPct: 30, widthPct: 28, heightPct: 28 },
-      { role: "league-badge",    xPct: 42, yPct: 12, widthPct: 16, heightPct: 8, align: "center" },
-      { role: "odd-value",       xPct: 30, yPct: 62, widthPct: 40, align: "center" },
-      { role: "cta",             xPct: 30, yPct: 82, widthPct: 40, align: "center" },
+      { role: "league-badge",    xPct: 42, yPct: 13, widthPct: 16, heightPct: 8, align: "center" },
+      { role: "match-info",      xPct: 15, yPct: 22, widthPct: 70, align: "center" },
+      { role: "team-crest-home", xPct: 8,  yPct: 32, widthPct: 30, heightPct: 30 },
+      { role: "vs-divider",      xPct: 40, yPct: 40, widthPct: 20, align: "center" },
+      { role: "team-crest-away", xPct: 62, yPct: 32, widthPct: 30, heightPct: 30 },
+      { role: "odd-label",       xPct: 10, yPct: 68, widthPct: 80, align: "center" },
+      { role: "odd-value",       xPct: 25, yPct: 72, widthPct: 50, align: "center" },
+      { role: "cta",             xPct: 22, yPct: 88, widthPct: 56, align: "center" },
+    ],
+  },
+  {
+    id: "odds-duel-story",
+    category: "odds",
+    label: "Duelo de Odds (Story)",
+    description: "Versão vertical do duelo: liga no topo, brasões empilhados sobre VS, odd gigante, CTA no rodapé.",
+    formats: ["story"],
+    sourceHint: "Ideal pra stories no Instagram/TikTok. Brasões oficiais em PNG transparente ficam nítidos.",
+    slots: [
+      { role: "league-badge",    xPct: 40, yPct: 8,  widthPct: 20, heightPct: 6, align: "center" },
+      { role: "match-info",      xPct: 10, yPct: 15, widthPct: 80, align: "center" },
+      { role: "team-crest-home", xPct: 8,  yPct: 22, widthPct: 36, heightPct: 22 },
+      { role: "vs-divider",      xPct: 40, yPct: 26, widthPct: 20, align: "center" },
+      { role: "team-crest-away", xPct: 56, yPct: 22, widthPct: 36, heightPct: 22 },
+      { role: "odd-label",       xPct: 8,  yPct: 52, widthPct: 84, align: "center" },
+      { role: "odd-value",       xPct: 15, yPct: 58, widthPct: 70, align: "center" },
+      { role: "cta",             xPct: 15, yPct: 88, widthPct: 70, align: "center" },
     ],
   },
   {
     id: "odds-shared-bet",
     category: "aposta-compartilhada",
-    label: "Aposta Compartilhada",
-    description: "Cartão vertical estilo bilhete: várias seleções empilhadas + odd combinada.",
+    label: "Aposta Compartilhada (Story)",
+    description: "Cartão vertical estilo bilhete: screenshot do bilhete + odd combinada + CTA.",
     formats: ["story"],
-    sourceHint: "Screenshot direto do bilhete da plataforma dá o melhor resultado.",
+    sourceHint: "Cole o screenshot direto do bilhete compartilhado — usa 'Capturar do link' pra automatizar.",
     slots: [
-      { role: "hero-art",  xPct: 8, yPct: 20, widthPct: 84, heightPct: 55 },
-      { role: "odd-value", xPct: 8, yPct: 78, widthPct: 84, align: "center" },
-      { role: "cta",       xPct: 8, yPct: 90, widthPct: 84, align: "center" },
+      { role: "hero-art",  xPct: 8,  yPct: 15, widthPct: 84, heightPct: 60 },
+      { role: "odd-label", xPct: 8,  yPct: 77, widthPct: 84, align: "center" },
+      { role: "odd-value", xPct: 8,  yPct: 80, widthPct: 84, align: "center" },
+      { role: "cta",       xPct: 15, yPct: 90, widthPct: 70, align: "center" },
+    ],
+  },
+  {
+    id: "odds-shared-feed",
+    category: "aposta-compartilhada",
+    label: "Aposta Compartilhada (Feed)",
+    description: "Bilhete à esquerda + odd/CTA à direita. Formato editorial para feed.",
+    formats: ["feed", "square_wa"],
+    sourceHint: "Screenshot do bilhete à esquerda, texto/CTA à direita — funciona pra multi/simples.",
+    slots: [
+      { role: "hero-art",  xPct: 6,  yPct: 20, widthPct: 46, heightPct: 68 },
+      { role: "odd-label", xPct: 56, yPct: 30, widthPct: 38, align: "left" },
+      { role: "odd-value", xPct: 56, yPct: 40, widthPct: 38, align: "left" },
+      { role: "subhead",   xPct: 56, yPct: 62, widthPct: 38, align: "left" },
+      { role: "cta",       xPct: 56, yPct: 82, widthPct: 38, align: "left" },
     ],
   },
   {
@@ -98,6 +139,20 @@ export const CREATIVE_REFERENCES: CreativeReference[] = [
     ],
   },
   {
+    id: "cassino-share",
+    category: "cassino",
+    label: "Cassino Multiplicador",
+    description: "Screenshot da rodada + multiplicador gigante ('523x'), estilo big win.",
+    formats: ["story", "feed"],
+    sourceHint: "Print de rodada boa (Aviator, Mines, Fortune Tiger) + multiplicador. Big win vende.",
+    slots: [
+      { role: "hero-art",  xPct: 10, yPct: 15, widthPct: 80, heightPct: 45 },
+      { role: "odd-label", xPct: 10, yPct: 63, widthPct: 80, align: "center" },
+      { role: "odd-value", xPct: 15, yPct: 68, widthPct: 70, align: "center" },
+      { role: "cta",       xPct: 20, yPct: 88, widthPct: 60, align: "center" },
+    ],
+  },
+  {
     id: "bonus-cashback",
     category: "bonus",
     label: "Bônus & Cashback",
@@ -110,6 +165,7 @@ export const CREATIVE_REFERENCES: CreativeReference[] = [
     ],
   },
 ];
+
 
 export function referencesByCategory(cat: ReferenceCategory): CreativeReference[] {
   return CREATIVE_REFERENCES.filter((r) => r.category === cat);
@@ -246,8 +302,37 @@ function slotToLayer(slot: LayoutSlot, ctx: ApplyReferenceCtx): Layer | null {
       bgPadPct: 60, bgRadiusPct: 50,
     } satisfies TextLayer;
   }
+  if (slot.role === "vs-divider") {
+    const text = (fill?.text || "VS").trim();
+    return {
+      kind: "text", ...base, text,
+      fontSizePct: vertical ? 10 : 8,
+      color: ctx.brand.ctaColor || "#FFC72C",
+      weight: 900, align,
+      family: "display", uppercase: true, shadow: true, lineHeight: 1,
+    } satisfies TextLayer;
+  }
+  if (slot.role === "match-info") {
+    const text = fill?.text || "Hoje · 18:30";
+    return {
+      kind: "text", ...base, text,
+      fontSizePct: vertical ? 3 : 2.4,
+      color: "#FFFFFFB3", weight: 600, align,
+      family: "grotesk", uppercase: true, shadow: false, lineHeight: 1.1,
+    } satisfies TextLayer;
+  }
+  if (slot.role === "odd-label") {
+    const text = fill?.text || "Vitória do mandante";
+    return {
+      kind: "text", ...base, text,
+      fontSizePct: vertical ? 3.4 : 2.8,
+      color: "#FFFFFFCC", weight: 700, align,
+      family: "grotesk", uppercase: true, shadow: false, lineHeight: 1.1,
+    } satisfies TextLayer;
+  }
   return null;
 }
+
 
 /** Frame obrigatório de marca: logo plataforma (topo-esq), assinatura PlayBet (topo-dir), selo legal (rodapé). */
 function brandFrame(ctx: ApplyReferenceCtx): Layer[] {

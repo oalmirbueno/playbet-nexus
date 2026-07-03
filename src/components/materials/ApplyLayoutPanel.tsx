@@ -14,6 +14,7 @@ import {
   type ApplyReferenceCtx,
 } from "@/lib/creativeReferences";
 import type { Layer, CreativeFormat } from "@/lib/creativeStudio";
+import { CrestSearchPopover } from "@/components/materials/CrestSearchPopover";
 
 const CATS: { id: ReferenceCategory | "all"; label: string }[] = [
   { id: "all", label: "Todos" },
@@ -32,12 +33,18 @@ const ROLE_LABEL: Record<string, string> = {
   "team-crest-away": "Brasão visitante",
   "league-badge": "Logo da liga",
   "odd-value": "Valor da odd",
+  "odd-label": "Rótulo da odd",
+  "vs-divider": "Divisor central (VS)",
+  "match-info": "Info do jogo (data · local)",
   "headline": "Manchete",
   "subhead": "Subtítulo",
   "cta": "Call to action",
 };
 
 const IMAGE_ROLES = new Set(["hero-art", "game-logo", "team-crest-home", "team-crest-away", "league-badge"]);
+const CREST_ROLES = new Set(["team-crest-home", "team-crest-away"]);
+const LEAGUE_ROLES = new Set(["league-badge"]);
+
 
 interface Props {
   format: CreativeFormat;
@@ -135,7 +142,8 @@ export function ApplyLayoutPanel({ format, ctx, onApply }: Props) {
                   {ref.slots.map((s) => {
                     const isImg = IMAGE_ROLES.has(s.role);
                     const fill = refFills[s.role];
-                    // Skip UI for slots that will resolve automatically from link
+                    const isCrest = CREST_ROLES.has(s.role);
+                    const isLeague = LEAGUE_ROLES.has(s.role);
                     const autoFromLink =
                       (s.role === "hero-art" || s.role === "game-logo") && !!ctx.link?.gameIconUrl;
                     return (
@@ -145,22 +153,39 @@ export function ApplyLayoutPanel({ format, ctx, onApply }: Props) {
                           {autoFromLink && !fill?.imageUrl && (
                             <span className="text-[9px] text-primary/80">(auto: link)</span>
                           )}
+                          {fill?.imageUrl && isImg && (
+                            <img src={fill.imageUrl} alt="" className="w-3.5 h-3.5 object-contain ml-auto" />
+                          )}
                         </Label>
-                        <Input
-                          value={(isImg ? fill?.imageUrl : fill?.text) || ""}
-                          onChange={(e) =>
-                            updateFill(ref.id, s.role, isImg ? { imageUrl: e.target.value } : { text: e.target.value })
-                          }
-                          placeholder={
-                            isImg
-                              ? autoFromLink ? "Sobrescrever com URL (opcional)" : "https://... (PNG transparente)"
-                              : s.role === "odd-value" ? "2.15" : s.role === "cta" ? "APOSTAR AGORA →" : "Digite..."
-                          }
-                          className="h-7 text-[11px]"
-                        />
+                        <div className="flex items-center gap-1">
+                          <Input
+                            value={(isImg ? fill?.imageUrl : fill?.text) || ""}
+                            onChange={(e) =>
+                              updateFill(ref.id, s.role, isImg ? { imageUrl: e.target.value } : { text: e.target.value })
+                            }
+                            placeholder={
+                              isImg
+                                ? autoFromLink ? "Sobrescrever com URL (opcional)" : "https://... (PNG transparente)"
+                                : s.role === "odd-value" ? "2.15"
+                                : s.role === "odd-label" ? "Vitória do mandante"
+                                : s.role === "match-info" ? "Sáb 18:30 · Allianz"
+                                : s.role === "vs-divider" ? "VS"
+                                : s.role === "cta" ? "APOSTAR AGORA →" : "Digite..."
+                            }
+                            className="h-7 text-[11px] flex-1 min-w-0"
+                          />
+                          {(isCrest || isLeague) && (
+                            <CrestSearchPopover
+                              kind={isCrest ? "team" : "league"}
+                              onPick={(url) => updateFill(ref.id, s.role, { imageUrl: url })}
+                              triggerLabel={isCrest ? "Clube" : "Liga"}
+                            />
+                          )}
+                        </div>
                       </div>
                     );
                   })}
+
                   <Button
                     onClick={() => apply(ref)}
                     size="sm"
