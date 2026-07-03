@@ -291,7 +291,14 @@ Deno.serve(async (req) => {
       upserts++;
     }
 
-    return new Response(JSON.stringify({ ok: true, window: { date_from: dateFrom, date_to: dateTo }, rows_received: report.rows.length, upserts, skipped, errors: errors.slice(0, 10), attempt: report.attempt }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const debug = body && (body as any).debug;
+    const responsePayload: Record<string, unknown> = { ok: true, window: { date_from: dateFrom, date_to: dateTo }, rows_received: report.rows.length, upserts, skipped, errors: errors.slice(0, 10), attempt: report.attempt };
+    if (debug) {
+      responsePayload.raw_payload_preview = typeof report.payload === "object" ? JSON.stringify(report.payload).slice(0, 4000) : String(report.payload).slice(0, 4000);
+      responsePayload.first_rows = report.rows.slice(0, 3);
+      responsePayload.accounts_count = (accounts ?? []).length;
+    }
+    return new Response(JSON.stringify(responsePayload), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return new Response(JSON.stringify({ ok: false, error: message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
