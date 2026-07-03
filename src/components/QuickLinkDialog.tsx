@@ -224,7 +224,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       if (lp) return lp;
     }
     return trackedAffiliateUrl;
-  }, [landingPageId, resolvedInstance, selectedLP, plannedInstanceSlug, selectedInfluencer, influencerId, campanhaId, trackedAffiliateUrl]);
+  }, [landingPageId, resolvedInstance, selectedLP, plannedInstanceSlug, selectedInfluencer, influencerId, campanhaId, trackedAffiliateUrl, trackingCode]);
 
   const canSave = influencerId && rawLink.trim() && (accountId || currentPlatformId);
 
@@ -295,6 +295,17 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       // ── Sync: LP config + Materiais (fire-and-forget, non-blocking) ──
       const linkId = createdLink?.id;
       if (linkId) {
+        if (instanceId) {
+          supabase
+            .from("landing_page_instances")
+            .update({
+              source_tracking_link_id: linkId,
+              affiliate_link: trackedAffiliateUrl,
+            } as any)
+            .eq("id", instanceId)
+            .then(() => {});
+        }
+
         Promise.allSettled([
           useLp
             ? supabase.functions.invoke("lp-autoconfigure", {
