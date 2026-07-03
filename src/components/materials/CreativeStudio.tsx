@@ -20,6 +20,7 @@ import {
   Download, Loader2, RefreshCw, Sparkles, Copy, Check, Trash2,
   AlignLeft, AlignCenter, AlignRight, Type, Image as ImageIcon,
   ChevronUp, ChevronDown, Save, Undo2, MousePointer2, ImageDown, Package,
+  BadgePlus, Blend, CopyPlus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -104,6 +105,30 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
 
   const selected = layers.find(l => l.id === selectedId) || null;
 
+  const platformLogoSrc = brandCtx?.brand?.logos.lockup
+    || brandCtx?.brand?.logos.wordmark
+    || brandCtx?.brand?.logos.mark
+    || null;
+  const platformSealSrc = brandCtx?.brand?.seal?.horizontal.light
+    || brandCtx?.brand?.seal?.horizontal.dark
+    || null;
+  const brandAccent = brandCtx?.brand?.palette.primary ?? "#FFC72C";
+
+  const chromeSpec = useMemo<BrandChromeSpec | undefined>(() => {
+    if (!link) return undefined;
+    return {
+      format,
+      platformLogoSrc,
+      platformName: brandCtx?.brand?.name || link.platformName || null,
+      sealSrc: platformSealSrc,
+      sealLabel: brandCtx?.brand?.seal?.alt ?? null,
+    };
+  }, [format, link?.id, link?.platformName, platformLogoSrc, platformSealSrc, brandCtx?.brand?.name, brandCtx?.brand?.seal?.alt]);
+
+  const applyBrandChrome = useCallback((inputLayers: Layer[]) => (
+    chromeSpec ? ensureBrandChrome(inputLayers, chromeSpec) : inputLayers
+  ), [chromeSpec]);
+
   const seedLayers = useCallback((fmt: CreativeFormat, withImages = true): Layer[] => {
     if (!link) return [];
     const brand = brandCtx?.brand ?? null;
@@ -118,13 +143,13 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     }, {
       includeImages: withImages,
       brand: brand ? {
-        logoSrc: brand.logos.mark || brand.logos.wordmark || brand.logos.lockup,
+        logoSrc: brand.logos.lockup || brand.logos.wordmark || brand.logos.mark,
         badgeBg: brand.palette.primary,
-        sealSrc: brand.seal?.horizontal.light,
+        sealSrc: brand.seal?.horizontal.light || brand.seal?.horizontal.dark,
         sealLabel: brand.seal?.alt,
       } : undefined,
     });
-  }, [link, brandCtx?.brand?.key]);
+  }, [link, brandCtx?.brand?.key, brandCtx?.brand?.logos.lockup, brandCtx?.brand?.logos.wordmark, brandCtx?.brand?.logos.mark, brandCtx?.brand?.seal?.horizontal.light, brandCtx?.brand?.seal?.horizontal.dark]);
 
 
   const loadDatabaseState = useCallback(async (linkId: string, fmt: CreativeFormat): Promise<SavedState | null> => {
@@ -171,28 +196,21 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       if (saved) {
         // Re-injeta chrome de marca caso o estado salvo seja anterior à resolução
         // do brandKit ou tenha sido salvo sem logo/selo reais.
-        const brand = brandCtx?.brand ?? null;
-        const chromeSpec: BrandChromeSpec | undefined = brand ? {
-          format,
-          platformLogoSrc: brand.logos.mark || brand.logos.wordmark || brand.logos.lockup,
-          platformName: brand.name,
-          sealSrc: brand.seal?.horizontal.light,
-          sealLabel: brand.seal?.alt,
-        } : undefined;
-        const hydrated = chromeSpec ? ensureBrandChrome(saved.layers, chromeSpec) : saved.layers;
+        const hydrated = applyBrandChrome(saved.layers);
+        const chromeChanged = JSON.stringify(hydrated) !== JSON.stringify(saved.layers);
         setLayers(hydrated);
         setStyle(saved.style);
         setSavedAt(saved.updatedAt);
-        setDirty(!saved.cloudSaved || hydrated !== saved.layers);
+        setDirty(!saved.cloudSaved || chromeChanged);
       } else {
-        setLayers(seedLayers(format));
+        setLayers(applyBrandChrome(seedLayers(format)));
         setSavedAt(null);
         setDirty(true);
       }
       setRenderKey(k => k + 1);
     })();
     return () => { cancelled = true; };
-  }, [link?.id, format, open, loadDatabaseState, brandLoading, brandCtx?.brand?.key]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [link?.id, format, open, loadDatabaseState, brandLoading, brandCtx?.brand?.key, applyBrandChrome]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-save (debounced)
   useEffect(() => {
@@ -209,7 +227,8 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       format, style,
       gameName: link.gameName,
       gameImageUrl: link.gameIconUrl,
-      platformName: link.platformName,
+      platformName: brandCtx?.brand?.name || link.platformName,
+      platformColor: brandAccent,
       cta: "JOGUE AGORA →",
       handle,
       headline: link.gameName || "",
@@ -218,7 +237,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       hideAutoText: editorMode,
       hideAutoArt: editorMode,
     };
-  }, [link, format, style, handle, editorMode]);
+  }, [link, format, style, handle, editorMode, brandCtx?.brand?.name, brandAccent]);
 
   // Render background-only preview (no layers) — layers are DOM overlays
   useEffect(() => {
@@ -287,8 +306,50 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     setEditorMode(true);
   };
 
+  const addPlatformLogoLayer = () => {
+    if (!platformLogoSrc) { toast.error("Logo da plataforma indisponível"); return; }
+    const nl: ImageLayer = {
+      kind: "image", id: crypto.randomUUID(), src: platformLogoSrc,
+      label: `Logo ${brandCtx?.brand?.name || link?.platformName || "plataforma"}`,
+      xPct: 34, yPct: 12, widthPct: 32, heightPct: 10,
+      radiusPct: 0, opacity: 1, fit: "contain", glow: null,
+    };
+    setLayers(ls => [...ls, nl]);
+    setDirty(true);
+    setSelectedId(nl.id);
+    setEditorMode(true);
+  };
+
+  const addSealLayer = () => {
+    if (!platformSealSrc) { toast.error("Selo da plataforma indisponível"); return; }
+    const nl: ImageLayer = {
+      kind: "image", id: crypto.randomUUID(), src: platformSealSrc,
+      label: brandCtx?.brand?.seal?.alt || "Selo legal 18+",
+      xPct: 18, yPct: 91, widthPct: 64, heightPct: 6,
+      radiusPct: 0, opacity: 1, fit: "contain", glow: null,
+    };
+    setLayers(ls => [...ls, nl]);
+    setDirty(true);
+    setSelectedId(nl.id);
+    setEditorMode(true);
+  };
+
+  const duplicateLayer = (layer: Layer | null) => {
+    if (!layer) return;
+    const copy = {
+      ...layer,
+      id: crypto.randomUUID(),
+      xPct: Math.max(0, Math.min(100 - layer.widthPct, layer.xPct + 3)),
+      yPct: Math.max(0, Math.min(96, layer.yPct + 3)),
+      chrome: undefined,
+    } as Layer;
+    setLayers(ls => [...ls, copy]);
+    setDirty(true);
+    setSelectedId(copy.id);
+  };
+
   const resetToDefaults = () => {
-    setLayers(seedLayers(format));
+    setLayers(applyBrandChrome(seedLayers(format)));
     setDirty(true);
     setSelectedId(null);
     setEditingTextId(null);
@@ -297,15 +358,20 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
 
   const applyTpl = (templateId: string) => {
     if (!link) return;
-    const next = applyTemplate(templateId, {
+    const raw = applyTemplate(templateId, {
       format,
       gameName: link.gameName,
       gameImageUrl: link.gameIconUrl,
-      platformName: link.platformName,
+      platformName: brandCtx?.brand?.name || link.platformName,
       hypeReason: link.hypeReason,
       cta: "JOGUE AGORA →",
       handle: handle || (link.shortUrl ? link.shortUrl.replace(/^https?:\/\//, "") : ""),
     });
+    const next = applyBrandChrome(raw.filter((layer) => {
+      if (layer.chrome) return true;
+      if (layer.kind !== "image") return true;
+      return !(layer.src === playbetLogo && /^logo/i.test(layer.label || ""));
+    }));
     setLayers(next);
     setSelectedId(null);
     setEditingTextId(null);
@@ -478,9 +544,9 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       for (const f of targets) {
         const chromeSpec: BrandChromeSpec = {
           format: f,
-          platformLogoSrc: brand?.logos.mark || brand?.logos.wordmark || brand?.logos.lockup || null,
+          platformLogoSrc: brand?.logos.lockup || brand?.logos.wordmark || brand?.logos.mark || null,
           platformName: brand?.name || link.platformName || null,
-          sealSrc: brand?.seal?.horizontal.light ?? null,
+          sealSrc: brand?.seal?.horizontal.light || brand?.seal?.horizontal.dark || null,
           sealLabel: brand?.seal?.alt ?? null,
         };
         const raw = f === format
@@ -675,6 +741,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                           objectFit: L.fit === "contain" ? "contain" : "cover",
                           borderRadius: `${L.radiusPct ?? 0}%`,
                           opacity: L.opacity ?? 1,
+                          transform: L.rotateDeg ? `rotate(${L.rotateDeg}deg)` : undefined,
                           boxShadow: L.glow ? `0 0 0 2px ${L.glow}, 0 0 24px ${L.glow}80` : undefined,
                         }}
                       />
@@ -724,6 +791,8 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                         fontWeight: L.weight,
                         fontSize: `${L.fontSizePct}cqw`,
                         color: L.color,
+                        opacity: L.opacity ?? 1,
+                        transform: L.rotateDeg ? `rotate(${L.rotateDeg}deg)` : undefined,
                         textAlign: L.align,
                         textTransform: L.uppercase ? "uppercase" : "none",
                         lineHeight: L.lineHeight ?? 1.05,
@@ -788,14 +857,10 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
               ctx={{
                 brand: {
                   platformName: brandCtx?.brand?.name ?? link.platformName,
-                  platformLogoSrc: brandCtx?.brand?.logos?.mark
-                    ?? brandCtx?.brand?.logos?.wordmark
-                    ?? brandCtx?.brand?.logos?.lockup
-                    ?? null,
+                  platformLogoSrc,
                   playbetLogoSrc: playbetLogo,
-                  ctaColor: brandCtx?.brand?.palette?.primary ?? "#FFC72C",
-                  sealSrc: brandCtx?.brand?.seal?.horizontal?.light
-                    ?? null,
+                  ctaColor: brandAccent,
+                  sealSrc: platformSealSrc,
                   sealLabel: brandCtx?.brand?.seal?.alt ?? null,
                 },
                 link: {
@@ -806,7 +871,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                 },
               }}
               onApply={(newLayers) => {
-                setLayers(newLayers);
+                setLayers(applyBrandChrome(newLayers));
                 setSelectedId(null);
                 setEditingTextId(null);
                 setDirty(true);
@@ -847,6 +912,12 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                     <button onClick={addImageLayer} title="Adicionar imagem" disabled={!link.gameIconUrl} className="text-[10px] px-2 py-1 rounded border border-border/60 hover:border-primary hover:text-foreground text-muted-foreground flex items-center gap-1 disabled:opacity-40">
                       <ImageIcon className="w-3 h-3" /> Imagem
                     </button>
+                    <button onClick={addPlatformLogoLayer} title="Adicionar logo real da plataforma" disabled={!platformLogoSrc} className="text-[10px] px-2 py-1 rounded border border-border/60 hover:border-primary hover:text-foreground text-muted-foreground flex items-center gap-1 disabled:opacity-40">
+                      <BadgePlus className="w-3 h-3" /> Logo
+                    </button>
+                    <button onClick={addSealLayer} title="Adicionar selo oficial" disabled={!platformSealSrc} className="text-[10px] px-2 py-1 rounded border border-border/60 hover:border-primary hover:text-foreground text-muted-foreground flex items-center gap-1 disabled:opacity-40">
+                      <Blend className="w-3 h-3" /> Selo
+                    </button>
                   </div>
                 </div>
                 <div className="space-y-1 max-h-[160px] overflow-y-auto -mx-1 px-1 scrollbar-thin">
@@ -867,6 +938,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                       </span>
                       <button onClick={(e) => { e.stopPropagation(); moveLayer(L.id, 1); }} className="opacity-50 hover:opacity-100 p-0.5"><ChevronUp className="w-3 h-3" /></button>
                       <button onClick={(e) => { e.stopPropagation(); moveLayer(L.id, -1); }} className="opacity-50 hover:opacity-100 p-0.5"><ChevronDown className="w-3 h-3" /></button>
+                      <button onClick={(e) => { e.stopPropagation(); duplicateLayer(L); }} className="opacity-50 hover:opacity-100 p-0.5"><CopyPlus className="w-3 h-3" /></button>
                       <button onClick={(e) => { e.stopPropagation(); deleteLayer(L.id); }} className="opacity-60 hover:opacity-100 hover:text-destructive p-0.5"><Trash2 className="w-3 h-3" /></button>
                     </div>
                   ))}
@@ -875,8 +947,14 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                   )}
                 </div>
 
-                {selectedText && <TextInspector layer={selectedText} onChange={(p) => updateLayer<TextLayer>(selectedText.id, p)} />}
-                {selectedImage && <ImageInspector layer={selectedImage} onChange={(p) => updateLayer<ImageLayer>(selectedImage.id, p)} />}
+                {selected && (
+                  <button onClick={() => duplicateLayer(selected)} className="w-full h-7 text-[11px] text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5 border border-border/60 rounded-md">
+                    <CopyPlus className="w-3 h-3" /> Duplicar camada selecionada
+                  </button>
+                )}
+
+                {selectedText && <TextInspector layer={selectedText} brandAccent={brandAccent} onChange={(p) => updateLayer<TextLayer>(selectedText.id, p)} />}
+                {selectedImage && <ImageInspector layer={selectedImage} brandAccent={brandAccent} onChange={(p) => updateLayer<ImageLayer>(selectedImage.id, p)} />}
 
                 <button onClick={resetToDefaults} className="w-full text-[11px] text-muted-foreground hover:text-foreground flex items-center justify-center gap-1.5 py-1.5 border border-border/60 rounded-md">
                   <Undo2 className="w-3 h-3" /> Restaurar layout padrão
@@ -967,7 +1045,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
 
 /* ─────────── inspectors ─────────── */
 
-function TextInspector({ layer, onChange }: { layer: TextLayer; onChange: (p: Partial<TextLayer>) => void }) {
+function TextInspector({ layer, brandAccent, onChange }: { layer: TextLayer; brandAccent: string; onChange: (p: Partial<TextLayer>) => void }) {
   return (
     <div className="space-y-3 pt-3 border-t border-border/60">
       <div className="space-y-1.5">
@@ -993,7 +1071,22 @@ function TextInspector({ layer, onChange }: { layer: TextLayer; onChange: (p: Pa
       </div>
       <SliderField label="Largura" value={layer.widthPct} min={10} max={100} step={1} suffix="%" onChange={(v) => onChange({ widthPct: v })} />
       <SliderField label="Entrelinhas" value={layer.lineHeight ?? 1.05} min={0.8} max={2} step={0.05} onChange={(v) => onChange({ lineHeight: v })} />
+      <div className="grid grid-cols-2 gap-2">
+        <SliderField label="Opacidade" value={layer.opacity ?? 1} min={0} max={1} step={0.05} onChange={(v) => onChange({ opacity: v })} />
+        <SliderField label="Rotação" value={layer.rotateDeg ?? 0} min={-30} max={30} step={1} suffix="°" onChange={(v) => onChange({ rotateDeg: v })} />
+      </div>
       <ColorField label="Cor do texto" value={layer.color} onChange={(v) => onChange({ color: v })} />
+      <div className="grid grid-cols-4 gap-1">
+        {["#FFFFFF", "#0B0F1E", "#FFC72C", brandAccent].map((color) => (
+          <button
+            key={color}
+            onClick={() => onChange({ color })}
+            className="h-7 rounded border border-border/60"
+            style={{ background: color }}
+            title={color}
+          />
+        ))}
+      </div>
       <div className="flex items-center gap-1">
         {(["left", "center", "right"] as const).map(a => (
           <button key={a} onClick={() => onChange({ align: a })}
@@ -1016,7 +1109,7 @@ function TextInspector({ layer, onChange }: { layer: TextLayer; onChange: (p: Pa
       <div className="pt-2 border-t border-border/40 space-y-2">
         <div className="flex items-center justify-between">
           <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Fundo (pílula)</Label>
-          <button onClick={() => onChange({ bgColor: layer.bgColor ? null : "#FFC72C" })}
+          <button onClick={() => onChange({ bgColor: layer.bgColor ? null : brandAccent })}
             className={cn("text-[10px] px-2 py-0.5 rounded border",
               layer.bgColor ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground")}>
             {layer.bgColor ? "Ativo" : "Inativo"}
@@ -1025,6 +1118,7 @@ function TextInspector({ layer, onChange }: { layer: TextLayer; onChange: (p: Pa
         {layer.bgColor && (
           <>
             <ColorField label="Cor" value={layer.bgColor} onChange={(v) => onChange({ bgColor: v })} />
+            <SliderField label="Padding" value={layer.bgPadPct ?? 40} min={10} max={100} step={5} suffix="%" onChange={(v) => onChange({ bgPadPct: v })} />
             <SliderField label="Arredondamento" value={layer.bgRadiusPct ?? 20} min={0} max={50} step={1} suffix="%" onChange={(v) => onChange({ bgRadiusPct: v })} />
           </>
         )}
@@ -1033,7 +1127,7 @@ function TextInspector({ layer, onChange }: { layer: TextLayer; onChange: (p: Pa
   );
 }
 
-function ImageInspector({ layer, onChange }: { layer: ImageLayer; onChange: (p: Partial<ImageLayer>) => void }) {
+function ImageInspector({ layer, brandAccent, onChange }: { layer: ImageLayer; brandAccent: string; onChange: (p: Partial<ImageLayer>) => void }) {
   return (
     <div className="space-y-3 pt-3 border-t border-border/60">
       <div className="grid grid-cols-2 gap-2">
@@ -1043,13 +1137,20 @@ function ImageInspector({ layer, onChange }: { layer: ImageLayer; onChange: (p: 
       <SliderField label="Largura" value={layer.widthPct} min={5} max={100} step={1} suffix="%" onChange={(v) => onChange({ widthPct: v })} />
       <SliderField label="Altura" value={layer.heightPct} min={5} max={100} step={1} suffix="%" onChange={(v) => onChange({ heightPct: v })} />
       <SliderField label="Arredondamento" value={layer.radiusPct ?? 0} min={0} max={50} step={1} suffix="%" onChange={(v) => onChange({ radiusPct: v })} />
-      <SliderField label="Opacidade" value={layer.opacity ?? 1} min={0} max={1} step={0.05} onChange={(v) => onChange({ opacity: v })} />
+      <div className="grid grid-cols-2 gap-2">
+        <SliderField label="Opacidade" value={layer.opacity ?? 1} min={0} max={1} step={0.05} onChange={(v) => onChange({ opacity: v })} />
+        <SliderField label="Rotação" value={layer.rotateDeg ?? 0} min={-30} max={30} step={1} suffix="°" onChange={(v) => onChange({ rotateDeg: v })} />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <SliderField label="Desfoque" value={layer.blur ?? 0} min={0} max={24} step={1} suffix="px" onChange={(v) => onChange({ blur: v || undefined })} />
+        <SliderField label="Exposição" value={layer.brightness ?? 1} min={0.2} max={2} step={0.05} onChange={(v) => onChange({ brightness: v })} />
+      </div>
       <div className="grid grid-cols-2 gap-2">
         <SelectField label="Ajuste" value={layer.fit ?? "cover"} onChange={(v) => onChange({ fit: v as ImageLayer["fit"] })}
           options={[["cover", "Preencher"], ["contain", "Conter"]]} />
         <div className="space-y-1">
           <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Brilho</Label>
-          <button onClick={() => onChange({ glow: layer.glow ? null : "#FFC72C" })}
+          <button onClick={() => onChange({ glow: layer.glow ? null : brandAccent })}
             className={cn("w-full h-8 text-[10px] rounded border",
               layer.glow ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground")}>
             {layer.glow ? "Contorno ligado" : "Desligado"}
