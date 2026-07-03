@@ -740,28 +740,43 @@ export default function InfluencerLanding() {
 
   const primaryGame = gameArts[0];
   const isCatalogMode = mode === "catalog";
-  const isGeneratedMode = !isCatalogMode;
+  const isPlatformDirect = mode === "platform_direct";
+  const isGeneratedMode = !isCatalogMode && !isPlatformDirect;
   const displayGames = mode === "single_game" && primaryGame ? [primaryGame] : gameArts;
-  const heroGame = primaryGame || null;
-  const bonusEnabled = bonusOffer?.enabled !== false;
-  const communityEnabled = communityCta?.enabled !== false;
+  const heroGame = isPlatformDirect ? null : (primaryGame || null);
+  const bonusEnabled = !isPlatformDirect && bonusOffer?.enabled !== false;
+  const communityEnabled = !isPlatformDirect && communityCta?.enabled !== false;
   const showFeatures = isGeneratedMode && isSectionOn("features") && bonusEnabled && (bonusOffer?.title || bonusOffer?.code || primaryGame);
   const showCommunity = isSectionOn("community") && communityEnabled && (communityCta?.label || communityCta?.url);
+  const platformName = brandCtx?.brand?.name ?? null;
   const defaultCta = isCatalogMode
     ? "Acessar oportunidades"
     : mode === "odds"
       ? "Acessar oportunidades"
-      : bonusEnabled && bonusOffer?.code
-        ? "Resgatar bônus"
-        : primaryGame?.name
-          ? `Jogar ${primaryGame.name}`
-          : "Jogar agora";
+      : isPlatformDirect
+        ? (platformName ? `Acessar ${platformName}` : "Acessar plataforma")
+        : bonusEnabled && bonusOffer?.code
+          ? "Resgatar bônus"
+          : primaryGame?.name
+            ? `Jogar ${primaryGame.name}`
+            : "Jogar agora";
   const configuredCta: string | null = (bonusEnabled ? bonusOffer?.cta_label : null) || instanceCtx?.hype_copy?.cta_label || null;
   const ctaLabel: string = isGeneratedMode && configuredCta?.toLowerCase().trim() === "acessar oportunidades"
     ? defaultCta
     : configuredCta || defaultCta;
-  const heroTitle = hypeTitle || (isCatalogMode ? "Oportunidades PlayBet" : primaryGame?.name || "Oferta oficial");
-  const heroSubtitle = hypeSub || (isCatalogMode ? "Acesso rápido às melhores oportunidades." : "Oferta ativa para jogar agora.");
+  const heroTitle = hypeTitle || (
+    isCatalogMode ? "Oportunidades PlayBet"
+    : isPlatformDirect ? (platformName ? `${platformName} com PlayBet` : "Oferta oficial")
+    : primaryGame?.name || "Oferta oficial"
+  );
+  const heroSubtitle = hypeSub || (
+    isCatalogMode ? "Acesso rápido às melhores oportunidades."
+    : isPlatformDirect
+      ? (platformName
+          ? `Acesse ${platformName} agora com bônus oficial PlayBet.`
+          : "Acesse a plataforma oficial com bônus PlayBet.")
+      : "Oferta ativa para jogar agora."
+  );
   const copyBonusCode = async () => {
     if (!bonusOffer?.code) return;
     try { await navigator.clipboard.writeText(bonusOffer.code); } catch {}
