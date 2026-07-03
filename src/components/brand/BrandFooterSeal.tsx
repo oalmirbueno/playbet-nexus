@@ -20,6 +20,7 @@ export function BrandFooterSeal({
   className?: string;
   compact?: boolean;
 }) {
+  const [imageFailed, setImageFailed] = useState(false);
   if (!brand?.seal) {
     return (
       <div className={cn("text-xs text-destructive font-medium", className)}>
@@ -29,7 +30,6 @@ export function BrandFooterSeal({
   }
   const t = tone === "auto" ? "light" : tone;
   const seloUrl = brand.seal[variant][t];
-  const [imageFailed, setImageFailed] = useState(false);
   return (
     <div
       className={cn(
