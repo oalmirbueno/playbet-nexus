@@ -212,7 +212,7 @@ export default function TrackingLinks() {
       instanceSlug: inst?.slug,
       affiliateBaseUrl: l.base_url || "",
       clickIdParamName: l.click_id_param_name || "sub1",
-      sub1: inf?.slug || l.tracking_code,
+      sub1: l.tracking_code,
       sub2: l.influencer_id || "",
       sub3: l.campanha_id || "",
     });

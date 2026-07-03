@@ -176,9 +176,11 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
     setHypeReason(g.hype_reason || hypeReason);
   };
 
+  const trackingCode = useMemo(() => subid || `link-${Date.now().toString(36)}`, [subid]);
+
   const trackedAffiliateUrl = useMemo(
-    () => buildTrackedAffiliateUrl(rawLink, clickIdParam, subid, influencerId || "", campanhaId || ""),
-    [rawLink, clickIdParam, subid, influencerId, campanhaId],
+    () => buildTrackedAffiliateUrl(rawLink, clickIdParam, trackingCode, influencerId || "", campanhaId || ""),
+    [rawLink, clickIdParam, trackingCode, influencerId, campanhaId],
   );
 
   // Resolve / preview the LP instance for (influencer × LP × affiliate_link).
@@ -223,8 +225,6 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
     }
     return trackedAffiliateUrl;
   }, [landingPageId, resolvedInstance, selectedLP, plannedInstanceSlug, selectedInfluencer, influencerId, campanhaId, trackedAffiliateUrl]);
-
-  const trackingCode = useMemo(() => subid || `link-${Date.now().toString(36)}`, [subid]);
 
   const canSave = influencerId && rawLink.trim() && (accountId || currentPlatformId);
 
