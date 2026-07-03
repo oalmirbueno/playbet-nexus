@@ -18,6 +18,9 @@ export interface LayoutSlot {
     | "team-crest-away"    // brasão time visitante
     | "league-badge"       // logo da liga/competição
     | "odd-value"          // valor da odd (2.15, +150, etc)
+    | "odd-label"          // rótulo da odd ("Vitória do mandante", "Over 2.5", etc)
+    | "vs-divider"         // "VS" tipográfico entre times
+    | "match-info"         // data/hora/estádio ("Sáb 18:30 · Allianz")
     | "cta"
     | "headline"
     | "subhead";
@@ -27,6 +30,7 @@ export interface LayoutSlot {
   heightPct?: number;
   align?: "left" | "center" | "right";
 }
+
 
 export interface CreativeReference {
   id: string;
