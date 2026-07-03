@@ -33,7 +33,11 @@ export function getMetricMoneyParts(metric: TrackingMetricMoneyLike) {
   const account = metric.platform_accounts;
   const revsharePct = money(metric.revshare_percent ?? account?.revshare_percent);
   const cpaUnit = money(metric.cpa_value ?? account?.cpa_value);
+  const cpaBaseline = money(metric.cpa_baseline_deposit ?? account?.cpa_baseline_deposit);
   const ftd = money(metric.ftd);
+  const depositTotal = money(metric.depositos_total ?? metric.converted_amount);
+  const avgFtd = ftd > 0 ? depositTotal / ftd : 0;
+  const meetsBaseline = cpaBaseline === 0 || avgFtd >= cpaBaseline;
   const source = String(metric.origem_importacao ?? "").toLowerCase();
   const revenueIsGrossPanelValue =
     source.includes("panel_scraper") ||
@@ -42,8 +46,10 @@ export function getMetricMoneyParts(metric: TrackingMetricMoneyLike) {
     source.includes("plataforma") ||
     source.includes("historico");
   const estimatedRevShare = revsharePct > 0 ? Math.max(0, grossRevenue) * (revsharePct / 100) : 0;
-  const estimatedCpa = cpaUnit > 0 && ftd > 0 ? ftd * cpaUnit : 0;
-  const cpa = Math.max(0, money(metric.cpa_commission) || estimatedCpa);
+  const estimatedCpa = cpaUnit > 0 && ftd > 0 && meetsBaseline ? ftd * cpaUnit : 0;
+  const importedCpa = money(metric.cpa_commission);
+  const cpa = importedCpa > 0 ? Math.max(0, importedCpa) : Math.max(0, estimatedCpa);
+
   const importedRevShare = Math.max(0, money(metric.revshare_commission));
   const looksLikeGrossWasSavedAsCommission =
     revenueIsGrossPanelValue &&
