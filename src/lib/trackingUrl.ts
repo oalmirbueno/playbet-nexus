@@ -97,9 +97,12 @@ export interface ExpectedShareUrl {
   campanhaId?: string | null;
 }
 
-export type ShareUrlValidation =
-  | { ok: true; url: string }
-  | { ok: false; reason: string };
+export interface ShareUrlValidation {
+  ok: boolean;
+  url: string;
+  reason?: string;
+}
+
 
 export function validateSharedLpUrl(
   url: string | null | undefined,
