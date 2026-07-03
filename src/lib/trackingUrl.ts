@@ -83,3 +83,50 @@ export function resolveShareUrl(args: {
     args.sub3 || "",
   );
 }
+
+/**
+ * Guard for the "copiar link" flow. Ensures a URL we're about to hand to the
+ * influencer really matches the tracking link + LP instance the UI thinks it
+ * is copying. Prevents shipping URLs that point at the wrong LP or drop the
+ * tracking code.
+ */
+export interface ExpectedShareUrl {
+  instanceSlug?: string | null;
+  trackingCode?: string | null;
+  influencerId?: string | null;
+  campanhaId?: string | null;
+}
+
+export type ShareUrlValidation =
+  | { ok: true; url: string }
+  | { ok: false; reason: string };
+
+export function validateSharedLpUrl(
+  url: string | null | undefined,
+  expected: ExpectedShareUrl,
+): ShareUrlValidation {
+  if (!url) return { ok: false, reason: "URL vazia" };
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return { ok: false, reason: "URL inválida" };
+  }
+  const q = parsed.searchParams;
+  const expectSlug = (expected.instanceSlug || "").trim();
+  const expectCode = (expected.trackingCode || "").trim();
+  if (expectSlug && q.get("ref") !== expectSlug) {
+    return { ok: false, reason: `ref esperado "${expectSlug}", encontrado "${q.get("ref") ?? ""}"` };
+  }
+  if (expectCode && q.get("sub1") !== expectCode) {
+    return { ok: false, reason: `sub1 esperado "${expectCode}", encontrado "${q.get("sub1") ?? ""}"` };
+  }
+  if (expected.influencerId && q.get("sub2") && q.get("sub2") !== expected.influencerId) {
+    return { ok: false, reason: `sub2 divergente do influenciador` };
+  }
+  if (expected.campanhaId && q.get("sub3") && q.get("sub3") !== expected.campanhaId) {
+    return { ok: false, reason: `sub3 divergente da campanha` };
+  }
+  return { ok: true, url };
+}
+
