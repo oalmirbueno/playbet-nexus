@@ -353,6 +353,26 @@ export default function InfluencerLanding() {
   const [gameArts, setGameArts] = useState<GameArt[]>([]);
   const [clicking, setClicking] = useState(false);
 
+  // Brand travada pelo tracking_link — logo/selo/licença/SEO nunca se misturam entre plataformas.
+  const { data: brandCtx } = useLinkBrand(resolved?.tracking_link_id ?? null);
+
+  // SEO dinâmico por marca resolvida
+  useEffect(() => {
+    if (!brandCtx?.brand) return;
+    document.title = brandCtx.seo.title;
+    const setMeta = (name: string, content: string, attr: "name" | "property" = "name") => {
+      let el = document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${name}"]`);
+      if (!el) { el = document.createElement("meta"); el.setAttribute(attr, name); document.head.appendChild(el); }
+      el.content = content;
+    };
+    setMeta("description", brandCtx.seo.description);
+    setMeta("og:title", brandCtx.seo.ogTitle, "property");
+    setMeta("og:description", brandCtx.seo.description, "property");
+    setMeta("og:type", "website", "property");
+    setMeta("twitter:card", "summary_large_image");
+  }, [brandCtx?.brand?.key, brandCtx?.seo.title, brandCtx?.seo.description, brandCtx?.seo.ogTitle]);
+
+
   useEffect(() => {
     const id = "lp-public-scrollbar-style";
     if (document.getElementById(id)) return;
