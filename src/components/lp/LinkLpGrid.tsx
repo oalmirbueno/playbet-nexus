@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import LpInstanceVisualEditor from "@/components/lp/LpInstanceVisualEditor";
 import { LP_MODE_LABELS, type LpMode } from "@/lib/lpMode";
 import { buildLpBaseUrl } from "@/lib/lpPublicUrl";
-import { buildPublicLpUrl } from "@/lib/trackingUrl";
+import { buildPublicLpUrl, validateSharedLpUrl } from "@/lib/trackingUrl";
 
 interface Row {
   id: string;
@@ -45,9 +45,16 @@ interface Props {
 }
 
 function buildRowShareUrl(row: Row): string | null {
-  return buildPublicLpUrl(row.lp_domain, row.lp_slug, row.influencer_id || "", row.campanha_id || "", row.lp_route)
-    || buildLpBaseUrl(row.lp_domain, row.lp_route);
+  return buildPublicLpUrl(
+    row.lp_domain,
+    row.lp_slug,
+    row.influencer_id || "",
+    row.campanha_id || "",
+    row.lp_route,
+    row.tracking_code || "",
+  ) || buildLpBaseUrl(row.lp_domain, row.lp_route);
 }
+
 
 export function LinkLpGrid({ influencerId, managerId, title = "LP por link", showInfluencer = false }: Props) {
   const [rows, setRows] = useState<Row[]>([]);
@@ -174,13 +181,25 @@ export function LinkLpGrid({ influencerId, managerId, title = "LP por link", sho
   const copyLink = async (r: Row) => {
     const url = buildRowShareUrl(r);
     if (!url) return toast.error("LP sem slug público");
+    const check = validateSharedLpUrl(url, {
+      instanceSlug: r.lp_slug,
+      trackingCode: r.tracking_code,
+      influencerId: r.influencer_id,
+      campanhaId: r.campanha_id,
+    });
+    if (!check.ok) {
+      return toast.error("Link não corresponde à LP/tracking", { description: check.reason });
+    }
+
+
     try {
-      await navigator.clipboard.writeText(url);
-      toast.success("Link da LP copiado", { description: url });
+      await navigator.clipboard.writeText(check.url);
+      toast.success("Link da LP copiado", { description: check.url });
     } catch {
       toast.error("Não consegui copiar");
     }
   };
+
 
   return (
     <Card className="border-border/60">

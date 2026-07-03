@@ -15,7 +15,7 @@ import { ArrowUp, ArrowDown, RefreshCw, ExternalLink, Loader2, Wand2, Users, Spa
 import { LP_MODE_LABELS, defaultLayoutConfig, type LpMode } from "@/lib/lpMode";
 import GameArtwork from "@/components/tracking/GameArtwork";
 import { suggestThreeOptions, computeOpportunityScore } from "@/lib/opportunityEngine";
-import { buildPublicLpUrl, buildTrackedAffiliateUrl } from "@/lib/trackingUrl";
+import { buildPublicLpUrl, buildTrackedAffiliateUrl, validateSharedLpUrl } from "@/lib/trackingUrl";
 import { buildLpBaseUrl } from "@/lib/lpPublicUrl";
 
 interface Props {
@@ -594,15 +594,35 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
       const syncError = syncResults.find((r: any) => r?.error)?.error;
       if (syncError) throw new Error(syncError.message);
 
+      const primaryLink = linksToSync[0] as any | undefined;
       const publicShareUrl = shareUrls[0]
         || (effectiveMode === "catalog"
           ? catalogShareUrl
           : buildPublicLpUrl(lpDomain, instance?.slug, instance?.influencer_id || "", "", basePage?.route))
         || publicUrl
         || "";
+      let copiedShareUrl = "";
       if (publicShareUrl) {
-        try { await navigator.clipboard.writeText(publicShareUrl); } catch {}
+        const validation = validateSharedLpUrl(publicShareUrl, {
+          instanceSlug: instance?.slug,
+          trackingCode: primaryLink?.tracking_code,
+          influencerId: primaryLink?.influencer_id || instance?.influencer_id,
+          campanhaId: primaryLink?.campanha_id,
+        });
+        if (!validation.ok) {
+          toast({
+            title: "Link não copiado",
+            description: `URL não bate com a LP/tracking: ${validation.reason}`,
+            variant: "destructive",
+          });
+        } else {
+          try {
+            await navigator.clipboard.writeText(validation.url);
+            copiedShareUrl = validation.url;
+          } catch {}
+        }
       }
+
 
       setMode(effectiveMode);
       setPreviewTab(effectiveMode === "catalog" ? "catalog" : "generated");
@@ -623,8 +643,11 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
 
       toast({
         title: "LP salva",
-        description: publicShareUrl ? `Link ${effectiveMode === "catalog" ? "da LP padrão" : "da LP gerada"} atualizado e copiado.` : "Página preservada e preview atualizado.",
+        description: copiedShareUrl
+          ? `Link ${effectiveMode === "catalog" ? "da LP padrão" : "da LP gerada"} atualizado e copiado.`
+          : (publicShareUrl ? "LP salva. Link não foi copiado — revise os dados." : "Página preservada e preview atualizado."),
       });
+
       setPreviewKey((k) => k + 1);
     } catch (e: any) {
       toast({ title: "Erro ao salvar", description: e?.message, variant: "destructive" });
