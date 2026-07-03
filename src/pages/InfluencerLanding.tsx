@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowRight, Zap, Gift, Users, Copy } from "lucide-react";
 import logo from "@/assets/logo.png";
-import { useLinkBrand } from "@/lib/useLinkBrand";
+import { useLinkBrand, useBrandByPlatform } from "@/lib/useLinkBrand";
 import { BrandFooterSeal } from "@/components/brand/BrandFooterSeal";
 
 
@@ -355,7 +355,15 @@ export default function InfluencerLanding() {
   const [clicking, setClicking] = useState(false);
 
   // Brand travada pelo tracking_link — logo/selo/licença/SEO nunca se misturam entre plataformas.
-  const { data: brandCtx } = useLinkBrand(resolved?.tracking_link_id ?? null);
+  // Fallback: visitantes anônimos não têm RLS em tracking_links/platforms, então usamos o hint
+  // denormalizado em `hype_copy.platform_slug` gravado pelo trigger `trigger_link_autopipeline`.
+  const { data: linkBrandCtx } = useLinkBrand(resolved?.tracking_link_id ?? null);
+  const platformHint =
+    (instanceCtx?.hype_copy?.platform_slug as string | null | undefined) ||
+    (instanceCtx?.hype_copy?.platform_name as string | null | undefined) ||
+    null;
+  const { data: hintBrandCtx } = useBrandByPlatform(!linkBrandCtx?.brand ? platformHint : null);
+  const brandCtx = linkBrandCtx?.brand ? linkBrandCtx : (hintBrandCtx?.brand ? hintBrandCtx : linkBrandCtx);
 
   // SEO dinâmico por marca resolvida
   useEffect(() => {
