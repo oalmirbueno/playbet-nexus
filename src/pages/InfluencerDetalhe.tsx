@@ -181,8 +181,9 @@ export default function InfluencerDetalhe() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
         <div className="stat-card border-l-2 border-l-primary"><span className="text-[10px] text-muted-foreground uppercase">Lucro real</span><p className="text-lg font-bold text-emerald-400">R$ {trackingMetrics.revenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p></div>
+        <div className="stat-card border-l-2 border-l-primary"><span className="text-[10px] text-muted-foreground uppercase">CPA</span><p className="text-lg font-bold">R$ {trackingMetrics.cpa.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p></div>
         <div className="stat-card border-l-2 border-l-accent"><span className="text-[10px] text-muted-foreground uppercase">FTDs</span><p className="text-lg font-bold">{trackingMetrics.ftds}</p></div>
         <div className="stat-card border-l-2 border-l-info"><span className="text-[10px] text-muted-foreground uppercase">Registros</span><p className="text-lg font-bold">{trackingMetrics.registrations}</p></div>
         <div className="stat-card border-l-2 border-l-success"><span className="text-[10px] text-muted-foreground uppercase">Comissão</span><p className="text-lg font-bold">{comissao}%</p></div>
