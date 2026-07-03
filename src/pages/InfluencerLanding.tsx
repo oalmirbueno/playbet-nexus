@@ -344,6 +344,23 @@ function GameImage({
   );
 }
 
+function BrandLogoImage({ src, name }: { src?: string | null; name: string }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) {
+    return <span className="text-sm font-extrabold tracking-wide text-white">{name}</span>;
+  }
+  return (
+    <img
+      src={src}
+      alt={name}
+      className="h-11 object-contain"
+      loading="eager"
+      decoding="async"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 export default function InfluencerLanding() {
   const { slug: pathSlug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
@@ -847,10 +864,9 @@ export default function InfluencerLanding() {
               <div className="mb-8 flex items-center justify-center gap-4">
                 <img src={logo} alt="PlayBet" className="h-11 opacity-95" />
                 <span className="text-white/30 text-xl font-light select-none">×</span>
-                <img
+                <BrandLogoImage
                   src={brandCtx.brand.logos.wordmark || brandCtx.brand.logos.lockup || brandCtx.brand.logos.mark}
-                  alt={brandCtx.brand.name}
-                  className="h-11 object-contain"
+                  name={brandCtx.brand.name}
                 />
               </div>
             ) : (
