@@ -123,7 +123,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       sealSrc: platformSealSrc,
       sealLabel: brandCtx?.brand?.seal?.alt ?? null,
     };
-  }, [format, link, platformLogoSrc, platformSealSrc, brandCtx?.brand?.name, brandCtx?.brand?.seal?.alt]);
+  }, [format, link?.id, link?.platformName, platformLogoSrc, platformSealSrc, brandCtx?.brand?.name, brandCtx?.brand?.seal?.alt]);
 
   const applyBrandChrome = useCallback((inputLayers: Layer[]) => (
     chromeSpec ? ensureBrandChrome(inputLayers, chromeSpec) : inputLayers
