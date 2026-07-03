@@ -12,13 +12,17 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
  */
 
 // ── Mock creativeStudio: só nos interessa observar downloadRawAsset ─────────
-const downloadRawAsset = vi.fn(async (_url: string, _name: string) => {});
-const renderCreative = vi.fn(async () => ({ dataUrl: "data:image/png;base64,AAA", blob: new Blob() }));
-const downloadCreative = vi.fn();
+const mocks = vi.hoisted(() => ({
+  downloadRawAsset: vi.fn(async (_url: string, _name: string) => {}),
+  renderCreative: vi.fn(async () => ({ dataUrl: "data:image/png;base64,AAA", blob: new Blob() })),
+  downloadCreative: vi.fn(),
+}));
+const { downloadRawAsset } = mocks;
+
 vi.mock("@/lib/creativeStudio", () => ({
-  downloadRawAsset,
-  renderCreative,
-  downloadCreative,
+  downloadRawAsset: mocks.downloadRawAsset,
+  renderCreative: mocks.renderCreative,
+  downloadCreative: mocks.downloadCreative,
   slugify: (s: string) => s.toLowerCase().replace(/\s+/g, "-"),
   FORMAT_SIZES: {
     feed: { w: 1080, h: 1080, label: "Feed" },
