@@ -239,7 +239,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
           const hype = (tl as any).hype_reason;
           const cat = (tl as any).link_category;
           setCopy(prev => ({
-            title: prev.title || titleForMode(m, gname),
+            title: prev.title || titleForMode(m, gname, pName),
             subtitle: prev.subtitle || hype || adaptiveSubtitle(m, gname, pName),
             cta_label: prev.cta_label || ctaForMode(m, cat, gname),
           }));
