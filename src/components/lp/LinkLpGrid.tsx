@@ -188,8 +188,9 @@ export function LinkLpGrid({ influencerId, managerId, title = "LP por link", sho
       campanhaId: r.campanha_id,
     });
     if (!check.ok) {
-      return toast.error("Link não corresponde à LP/tracking", { description: "reason" in check ? check.reason : undefined });
+      return toast.error("Link não corresponde à LP/tracking", { description: check.reason });
     }
+
 
     try {
       await navigator.clipboard.writeText(check.url);
