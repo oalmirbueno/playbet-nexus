@@ -88,3 +88,64 @@ export function defaultLayoutConfig(mode: LpMode) {
   return { sections, mode };
 }
 
+/**
+ * Resolve the *effective* mode a public LP should render.
+ * Never trusts a stored `single_game`/`multi_game` when the instance has no
+ * game slug bound — falls back to `platform_direct` (LP limpa) so we never
+ * bleed games from other links onto a clean/generated LP.
+ */
+export interface ResolveEffectiveLpModeInput {
+  storedMode?: string | null;
+  hasResolvedGameArt: boolean;
+  hypeCopyGameSlug?: string | null;
+}
+
+export function resolveEffectiveLpMode({
+  storedMode,
+  hasResolvedGameArt,
+  hypeCopyGameSlug,
+}: ResolveEffectiveLpModeInput): LpMode {
+  const mode = (storedMode || "catalog") as LpMode;
+  const hasSelectedGame =
+    hasResolvedGameArt || Boolean((hypeCopyGameSlug || "").trim());
+  if ((mode === "single_game" || mode === "multi_game") && !hasSelectedGame) {
+    return "platform_direct";
+  }
+  return mode;
+}
+
+/**
+ * Strict per-instance game scoping. Only returns games whose slug is listed
+ * in the instance's `game_slugs` (or matches its `hype_copy.game_slug`).
+ * Prevents catalog/hyped fallback leaks when the link binds a single game.
+ */
+export interface ScopeGamesInput<T extends { slug?: string | null }> {
+  instanceGameSlugs?: Array<string | null | undefined> | null;
+  hypeCopyGameSlug?: string | null;
+  available: T[];
+}
+
+export function scopeGamesForInstance<T extends { slug?: string | null }>({
+  instanceGameSlugs,
+  hypeCopyGameSlug,
+  available,
+}: ScopeGamesInput<T>): T[] {
+  const norm = (v?: string | null) =>
+    String(v || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  const allow = new Set<string>();
+  (instanceGameSlugs ?? []).forEach((s) => {
+    const n = norm(s);
+    if (n) allow.add(n);
+  });
+  const hype = norm(hypeCopyGameSlug);
+  if (hype) allow.add(hype);
+  if (allow.size === 0) return [];
+  return available.filter((g) => allow.has(norm(g.slug)));
+}
+
+
