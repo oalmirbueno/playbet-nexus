@@ -123,7 +123,23 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
       }
     })();
     return () => { cancelled = true; };
-  }, [influencerId, managerId, showInfluencer]);
+  }, [influencerId, managerId, showInfluencer, reloadTick]);
+
+  // Realtime: reflect admin edits/new links live for portal & gerente.
+  useEffect(() => {
+    const bump = () => setReloadTick(t => t + 1);
+    const filter = influencerId ? `influencer_id=eq.${influencerId}` : undefined;
+    const ch = supabase.channel(`materials-view:${influencerId ?? managerId ?? "all"}`)
+      .on("postgres_changes",
+          filter
+            ? { event: "*", schema: "public", table: "tracking_links", filter }
+            : { event: "*", schema: "public", table: "tracking_links" },
+          bump)
+      .on("postgres_changes", { event: "*", schema: "public", table: "link_materials" }, bump)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "landing_page_instances" }, bump)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [influencerId, managerId]);
 
   const platforms = useMemo(() => {
     const set = new Set<string>();
