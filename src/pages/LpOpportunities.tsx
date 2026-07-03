@@ -46,6 +46,8 @@ import { SportsEventsPanel } from "@/components/lp/SportsEventsPanel";
 import { SignalRoomPanel } from "@/components/lp/SignalRoomPanel";
 import { LinkLpGrid } from "@/components/lp/LinkLpGrid";
 import { isSelfLandingLoop } from "@/lib/opportunityDetect";
+import { BrandChip, BrandScope } from "@/components/brand/BrandScope";
+import { resolveBrand } from "@/lib/brandRegistry";
 
 const CATEGORIES = [
   { value: "sports", label: "Esportes" },
