@@ -130,6 +130,7 @@ function AdminRoutes() {
         <Route path="/tracking/events" element={<TrackingEvents />} />
         <Route path="/tracking/snapshots" element={<TrackingSnapshots />} />
         <Route path="/tracking/links" element={<TrackingLinks />} />
+        <Route path="/tracking/status" element={<TrackingStatus />} />
         <Route path="/materiais" element={<Materiais />} />
         <Route path="/tracking/reconciliacao" element={<Reconciliacao />} />
         <Route path="/comercial" element={<ComercialPipeline />} />
