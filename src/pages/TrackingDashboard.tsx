@@ -16,7 +16,7 @@ import {
 } from "recharts";
 import {
   Settings2, CloudDownload, RefreshCcw, TrendingUp, ArrowUpRight, ArrowDownRight,
-  Trophy, Sparkle, Eye, UserPlus, MousePointerClick, DollarSign,
+  Trophy, Sparkle, Eye, UserPlus, MousePointerClick, DollarSign, WalletCards, BadgeDollarSign,
 } from "lucide-react";
 import HistoricalImportDialog from "@/components/tracking/HistoricalImportDialog";
 

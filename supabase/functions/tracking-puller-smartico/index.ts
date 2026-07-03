@@ -159,14 +159,16 @@ Deno.serve(async (req) => {
       b.depositos_total += num(pick(row, ["deposit_total", "deposits_total", "deposit_amount", "ftd_total"]));
       b.revenue += num(pick(row, ["net_pl", "revenue", "ngr", "ggr", "net_revenue"]));
       b.api_commission += num(pick(row, ["commissions_total", "commission", "commission_total", "partner_income"]));
+      b.api_cpa_commission = (b.api_cpa_commission || 0) + num(pick(row, ["cpa_commission", "cpa_commissions", "cpa_total", "cpa_income", "ftd_commission"]));
+      b.api_revshare_commission = (b.api_revshare_commission || 0) + num(pick(row, ["revshare_commission", "revshare", "rev_share", "rs_commission", "revenue_commission"]));
       buckets.set(key, b);
     }
 
     let upserts = 0;
     const errors: string[] = [];
     for (const b of buckets.values()) {
-      const cpaCommission = b.ftd * b.cpa_unit;
-      const revshareCommission = b.api_commission || b.revenue;
+      const cpaCommission = b.api_cpa_commission || (b.ftd * b.cpa_unit);
+      const revshareCommission = b.api_revshare_commission || ((b.api_commission && b.api_commission !== cpaCommission) ? Math.max(b.api_commission - cpaCommission, 0) : b.revenue);
       const payload = {
         ...b,
         cliques: Math.round(b.cliques), registros: Math.round(b.registros), ftd: Math.round(b.ftd), deposits_count: Math.round(b.deposits_count),
@@ -177,7 +179,7 @@ Deno.serve(async (req) => {
         original_amount: b.revenue, original_currency: "BRL", converted_amount: b.revenue, converted_currency: "BRL",
         origem_importacao: "smartico_api_pull", observacoes: `Smartico TAP / brand=${b.sample_brand || "?"} / api_commission=${b.api_commission.toFixed(2)}`, is_demo: false,
       };
-      delete (payload as any).api_commission; delete (payload as any).cpa_unit; delete (payload as any).sample_brand;
+      delete (payload as any).api_commission; delete (payload as any).api_cpa_commission; delete (payload as any).api_revshare_commission; delete (payload as any).cpa_unit; delete (payload as any).sample_brand;
 
       let q = admin.from("tracking_metrics").select("id").eq("data_ref", b.data_ref).eq("platform_id", b.platform_id).eq("platform_account_id", b.platform_account_id).eq("origem_importacao", "smartico_api_pull");
       q = b.influencer_id ? q.eq("influencer_id", b.influencer_id) : q.is("influencer_id", null);
