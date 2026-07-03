@@ -43,6 +43,7 @@ export default function Dashboard() {
   const { consolidated, hasData: hasTrackingData } = useAutoConsolidation();
   const { summary: metricsSummary, isLoading: loadingMetrics, refetch: refetchMetrics } = useTrackingMetricsSummary("30d");
   const [syncingPanel, setSyncingPanel] = useState(false);
+  useRealtimeMetrics();
 
   const platformMap = useMemo(() => {
     const m = new Map<string, any>();
