@@ -197,10 +197,11 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
         // Re-injeta chrome de marca caso o estado salvo seja anterior à resolução
         // do brandKit ou tenha sido salvo sem logo/selo reais.
         const hydrated = applyBrandChrome(saved.layers);
+        const chromeChanged = JSON.stringify(hydrated) !== JSON.stringify(saved.layers);
         setLayers(hydrated);
         setStyle(saved.style);
         setSavedAt(saved.updatedAt);
-        setDirty(!saved.cloudSaved || hydrated !== saved.layers);
+        setDirty(!saved.cloudSaved || chromeChanged);
       } else {
         setLayers(applyBrandChrome(seedLayers(format)));
         setSavedAt(null);
