@@ -56,7 +56,9 @@ async function tryFetch(url: URL, headers: HeadersInit) {
   const text = await res.text();
   let json: any = null;
   try { json = text ? JSON.parse(text) : null; } catch { /* non-json */ }
-  return { ok: res.ok, status: res.status, text, json };
+  // Smartico returns HTTP 200 with { errCode, message } on auth/label failures.
+  const bodyError = json && typeof json === "object" && (json.errCode || json.error || json.err) && !Array.isArray(json.data ?? json.rows ?? json.result);
+  return { ok: res.ok && !bodyError, status: res.status, text, json };
 }
 
 async function fetchReport(apiKey: string, labelId: string | null, dateFrom: string, dateTo: string) {
@@ -96,9 +98,9 @@ async function fetchReport(apiKey: string, labelId: string | null, dateFrom: str
     if (r.ok) return { payload: r.json, rows: extractRows(r.json), attempt: a.label };
     errors.push(`${a.label}:${r.status}:${(r.text || "").slice(0, 160)}`);
   }
-  const missingLabel = errors.some((e) => e.toLowerCase().includes("missing label"));
+  const missingLabel = errors.some((e) => /missing label|errcode.?:?\s*3|label.?id/i.test(e));
   if (missingLabel) {
-    throw new Error("Smartico retornou 'Missing label id'. Configure também SMARTICO_LABEL_ID/STELLAR_TAP_LABEL_ID no Edge Function; a chave atual sozinha não autoriza o relatório.");
+    throw new Error("Smartico exige label_id: configure a variável SMARTICO_LABEL_ID (ou STELLAR_TAP_LABEL_ID) — a chave sozinha não autoriza o relatório. Sem isso o pull volta zerado.");
   }
   throw new Error(`Smartico falhou: ${errors[0] ?? "sem resposta"}`);
 }
@@ -291,7 +293,14 @@ Deno.serve(async (req) => {
       upserts++;
     }
 
-    return new Response(JSON.stringify({ ok: true, window: { date_from: dateFrom, date_to: dateTo }, rows_received: report.rows.length, upserts, skipped, errors: errors.slice(0, 10), attempt: report.attempt }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const debug = body && (body as any).debug;
+    const responsePayload: Record<string, unknown> = { ok: true, window: { date_from: dateFrom, date_to: dateTo }, rows_received: report.rows.length, upserts, skipped, errors: errors.slice(0, 10), attempt: report.attempt };
+    if (debug) {
+      responsePayload.raw_payload_preview = typeof report.payload === "object" ? JSON.stringify(report.payload).slice(0, 4000) : String(report.payload).slice(0, 4000);
+      responsePayload.first_rows = report.rows.slice(0, 3);
+      responsePayload.accounts_count = (accounts ?? []).length;
+    }
+    return new Response(JSON.stringify(responsePayload), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     return new Response(JSON.stringify({ ok: false, error: message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
