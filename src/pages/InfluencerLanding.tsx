@@ -166,6 +166,29 @@ function compactUnique(values: Array<string | null | undefined>) {
   return Array.from(new Set(values.map(normalizeSlug).filter(Boolean)));
 }
 
+function isInternalPreviewContext(): boolean {
+  const host = window.location.hostname.toLowerCase();
+  const referrer = document.referrer.toLowerCase();
+  return (
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host.startsWith("id-preview--") ||
+    referrer.includes("/lp-opportunities") ||
+    referrer.includes("/lp-instancias") ||
+    referrer.includes("/landing-pages") ||
+    referrer.includes("__lovable_") ||
+    searchParamsPreview()
+  );
+}
+
+function searchParamsPreview(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).has("_preview");
+  } catch {
+    return false;
+  }
+}
+
 function GameImage({
   art,
   className,
@@ -359,27 +382,29 @@ export default function InfluencerLanding() {
         });
         setState("ready");
 
-        // Register LP VIEW event (does not count as outbound click in metrics).
-        // The actual 'click' canonical event is registered on CTA press below.
-        supabase.from("tracking_events").insert({
-          canonical_event_name: "lp_view",
-          raw_event_name: "lp_view",
-          click_id: clickId,
-          influencer_id: influencerId,
-          landing_page_id: landingPageId,
-          landing_page_instance_id: instanceId,
-          tracking_link_id: tl?.id || null,
-          source_type: "landing_page",
-          event_timestamp: new Date().toISOString(),
-          raw_payload: {
-            slug,
-            hostname,
-            sub2: searchParams.get("sub2"),
-            sub3: searchParams.get("sub3"),
-            user_agent: navigator.userAgent,
-            referrer: document.referrer || null,
-          },
-        }).then(() => {});
+        // Register real public LP views only. Admin/editor previews must never
+        // inflate production tracking.
+        if (!isInternalPreviewContext()) {
+          supabase.from("tracking_events").insert({
+            canonical_event_name: "lp_view",
+            raw_event_name: "lp_view",
+            click_id: clickId,
+            influencer_id: influencerId,
+            landing_page_id: landingPageId,
+            landing_page_instance_id: instanceId,
+            tracking_link_id: tl?.id || null,
+            source_type: "landing_page",
+            event_timestamp: new Date().toISOString(),
+            raw_payload: {
+              slug,
+              hostname,
+              sub2: searchParams.get("sub2"),
+              sub3: searchParams.get("sub3"),
+              user_agent: navigator.userAgent,
+              referrer: document.referrer || null,
+            },
+          }).then(() => {});
+        }
 
       };
 
