@@ -31,10 +31,10 @@ export default function TrackingOverviewCard() {
     : null;
 
   const status = useMemo(() => {
-    if (hasEvents) return "ok";
+    if (hasEvents || hasMetrics) return "ok";
     if (accounts.length > 0 || links.length > 0) return "parcial";
     return "pendente";
-  }, [hasEvents, accounts, links]);
+  }, [hasEvents, hasMetrics, accounts, links]);
 
   const statusConfig = {
     ok: { label: "Operacional", color: "text-emerald-500", bg: "bg-emerald-500/10 border-emerald-500/20", icon: CheckCircle2 },
