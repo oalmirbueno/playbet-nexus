@@ -32,9 +32,9 @@ export function useTrackingMetricsSummary(period: PeriodKey = "30d", platformId?
       let query = supabase
         .from("tracking_metrics")
         .select(
-          "data_ref, platform_id, ftd, registros, deposits_count, depositos_total, cliques, revenue, cpa_commission, revshare_commission, commission_total, converted_amount, origem_importacao",
+          "data_ref, platform_id, ftd, registros, deposits_count, depositos_total, cliques, revenue, cpa_commission, revshare_commission, commission_total, converted_amount, origem_importacao, platform_accounts(revshare_percent,cpa_value)",
         )
-        .eq("is_demo", false)
+        .or("is_demo.is.false,is_demo.is.null")
         .lte("data_ref", endIso);
       if (startIso) query = query.gte("data_ref", startIso);
       if (platformId) query = query.eq("platform_id", platformId);
