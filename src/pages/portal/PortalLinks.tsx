@@ -4,6 +4,7 @@ import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { Copy, Link2, ExternalLink, Sparkles, MousePointerClick, TrendingUp, Wallet, Flame } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { resolveShareUrl } from "@/lib/trackingUrl";
+import { getMetricMoneyParts } from "@/lib/trackingMetrics";
 import { useQuery } from "@tanstack/react-query";
 
 interface EnrichedLink {
@@ -53,7 +54,7 @@ export default function PortalLinks() {
           .order("created_at", { ascending: false }),
         supabase
           .from("tracking_metrics")
-          .select("platform_account_id, cliques, registros, ftd, revenue")
+          .select("platform_account_id, cliques, registros, ftd, revenue, cpa_commission, revshare_commission, commission_total, origem_importacao")
           .eq("influencer_id", infId)
           .eq("is_demo", false),
       ]);
@@ -86,7 +87,7 @@ export default function PortalLinks() {
         cur.clicks += m.cliques ?? 0;
         cur.regs += m.registros ?? 0;
         cur.ftd += m.ftd ?? 0;
-        cur.revenue += Number(m.revenue ?? 0);
+        cur.revenue += getMetricMoneyParts(m).total;
         metricsByAcc.set(k, cur);
       });
 
@@ -181,7 +182,7 @@ export default function PortalLinks() {
           { label: "Cliques", value: totals.clicks.toLocaleString("pt-BR"), icon: MousePointerClick },
           { label: "Cadastros", value: totals.regs.toLocaleString("pt-BR"), icon: Sparkles },
           { label: "FTDs", value: totals.ftd.toLocaleString("pt-BR"), icon: TrendingUp },
-          { label: "Receita gerada", value: totals.revenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }), icon: Wallet },
+          { label: "Lucro real", value: totals.revenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }), icon: Wallet },
         ].map((c) => (
           <div key={c.label} className="glass-card p-4">
             <div className="flex items-center justify-between mb-1.5">
@@ -290,7 +291,7 @@ export default function PortalLinks() {
                 <MiniStat label="Cliques" value={l.metrics.clicks.toLocaleString("pt-BR")} />
                 <MiniStat label="Cadastros" value={l.metrics.regs.toLocaleString("pt-BR")} />
                 <MiniStat label="FTDs" value={l.metrics.ftd.toLocaleString("pt-BR")} />
-                <MiniStat label="Receita" value={l.metrics.revenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })} highlight />
+                <MiniStat label="Lucro" value={l.metrics.revenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 2 })} highlight />
               </div>
             </div>
           ))}
