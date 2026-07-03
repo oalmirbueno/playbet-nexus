@@ -56,6 +56,7 @@ export default function TrackingLinks() {
   const { data: metrics } = useTrackingMetrics();
   const { create: createMetric } = useTrackingMetrics();
   const { toast } = useToast();
+  const qc = useQueryClient();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<FormState>(emptyForm);
