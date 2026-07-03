@@ -2752,6 +2752,7 @@ export type Database = {
           exchange_rate: number | null
           exchange_rate_source: string | null
           exchange_rate_timestamp: string | null
+          external_ref: string | null
           ftd: number | null
           ftd_cr: number | null
           id: string
@@ -2804,6 +2805,7 @@ export type Database = {
           exchange_rate?: number | null
           exchange_rate_source?: string | null
           exchange_rate_timestamp?: string | null
+          external_ref?: string | null
           ftd?: number | null
           ftd_cr?: number | null
           id?: string
@@ -2856,6 +2858,7 @@ export type Database = {
           exchange_rate?: number | null
           exchange_rate_source?: string | null
           exchange_rate_timestamp?: string | null
+          external_ref?: string | null
           ftd?: number | null
           ftd_cr?: number | null
           id?: string
