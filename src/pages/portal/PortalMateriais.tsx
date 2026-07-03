@@ -17,5 +17,5 @@ export default function PortalMateriais() {
   }, [user]);
 
   if (infId === undefined) return <Skeleton className="h-64 w-full" />;
-  return <MateriaisView influencerId={infId} title="Meus Materiais" />;
+  return <MateriaisView influencerId={infId} title="Meus Materiais" readOnly />;
 }
