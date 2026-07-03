@@ -12,13 +12,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
-  renderCreative, downloadCreative, slugify,
+  renderCreative, downloadCreative, slugify, downloadRawAsset,
   FORMAT_SIZES, STYLE_LABEL,
   type CreativeFormat, type CreativeStyle, type CreativeInput, type RenderedCreative,
 } from "@/lib/creativeStudio";
+import playbetLogo from "@/assets/logo-mark.png";
 import {
-  Loader2, Save, RefreshCw, Download, Sparkles, ExternalLink, Wand2, Layout,
+  Loader2, Save, RefreshCw, Download, Sparkles, ExternalLink, Wand2, Layout, Package,
 } from "lucide-react";
+
 import { useLinkBrand } from "@/lib/useLinkBrand";
 import { BrandLockBadge } from "@/components/brand/BrandLockBadge";
 
@@ -251,6 +253,39 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId }: Props
     downloadCreative(preview, `playbet-${slugify(link.game_name || "criativo")}-${mFormat}`);
   };
 
+  const brand = brandCtx?.brand;
+  const platformLogoSrc = brand?.logos.wordmark || brand?.logos.lockup || brand?.logos.mark || null;
+  const platformSealSrc = brand?.seal?.horizontal.light || brand?.seal?.horizontal.dark || null;
+  const platformSlugForFile = slugify(brand?.name || platformName || "plataforma");
+
+  const downloadPlaybetLogo = async () => {
+    try {
+      await downloadRawAsset(playbetLogo, "playbet-logo");
+      toast.success("Logo PlayBet baixada");
+    } catch (e) { toast.error("Falha ao baixar logo PlayBet", { description: (e as Error).message }); }
+  };
+  const downloadPlatformLogo = async () => {
+    if (!platformLogoSrc) return toast.error("Logo da plataforma indisponível");
+    try {
+      await downloadRawAsset(platformLogoSrc, `${platformSlugForFile}-logo`);
+      toast.success(`Logo ${brand?.name || "plataforma"} baixada`);
+    } catch (e) { toast.error("Falha ao baixar logo", { description: (e as Error).message }); }
+  };
+  const downloadPlatformSeal = async () => {
+    if (!platformSealSrc) return toast.error("Selo da plataforma indisponível");
+    try {
+      await downloadRawAsset(platformSealSrc, `${platformSlugForFile}-selo-oficial`);
+      toast.success(`Selo ${brand?.name || "plataforma"} baixado`);
+    } catch (e) { toast.error("Falha ao baixar selo", { description: (e as Error).message }); }
+  };
+  const downloadBrandKit = async () => {
+    await downloadPlaybetLogo().catch(() => {});
+    await new Promise((r) => setTimeout(r, 120));
+    if (platformLogoSrc) { await downloadPlatformLogo().catch(() => {}); await new Promise((r) => setTimeout(r, 120)); }
+    if (platformSealSrc) { await downloadPlatformSeal().catch(() => {}); }
+  };
+
+
   const lpPreviewUrl = useMemo(() => {
     if (!lpSlug || !influencerSlug) return null;
     const inst = instance?.slug ? `?i=${encodeURIComponent(instance.slug)}` : "";
@@ -317,6 +352,60 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId }: Props
 
                 {/* controls */}
                 <div className="border-t md:border-t-0 md:border-l border-border/60 p-5 space-y-4 overflow-y-auto">
+                  {/* Kit da marca — sempre disponível, essencial para links sem jogo */}
+                  <div className="space-y-2 pb-3 border-b border-border/40">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        Kit da marca · ativos isolados
+                      </Label>
+                      <button
+                        onClick={downloadBrandKit}
+                        className="text-[10px] text-primary hover:underline"
+                        title="Baixa PlayBet + logo da plataforma + selo oficial"
+                      >
+                        Baixar tudo
+                      </button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <Button
+                        onClick={downloadPlaybetLogo}
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-[11px] px-2"
+                        title="Logo PlayBet"
+                      >
+                        <Package className="w-3.5 h-3.5 mr-1.5" /> PlayBet
+                      </Button>
+                      <Button
+                        onClick={downloadPlatformLogo}
+                        disabled={!platformLogoSrc}
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-[11px] px-2"
+                        title={`Logo oficial ${brand?.name || "da plataforma"}`}
+                      >
+                        <Package className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+                        <span className="truncate">{brand?.name || "Plataforma"}</span>
+                      </Button>
+                      <Button
+                        onClick={downloadPlatformSeal}
+                        disabled={!platformSealSrc}
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-[11px] px-2"
+                        title={`Selo oficial ${brand?.name || "da plataforma"}`}
+                      >
+                        <Sparkles className="w-3.5 h-3.5 mr-1.5 shrink-0" /> Selo
+                      </Button>
+                    </div>
+                    {!link?.game_slug && !link?.game_name && (
+                      <p className="text-[10px] text-muted-foreground leading-snug">
+                        Link sem jogo: use estes ativos separados para montar o post direto pra plataforma.
+                      </p>
+                    )}
+                  </div>
+
+
                   {materials.length > 1 && (
                     <div className="space-y-2">
                       <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Materiais deste link</Label>
