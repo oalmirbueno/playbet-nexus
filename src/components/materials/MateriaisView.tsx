@@ -244,7 +244,7 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
       )}
 
       <CreativeStudio open={open} onOpenChange={setOpen} link={active} />
-      <LinkMaterialEditor open={editorOpen} onOpenChange={setEditorOpen} trackingLinkId={editorLinkId} />
+      <LinkMaterialEditor open={editorOpen} onOpenChange={setEditorOpen} trackingLinkId={editorLinkId} readOnly={readOnly} />
     </div>
   );
 }
