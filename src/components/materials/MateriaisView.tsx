@@ -49,6 +49,9 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
   const [open, setOpen] = useState(false);
   const [editorLinkId, setEditorLinkId] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [reloadTick, setReloadTick] = useState(0);
+
+
 
   useEffect(() => {
     let cancelled = false;
