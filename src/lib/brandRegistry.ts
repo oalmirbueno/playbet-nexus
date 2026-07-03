@@ -68,6 +68,13 @@ import ebSealVDark from "@/assets/brands/estrela-bet/estrela-bet-selo-v-preto.pn
 import vupiBgViolet from "@/assets/brands/vupi/vupi-bg-violet.png.asset.json";
 import vupiBgLavender from "@/assets/brands/vupi/vupi-bg-lavender.png.asset.json";
 import vupiBgMidnight from "@/assets/brands/vupi/vupi-bg-midnight.png.asset.json";
+import vupiMarkViolet from "@/assets/brands/vupi/vupi-mark-violet.png.asset.json";
+import vupiMarkMidnight from "@/assets/brands/vupi/vupi-mark-midnight.png.asset.json";
+import vupiMarkLavender from "@/assets/brands/vupi/vupi-mark-lavender.png.asset.json";
+import vupiWordDark from "@/assets/brands/vupi/vupi-wordmark-dark.png.asset.json";
+import vupiWordWhite from "@/assets/brands/vupi/vupi-wordmark-white.png.asset.json";
+import vupiSeloH from "@/assets/brands/vupi/vupi-selo-h.png.asset.json";
+
 
 const REGISTRY: Record<BrandKey, BrandKit> = {
   playbet: {
@@ -122,8 +129,21 @@ const REGISTRY: Record<BrandKey, BrandKit> = {
     key: "vupi",
     name: "VUPI",
     slugAliases: ["vupi", "vupibet", "vupi-bet"],
-    logos: { mark: "" }, // aguardando upload da logo VUPI
-    seal: null,          // aguardando selo + nº autorização VUPI
+    logos: {
+      mark: vupiMarkViolet.url,          // "v" símbolo primário (violet)
+      wordmark: vupiWordDark.url,        // wordmark "vupi" em midnight
+      lockup: vupiWordDark.url,
+      lockupAlt: vupiWordWhite.url,      // wordmark em branco p/ fundos escuros
+    },
+    seal: {
+      // VUPI enviou apenas variante horizontal (light on light). Reutilizamos
+      // como base para ambos os fundos até receber as demais variantes.
+      horizontal: { light: vupiSeloH.url, dark: vupiSeloH.url },
+      vertical:   { light: vupiSeloH.url, dark: vupiSeloH.url },
+      license: "SPA/MF nº 1.762/2025",
+      alt: "18+ Jogue com responsabilidade. Autorização SPA/MF nº 1.762/2025",
+    },
+
     palette: {
       primary: "#5A00C2",
       primaryContrast: "#FFFFFF",
