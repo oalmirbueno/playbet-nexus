@@ -1615,6 +1615,53 @@ export type Database = {
         }
         Relationships: []
       }
+      panel_scraper_runs: {
+        Row: {
+          created_at: string
+          discovery: Json
+          finished_at: string | null
+          id: string
+          message: string | null
+          platform_id: string | null
+          rows_imported: number
+          scraper_key: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          discovery?: Json
+          finished_at?: string | null
+          id?: string
+          message?: string | null
+          platform_id?: string | null
+          rows_imported?: number
+          scraper_key: string
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          discovery?: Json
+          finished_at?: string | null
+          id?: string
+          message?: string | null
+          platform_id?: string | null
+          rows_imported?: number
+          scraper_key?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "panel_scraper_runs_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "platforms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       platform_accounts: {
         Row: {
           account_external_id: string | null
