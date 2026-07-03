@@ -23,6 +23,7 @@ const sections: MenuSection[] = [
     items: [
       { label: "Dashboard", icon: LayoutDashboard, path: "/" },
       { label: "Tracking", icon: BarChart3, path: "/tracking" },
+      { label: "Status Postback", icon: Radio, path: "/tracking/status" },
       { label: "Pessoas", icon: Users, path: "/pessoas" },
     ],
   },
