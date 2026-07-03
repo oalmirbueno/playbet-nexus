@@ -241,7 +241,7 @@ export const trackingMetricService = {
   async getAll(): Promise<TrackingMetricRow[]> {
     const { data, error } = await sb
       .from("tracking_metrics")
-      .select("*, platform_accounts(revshare_percent,cpa_value)")
+      .select("*, platform_accounts(revshare_percent,cpa_value,cpa_baseline_deposit)")
       .order("data_ref", { ascending: false });
     if (error) throw error;
     return data || [];
@@ -254,7 +254,7 @@ export const trackingMetricService = {
     date_from?: string;
     date_to?: string;
   }): Promise<TrackingMetricRow[]> {
-    let q = sb.from("tracking_metrics").select("*, platform_accounts(revshare_percent,cpa_value)");
+    let q = sb.from("tracking_metrics").select("*, platform_accounts(revshare_percent,cpa_value,cpa_baseline_deposit)");
     if (filters.platform_id) q = q.eq("platform_id", filters.platform_id);
     if (filters.influencer_id) q = q.eq("influencer_id", filters.influencer_id);
     if (filters.campanha_id) q = q.eq("campanha_id", filters.campanha_id);
