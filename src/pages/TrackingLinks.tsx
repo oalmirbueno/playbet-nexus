@@ -163,8 +163,20 @@ export default function TrackingLinks() {
     const cleaned: any = { ...payload };
     Object.keys(cleaned).forEach(k => { if (cleaned[k] === "") cleaned[k] = null; });
     try {
-      if (id) await update(id, cleaned); else await create(cleaned);
-      toast({ title: id ? "Link atualizado" : "Link criado" });
+      if (id) {
+        await update(id, cleaned);
+        toast({ title: "Link atualizado" });
+      } else {
+        const created: any = await create(cleaned);
+        const linkId = created?.id;
+        if (linkId) {
+          syncLinkAssets(linkId, { useLp: !!cleaned.landing_page_instance_id }, qc);
+        }
+        toast({
+          title: "Link criado",
+          description: "Materiais e LP sincronizando em segundo plano.",
+        });
+      }
       setModalOpen(false);
     } catch (e: any) {
       toast({ title: "Erro ao salvar", description: e?.message || "Tente novamente", variant: "destructive" });
@@ -172,10 +184,18 @@ export default function TrackingLinks() {
   };
 
   const handleWizardComplete = async (payload: any) => {
-    await create(payload);
+    const created: any = await create(payload);
+    const linkId = created?.id;
+    if (linkId) {
+      syncLinkAssets(linkId, { useLp: !!payload?.landing_page_instance_id }, qc);
+    }
     setWizardOpen(false);
-    toast({ title: "Tracking link criado via setup guiado!" });
+    toast({
+      title: "Tracking link criado via setup guiado!",
+      description: "Materiais e LP sincronizando em segundo plano.",
+    });
   };
+
 
   const handleApplyMappings = async (platformId: string, preset: PlatformPreset, accountId?: string) => {
     const subFields: Record<string, string> = {};
