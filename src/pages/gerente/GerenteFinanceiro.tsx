@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { useManagerSync } from "@/hooks/useManagerSync";
 import { Wallet, TrendingUp, Users, ArrowRight, Percent, Info } from "lucide-react";
+import { getMetricMoneyParts } from "@/lib/trackingMetrics";
 
 type InfBreakdown = { id: string; name: string; slug: string; revenue: number; ftd: number };
 
@@ -35,7 +36,7 @@ export default function GerenteFinanceiro() {
       let mets: any[] = [];
       if (ids.length) {
         const { data } = await supabase.from("tracking_metrics")
-          .select("influencer_id, revenue, ftd, data_ref")
+          .select("influencer_id, revenue, cpa_commission, revshare_commission, commission_total, origem_importacao, ftd, data_ref")
           .in("influencer_id", ids).eq("is_demo", false);
         mets = data ?? [];
       }
@@ -44,7 +45,7 @@ export default function GerenteFinanceiro() {
       let total = 0, total30 = 0;
       for (const mt of mets) {
         const r = perInf.get(mt.influencer_id); if (!r) continue;
-        const rev = Number(mt.revenue ?? 0);
+        const rev = getMetricMoneyParts(mt).total;
         r.revenue += rev; r.ftd += mt.ftd ?? 0;
         total += rev;
         if ((mt.data_ref ?? "") >= cutoffStr) total30 += rev;
@@ -83,7 +84,7 @@ export default function GerenteFinanceiro() {
         <div>
           <h1 className="page-header">Meus ganhos</h1>
           <p className="page-subtitle">
-            Comissão de gerência sobre a receita validada do squad
+            Comissão de gerência sobre o lucro real validado do squad
             {mgr?.squad?.name ? <> — <span className="text-foreground">{mgr.squad.name}</span></> : null}.
           </p>
         </div>
@@ -110,7 +111,7 @@ export default function GerenteFinanceiro() {
 
       {/* KPI row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Kpi label="Receita do squad (total)" value={brl(squadRevenue)} />
+        <Kpi label="Lucro real do squad (total)" value={brl(squadRevenue)} />
         <Kpi label="Ganhos brutos totais" value={brl(grossEarnings)} highlight />
         <Kpi label="Já pago" value={brl(paid)} />
         <Kpi label="Pendente" value={brl(Math.max(0, requested - paid))} />
@@ -120,10 +121,10 @@ export default function GerenteFinanceiro() {
       <div className="glass-card p-5">
         <h3 className="section-title">Como sua comissão é calculada</h3>
         <p className="text-[12px] text-muted-foreground mb-3">
-          Modelo oficial PlayBet · sempre sobre valor recebido e validado da casa (nunca cliques ou depósitos brutos).
+          Modelo oficial PlayBet · sempre sobre RevShare + CPA recebido e validado da casa (nunca cliques ou depósitos brutos).
         </p>
         <div className="flex items-center gap-2 flex-wrap text-[13px] font-mono">
-          <Chip label="Receita validada do squad" value={brl(squadRevenue)} />
+          <Chip label="Lucro real validado" value={brl(squadRevenue)} />
           <span className="text-muted-foreground">×</span>
           <Chip label="Sua comissão" value={`${pct.toFixed(1)}%`} />
           <span className="text-muted-foreground">=</span>
@@ -153,7 +154,7 @@ export default function GerenteFinanceiro() {
                 <tr>
                   <th className="px-4 py-2 text-left">Influenciador</th>
                   <th className="px-4 py-2 text-right">FTDs</th>
-                  <th className="px-4 py-2 text-right">Receita gerada</th>
+                  <th className="px-4 py-2 text-right">Lucro real</th>
                   <th className="px-4 py-2 text-right">Sua parte ({pct.toFixed(1)}%)</th>
                 </tr>
               </thead>
