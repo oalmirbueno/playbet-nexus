@@ -185,6 +185,7 @@ export default function TrackingEvents() {
                 <SelectItem value="api">API</SelectItem>
                 <SelectItem value="manual">Manual</SelectItem>
                 <SelectItem value="csv">CSV</SelectItem>
+                <SelectItem value="landing_page">Landing page</SelectItem>
               </SelectContent>
             </Select>
             <Input type="date" className="h-9 text-xs" value={dateFrom} onChange={e => setDateFrom(e.target.value)} />

@@ -14,6 +14,14 @@ function filterReal<T extends { is_demo: boolean }>(rows: T[]): T[] {
   return rows.filter(r => !r.is_demo);
 }
 
+function filterValidEvents(rows: TrackingEventRow[]): TrackingEventRow[] {
+  return rows.filter(r =>
+    !r.is_demo &&
+    !r.is_duplicate &&
+    !["invalid_legacy", "invalid_internal_preview", "duplicate_technical"].includes(r.status || "")
+  );
+}
+
 export function usePlatformAccounts() {
   const qc = useQueryClient();
   const { toast } = useToast();
@@ -193,5 +201,5 @@ export function useTrackingEvents(filters?: {
     queryFn: () => hasFilters ? trackingEventService.getFiltered(filters!) : trackingEventService.getAll(),
   });
 
-  return { data: filterReal(rawData), isLoading };
+  return { data: filterValidEvents(rawData), isLoading };
 }

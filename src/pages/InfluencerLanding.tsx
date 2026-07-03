@@ -25,6 +25,31 @@ function generateClickId(): string {
   return `clk_${ts}_${rand}`;
 }
 
+function getOrCreatePageClickId(slug?: string | null): string {
+  const key = `playbet_lp_click_id:${slug || "default"}`;
+  try {
+    const existing = window.sessionStorage.getItem(key);
+    if (existing) return existing;
+    const next = generateClickId();
+    window.sessionStorage.setItem(key, next);
+    return next;
+  } catch {
+    return generateClickId();
+  }
+}
+
+function shouldSendLpView(slug?: string | null, clickId?: string | null): boolean {
+  if (!slug || !clickId || isInternalPreviewContext()) return false;
+  const key = `playbet_lp_view_sent:${slug}:${clickId}`;
+  try {
+    if (window.sessionStorage.getItem(key)) return false;
+    window.sessionStorage.setItem(key, "1");
+    return true;
+  } catch {
+    return true;
+  }
+}
+
 /** Append click_id (sub1) to the affiliate URL */
 function injectClickId(url: string, paramName: string, clickId: string): string {
   try {
@@ -164,6 +189,37 @@ function normalizeSlug(value?: string | null) {
 
 function compactUnique(values: Array<string | null | undefined>) {
   return Array.from(new Set(values.map(normalizeSlug).filter(Boolean)));
+}
+
+function isInternalPreviewContext(): boolean {
+  const host = window.location.hostname.toLowerCase();
+  const referrer = document.referrer.toLowerCase();
+  const isEmbeddedPreview = (() => {
+    try {
+      return window.self !== window.top;
+    } catch {
+      return true;
+    }
+  })();
+  return (
+    isEmbeddedPreview ||
+    host === "localhost" ||
+    host === "127.0.0.1" ||
+    host.startsWith("id-preview--") ||
+    referrer.includes("/lp-opportunities") ||
+    referrer.includes("/lp-instancias") ||
+    referrer.includes("/landing-pages") ||
+    referrer.includes("__lovable_") ||
+    searchParamsPreview()
+  );
+}
+
+function searchParamsPreview(): boolean {
+  try {
+    return new URLSearchParams(window.location.search).has("_preview");
+  } catch {
+    return false;
+  }
 }
 
 function GameImage({
@@ -325,7 +381,7 @@ export default function InfluencerLanding() {
 
     (async () => {
       const hostname = window.location.hostname;
-      const clickId = generateClickId();
+      const clickId = getOrCreatePageClickId(slug);
 
       // Helper to finalize resolution
       const finalize = async (
@@ -359,27 +415,32 @@ export default function InfluencerLanding() {
         });
         setState("ready");
 
-        // Register LP VIEW event (does not count as outbound click in metrics).
-        // The actual 'click' canonical event is registered on CTA press below.
-        supabase.from("tracking_events").insert({
-          canonical_event_name: "lp_view",
-          raw_event_name: "lp_view",
-          click_id: clickId,
-          influencer_id: influencerId,
-          landing_page_id: landingPageId,
-          landing_page_instance_id: instanceId,
-          tracking_link_id: tl?.id || null,
-          source_type: "landing_page",
-          event_timestamp: new Date().toISOString(),
-          raw_payload: {
-            slug,
-            hostname,
-            sub2: searchParams.get("sub2"),
-            sub3: searchParams.get("sub3"),
-            user_agent: navigator.userAgent,
-            referrer: document.referrer || null,
-          },
-        }).then(() => {});
+        // Register real public LP views only. Admin/editor previews must never
+        // inflate production tracking.
+        if (shouldSendLpView(slug, clickId)) {
+          supabase.from("tracking_events").insert({
+            canonical_event_name: "lp_view",
+            raw_event_name: "lp_view",
+            click_id: clickId,
+            influencer_id: influencerId,
+            landing_page_id: landingPageId,
+            landing_page_instance_id: instanceId,
+            tracking_link_id: tl?.id || null,
+            source_type: "landing_page",
+            event_timestamp: new Date().toISOString(),
+            raw_payload: {
+              slug,
+              hostname,
+              path: window.location.pathname,
+              search: window.location.search,
+              is_preview: searchParamsPreview(),
+              sub2: searchParams.get("sub2"),
+              sub3: searchParams.get("sub3"),
+              user_agent: navigator.userAgent,
+              referrer: document.referrer || null,
+            },
+          }).then(() => {});
+        }
 
       };
 
@@ -474,18 +535,20 @@ export default function InfluencerLanding() {
     // tracking_event with platform_id resolved from the tracking_link,
     // so the click counts in tracking_metrics for the right casa.
     try {
-      await supabase.from("clicks").insert({
-        click_id: resolved.click_id,
-        influencer_id: resolved.influencer_id,
-        landing_page_id: resolved.landing_page_id,
-        landing_page_instance_id: resolved.instance_id,
-        tracking_link_id: resolved.tracking_link_id,
-        clicked_at: new Date().toISOString(),
-        user_agent: navigator.userAgent,
-        referrer: document.referrer || null,
-        route: `/?ref=${slug}`,
-        source: "cta_click",
-      } as any);
+      if (!isInternalPreviewContext()) {
+        await supabase.from("clicks").insert({
+          click_id: resolved.click_id,
+          influencer_id: resolved.influencer_id,
+          landing_page_id: resolved.landing_page_id,
+          landing_page_instance_id: resolved.instance_id,
+          tracking_link_id: resolved.tracking_link_id,
+          clicked_at: new Date().toISOString(),
+          user_agent: navigator.userAgent,
+          referrer: document.referrer || null,
+          route: `/?ref=${slug}`,
+          source: "cta_click",
+        } as any);
+      }
     } catch {
       // Don't block redirect
     }

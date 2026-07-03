@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
+const VALID_TRACKING_EVENT_STATUS_FILTER = "status.is.null,status.not.in.(invalid_legacy,invalid_internal_preview,duplicate_technical)";
+
 // ── Types ──────────────────────────────────────────────
 
 export interface PlatformAccountRow {
@@ -318,7 +320,13 @@ export const platformEventMappingService = {
 // ── Tracking Events ────────────────────────────────────
 export const trackingEventService = {
   async getAll(): Promise<TrackingEventRow[]> {
-    const { data, error } = await sb.from("tracking_events").select("*").order("event_timestamp", { ascending: false }).limit(500);
+    const { data, error } = await sb
+      .from("tracking_events")
+      .select("*")
+      .eq("is_duplicate", false)
+      .or(VALID_TRACKING_EVENT_STATUS_FILTER)
+      .order("event_timestamp", { ascending: false })
+      .limit(500);
     if (error) throw error;
     return data || [];
   },
@@ -331,6 +339,7 @@ export const trackingEventService = {
     date_to?: string;
   }): Promise<TrackingEventRow[]> {
     let q = sb.from("tracking_events").select("*");
+    q = q.eq("is_duplicate", false).or(VALID_TRACKING_EVENT_STATUS_FILTER);
     if (filters.platform_id) q = q.eq("platform_id", filters.platform_id);
     if (filters.influencer_id) q = q.eq("influencer_id", filters.influencer_id);
     if (filters.canonical_event_name) q = q.eq("canonical_event_name", filters.canonical_event_name);

@@ -6,6 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface ConsolidatedMetrics {
   totalClicks: number;
+  lpViewCount: number;
+  outboundClickCount: number;
+  conversionEventCount: number;
   totalRegistrations: number;
   totalFtd: number;
   totalDeposits: number;
@@ -40,6 +43,7 @@ type TrackingEventRow = {
   exchange_rate_timestamp: string | null;
   commission_amount: number | null;
   status: string | null;
+  is_duplicate?: boolean | null;
   transaction_id: string | null;
   raw_payload?: {
     amount?: string | number | null;
@@ -50,7 +54,9 @@ type TrackingEventRow = {
 };
 
 function isValidTrackingEvent(event: TrackingEventRow) {
-  return event.status !== "invalid_legacy" && !event.canonical_event_name?.startsWith("{");
+  return !event.is_duplicate
+    && !["invalid_legacy", "invalid_internal_preview", "duplicate_technical"].includes(event.status || "")
+    && !event.canonical_event_name?.startsWith("{");
 }
 
 function isWithdrawableTrackingEvent(event: TrackingEventRow) {
@@ -124,7 +130,7 @@ export function useAutoConsolidation() {
         supabase
           .from("tracking_events")
           .select(
-            "id, platform_id, canonical_event_name, event_timestamp, original_amount, original_currency, converted_amount_brl, exchange_rate, exchange_rate_timestamp, commission_amount, status, transaction_id, raw_payload",
+            "id, platform_id, canonical_event_name, event_timestamp, original_amount, original_currency, converted_amount_brl, exchange_rate, exchange_rate_timestamp, commission_amount, status, is_duplicate, transaction_id, raw_payload",
           )
           .eq("is_demo", false)
           .order("event_timestamp", { ascending: false }),
@@ -146,11 +152,16 @@ export function useAutoConsolidation() {
     refetchOnWindowFocus: true,
   });
 
-  const realClicksCount = trackingData?.realClicksCount ?? 0;
   const validEvents = useMemo(
     () => (trackingData?.events ?? []).filter(isValidTrackingEvent),
     [trackingData?.events],
   );
+  const lpViewCount = validEvents.filter((event) => event.canonical_event_name === "lp_view").length;
+  const outboundClickCount = validEvents.filter((event) => event.canonical_event_name === "click").length;
+  const conversionEventCount = validEvents.filter(
+    (event) => !["lp_view", "click"].includes(event.canonical_event_name),
+  ).length;
+  const realClicksCount = outboundClickCount;
 
   const latestWithdrawable = useMemo(
     () => validEvents.find(isWithdrawableTrackingEvent) ?? null,
@@ -215,6 +226,9 @@ export function useAutoConsolidation() {
 
     const result: ConsolidatedMetrics = {
       totalClicks: realClicksCount,
+      lpViewCount,
+      outboundClickCount,
+      conversionEventCount,
       totalRegistrations: 0,
       totalFtd: 0,
       totalDeposits: 0,
@@ -321,7 +335,7 @@ export function useAutoConsolidation() {
     }
 
     return result;
-  }, [latestWithdrawable, platforms, realClicksCount, validEvents]);
+  }, [conversionEventCount, latestWithdrawable, lpViewCount, outboundClickCount, platforms, realClicksCount, validEvents]);
 
   return {
     consolidated,

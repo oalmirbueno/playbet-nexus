@@ -17,7 +17,7 @@ import {
 } from "recharts";
 import {
   Settings2, CloudDownload, RefreshCcw, TrendingUp, ArrowUpRight, ArrowDownRight,
-  Trophy, Sparkle, Eye, UserPlus, Wallet, DollarSign,
+  Trophy, Sparkle, Eye, UserPlus, MousePointerClick, DollarSign,
 } from "lucide-react";
 import HistoricalImportDialog from "@/components/tracking/HistoricalImportDialog";
 
@@ -73,7 +73,7 @@ export default function TrackingDashboard() {
   const { data: influencers } = useInfluencers();
   const { data: campanhas } = useCampanhas();
   const { data: platforms } = usePlatforms();
-  const { data: recentEvents } = useTrackingEvents();
+  const { data: periodEvents } = useTrackingEvents(filters);
   const { consolidated } = useAutoConsolidation();
 
   const handleSync = async () => {
@@ -105,9 +105,16 @@ export default function TrackingDashboard() {
     );
   }, [metrics]);
 
-  const kpiVisitas = periodKpis.visitas || consolidated.totalClicks || 0;
+  const periodEventKpis = useMemo(() => {
+    const visits = periodEvents.filter((e) => e.canonical_event_name === "lp_view").length;
+    const outboundClicks = periodEvents.filter((e) => e.canonical_event_name === "click").length;
+    const conversions = periodEvents.filter((e) => !["lp_view", "click"].includes(e.canonical_event_name)).length;
+    return { visits, outboundClicks, conversions, total: periodEvents.length };
+  }, [periodEvents]);
+
+  const kpiVisitas = periodEventKpis.visits || consolidated.lpViewCount || 0;
+  const kpiOutboundClicks = periodEventKpis.outboundClicks || consolidated.outboundClickCount || 0;
   const kpiCadastros = periodKpis.cadastros || consolidated.totalRegistrations || 0;
-  const kpiFtd = periodKpis.ftd || consolidated.totalFtd || 0;
   const kpiReceita = periodKpis.receita || consolidated.revenueBrl || 0;
 
   const trend = useMemo(() => {
@@ -245,22 +252,21 @@ export default function TrackingDashboard() {
           icon={<Eye size={16} />}
           label="Visitas"
           value={fmtNum(kpiVisitas)}
-          hint="Cliques nos seus links"
+          hint="Aberturas da LP · lp_view"
         />
         <KpiCard
           variant="info"
-          icon={<UserPlus size={16} />}
-          label="Cadastros"
-          value={fmtNum(kpiCadastros)}
-          hint={kpiVisitas ? `${pctStr(kpiCadastros, kpiVisitas)} de conversão` : "-"}
+          icon={<MousePointerClick size={16} />}
+          label="Cliques saída"
+          value={fmtNum(kpiOutboundClicks)}
+          hint={kpiVisitas ? `${pctStr(kpiOutboundClicks, kpiVisitas)} CTR` : "Botão da LP / afiliado"}
         />
         <KpiCard
           variant="warning"
-          icon={<Wallet size={16} />}
-          label="1º Depósito"
-          value={fmtNum(kpiFtd)}
-          hint={kpiCadastros ? `${pctStr(kpiFtd, kpiCadastros)} dos cadastros` : "-"}
-          trendUp={kpiCadastros ? kpiFtd / Math.max(kpiCadastros, 1) > 0.2 : null}
+          icon={<UserPlus size={16} />}
+          label="Cadastros"
+          value={fmtNum(kpiCadastros)}
+          hint={`${periodEventKpis.conversions} conversões no período`}
         />
         <KpiCard
           variant="success"
@@ -332,7 +338,7 @@ export default function TrackingDashboard() {
             <h3 className="text-sm font-semibold text-foreground mb-4">Status</h3>
             <dl className="space-y-3">
               <StatusRow label="Casas conectadas" value={String(accounts.length)} />
-              <StatusRow label="Eventos no período" value={fmtNum(consolidated.eventCount)} />
+              <StatusRow label="Eventos no período" value={fmtNum(periodEventKpis.total)} />
               <StatusRow
                 label="Última atividade"
                 value={lastSync ? lastSync.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "-"}

@@ -48,7 +48,8 @@ export default function InfluencerDetalhe() {
         .select("*")
         .eq("influencer_id", id)
         .eq("is_demo", false)
-        .or("status.is.null,status.neq.invalid_legacy")
+        .eq("is_duplicate", false)
+        .or("status.is.null,status.not.in.(invalid_legacy,invalid_internal_preview,duplicate_technical)")
         .order("event_timestamp", { ascending: false })
         .then(({ data: evts }) => setTrackingEvents(evts || []));
     }
@@ -60,6 +61,9 @@ export default function InfluencerDetalhe() {
 
   // Tracking metrics (before early returns for hooks rule)
   const trackingMetrics = useMemo(() => {
+    const visits = trackingEvents.filter(e => e.canonical_event_name === "lp_view").length;
+    const outboundClicks = trackingEvents.filter(e => e.canonical_event_name === "click").length;
+    const conversionEvents = trackingEvents.filter(e => !["lp_view", "click"].includes(e.canonical_event_name));
     const registrations = trackingEvents.filter(e => e.canonical_event_name === "registration").length;
     const ftds = trackingEvents.filter(e => e.canonical_event_name === "ftd").length;
     const deposits = trackingEvents.filter(e => ["deposit", "redeposit", "ftd"].includes(e.canonical_event_name));
@@ -74,7 +78,7 @@ export default function InfluencerDetalhe() {
       revByDay[day] = (revByDay[day] || 0) + (e.converted_amount_brl || e.original_amount || 0);
     });
     const revenueChart = Object.entries(revByDay).map(([data, valor]) => ({ data, valor: Number(valor.toFixed(2)) }));
-    return { registrations, ftds, depositsTotal, revenue, revenueUsd, redeposits, revenueChart, total: trackingEvents.length };
+    return { visits, outboundClicks, registrations, ftds, depositsTotal, revenue, revenueUsd, redeposits, revenueChart, total: conversionEvents.length };
   }, [trackingEvents]);
 
   if (isLoading) {
@@ -145,9 +149,9 @@ export default function InfluencerDetalhe() {
         <div className="stat-card border-l-2 border-l-accent"><span className="text-[10px] text-muted-foreground uppercase">FTDs</span><p className="text-lg font-bold">{trackingMetrics.ftds}</p></div>
         <div className="stat-card border-l-2 border-l-info"><span className="text-[10px] text-muted-foreground uppercase">Registros</span><p className="text-lg font-bold">{trackingMetrics.registrations}</p></div>
         <div className="stat-card border-l-2 border-l-success"><span className="text-[10px] text-muted-foreground uppercase">Comissão</span><p className="text-lg font-bold">{comissao}%</p></div>
-        <div className="stat-card border-l-2 border-l-warning"><span className="text-[10px] text-muted-foreground uppercase">Total Cliques</span><p className="text-lg font-bold">{totalCliques.toLocaleString()}</p></div>
+        <div className="stat-card border-l-2 border-l-warning"><span className="text-[10px] text-muted-foreground uppercase">Cliques saída</span><p className="text-lg font-bold">{trackingMetrics.outboundClicks.toLocaleString()}</p></div>
         <div className="stat-card border-l-2 border-l-destructive"><span className="text-[10px] text-muted-foreground uppercase">LPs Vinculadas</span><p className="text-lg font-bold">{myInstances.length}</p></div>
-        <div className="stat-card border-l-2 border-l-muted-foreground"><span className="text-[10px] text-muted-foreground uppercase">Eventos</span><p className="text-lg font-bold">{trackingMetrics.total}</p></div>
+        <div className="stat-card border-l-2 border-l-muted-foreground"><span className="text-[10px] text-muted-foreground uppercase">Visitas LP</span><p className="text-lg font-bold">{trackingMetrics.visits}</p></div>
       </div>
 
       {/* Tabs */}
@@ -236,7 +240,7 @@ export default function InfluencerDetalhe() {
 
           {/* Events table */}
           <div className="glass-card p-5">
-            <h3 className="section-title">Últimos Eventos ({trackingMetrics.total} total)</h3>
+            <h3 className="section-title">Últimas Conversões ({trackingMetrics.total} total)</h3>
             {trackingEvents.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Activity size={32} className="mx-auto mb-2 opacity-30" />
