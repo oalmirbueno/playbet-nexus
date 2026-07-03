@@ -15,7 +15,11 @@ function filterReal<T extends { is_demo: boolean }>(rows: T[]): T[] {
 }
 
 function filterValidEvents(rows: TrackingEventRow[]): TrackingEventRow[] {
-  return rows.filter(r => !r.is_demo && !["invalid_legacy", "invalid_internal_preview"].includes(r.status || ""));
+  return rows.filter(r =>
+    !r.is_demo &&
+    !r.is_duplicate &&
+    !["invalid_legacy", "invalid_internal_preview", "duplicate_technical"].includes(r.status || "")
+  );
 }
 
 export function usePlatformAccounts() {

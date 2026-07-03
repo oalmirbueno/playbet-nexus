@@ -48,7 +48,8 @@ export default function InfluencerDetalhe() {
         .select("*")
         .eq("influencer_id", id)
         .eq("is_demo", false)
-        .or("status.is.null,status.not.in.(invalid_legacy,invalid_internal_preview)")
+        .eq("is_duplicate", false)
+        .or("status.is.null,status.not.in.(invalid_legacy,invalid_internal_preview,duplicate_technical)")
         .order("event_timestamp", { ascending: false })
         .then(({ data: evts }) => setTrackingEvents(evts || []));
     }
