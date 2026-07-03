@@ -60,6 +60,8 @@ const FORMATS: CreativeFormat[] = ["feed", "story", "landscape", "square_wa"];
 const STYLES: CreativeStyle[] = ["hype", "minimal", "editorial"];
 
 export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId }: Props) {
+  const { data: brandCtx } = useLinkBrand(trackingLinkId);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [link, setLink] = useState<LinkRow | null>(null);
