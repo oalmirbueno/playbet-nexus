@@ -100,7 +100,7 @@ export default function InfluencerDetalhe() {
       revByDay[day] = (revByDay[day] || 0) + (e.converted_amount_brl || e.original_amount || 0);
     });
     const chartSource = hasOfficialRows ? official.revByDay : revByDay;
-    const revenueChart = Object.entries(chartSource).map(([data, valor]) => ({ data, valor: Number(valor.toFixed(2)) }));
+    const revenueChart = Object.entries(chartSource).map(([data, valor]) => ({ data, valor: Number(Number(valor).toFixed(2)) }));
     return {
       visits,
       outboundClicks,
