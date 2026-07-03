@@ -478,12 +478,21 @@ export default function LpOpportunities() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-3xl p-0 gap-0 max-h-[92vh] overflow-hidden flex flex-col">
           <DialogHeader className="sticky top-0 z-10 px-6 py-4 border-b border-border/60 bg-card/85 backdrop-blur-md">
-            <DialogTitle className="text-base font-semibold tracking-tight">
-              {editingId ? "Editar oportunidade" : "Nova oportunidade"}
-            </DialogTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Edição manual. Para detecção automática use o Assistente.
-            </p>
+            {(() => {
+              const platformName = (platforms as any[]).find((p) => p.id === form.platform_id)?.name || null;
+              const brandKit = resolveBrand(platformName);
+              return (
+                <BrandScope brand={brandKit} accentBar className="-mx-6 -my-4 px-6 py-4">
+                  <DialogTitle className="text-base font-semibold tracking-tight flex items-center gap-2">
+                    {editingId ? "Editar oportunidade" : "Nova oportunidade"}
+                    <BrandChip brand={brandKit} fallbackLabel={platformName || "sem plataforma"} size="xs" />
+                  </DialogTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Edição manual. Para detecção automática use o Assistente.
+                  </p>
+                </BrandScope>
+              );
+            })()}
           </DialogHeader>
 
           <div className="main-scroll flex-1 overflow-y-auto px-6 py-5 space-y-7 min-w-0">
