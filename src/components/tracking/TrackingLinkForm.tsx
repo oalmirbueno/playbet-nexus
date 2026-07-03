@@ -155,12 +155,26 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
     ? (platforms as any[]).find((p: any) => p.id === detectedPlatformId)?.name ?? null
     : null;
 
-  // Auto-fill platform account when we detect a platform and no account is chosen yet
+  // Auto-align platform account to the URL. If none chosen → fill in.
+  // If chosen but URL clearly belongs to a different platform (strong match),
+  // switch to the correct one so the user cannot mix Estrela Bet ↔ VUPI etc.
+  // The DB trigger `enforce_tracking_link_platform_match` is the ultimate guard.
   useEffect(() => {
-    if (!detectedPlatformId || form.platform_account_id) return;
-    const acc = (accounts as any[]).find((a: any) => a.platform_id === detectedPlatformId && a.is_active !== false);
-    if (acc) setForm(p => ({ ...p, platform_account_id: acc.id }));
-  }, [detectedPlatformId, form.platform_account_id, accounts]);
+    if (!detectedPlatformId) return;
+    const currentAcc = (accounts as any[]).find((a: any) => a.id === form.platform_account_id);
+    if (currentAcc?.platform_id === detectedPlatformId) return;
+    const nextAcc = (accounts as any[]).find((a: any) => a.platform_id === detectedPlatformId && a.is_active !== false);
+    if (!nextAcc) return;
+    const topScore = detection.platformCandidates[0]?.score ?? 0;
+    if (form.platform_account_id && topScore < 75) return; // ambiguous — leave user's pick
+    setForm(p => ({ ...p, platform_account_id: nextAcc.id }));
+    if (form.platform_account_id && form.platform_account_id !== nextAcc.id) {
+      toast({
+        title: "Conta ajustada pela URL",
+        description: `O link pertence a ${detectedPlatformName ?? "outra casa"}. Trocamos a conta para evitar mistura de plataformas.`,
+      });
+    }
+  }, [detectedPlatformId, detectedPlatformName, form.platform_account_id, accounts, detection.platformCandidates, toast]);
 
   // Auto-fill category / game from URL heuristics, without stomping user overrides
   useEffect(() => {
