@@ -1,0 +1,14 @@
+/* Brand fonts — carregados via CDN Lovable Assets.
+   Articulat CF é a face proprietária da VUPI (não está no Google Fonts).
+   Playfair Display vem do Google Fonts (importado no index.css).       */
+
+@font-face {
+  font-family: "Articulat CF";
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+  src: url("/__l5e/assets-v1/") format("opentype");
+}
+
+/* Os @font-face reais são injetados em runtime a partir dos .asset.json
+   por src/lib/brandFonts.ts para manter os URLs sincronizados com o CDN. */
