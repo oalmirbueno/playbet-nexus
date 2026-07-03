@@ -109,7 +109,7 @@ export function useTrackingSnapshots() {
     queryKey: ["tracking_snapshots"],
     queryFn: trackingSnapshotService.getAll,
   });
-  return { data: filterReal(rawData), isLoading };
+  return { data: filterValidEvents(rawData), isLoading };
 }
 
 export function useTrackingLinks() {

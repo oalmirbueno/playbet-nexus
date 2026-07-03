@@ -25,6 +25,31 @@ function generateClickId(): string {
   return `clk_${ts}_${rand}`;
 }
 
+function getOrCreatePageClickId(slug?: string | null): string {
+  const key = `playbet_lp_click_id:${slug || "default"}`;
+  try {
+    const existing = window.sessionStorage.getItem(key);
+    if (existing) return existing;
+    const next = generateClickId();
+    window.sessionStorage.setItem(key, next);
+    return next;
+  } catch {
+    return generateClickId();
+  }
+}
+
+function shouldSendLpView(slug?: string | null, clickId?: string | null): boolean {
+  if (!slug || !clickId || isInternalPreviewContext()) return false;
+  const key = `playbet_lp_view_sent:${slug}:${clickId}`;
+  try {
+    if (window.sessionStorage.getItem(key)) return false;
+    window.sessionStorage.setItem(key, "1");
+    return true;
+  } catch {
+    return true;
+  }
+}
+
 /** Append click_id (sub1) to the affiliate URL */
 function injectClickId(url: string, paramName: string, clickId: string): string {
   try {
@@ -348,7 +373,7 @@ export default function InfluencerLanding() {
 
     (async () => {
       const hostname = window.location.hostname;
-      const clickId = generateClickId();
+      const clickId = getOrCreatePageClickId(slug);
 
       // Helper to finalize resolution
       const finalize = async (
@@ -384,7 +409,7 @@ export default function InfluencerLanding() {
 
         // Register real public LP views only. Admin/editor previews must never
         // inflate production tracking.
-        if (!isInternalPreviewContext()) {
+        if (shouldSendLpView(slug, clickId)) {
           supabase.from("tracking_events").insert({
             canonical_event_name: "lp_view",
             raw_event_name: "lp_view",
