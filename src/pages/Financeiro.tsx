@@ -13,6 +13,7 @@ import PeriodFilter from "@/components/financeiro/PeriodFilter";
 import KpiDuo from "@/components/financeiro/KpiDuo";
 import RankingTable from "@/components/financeiro/RankingTable";
 import SaquesTab from "@/components/financeiro/SaquesTab";
+import PlatformBreakdown from "@/components/financeiro/PlatformBreakdown";
 import DistributionCard from "@/components/DistributionCard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
