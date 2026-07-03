@@ -15,7 +15,7 @@ import { ArrowUp, ArrowDown, RefreshCw, ExternalLink, Loader2, Wand2, Users, Spa
 import { LP_MODE_LABELS, defaultLayoutConfig, type LpMode } from "@/lib/lpMode";
 import GameArtwork from "@/components/tracking/GameArtwork";
 import { suggestThreeOptions, computeOpportunityScore } from "@/lib/opportunityEngine";
-import { buildPublicLpUrl, buildTrackedAffiliateUrl } from "@/lib/trackingUrl";
+import { buildPublicLpUrl, buildTrackedAffiliateUrl, validateSharedLpUrl } from "@/lib/trackingUrl";
 import { buildLpBaseUrl } from "@/lib/lpPublicUrl";
 
 interface Props {
