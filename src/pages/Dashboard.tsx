@@ -6,12 +6,14 @@ import TrackingOverviewCard from "@/components/TrackingOverviewCard";
 import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
 import { useTrackingMetricsSummary } from "@/hooks/useTrackingMetricsSummary";
 import { useRealtimeMetrics } from "@/hooks/useRealtimeMetrics";
+import { useFinanceiroData } from "@/hooks/useFinanceiroData";
 import { useInfluencers, useGames, usePlatforms, useLandingPages, useTemplates, useUtms, useCampanhas, useSocios, useSaques, useConteudo } from "@/hooks/useSupabaseQuery";
 import { useQueryClient } from "@tanstack/react-query";
 import { seedDemoData, clearDemoData } from "@/services/seedDemoData";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { calculateSocioDistribution, readDistributionParams } from "@/lib/financialDistribution";
 
 const steps = [
   { label: "Cadastrar primeira plataforma", path: "/plataformas", icon: Monitor, key: "platforms" },
@@ -42,6 +44,7 @@ export default function Dashboard() {
   const { data: conteudos } = useConteudo();
   const { consolidated, hasData: hasTrackingData } = useAutoConsolidation();
   const { summary: metricsSummary, isLoading: loadingMetrics, refetch: refetchMetrics } = useTrackingMetricsSummary("30d");
+  const { distribution: financeiroDistribution } = useFinanceiroData({ period: "30d" });
   const [syncingPanel, setSyncingPanel] = useState(false);
   useRealtimeMetrics();
 
@@ -52,6 +55,10 @@ export default function Dashboard() {
   }, [platforms]);
 
   const hasMetricsData = metricsSummary.profitBase > 0 || metricsSummary.ftd > 0 || metricsSummary.depositsTotal > 0;
+  const socioDistribution = useMemo(
+    () => calculateSocioDistribution(financeiroDistribution, readDistributionParams(), socios as any),
+    [financeiroDistribution, socios],
+  );
 
   const handleSyncPanels = async () => {
     setSyncingPanel(true);
@@ -207,24 +214,42 @@ export default function Dashboard() {
           </div>
 
           {Object.keys(metricsSummary.byPlatform).length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 pt-2 border-t border-border/60">
-              {Object.entries(metricsSummary.byPlatform)
-                .sort(([, a], [, b]) => (b.revenue + b.cpa) - (a.revenue + a.cpa))
-                .map(([pid, p]) => {
-                  const plat = platformMap.get(pid);
-                  return (
-                    <div key={pid} className="flex items-center justify-between rounded-md bg-secondary/30 px-3 py-2">
+            <div className="space-y-3 pt-2 border-t border-border/60">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                {Object.entries(metricsSummary.byPlatform)
+                  .sort(([, a], [, b]) => (b.revenue + b.cpa) - (a.revenue + a.cpa))
+                  .map(([pid, p]) => {
+                    const plat = platformMap.get(pid);
+                    return (
+                      <div key={pid} className="flex items-center justify-between rounded-md bg-secondary/30 px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium truncate">{plat?.name ?? "Plataforma"}</p>
+                          <p className="text-[10px] text-muted-foreground">FTD {p.ftd} · Dep {formatBRL(p.deposits)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs font-semibold text-primary">{formatBRL(p.revenue + p.cpa)}</p>
+                          <p className="text-[10px] text-muted-foreground">Rev + CPA</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+              {socioDistribution.partnerRows.length > 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                  {socioDistribution.partnerRows.map((row) => (
+                    <div key={row.id} className="flex items-center justify-between rounded-md bg-primary/5 border border-primary/20 px-3 py-2">
                       <div className="min-w-0">
-                        <p className="text-xs font-medium truncate">{plat?.name ?? "Plataforma"}</p>
-                        <p className="text-[10px] text-muted-foreground">FTD {p.ftd} · Dep {formatBRL(p.deposits)}</p>
+                        <p className="text-xs font-medium truncate">{row.nome}</p>
+                        <p className="text-[10px] text-muted-foreground">Sócio · {row.normalizedPct.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xs font-semibold text-primary">{formatBRL(p.revenue + p.cpa)}</p>
-                        <p className="text-[10px] text-muted-foreground">Rev + CPA</p>
+                        <p className="text-xs font-semibold text-primary">{formatBRL(row.amount)}</p>
+                        <p className="text-[10px] text-muted-foreground">Distribuição</p>
                       </div>
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>

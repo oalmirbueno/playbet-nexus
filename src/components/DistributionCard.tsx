@@ -2,75 +2,43 @@ import { useEffect, useMemo, useState } from "react";
 import { Calculator, AlertTriangle, Info } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
-const fmt = (v: number) =>
-  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-
-const STORAGE_KEY = "playbet.distribution.params.v4";
-
-const DEFAULTS = {
-  taxPct: 15,
-  reservePct: 10,
-  costs: 0,
-  partners: 3,
-};
-
-export interface DistributionBreakdown {
-  /** Rev (revshare) + CPA total no período. É a ÚNICA base de lucro. */
-  profitBase: number;
-  /** Parte do lucro vinculada a linhas com influencer atribuído. */
-  attributedProfit: number;
-  /** Parte do lucro sem influencer atribuído (100% sócios, nenhum desconto). */
-  unattributedProfit: number;
-  /** Comissões devidas aos influenciadores (soma por linha × % de cada um). */
-  influencerCommissionsOwed: number;
-  /** Comissões devidas aos gerentes (só quando o influencer atribuído tem manager). */
-  managerCommissionsOwed: number;
-}
+import {
+  calculateSocioDistribution,
+  DEFAULT_DISTRIBUTION_PARAMS,
+  formatBRL as fmt,
+  readDistributionParams,
+  writeDistributionParams,
+  type DistributionBreakdown,
+  type PartnerLike,
+} from "@/lib/financialDistribution";
 
 interface Props {
   breakdown: DistributionBreakdown;
+  socios?: PartnerLike[];
   sourceLabel?: string;
 }
 
-export default function DistributionCard({ breakdown, sourceLabel = "Rev + CPA do período" }: Props) {
-  const [params, setParams] = useState(() => {
-    if (typeof window === "undefined") return DEFAULTS;
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : DEFAULTS;
-    } catch {
-      return DEFAULTS;
-    }
-  });
+export default function DistributionCard({ breakdown, socios = [], sourceLabel = "Rev + CPA do período" }: Props) {
+  const [params, setParams] = useState(readDistributionParams);
 
   useEffect(() => {
-    try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(params)); } catch { /* noop */ }
+    try { writeDistributionParams(params); } catch { /* noop */ }
   }, [params]);
 
-  const result = useMemo(() => {
-    const { profitBase, influencerCommissionsOwed, managerCommissionsOwed } = breakdown;
-    const afterCommissions = profitBase - influencerCommissionsOwed - managerCommissionsOwed;
-    const tax = Math.max(0, afterCommissions) * (params.taxPct / 100);
-    const costs = Math.max(0, params.costs || 0);
-    const subtotal = afterCommissions - tax - costs;
-    const reserve = Math.max(0, subtotal) * (params.reservePct / 100);
-    const partnersPool = subtotal - reserve;
-    const partners = Math.max(1, params.partners || 1);
-    const perPartner = partnersPool / partners;
-    return { afterCommissions, tax, costs, subtotal, reserve, partnersPool, perPartner };
-  }, [breakdown, params]);
+  const result = useMemo(() => calculateSocioDistribution(breakdown, params, socios), [breakdown, params, socios]);
 
   const warnings: string[] = [];
   if (params.taxPct < 10 || params.taxPct > 20)
     warnings.push("Imposto/provisão fora da faixa oficial 10–20%.");
   if (params.reservePct !== 10)
     warnings.push("Reserva PlayBet difere do padrão de 10%.");
+  if (result.partnerRows.length > 0 && Math.round(result.rawParticipationTotal * 100) / 100 !== 100)
+    warnings.push(`Participações ativas somam ${result.rawParticipationTotal.toLocaleString("pt-BR")}% — a divisão foi normalizada proporcionalmente.`);
 
-  const setField = (key: keyof typeof DEFAULTS) => (e: React.ChangeEvent<HTMLInputElement>) =>
+  const setField = (key: keyof typeof DEFAULT_DISTRIBUTION_PARAMS) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setParams((p) => ({ ...p, [key]: Number(e.target.value) || 0 }));
 
-  const reset = () => setParams(DEFAULTS);
+  const reset = () => setParams(DEFAULT_DISTRIBUTION_PARAMS);
 
   const steps = [
     { label: "Lucro real (Rev + CPA)", value: breakdown.profitBase, kind: "base" as const, hint: sourceLabel },
@@ -90,7 +58,7 @@ export default function DistributionCard({ breakdown, sourceLabel = "Rev + CPA d
     { label: "− Custos diretos", value: -result.costs, kind: "out" as const },
     { label: "= Subtotal", value: result.subtotal, kind: "sub" as const },
     { label: `− Reserva PlayBet (${params.reservePct}%)`, value: -result.reserve, kind: "out" as const },
-    { label: `= Saldo dos sócios ÷ ${params.partners}`, value: result.partnersPool, kind: "final" as const },
+    { label: "= Saldo dos sócios", value: result.partnersPool, kind: "final" as const },
   ];
 
   return (
@@ -123,7 +91,6 @@ export default function DistributionCard({ breakdown, sourceLabel = "Rev + CPA d
             { k: "taxPct", label: "Imposto %", min: 0, max: 30, step: 0.5 },
             { k: "reservePct", label: "Reserva %", min: 0, max: 50, step: 1 },
             { k: "costs", label: "Custos (R$)", min: 0, step: 50 },
-            { k: "partners", label: "Sócios", min: 1, max: 10, step: 1 },
           ] as const).map((f) => (
             <div key={f.k}>
               <label className="text-[10px] uppercase tracking-wider text-muted-foreground">{f.label}</label>
@@ -133,7 +100,7 @@ export default function DistributionCard({ breakdown, sourceLabel = "Rev + CPA d
                 min={f.min}
                 max={(f as any).max}
                 value={params[f.k as keyof typeof params] as number}
-                onChange={setField(f.k as keyof typeof DEFAULTS)}
+                onChange={setField(f.k)}
                 className="w-full mt-1 px-2 py-1.5 rounded-md bg-secondary/40 border border-border text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
@@ -185,10 +152,15 @@ export default function DistributionCard({ breakdown, sourceLabel = "Rev + CPA d
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-          {Array.from({ length: params.partners }).map((_, i) => (
-            <div key={i} className="rounded-md border border-border bg-secondary/30 px-3 py-2 text-center">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Sócio {i + 1}</p>
-              <p className="text-base font-bold font-mono tabular-nums">{fmt(result.perPartner)}</p>
+          {result.partnerRows.length === 0 ? (
+            <div className="col-span-3 rounded-md border border-border bg-secondary/30 px-3 py-4 text-center text-xs text-muted-foreground">
+              Nenhum sócio ativo cadastrado para receber a distribuição.
+            </div>
+          ) : result.partnerRows.map((row) => (
+            <div key={row.id} className="rounded-md border border-border bg-secondary/30 px-3 py-2 text-center">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground truncate">{row.nome}</p>
+              <p className="text-base font-bold font-mono tabular-nums">{fmt(row.amount)}</p>
+              <p className="text-[10px] text-muted-foreground">{row.normalizedPct.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%</p>
             </div>
           ))}
         </div>

@@ -6,6 +6,7 @@ import { useInfluencers, usePlatforms, useCampanhas, useSaques, useSocios, useMa
 import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
 import { useTrackingMetricsSummary } from "@/hooks/useTrackingMetricsSummary";
 import { useFinanceiroData } from "@/hooks/useFinanceiroData";
+import { calculateSocioDistribution, readDistributionParams } from "@/lib/financialDistribution";
 
 const formatBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -39,17 +40,15 @@ export default function DashboardExecutivo() {
   );
 
   const distribuicao = useMemo(() => {
-    const base = officialDistribution.profitBase;
-    const comissao = officialDistribution.influencerCommissionsOwed + officialDistribution.managerCommissionsOwed;
-    const operacional = Math.max(0, base - comissao) * 0.10;
-    const baseSocietaria = base - comissao - operacional;
+    const params = readDistributionParams();
+    const calculated = calculateSocioDistribution(officialDistribution, params, socios as any);
     return {
-      base, fonte: "tracking" as const, comissao, operacional, baseSocietaria,
-      porSocio: socios.map((s: any) => ({
-        nome: s.nome,
-        participacao: Number(s.participacao || 0),
-        valor: baseSocietaria * (Number(s.participacao || 0) / 100),
-      })),
+      base: officialDistribution.profitBase,
+      comissao: officialDistribution.influencerCommissionsOwed + officialDistribution.managerCommissionsOwed,
+      tax: calculated.tax,
+      reserve: calculated.reserve,
+      partnersPool: calculated.partnersPool,
+      porSocio: calculated.partnerRows,
     };
   }, [officialDistribution, socios]);
 
@@ -163,13 +162,17 @@ export default function DashboardExecutivo() {
               <span className="tabular-nums">- {formatBRL(distribuicao.comissao)}</span>
             </div>
             <div className="flex justify-between text-primary">
-              <span>− Retenção Operacional (10%)</span>
-              <span className="tabular-nums">- {formatBRL(distribuicao.operacional)}</span>
+              <span>− Imposto/provisão (15%)</span>
+              <span className="tabular-nums">- {formatBRL(distribuicao.tax)}</span>
+            </div>
+            <div className="flex justify-between text-primary">
+              <span>− Reserva PlayBet (10%)</span>
+              <span className="tabular-nums">- {formatBRL(distribuicao.reserve)}</span>
             </div>
             <div className="h-px bg-border my-1.5" />
             <div className="flex justify-between font-bold text-primary">
-              <span>= Base Societária</span>
-              <span className="tabular-nums">{formatBRL(Math.max(0, distribuicao.baseSocietaria))}</span>
+              <span>= Saldo dos sócios</span>
+              <span className="tabular-nums">{formatBRL(Math.max(0, distribuicao.partnersPool))}</span>
             </div>
           </div>
 
@@ -182,9 +185,9 @@ export default function DashboardExecutivo() {
                   <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{s.nome}</p>
-                    <p className="text-[10px] text-muted-foreground">{s.participacao}% de participação</p>
+                    <p className="text-[10px] text-muted-foreground">{s.normalizedPct.toLocaleString("pt-BR", { maximumFractionDigits: 2 })}% de participação</p>
                   </div>
-                  <p className="text-base font-bold tabular-nums">{formatBRL(Math.max(0, s.valor))}</p>
+                  <p className="text-base font-bold tabular-nums">{formatBRL(Math.max(0, s.amount))}</p>
                 </div>
               ))
             )}
