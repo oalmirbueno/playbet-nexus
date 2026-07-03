@@ -292,7 +292,14 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
         status: "active",
       } as any);
 
-      // ── Sync: LP config + Materiais (fire-and-forget, non-blocking) ──
+      // ── Sync pós-criação ──────────────────────────────────────────────
+      // O trigger de DB `trg_tracking_links_autopipeline` já cria os
+      // materiais, configura a instância de LP e dispara notificações
+      // automaticamente. Aqui apenas:
+      //  • fixamos a source_tracking_link_id na instância;
+      //  • disparamos `lp-autoconfigure` quando o caller passa
+      //    extra_game_slugs / hype_copy que o trigger não cobre;
+      //  • invalidamos as queries React Query para refletir o novo estado.
       const linkId = createdLink?.id;
       if (linkId) {
         if (instanceId) {
@@ -306,24 +313,18 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
             .then(() => {});
         }
 
-        Promise.allSettled([
-          useLp
-            ? supabase.functions.invoke("lp-autoconfigure", {
-                body: {
-                  tracking_link_id: linkId,
-                  extra_game_slugs: extraGameSlugs,
-                  hype_copy: { subtitle: hypeReason || null },
-                },
-              })
-            : Promise.resolve(null),
-          supabase.functions.invoke("materials-autogenerate", {
-            body: { tracking_link_id: linkId },
-          }),
-        ]).then(() => {
-          qc.invalidateQueries({ queryKey: ["landing_page_instances"] });
-          qc.invalidateQueries({ queryKey: ["link_materials"] });
-        });
+        const needsLpExtras = useLp && (extraGameSlugs.length > 0 || !!hypeReason);
+        syncLinkAssets(
+          linkId,
+          {
+            useLp: needsLpExtras,
+            extraGameSlugs,
+            hypeCopy: needsLpExtras ? { subtitle: hypeReason || null } : null,
+          },
+          qc,
+        );
       }
+
 
       try { await navigator.clipboard.writeText(finalUrl); } catch {}
 
