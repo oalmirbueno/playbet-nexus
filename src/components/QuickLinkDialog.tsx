@@ -14,6 +14,7 @@ import { detectFromUrl, CATEGORY_LABELS, inferAttributionParam, type LinkCategor
 import GameArtwork from "@/components/tracking/GameArtwork";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { syncLinkAssets } from "@/lib/linkAssets";
 
 interface Props {
   open: boolean;
