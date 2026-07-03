@@ -77,15 +77,17 @@ function isBonusCategory(category: string | null | undefined): boolean {
 function ctaForMode(lpMode: LpMode, category: string | null | undefined, gameName?: string | null): string {
   if (lpMode === "catalog") return "Acessar oportunidades";
   if (lpMode === "odds") return "Acessar oportunidades";
+  if (lpMode === "platform_direct") return "Acessar plataforma";
   if (isBonusCategory(category)) return "Resgatar bônus";
   if (lpMode === "multi_game") return "Ver jogos";
   return gameName ? `Jogar ${gameName}` : "Jogar agora";
 }
 
-function titleForMode(lpMode: LpMode, gameName?: string | null): string {
+function titleForMode(lpMode: LpMode, gameName?: string | null, platformName?: string | null): string {
   if (lpMode === "catalog") return "Oportunidades PlayBet";
   if (lpMode === "odds") return "Em destaque";
   if (lpMode === "multi_game") return "Jogos em alta";
+  if (lpMode === "platform_direct") return platformName ? `${platformName} com PlayBet` : "Oferta oficial";
   return gameName || "Oferta oficial";
 }
 
@@ -107,6 +109,10 @@ function adaptiveSubtitle(mode: LpMode, gameName?: string | null, platformName?:
     return `Oferta ativa${gameName ? ` para ${gameName}` : ""}${platformName ? ` na ${platformName}` : ""}.`;
   if (mode === "multi_game")
     return "Jogos em alta com ofertas oficiais.";
+  if (mode === "platform_direct")
+    return platformName
+      ? `Acesse ${platformName} agora com bônus oficial PlayBet.`
+      : "Acesse a plataforma oficial com bônus PlayBet.";
   return "Acesso rápido às melhores oportunidades.";
 }
 
