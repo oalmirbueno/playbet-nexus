@@ -138,7 +138,10 @@ function AdminRoutes() {
         <Route path="/comercial" element={<ComercialPipeline />} />
         <Route path="/comercial/squads" element={<ComercialSquads />} />
         <Route path="/comercial/qualificacao" element={<ComercialQualificacao />} />
+        <Route path="/marcas" element={<BrandIndex />} />
+        <Route path="/marca/:brand" element={<BrandShowcase />} />
         <Route path="*" element={<NotFound />} />
+
       </Routes>
     </DashboardLayout>
   );
