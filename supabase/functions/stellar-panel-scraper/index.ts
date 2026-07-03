@@ -392,6 +392,8 @@ async function persist(
 
     const dateRef = normalizePeriod(it.period ?? "", fallbackDate);
     if (!dateRef) continue;
+    const cpaCommission = Number(it.cpa ?? 0) || 0;
+    const revShareCommission = Number(it.rev_share ?? 0) || 0;
 
     const record: Record<string, any> = {
       data_ref: dateRef,
@@ -406,7 +408,9 @@ async function persist(
       deposits_count: it.deposits ?? 0,
       depositos_total: it.amount_deposit ?? 0,
       revenue: it.ngr ?? it.ggr ?? 0,
-      commission_total: (it.cpa ?? 0) + (it.rev_share ?? 0),
+      cpa_commission: cpaCommission,
+      revshare_commission: revShareCommission,
+      commission_total: cpaCommission + revShareCommission,
       converted_amount: it.amount_deposit ?? 0,
       converted_currency: "BRL",
       original_amount: it.amount_deposit ?? 0,
