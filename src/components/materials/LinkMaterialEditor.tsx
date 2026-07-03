@@ -63,7 +63,7 @@ interface Material {
 const FORMATS: CreativeFormat[] = ["feed", "story", "landscape", "square_wa"];
 const STYLES: CreativeStyle[] = ["hype", "minimal", "editorial"];
 
-export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId }: Props) {
+export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId, readOnly = false }: Props) {
   const { data: brandCtx } = useLinkBrand(trackingLinkId);
 
   const [loading, setLoading] = useState(true);
