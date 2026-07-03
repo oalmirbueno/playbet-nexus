@@ -109,8 +109,14 @@ export default function Financeiro() {
       )}
 
       <Tabs value={activeTab} onValueChange={(v) => setParam("tab", v)}>
-        <TabsList className="flex md:grid md:grid-cols-5 md:w-auto md:inline-grid w-full justify-start">
+        <TabsList className="flex md:grid md:grid-cols-6 md:w-auto md:inline-grid w-full justify-start">
           <TabsTrigger value="distribuicao">Distribuição</TabsTrigger>
+          <TabsTrigger value="plataformas">
+            Plataformas
+            {rankingPlatforms.length > 0 && (
+              <span className="ml-2 text-[10px] text-muted-foreground">{rankingPlatforms.length}</span>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="influencers">
             Influencers
             {rankingInfluencers.length > 0 && (
@@ -144,6 +150,11 @@ export default function Financeiro() {
             sourceLabel={`Rev + CPA · ${range.label.toLowerCase()}`}
           />
         </TabsContent>
+
+        <TabsContent value="plataformas" className="mt-6">
+          <PlatformBreakdown rows={rankingPlatforms} periodLabel={range.label} />
+        </TabsContent>
+
 
         <TabsContent value="influencers" className="mt-6">
           <RankingTable
