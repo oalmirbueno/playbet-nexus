@@ -94,9 +94,8 @@ export default function Financeiro() {
 
         <TabsContent value="distribuicao" className="mt-6">
           <DistributionCard
-            revenueBrl={caixaRealizado > 0 ? caixaRealizado : revenueTracking}
-            sourceLabel={caixaRealizado > 0 ? "caixa realizado Asaas" : "revenue atribuído tracking"}
-            perPlatform={[]}
+            breakdown={distribution}
+            sourceLabel={`Rev + CPA · ${range.label.toLowerCase()}`}
           />
         </TabsContent>
 
