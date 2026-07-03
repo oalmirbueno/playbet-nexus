@@ -287,7 +287,7 @@ export default function LPInstances() {
         <table className="data-table">
           <thead>
             <tr>
-              <th>LP Base</th><th>Domínio</th><th>Influencer</th><th>Slug</th>
+              <th>LP Base</th><th>Marca</th><th>Domínio</th><th>Influencer</th><th>Slug</th>
               <th>Affiliate Link</th><th>URL Pública</th><th>Status</th><th>Ações</th>
             </tr>
           </thead>
