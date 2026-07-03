@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import LpInstanceVisualEditor from "@/components/lp/LpInstanceVisualEditor";
 import { LP_MODE_LABELS, type LpMode } from "@/lib/lpMode";
 import { buildLpBaseUrl } from "@/lib/lpPublicUrl";
-import { buildPublicLpUrl } from "@/lib/trackingUrl";
+import { buildPublicLpUrl, validateSharedLpUrl } from "@/lib/trackingUrl";
 
 interface Row {
   id: string;
