@@ -78,13 +78,32 @@ export default function TrackingDashboard() {
   const handleSync = async () => {
     setSyncing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("tracking-puller-smartico", {
-        body: { source: "manual", mode: "recent" },
-      });
-      if (error) throw error;
-      const r = data as { ok?: boolean; rows_received?: number; upserts?: number; error?: string };
-      if (r?.ok === false) throw new Error(r.error || "Falha");
-      toast.success(`Sincronizado · ${r.rows_received ?? 0} linhas lidas · ${r.upserts ?? 0} métricas atualizadas`);
+      // Fan out to every configured puller so this button covers ALL
+      // platforms (Estrela Bet, VUPI, 1win, …). Panel scraper is the source
+      // of truth for Stellar brands; Smartico puller covers other tenants.
+      const [panel, smartico] = await Promise.allSettled([
+        supabase.functions.invoke("stellar-panel-scraper", { body: { days: 30 } }),
+        supabase.functions.invoke("tracking-puller-smartico", { body: { source: "manual", mode: "recent" } }),
+      ]);
+      const parts: string[] = [];
+      if (panel.status === "fulfilled" && !panel.value.error) {
+        const d = panel.value.data as { rows?: number; per_brand?: Record<string, number> };
+        const brands = d?.per_brand ? Object.entries(d.per_brand).map(([b, n]) => `${b}:${n}`).join(" · ") : "";
+        parts.push(`Painel ${d?.rows ?? 0} linhas${brands ? ` (${brands})` : ""}`);
+      } else if (panel.status === "fulfilled" && panel.value.error) {
+        parts.push(`Painel falhou: ${panel.value.error.message}`);
+      }
+      if (smartico.status === "fulfilled" && !smartico.value.error) {
+        const r = smartico.value.data as { rows_received?: number; upserts?: number };
+        parts.push(`Smartico ${r?.rows_received ?? 0}/${r?.upserts ?? 0}`);
+      }
+      // Force React Query to refetch immediately.
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["tracking_metrics"] }),
+        qc.invalidateQueries({ queryKey: ["tracking_events"] }),
+        qc.invalidateQueries({ queryKey: ["platform_accounts"] }),
+      ]);
+      toast.success(`Atualizado em tempo real · ${parts.join(" · ") || "sem novidades"}`);
     } catch (e) {
       toast.error(`Falha ao sincronizar: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
