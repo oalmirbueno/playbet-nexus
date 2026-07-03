@@ -758,6 +758,16 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                 setDirty(true);
               }}
             />
+
+            <CaptureOddPanel
+              format={format}
+              suggestedUrl={link.shortUrl}
+              onCapture={(layer) => {
+                setLayers((ls) => [...ls, layer]);
+                setSelectedId(layer.id);
+                setDirty(true);
+              }}
+            />
             </div>
 
             <div className="space-y-2">
