@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getPeriodRange, type PeriodKey } from "@/hooks/useFinanceiroData";
+import { getMetricMoneyParts } from "@/lib/trackingMetrics";
 
 export interface TrackingMetricsSummary {
   ftd: number;
@@ -63,8 +64,9 @@ export function useTrackingMetricsSummary(period: PeriodKey = "30d", platformId?
 
     for (const row of q.data ?? []) {
       const r: any = row;
-      const rev = Number(r.revshare_commission ?? r.revenue ?? 0);
-      const cpa = Number(r.cpa_commission ?? 0);
+      const money = getMetricMoneyParts(r);
+      const rev = money.revShare;
+      const cpa = money.cpa;
       const deposits = Number(r.depositos_total ?? r.converted_amount ?? 0);
 
       acc.ftd += Number(r.ftd || 0);
@@ -73,12 +75,12 @@ export function useTrackingMetricsSummary(period: PeriodKey = "30d", platformId?
       acc.depositsTotal += deposits;
       acc.revenue += rev;
       acc.cpa += cpa;
-      acc.profitBase += rev + cpa;
-      acc.commissionTotal += Number(r.commission_total || 0);
+      acc.profitBase += money.total;
+      acc.commissionTotal += money.total;
       acc.clicks += Number(r.cliques || 0);
 
       const src = r.origem_importacao || "desconhecido";
-      acc.bySource[src] = (acc.bySource[src] ?? 0) + rev + cpa;
+      acc.bySource[src] = (acc.bySource[src] ?? 0) + money.total;
 
       if (r.platform_id) {
         const p = acc.byPlatform[r.platform_id] ?? { revenue: 0, cpa: 0, ftd: 0, deposits: 0 };
