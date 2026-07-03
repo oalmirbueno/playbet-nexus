@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
-import { MousePointerClick, UserPlus, DollarSign, Gamepad2, Monitor, Users, Link2, FileText, ArrowRight, CheckCircle, Database, Trash2, Loader2 } from "lucide-react";
+import { MousePointerClick, UserPlus, DollarSign, Gamepad2, Monitor, Users, Link2, FileText, ArrowRight, CheckCircle, Database, Trash2, Loader2, TrendingUp, Wallet, Target, RefreshCw } from "lucide-react";
 import TrackingOverviewCard from "@/components/TrackingOverviewCard";
 import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
+import { useTrackingMetricsSummary } from "@/hooks/useTrackingMetricsSummary";
 import { useInfluencers, useGames, usePlatforms, useLandingPages, useTemplates, useUtms, useCampanhas, useSocios, useSaques, useConteudo } from "@/hooks/useSupabaseQuery";
 import { useQueryClient } from "@tanstack/react-query";
 import { seedDemoData, clearDemoData } from "@/services/seedDemoData";
@@ -38,6 +40,36 @@ export default function Dashboard() {
   const { data: saques } = useSaques();
   const { data: conteudos } = useConteudo();
   const { consolidated, hasData: hasTrackingData } = useAutoConsolidation();
+  const { summary: metricsSummary, isLoading: loadingMetrics, refetch: refetchMetrics } = useTrackingMetricsSummary("30d");
+  const [syncingPanel, setSyncingPanel] = useState(false);
+
+  const platformMap = useMemo(() => {
+    const m = new Map<string, any>();
+    (platforms ?? []).forEach((p: any) => m.set(p.id, p));
+    return m;
+  }, [platforms]);
+
+  const hasMetricsData = metricsSummary.profitBase > 0 || metricsSummary.ftd > 0 || metricsSummary.depositsTotal > 0;
+
+  const handleSyncPanels = async () => {
+    setSyncingPanel(true);
+    try {
+      await Promise.allSettled([
+        supabase.functions.invoke("stellar-panel-scraper", { body: { window_days: 3 } }),
+        supabase.functions.invoke("tracking-puller-smartico", { body: {} }),
+      ]);
+      await Promise.all([
+        refetchMetrics(),
+        queryClient.invalidateQueries({ queryKey: ["tracking_consolidated_real_source"] }),
+        queryClient.invalidateQueries({ queryKey: ["financeiro_metrics"] }),
+      ]);
+      toast({ title: "Painéis sincronizados" });
+    } catch (e: any) {
+      toast({ title: "Erro ao sincronizar", description: e.message, variant: "destructive" });
+    } finally {
+      setSyncingPanel(false);
+    }
+  };
 
   const counts: Record<string, number> = {
     platforms: platforms.length,
@@ -104,6 +136,10 @@ export default function Dashboard() {
           <p className="text-sm text-muted-foreground mt-1">Visão geral consolidada da operação</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button onClick={handleSyncPanels} disabled={syncingPanel} size="sm" variant="outline">
+            {syncingPanel ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+            {syncingPanel ? "Sincronizando..." : "Sincronizar painéis"}
+          </Button>
           {totalItems === 0 && (
             <Button onClick={handleSeed} disabled={seeding} size="sm">
               {seeding ? <Loader2 size={14} className="animate-spin" /> : <Database size={14} />}
@@ -118,6 +154,77 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Resumo Financeiro — espelha os números do Financeiro (tracking_metrics últimos 30 dias) */}
+      {(hasMetricsData || loadingMetrics) && (
+        <div className="glass-card p-6 space-y-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <div className="flex items-center gap-2">
+                <TrendingUp size={16} className="text-primary" />
+                <h3 className="text-sm font-semibold">Resumo Financeiro (últimos 30 dias)</h3>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Dados oficiais importados dos painéis · Última data: {metricsSummary.latestDataRef ?? "—"}
+              </p>
+            </div>
+            <Button size="sm" variant="ghost" onClick={() => navigate("/financeiro")} className="text-xs h-7 text-primary">
+              Ver financeiro <ArrowRight size={12} className="ml-1" />
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+            <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+              <p className="text-[10px] uppercase text-muted-foreground">FTD</p>
+              <p className="text-lg font-bold">{metricsSummary.ftd}</p>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+              <p className="text-[10px] uppercase text-muted-foreground">Depósitos</p>
+              <p className="text-lg font-bold">{formatBRL(metricsSummary.depositsTotal)}</p>
+              <p className="text-[10px] text-muted-foreground">{metricsSummary.depositsCount} transações</p>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+              <p className="text-[10px] uppercase text-muted-foreground">Rev (RevShare)</p>
+              <p className="text-lg font-bold text-primary">{formatBRL(metricsSummary.revenue)}</p>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+              <p className="text-[10px] uppercase text-muted-foreground">CPA</p>
+              <p className="text-lg font-bold text-primary">{formatBRL(metricsSummary.cpa)}</p>
+            </div>
+            <div className="rounded-lg border border-primary/40 bg-primary/5 p-3">
+              <p className="text-[10px] uppercase text-muted-foreground">Lucro real (Rev + CPA)</p>
+              <p className="text-lg font-bold text-primary">{formatBRL(metricsSummary.profitBase)}</p>
+              <p className="text-[10px] text-muted-foreground">Base de distribuição</p>
+            </div>
+            <div className="rounded-lg border border-border/60 bg-background/40 p-3">
+              <p className="text-[10px] uppercase text-muted-foreground">Registros</p>
+              <p className="text-lg font-bold">{metricsSummary.registrations}</p>
+            </div>
+          </div>
+
+          {Object.keys(metricsSummary.byPlatform).length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 pt-2 border-t border-border/60">
+              {Object.entries(metricsSummary.byPlatform)
+                .sort(([, a], [, b]) => (b.revenue + b.cpa) - (a.revenue + a.cpa))
+                .map(([pid, p]) => {
+                  const plat = platformMap.get(pid);
+                  return (
+                    <div key={pid} className="flex items-center justify-between rounded-md bg-secondary/30 px-3 py-2">
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium truncate">{plat?.name ?? "Plataforma"}</p>
+                        <p className="text-[10px] text-muted-foreground">FTD {p.ftd} · Dep {formatBRL(p.deposits)}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs font-semibold text-primary">{formatBRL(p.revenue + p.cpa)}</p>
+                        <p className="text-[10px] text-muted-foreground">Rev + CPA</p>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Tracking Revenue Summary - when real tracking data exists */}
       {hasTrackingData && ((consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0 || consolidated.revenueBrl > 0) && (

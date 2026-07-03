@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { usePlatformAccounts, useTrackingLinks } from "@/hooks/useTrackingData";
 import { usePlatforms } from "@/hooks/useSupabaseQuery";
 import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
+import { useTrackingMetricsSummary } from "@/hooks/useTrackingMetricsSummary";
 import { Activity, ArrowRight, CheckCircle2, AlertTriangle, Radio } from "lucide-react";
 
 function fmtCurrency(value: number, currency: string) {
@@ -18,16 +19,22 @@ export default function TrackingOverviewCard() {
   const { data: accounts } = usePlatformAccounts();
   const { data: links } = useTrackingLinks();
   const { consolidated, hasData: hasEvents } = useAutoConsolidation();
+  const { summary: metricsSummary } = useTrackingMetricsSummary("30d");
+
+  // Merge event-based numbers with panel-scraper metrics for a single source of truth.
+  const mergedRevenueBrl = Math.max(consolidated.revenueBrl, metricsSummary.revenue + metricsSummary.cpa);
+  const mergedConversions = Math.max(consolidated.conversionEventCount, metricsSummary.ftd + metricsSummary.registrations);
+  const hasMetrics = metricsSummary.profitBase > 0 || metricsSummary.ftd > 0;
 
   const lastEvent = consolidated.lastEventTimestamp
     ? new Date(consolidated.lastEventTimestamp).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
     : null;
 
   const status = useMemo(() => {
-    if (hasEvents) return "ok";
+    if (hasEvents || hasMetrics) return "ok";
     if (accounts.length > 0 || links.length > 0) return "parcial";
     return "pendente";
-  }, [hasEvents, accounts, links]);
+  }, [hasEvents, hasMetrics, accounts, links]);
 
   const statusConfig = {
     ok: { label: "Operacional", color: "text-emerald-500", bg: "bg-emerald-500/10 border-emerald-500/20", icon: CheckCircle2 },
@@ -65,14 +72,10 @@ export default function TrackingOverviewCard() {
             <p className="text-lg font-bold text-emerald-500">{consolidated.outboundClickCount}</p>
           </div>
           <div>
-            <p className="text-[10px] text-muted-foreground uppercase">Receita</p>
-            {consolidated.revenueOriginalCurrency !== "BRL" && consolidated.revenueOriginal > 0 ? (
-              <>
-                <p className="text-lg font-bold">{fmtCurrency(consolidated.revenueOriginal, consolidated.revenueOriginalCurrency)}</p>
-                <p className="text-[10px] text-muted-foreground">≈ {fmtCurrency(consolidated.revenueBrl, "BRL")}</p>
-              </>
-            ) : (
-              <p className="text-lg font-bold">{fmtCurrency(consolidated.revenueBrl, "BRL")}</p>
+            <p className="text-[10px] text-muted-foreground uppercase">Lucro real (Rev+CPA)</p>
+            <p className="text-lg font-bold text-primary">{fmtCurrency(mergedRevenueBrl, "BRL")}</p>
+            {consolidated.revenueOriginalCurrency !== "BRL" && consolidated.revenueOriginal > 0 && (
+              <p className="text-[10px] text-muted-foreground">≈ {fmtCurrency(consolidated.revenueOriginal, consolidated.revenueOriginalCurrency)}</p>
             )}
           </div>
           <div>
@@ -81,12 +84,16 @@ export default function TrackingOverviewCard() {
           </div>
           <div>
             <p className="text-[10px] text-muted-foreground uppercase">Conversões</p>
-            <p className="text-lg font-bold">{consolidated.conversionEventCount}</p>
+            <p className="text-lg font-bold">{mergedConversions}</p>
           </div>
           <div>
-            <p className="text-[10px] text-muted-foreground uppercase">Última atividade</p>
-            <p className="text-xs font-medium mt-1">{lastEvent || "-"}</p>
+            <p className="text-[10px] text-muted-foreground uppercase">FTD (30d)</p>
+            <p className="text-lg font-bold">{metricsSummary.ftd}</p>
           </div>
+        </div>
+        <div className="mb-3">
+          <p className="text-[10px] text-muted-foreground uppercase">Última atividade</p>
+          <p className="text-xs font-medium mt-1">{lastEvent || (metricsSummary.latestDataRef ?? "-")}</p>
         </div>
 
         {(consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0 && (
