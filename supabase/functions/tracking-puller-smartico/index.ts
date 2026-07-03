@@ -218,7 +218,19 @@ Deno.serve(async (req) => {
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-  if (!apiKey) return new Response(JSON.stringify({ ok: false, error: "SMARTICO_API_KEY/STELLAR_TAP_API_KEY não configurado" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  if (!apiKey) {
+    // Operação sem API key: tracking roda 100% via postback em tempo real.
+    // Retornamos 200 com mode=postback_only para não poluir logs de erro.
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        mode: "postback_only",
+        message: "Sem API key nesta operação. Tracking ativo via postback em tempo real (Estrela Bet + VUPI). Nenhum pull executado.",
+        inserted: 0,
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
+  }
 
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
   let body: { date_from?: string; date_to?: string } = {};
