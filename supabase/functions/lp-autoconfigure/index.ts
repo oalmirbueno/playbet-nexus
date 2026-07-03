@@ -109,14 +109,21 @@ Deno.serve(async (req) => {
       const manualLayout = currentHype.auto === false;
 
       // If the visual editor already saved manual changes, do NOT replace the
-      // registered page/mode/copy. Only keep the source link relation alive.
+      // registered page/copy. Exception: impossible no-game generated pages
+      // must be normalized to LP limpa so they never show stale game sections.
       const updatePayload = manualLayout
         ? {
+            ...(!link.game_slug ? {
+              lp_mode: "platform_direct",
+              game_slugs: [],
+              game_ids: [],
+              layout_config: { ...defaultLayoutConfig("platform_direct"), updated_at: new Date().toISOString() },
+            } : {}),
             hype_copy: {
               ...currentHype,
-              game_slug: currentHype.game_slug || link.game_slug || null,
-              game_name: currentHype.game_name || link.game_name || null,
-              game_icon_url: currentHype.game_icon_url || link.game_icon_url || null,
+              game_slug: link.game_slug ? (currentHype.game_slug || link.game_slug) : null,
+              game_name: link.game_slug ? (currentHype.game_name || link.game_name) : null,
+              game_icon_url: link.game_slug ? (currentHype.game_icon_url || link.game_icon_url) : null,
             },
             source_tracking_link_id: currentInstance?.source_tracking_link_id || trackingLinkId,
             auto_generated: true,
