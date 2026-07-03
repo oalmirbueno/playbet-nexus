@@ -34,6 +34,7 @@ export interface ConsolidatedMetrics {
 type TrackingEventRow = {
   id: string;
   platform_id: string | null;
+  click_id: string | null;
   canonical_event_name: string;
   event_timestamp: string;
   original_amount: number | null;
@@ -57,6 +58,13 @@ function isValidTrackingEvent(event: TrackingEventRow) {
   return !event.is_duplicate
     && !["invalid_legacy", "invalid_internal_preview", "duplicate_technical"].includes(event.status || "")
     && !event.canonical_event_name?.startsWith("{");
+}
+
+function countClickSessions(events: TrackingEventRow[]) {
+  const clickEvents = events.filter((event) => event.canonical_event_name === "click");
+  const withClickId = new Set(clickEvents.map((event) => event.click_id).filter(Boolean));
+  const withoutClickId = clickEvents.filter((event) => !event.click_id).length;
+  return withClickId.size + withoutClickId;
 }
 
 function isWithdrawableTrackingEvent(event: TrackingEventRow) {
@@ -156,8 +164,9 @@ export function useAutoConsolidation() {
     () => (trackingData?.events ?? []).filter(isValidTrackingEvent),
     [trackingData?.events],
   );
-  const lpViewCount = validEvents.filter((event) => event.canonical_event_name === "lp_view").length;
+  const explicitLpViewCount = validEvents.filter((event) => event.canonical_event_name === "lp_view").length;
   const outboundClickCount = validEvents.filter((event) => event.canonical_event_name === "click").length;
+  const lpViewCount = Math.max(explicitLpViewCount, countClickSessions(validEvents));
   const conversionEventCount = validEvents.filter(
     (event) => !["lp_view", "click"].includes(event.canonical_event_name),
   ).length;
