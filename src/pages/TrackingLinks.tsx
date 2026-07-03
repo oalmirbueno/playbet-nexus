@@ -28,6 +28,8 @@ import {
 import { findPresetByName, type PlatformPreset } from "@/config/platformPresets";
 import type { TrackingLinkRow } from "@/services/trackingService";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
+import { syncLinkAssets } from "@/lib/linkAssets";
 import { resolveShareUrl } from "@/lib/trackingUrl";
 import GameArtwork from "@/components/tracking/GameArtwork";
 import { getMetricMoneyParts } from "@/lib/trackingMetrics";
