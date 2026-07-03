@@ -103,7 +103,7 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
   // Volume bruto (depósitos convertidos) — telemetria apenas, NÃO é base de distribuição
   const revenueTracking = useMemo(() => {
     return (metricsQuery.data ?? []).reduce(
-      (acc: number, m: any) => acc + Number(m.converted_amount ?? m.revenue ?? 0),
+      (acc: number, m: any) => acc + Number(m.revshare_commission ?? m.revenue ?? 0) + Number(m.cpa_commission ?? 0),
       0,
     );
   }, [metricsQuery.data]);
@@ -135,7 +135,7 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
       const b = buckets.get(key) ?? { ftd: 0, deposits: 0, revenue: 0 };
       b.ftd += Number((m as any).ftd || 0);
       b.deposits += Number((m as any).depositos_total || 0);
-      b.revenue += Number((m as any).converted_amount ?? (m as any).revenue ?? 0);
+      b.revenue += Number((m as any).revshare_commission ?? (m as any).revenue ?? 0) + Number((m as any).cpa_commission ?? 0);
       buckets.set(key, b);
     }
     return Array.from(buckets.entries()).map(([id, b]) => {
