@@ -324,32 +324,40 @@ async function buildAttribution(
     (links ?? []).forEach((l: any) => byCode.set(l.tracking_code, l));
   }
 
-  // Resolve platforms by brand slug/name.
+  // Match brands to platforms by normalized comparison against BOTH
+  // platform.slug and platform.name — keeps VUPI rows from being written
+  // under Estrela Bet just because a brand slug didn't match by ilike.
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "");
   const brandToPlatformId = new Map<string, string>();
   const brandToAccountId = new Map<string, string>();
+
+  const { data: platforms } = await run.supabase
+    .from("platforms")
+    .select("id, name, slug");
+  const { data: accounts } = await run.supabase
+    .from("platform_accounts")
+    .select("id, platform_id, is_active")
+    .eq("is_demo", false);
+
   for (const b of brands) {
-    const candidates = [b.brand_name, b.brand_slug];
-    for (const c of candidates) {
-      if (!c) continue;
-      const { data: p } = await run.supabase
-        .from("platforms")
-        .select("id, name")
-        .ilike("name", `%${c}%`)
-        .limit(1)
-        .maybeSingle();
-      if (p?.id) {
-        brandToPlatformId.set(b.brand_slug, p.id as string);
-        // Try to resolve a default platform_account for the brand.
-        const { data: acc } = await run.supabase
-          .from("platform_accounts")
-          .select("id")
-          .eq("platform_id", p.id)
-          .limit(1)
-          .maybeSingle();
-        if (acc?.id) brandToAccountId.set(b.brand_slug, acc.id as string);
-        break;
-      }
+    const targets = [b.brand_slug, b.brand_name]
+      .filter(Boolean)
+      .map((x) => norm(String(x)));
+    const platform = (platforms ?? []).find((p: any) => {
+      const candidates = [norm(p.slug ?? ""), norm(p.name ?? "")];
+      return targets.some((t) =>
+        candidates.some((c) => c && (c === t || c.includes(t) || t.includes(c))),
+      );
+    });
+    if (!platform?.id) {
+      log(run, "attribution/no_platform", { brand: b.brand_slug });
+      continue;
     }
+    brandToPlatformId.set(b.brand_slug, platform.id as string);
+    const acc = (accounts ?? [])
+      .filter((a: any) => a.platform_id === platform.id)
+      .sort((a: any, b: any) => (b.is_active ? 1 : 0) - (a.is_active ? 1 : 0))[0];
+    if (acc?.id) brandToAccountId.set(b.brand_slug, acc.id as string);
   }
   return { byCode, brandToPlatformId, brandToAccountId };
 }
@@ -362,18 +370,34 @@ async function persist(
   fallbackDate: string,
 ): Promise<number> {
   let inserted = 0;
+  const brandPlatformId = ctx.brandToPlatformId.get(brand.brand_slug) ?? null;
+  const brandAccountId = ctx.brandToAccountId.get(brand.brand_slug) ?? null;
+
   for (const it of items) {
     const link = it.campaign_name ? ctx.byCode.get(it.campaign_name) : null;
-    const platformAccountId =
-      link?.platform_account_id ?? ctx.brandToAccountId.get(brand.brand_slug) ?? null;
-    const platformId = ctx.brandToPlatformId.get(brand.brand_slug) ?? null;
+    // Brand mapping ALWAYS wins for platform_id — never let a VUPI row end
+    // up under Estrela Bet. Use link.platform_account_id only if it belongs
+    // to the same brand platform.
+    let platformAccountId = brandAccountId;
+    if (link?.platform_account_id) {
+      const linkAcc = (await run.supabase
+        .from("platform_accounts")
+        .select("platform_id")
+        .eq("id", link.platform_account_id)
+        .maybeSingle()).data;
+      if (linkAcc?.platform_id === brandPlatformId) {
+        platformAccountId = link.platform_account_id;
+      }
+    }
 
     const dateRef = normalizePeriod(it.period ?? "", fallbackDate);
     if (!dateRef) continue;
 
     const record: Record<string, any> = {
       data_ref: dateRef,
-      platform_id: platformAccountId ? null : platformId,
+      // Always fill both — dashboards group by platform_id and detail views
+      // pivot on platform_account_id.
+      platform_id: brandPlatformId,
       platform_account_id: platformAccountId,
       influencer_id: link?.influencer_id ?? null,
       campanha_id: link?.campanha_id ?? null,
