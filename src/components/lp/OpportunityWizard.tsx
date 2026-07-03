@@ -36,7 +36,7 @@ interface Props {
 type Mode = OpportunityCategory;
 
 const MODES: Array<{ value: Mode; label: string; icon: any; hint: string }> = [
-  { value: "sports", label: "Sports Odds", icon: Trophy, hint: "Evento, mercado e odd" },
+  { value: "sports", label: "Em destaque", icon: Trophy, hint: "Evento e opção" },
   { value: "casino", label: "Cassino / Jogos", icon: Dices, hint: "Jogo, provedor e tipo" },
   { value: "offer", label: "Oferta", icon: Gift, hint: "Bônus, cashback, cadastro" },
   { value: "guide", label: "Guia", icon: BookOpen, hint: "Conteúdo explicativo" },
@@ -48,7 +48,7 @@ const PRIORITY_OPTS = [
   { v: 20, label: "Destaque" },
 ];
 
-const SPORTS_CTAS = ["Ver odd", "Apostar agora", "Confira na casa"];
+const SPORTS_CTAS = ["Ver opção", "Acessar agora", "Confira na casa"];
 const CASINO_CTAS = ["Jogar agora", "Ver jogo", "Abrir cassino"];
 const OFFER_CTAS = ["Resgatar oferta", "Ativar bônus", "Quero participar"];
 const GUIDE_CTAS = ["Ler guia", "Saiba mais"];
@@ -61,11 +61,11 @@ const MEDIA_TYPES: Array<{ v: string; label: string }> = [
   { v: "screenshot", label: "Screenshot" },
   { v: "banner", label: "Banner" },
   { v: "game_thumb", label: "Thumb do jogo" },
-  { v: "odds_print", label: "Print da odd" },
+  { v: "odds_print", label: "Print da opção" },
 ];
 
 const SOURCE_LABELS = [
-  "Print oficial", "Banner da casa", "Imagem do jogo", "Print da odd", "Mídia própria",
+  "Print oficial", "Banner da casa", "Imagem do jogo", "Print da opção", "Mídia própria",
 ];
 
 // Copy proibida - bloqueia publicação para qualquer campo textual.
@@ -206,7 +206,7 @@ export function OpportunityWizard({
     if (mode === "sports") {
       title = evento || "Aposta sugerida";
       subtitle = [mercado, casa].filter(Boolean).join(" · ");
-      badge = odd ? `Odd ${odd}` : "Em destaque";
+      badge = "Em destaque";
       cta = sportsCta;
     } else if (mode === "casino") {
       title = gameName || "Em destaque";
