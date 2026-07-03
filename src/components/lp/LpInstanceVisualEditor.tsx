@@ -214,7 +214,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         // so already registered LPs keep working even if an older sync missed the FK.
         let { data: tl } = await supabase
           .from("tracking_links")
-          .select("id, influencer_id, campanha_id, tracking_code, click_id_param_name, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, short_url, platform_account_id, platform_accounts(platform_id, platforms(name))")
+          .select("id, influencer_id, campanha_id, tracking_code, click_id_param_name, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, short_url, platform_account_id, platform_accounts(platform_id, platforms(name, slug))")
           .eq("landing_page_instance_id", instanceId)
           .order("created_at", { ascending: false })
           .limit(1)
@@ -222,7 +222,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         if (!tl && (inst as any).source_tracking_link_id) {
           const { data: sourceTl } = await supabase
             .from("tracking_links")
-            .select("id, influencer_id, campanha_id, tracking_code, click_id_param_name, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, short_url, platform_account_id, platform_accounts(platform_id, platforms(name))")
+            .select("id, influencer_id, campanha_id, tracking_code, click_id_param_name, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, short_url, platform_account_id, platform_accounts(platform_id, platforms(name, slug))")
             .eq("id", (inst as any).source_tracking_link_id)
             .maybeSingle();
           tl = sourceTl;
@@ -463,7 +463,11 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
 
   const handleSave = async () => {
     if (!instanceId) return;
-    const effectiveMode: LpMode = previewTab === "generated" && mode === "catalog" ? "single_game" : mode;
+    const requestedMode: LpMode = previewTab === "generated" && mode === "catalog" ? "single_game" : mode;
+    const hasSelectedGame = Boolean(link?.game_slug || gameSlugs[0]);
+    const effectiveMode: LpMode = (requestedMode === "single_game" || requestedMode === "multi_game") && !hasSelectedGame
+      ? "platform_direct"
+      : requestedMode;
     setSaving(true);
     try {
       const selectedGame = availableGames.find((g: any) => g.game_slug === gameSlugs[0]);
@@ -471,10 +475,15 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
       const effectiveGameSlug = noGameMode ? null : (link?.game_slug || gameSlugs[0] || null);
       const effectiveGameName = noGameMode ? null : (link?.game_name || selectedGame?.game_name || null);
       const effectiveGameIconUrl = noGameMode ? null : (link?.game_icon_url || selectedGame?.icon_url || null);
+      const safeGameSlugs = effectiveGameSlug ? [effectiveGameSlug] : [];
       const cleanTitle = copy.title || titleForMode(effectiveMode, effectiveGameName, platformName);
       const cleanSubtitle = copy.subtitle || adaptiveSubtitle(effectiveMode, effectiveGameName, platformName);
       const cleanCta = copy.cta_label || ctaForMode(effectiveMode, link?.link_category, effectiveGameName) || null;
-      const layoutConfig = { mode: effectiveMode, sections, updated_at: new Date().toISOString() };
+      const safeSections = effectiveMode === "platform_direct"
+        ? ensureCommunitySection(defaultLayoutConfig(effectiveMode).sections)
+        : sections;
+      const layoutConfig = { mode: effectiveMode, sections: safeSections, updated_at: new Date().toISOString() };
+      const platformSlug = (link as any)?.platform_accounts?.platforms?.slug || instance?.hype_copy?.platform_slug || null;
       const hype_copy: any = {
         title: cleanTitle || null,
         subtitle: cleanSubtitle || null,
@@ -496,6 +505,8 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         game_name: effectiveGameName,
         game_icon_url: effectiveGameIconUrl,
         category: link?.link_category || null,
+        platform_slug: platformSlug,
+        platform_name: platformName || instance?.hype_copy?.platform_name || null,
         auto: false,
       };
       if (effectiveMode === "odds" && smartOdds.length) hype_copy.smart_odds = smartOdds;
@@ -514,7 +525,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         .from("landing_page_instances")
         .update({
           lp_mode: effectiveMode,
-          game_slugs: noGameMode ? [] : gameSlugs,
+          game_slugs: safeGameSlugs,
           layout_config: layoutConfig,
           hype_copy,
           affiliate_link: instanceAffiliateLink,
@@ -598,7 +609,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
       setInstance((prev: any) => prev ? {
         ...prev,
         lp_mode: effectiveMode,
-        game_slugs: noGameMode ? [] : gameSlugs,
+        game_slugs: safeGameSlugs,
         layout_config: layoutConfig,
         hype_copy,
       } : prev);
