@@ -100,7 +100,7 @@ export default function DistributionCard({ breakdown, socios = [], sourceLabel =
                 min={f.min}
                 max={(f as any).max}
                 value={params[f.k as keyof typeof params] as number}
-                onChange={setField(f.k as keyof typeof DEFAULTS)}
+                onChange={setField(f.k)}
                 className="w-full mt-1 px-2 py-1.5 rounded-md bg-secondary/40 border border-border text-sm font-mono focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
