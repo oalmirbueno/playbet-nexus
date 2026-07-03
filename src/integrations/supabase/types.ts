@@ -1615,6 +1615,99 @@ export type Database = {
         }
         Relationships: []
       }
+      panel_reconciliations: {
+        Row: {
+          brand_name: string | null
+          brand_slug: string
+          created_at: string
+          data_ref: string
+          db_commission: number
+          db_deposits_count: number
+          db_deposits_total: number
+          db_ftds: number
+          db_ngr: number
+          db_registrations: number
+          diff_commission: number | null
+          diff_deposits_count: number | null
+          diff_deposits_total: number | null
+          diff_ftds: number | null
+          diff_ngr: number | null
+          diff_registrations: number | null
+          divergent: boolean
+          id: string
+          notes: Json
+          panel_commission: number
+          panel_deposits_count: number
+          panel_deposits_total: number
+          panel_ftds: number
+          panel_ngr: number
+          panel_registrations: number
+          run_at: string
+          scraper_key: string
+          severity: string
+        }
+        Insert: {
+          brand_name?: string | null
+          brand_slug: string
+          created_at?: string
+          data_ref: string
+          db_commission?: number
+          db_deposits_count?: number
+          db_deposits_total?: number
+          db_ftds?: number
+          db_ngr?: number
+          db_registrations?: number
+          diff_commission?: number | null
+          diff_deposits_count?: number | null
+          diff_deposits_total?: number | null
+          diff_ftds?: number | null
+          diff_ngr?: number | null
+          diff_registrations?: number | null
+          divergent?: boolean
+          id?: string
+          notes?: Json
+          panel_commission?: number
+          panel_deposits_count?: number
+          panel_deposits_total?: number
+          panel_ftds?: number
+          panel_ngr?: number
+          panel_registrations?: number
+          run_at?: string
+          scraper_key?: string
+          severity?: string
+        }
+        Update: {
+          brand_name?: string | null
+          brand_slug?: string
+          created_at?: string
+          data_ref?: string
+          db_commission?: number
+          db_deposits_count?: number
+          db_deposits_total?: number
+          db_ftds?: number
+          db_ngr?: number
+          db_registrations?: number
+          diff_commission?: number | null
+          diff_deposits_count?: number | null
+          diff_deposits_total?: number | null
+          diff_ftds?: number | null
+          diff_ngr?: number | null
+          diff_registrations?: number | null
+          divergent?: boolean
+          id?: string
+          notes?: Json
+          panel_commission?: number
+          panel_deposits_count?: number
+          panel_deposits_total?: number
+          panel_ftds?: number
+          panel_ngr?: number
+          panel_registrations?: number
+          run_at?: string
+          scraper_key?: string
+          severity?: string
+        }
+        Relationships: []
+      }
       panel_scraper_runs: {
         Row: {
           created_at: string
