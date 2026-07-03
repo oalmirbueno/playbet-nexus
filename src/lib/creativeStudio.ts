@@ -377,6 +377,7 @@ export function defaultLayersFor(
     widthPct: vertical ? 28 : 24,
     heightPct: vertical ? 6 : 8,
     radiusPct: 0, opacity: 1, fit: "contain", glow: null,
+    chrome: "platform-logo",
   });
 
   // ── Assinatura PLAYBET (painel) — sempre presente como co-branding no canto superior direito,
@@ -389,8 +390,10 @@ export function defaultLayersFor(
       widthPct: vertical ? 20 : 16,
       heightPct: vertical ? 4 : 5,
       radiusPct: 0, opacity: 0.85, fit: "contain", glow: null,
+      chrome: "playbet-signature",
     });
   }
+
 
 
   if (input.platformName) {
