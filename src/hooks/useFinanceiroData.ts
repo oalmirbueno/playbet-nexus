@@ -314,6 +314,7 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
     rankingInfluencers,
     rankingStreamers,
     rankingGerentes,
+    rankingPlatforms,
     platforms: platforms ?? [],
     platformMap,
     distribution,
