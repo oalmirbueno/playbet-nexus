@@ -537,10 +537,19 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
               <MousePointer2 className="w-3.5 h-3.5" />
               Editor ativo
             </button>
+            <Button
+              onClick={() => { resetToDefaults(); toast.success(`Layout regenerado com ${brandCtx?.brand?.name || "marca atual"}`); }}
+              variant="outline" size="sm" className="h-8 text-xs"
+              title="Sobrescreve o layout atual usando logos, cores e selo da marca resolvida pelo link"
+            >
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+              Regenerar c/ marca
+            </Button>
             <Button onClick={saveLayout} disabled={savingLayout} size="sm" className="h-8 text-xs">
               {savingLayout ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-1.5" />}
               Salvar
             </Button>
+
             {link.shortUrl && (
               <button onClick={copyLink} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-secondary/40">
                 {copied ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
