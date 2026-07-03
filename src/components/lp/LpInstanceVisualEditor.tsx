@@ -1038,6 +1038,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
             {saving ? "Salvando…" : "Salvar LP"}
           </Button>
         </DialogFooter>
+        </BrandScope>
       </DialogContent>
     </Dialog>
   );
