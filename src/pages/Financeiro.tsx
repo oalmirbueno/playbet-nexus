@@ -26,7 +26,7 @@ export default function Financeiro() {
     range, isLoading,
     caixaRealizado, revenueTracking, diff,
     saquesInPeriod, rankingInfluencers, rankingStreamers, rankingGerentes,
-    platforms,
+    platforms, distribution,
   } = useFinanceiroData({ period, platformId: platformId === "all" ? null : platformId });
 
   return (
@@ -94,9 +94,8 @@ export default function Financeiro() {
 
         <TabsContent value="distribuicao" className="mt-6">
           <DistributionCard
-            revenueBrl={caixaRealizado > 0 ? caixaRealizado : revenueTracking}
-            sourceLabel={caixaRealizado > 0 ? "caixa realizado Asaas" : "revenue atribuído tracking"}
-            perPlatform={[]}
+            breakdown={distribution}
+            sourceLabel={`Rev + CPA · ${range.label.toLowerCase()}`}
           />
         </TabsContent>
 
