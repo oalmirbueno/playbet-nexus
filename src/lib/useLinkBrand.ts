@@ -62,20 +62,22 @@ export function useLinkBrand(linkId?: string | null) {
         .maybeSingle();
       if (error) throw error;
 
-      // @ts-expect-error — join shape
-      const plat = data?.platform_accounts?.platforms ?? null;
+      const row = data as unknown as {
+        platform_account_id?: string | null;
+        tracking_code?: string | null;
+        platform_accounts?: { platforms?: { name?: string | null; slug?: string | null } | null } | null;
+      } | null;
+      const plat = row?.platform_accounts?.platforms ?? null;
       const platformName: string | null = plat?.name ?? null;
       const platformSlug: string | null = plat?.slug ?? null;
       // Resolve preferindo slug (mais estável que name livre).
       const brand = resolveBrand(platformSlug) || resolveBrand(platformName);
-      // @ts-expect-error
-      const linkSlug: string | null = data?.tracking_code ?? null;
+      const linkSlug: string | null = row?.tracking_code ?? null;
       return {
         brand,
         platformName,
         platformSlug,
-        // @ts-expect-error
-        platformAccountId: data?.platform_account_id ?? null,
+        platformAccountId: row?.platform_account_id ?? null,
         linkSlug,
         isLegallyReady: isBrandLegallyReady(brand),
         seo: buildSeo(brand, linkSlug),
