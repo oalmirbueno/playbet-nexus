@@ -218,6 +218,7 @@ async function findOpportunityDestination(instanceId: string | null, landingPage
       .maybeSingle();
     if (data?.destination_url) return data.destination_url;
   }
+  if (instanceId) return null;
   if (!landingPageId && !instanceId) return null;
   const query = supabase
     .from("lp_opportunities")
@@ -420,7 +421,10 @@ export default function InfluencerLanding() {
       const fallbackSlug = normalizeSlug(fallback?.game_slug || tl?.game_slug);
       const fallbackName = fallback?.game_name || tl?.game_name || fallbackSlug;
       const fallbackIcon = fallback?.game_icon_url || tl?.game_icon_url || null;
-      const effectiveSlugs = compactUnique([...(slugs || []), fallbackSlug]);
+      const instanceSlugs = compactUnique(slugs || []);
+      const effectiveSlugs = instanceId
+        ? (instanceSlugs.length > 0 ? instanceSlugs : compactUnique([fallbackSlug]))
+        : compactUnique([...(slugs || []), fallbackSlug]);
       const linkIcon: GameArt | null = fallbackSlug
         ? { slug: fallbackSlug, name: fallbackName || fallbackSlug, icon_url: fallbackIcon }
         : null;
@@ -830,6 +834,11 @@ export default function InfluencerLanding() {
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] backdrop-blur border border-emerald-400/20 text-emerald-300 text-[10px] font-semibold uppercase tracking-[0.14em] mb-6">
               <Zap size={11} /> {mode === "odds" ? "Em destaque" : isCatalogMode ? "Oportunidades" : isPlatformDirect ? "Parceria oficial" : "Oferta oficial"}
             </div>
+            {brandCtx?.brand?.seal && (
+              <div className="mb-6 flex justify-center">
+                <BrandFooterSeal brand={brandCtx.brand} variant="horizontal" tone="light" compact />
+              </div>
+            )}
             {heroGame && (
               <div className="relative mx-auto mb-6 w-fit">
                 <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-emerald-500/40 to-cyan-400/20 blur-2xl" />
@@ -901,19 +910,14 @@ export default function InfluencerLanding() {
         </section>
       )}
 
-      {isSectionOn("games") && mode !== "odds" && !isPlatformDirect && (
+      {isSectionOn("games") && mode !== "odds" && !isPlatformDirect && displayGames.length > 0 && (
         <section className="px-6 pb-16">
           <div className="max-w-xl mx-auto">
             <h2 className="text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500 mb-5">
               {mode === "single_game" ? "Jogo selecionado" : mode === "multi_game" ? "Jogos em alta" : "Catálogo"}
             </h2>
             <div className={`grid gap-2.5 ${displayGames.length === 1 ? "grid-cols-1 max-w-[220px] mx-auto" : "grid-cols-3"}`}>
-              {(displayGames.length > 0
-                ? displayGames
-                : ["Fortune Tiger", "Aviator", "Mines", "Sweet Bonanza", "Gates of Olympus", "Spaceman"].map(
-                    (n) => ({ slug: n, name: n, icon_url: null } as GameArt),
-                  )
-              ).map((g) => (
+              {displayGames.map((g) => (
                 <button
                   key={g.slug}
                   onClick={handleCTA}

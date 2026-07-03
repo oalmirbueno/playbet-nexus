@@ -20,7 +20,7 @@ export function detectLpMode({ linkCategory, gameSlug, extraGameSlugs }: LpModeI
   if (gameSlug && extras.length === 0) return "single_game";
   if (extras.length >= 1 && gameSlug) return "multi_game";
   if (extras.length >= 2) return "multi_game";
-  return "catalog";
+  return "platform_direct";
 }
 
 export const LP_MODE_LABELS: Record<LpMode, string> = {
