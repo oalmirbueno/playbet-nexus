@@ -51,28 +51,33 @@ export function useLinkBrand(linkId?: string | null) {
     enabled: !!linkId,
     staleTime: 5 * 60_000,
     queryFn: async () => {
+      // ATENÇÃO: `tracking_links` NÃO tem coluna `slug` — usar `tracking_code`.
+      // Um select em coluna inexistente derruba o join inteiro e faz o brand cair pra null.
       const { data, error } = await supabase
         .from("tracking_links")
         .select(
-          "id, slug, platform_account_id, platform_accounts(platform_id, platforms(name, slug))"
+          "id, tracking_code, platform_account_id, platform_accounts(platform_id, platforms(name, slug))"
         )
         .eq("id", linkId!)
         .maybeSingle();
       if (error) throw error;
 
-      // @ts-expect-error — join shape
-      const plat = data?.platform_accounts?.platforms ?? null;
+      const row = data as unknown as {
+        platform_account_id?: string | null;
+        tracking_code?: string | null;
+        platform_accounts?: { platforms?: { name?: string | null; slug?: string | null } | null } | null;
+      } | null;
+      const plat = row?.platform_accounts?.platforms ?? null;
       const platformName: string | null = plat?.name ?? null;
       const platformSlug: string | null = plat?.slug ?? null;
-      const brand = resolveBrand(platformSlug ?? platformName ?? null);
-      // @ts-expect-error
-      const linkSlug: string | null = data?.slug ?? null;
+      // Resolve preferindo slug (mais estável que name livre).
+      const brand = resolveBrand(platformSlug) || resolveBrand(platformName);
+      const linkSlug: string | null = row?.tracking_code ?? null;
       return {
         brand,
         platformName,
         platformSlug,
-        // @ts-expect-error
-        platformAccountId: data?.platform_account_id ?? null,
+        platformAccountId: row?.platform_account_id ?? null,
         linkSlug,
         isLegallyReady: isBrandLegallyReady(brand),
         seo: buildSeo(brand, linkSlug),
