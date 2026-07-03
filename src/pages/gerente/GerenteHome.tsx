@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { useManagerSync } from "@/hooks/useManagerSync";
 import { Users, Target, TrendingUp, Wallet, Trophy, Link2, Sparkles, ArrowRight } from "lucide-react";
+import { getMetricMoneyParts } from "@/lib/trackingMetrics";
 
 export default function GerenteHome() {
   const { user } = useAuth();
@@ -30,7 +31,7 @@ export default function GerenteHome() {
       let topRows: any[] = [];
       if (ids.length) {
         const [{ data: metrics }, { count: lc }] = await Promise.all([
-          supabase.from("tracking_metrics").select("influencer_id, cliques, ftd, revenue").in("influencer_id", ids).eq("is_demo", false),
+          supabase.from("tracking_metrics").select("influencer_id, cliques, ftd, revenue, cpa_commission, revshare_commission, commission_total, origem_importacao").in("influencer_id", ids).eq("is_demo", false),
           supabase.from("tracking_links").select("id", { count: "exact", head: true }).in("influencer_id", ids).eq("is_demo", false),
         ]);
         linksCount = lc ?? 0;
@@ -38,8 +39,9 @@ export default function GerenteHome() {
         for (const inf of infs!) byInf[inf.id] = { ...inf, revenue: 0, ftd: 0, clicks: 0 };
         for (const mt of metrics ?? []) {
           const r = byInf[mt.influencer_id]; if (!r) continue;
-          agg.clicks += mt.cliques ?? 0; agg.ftd += mt.ftd ?? 0; agg.revenue += Number(mt.revenue ?? 0);
-          r.clicks += mt.cliques ?? 0; r.ftd += mt.ftd ?? 0; r.revenue += Number(mt.revenue ?? 0);
+          const realProfit = getMetricMoneyParts(mt).total;
+          agg.clicks += mt.cliques ?? 0; agg.ftd += mt.ftd ?? 0; agg.revenue += realProfit;
+          r.clicks += mt.cliques ?? 0; r.ftd += mt.ftd ?? 0; r.revenue += realProfit;
         }
         topRows = Object.values(byInf).sort((a: any, b: any) => b.revenue - a.revenue).slice(0, 5);
       }
@@ -53,7 +55,7 @@ export default function GerenteHome() {
     { label: "Influenciadores", value: `${kpi.activeInfluencers}/${kpi.influencers}`, icon: Users },
     { label: "Cliques totais", value: kpi.clicks.toLocaleString("pt-BR"), icon: Target },
     { label: "FTDs", value: kpi.ftd.toLocaleString("pt-BR"), icon: TrendingUp },
-    { label: "Receita do squad", value: kpi.revenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }), icon: Wallet },
+    { label: "Lucro real do squad", value: kpi.revenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 2 }), icon: Wallet },
   ];
 
   return (
@@ -111,7 +113,7 @@ export default function GerenteHome() {
                     <p className="text-[11px] text-muted-foreground truncate">{r.instagram ?? `@${r.slug}`}</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-[13px] font-semibold tabular-nums text-primary">{Number(r.revenue).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })}</p>
+                    <p className="text-[13px] font-semibold tabular-nums text-primary">{Number(r.revenue).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 2 })}</p>
                     <p className="text-[10px] text-muted-foreground tabular-nums">{r.ftd} FTDs · {r.clicks.toLocaleString("pt-BR")} cliques</p>
                   </div>
                 </li>
