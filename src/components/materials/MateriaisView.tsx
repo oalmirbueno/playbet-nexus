@@ -36,9 +36,11 @@ interface Props {
   title?: string;
   /** Whether to show the influencer column. */
   showInfluencer?: boolean;
+  /** When true, editor opens in view-only mode (portal/gerente). */
+  readOnly?: boolean;
 }
 
-export function MateriaisView({ influencerId, managerId, title = "Materiais", showInfluencer = false }: Props) {
+export function MateriaisView({ influencerId, managerId, title = "Materiais", showInfluencer = false, readOnly = false }: Props) {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
