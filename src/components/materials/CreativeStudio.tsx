@@ -523,6 +523,34 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     } catch (e) { toast.error("Falha ao baixar logo", { description: (e as Error).message }); }
   };
 
+  const downloadPlatformLogo = async () => {
+    const brand = brandCtx?.brand;
+    const src = brand?.logos.wordmark || brand?.logos.lockup || brand?.logos.mark;
+    if (!src) { toast.error("Logo da plataforma indisponível"); return; }
+    try {
+      await downloadRawAsset(src, `${slugify(brand?.name || link.platformName || "plataforma")}-logo`);
+      toast.success(`Logo ${brand?.name || "plataforma"} baixada`);
+    } catch (e) { toast.error("Falha ao baixar logo", { description: (e as Error).message }); }
+  };
+
+  const downloadPlatformSeal = async () => {
+    const brand = brandCtx?.brand;
+    const src = brand?.seal?.horizontal.light || brand?.seal?.horizontal.dark;
+    if (!src) { toast.error("Selo da plataforma indisponível"); return; }
+    try {
+      await downloadRawAsset(src, `${slugify(brand?.name || link.platformName || "plataforma")}-selo-oficial`);
+      toast.success(`Selo ${brand?.name || "plataforma"} baixado`);
+    } catch (e) { toast.error("Falha ao baixar selo", { description: (e as Error).message }); }
+  };
+
+  const downloadBrandKit = async () => {
+    await downloadPlaybetLogo().catch(() => {});
+    await new Promise(r => setTimeout(r, 150));
+    await downloadPlatformLogo().catch(() => {});
+    await new Promise(r => setTimeout(r, 150));
+    await downloadPlatformSeal().catch(() => {});
+  };
+
   const copyLink = async () => {
     if (!link?.shortUrl) return;
     try {
