@@ -5,6 +5,8 @@ import { ArrowRight, Zap, Gift, Users, Copy } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { useLinkBrand, useBrandByPlatform } from "@/lib/useLinkBrand";
 import { BrandFooterSeal } from "@/components/brand/BrandFooterSeal";
+import { resolveEffectiveLpMode } from "@/lib/lpMode";
+
 
 
 type LoadState = "loading" | "ready" | "not_found" | "inactive" | "no_domain";
