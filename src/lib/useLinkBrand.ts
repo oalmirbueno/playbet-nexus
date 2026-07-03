@@ -51,10 +51,12 @@ export function useLinkBrand(linkId?: string | null) {
     enabled: !!linkId,
     staleTime: 5 * 60_000,
     queryFn: async () => {
+      // ATENÇÃO: `tracking_links` NÃO tem coluna `slug` — usar `tracking_code`.
+      // Um select em coluna inexistente derruba o join inteiro e faz o brand cair pra null.
       const { data, error } = await supabase
         .from("tracking_links")
         .select(
-          "id, slug, platform_account_id, platform_accounts(platform_id, platforms(name, slug))"
+          "id, tracking_code, platform_account_id, platform_accounts(platform_id, platforms(name, slug))"
         )
         .eq("id", linkId!)
         .maybeSingle();
@@ -64,9 +66,10 @@ export function useLinkBrand(linkId?: string | null) {
       const plat = data?.platform_accounts?.platforms ?? null;
       const platformName: string | null = plat?.name ?? null;
       const platformSlug: string | null = plat?.slug ?? null;
-      const brand = resolveBrand(platformSlug ?? platformName ?? null);
+      // Resolve preferindo slug (mais estável que name livre).
+      const brand = resolveBrand(platformSlug) || resolveBrand(platformName);
       // @ts-expect-error
-      const linkSlug: string | null = data?.slug ?? null;
+      const linkSlug: string | null = data?.tracking_code ?? null;
       return {
         brand,
         platformName,
