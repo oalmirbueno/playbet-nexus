@@ -41,7 +41,15 @@ export default function TrackingEvents() {
     date_to: dateTo || undefined,
   }), [platformFilter, eventFilter, sourceFilter, dateFrom, dateTo]);
 
+  const statsFilters = useMemo(() => ({
+    platform_id: platformFilter !== "all" ? platformFilter : undefined,
+    source_type: sourceFilter !== "all" ? sourceFilter : undefined,
+    date_from: dateFrom || undefined,
+    date_to: dateTo || undefined,
+  }), [platformFilter, sourceFilter, dateFrom, dateTo]);
+
   const { data: events, isLoading } = useTrackingEvents(filters);
+  const { data: statsEvents } = useTrackingEvents(statsFilters);
   const { data: platforms } = usePlatforms();
   const { data: accounts } = usePlatformAccounts();
 
@@ -56,6 +64,16 @@ export default function TrackingEvents() {
     );
   }, [events, searchText]);
 
+  const statsBaseEvents = useMemo(() => {
+    if (!searchText) return statsEvents;
+    const q = searchText.toLowerCase();
+    return statsEvents.filter(e =>
+      (e.transaction_id || "").toLowerCase().includes(q) ||
+      (e.click_id || "").toLowerCase().includes(q) ||
+      (e.platform_user_id || "").toLowerCase().includes(q)
+    );
+  }, [statsEvents, searchText]);
+
   const getPlatformName = (id: string | null) => {
     if (!id) return "-";
     return (platforms as any[]).find((p: any) => p.id === id)?.name || id.slice(0, 8);
@@ -67,27 +85,27 @@ export default function TrackingEvents() {
   };
 
   const stats = useMemo(() => {
-    const visits = filteredEvents.filter(e => e.canonical_event_name === "lp_view");
-    const outboundClicks = filteredEvents.filter(e => e.canonical_event_name === "click");
-    const conversions = filteredEvents.filter(e =>
+    const visits = statsBaseEvents.filter(e => e.canonical_event_name === "lp_view");
+    const outboundClicks = statsBaseEvents.filter(e => e.canonical_event_name === "click");
+    const conversions = statsBaseEvents.filter(e =>
       !["lp_view", "click"].includes(e.canonical_event_name)
     );
     const uniqueVisitors = new Set(visits.map(e => e.click_id).filter(Boolean)).size;
     const uniqueClickIds = new Set(outboundClicks.map(e => e.click_id).filter(Boolean)).size;
     const ctr = visits.length > 0 ? (outboundClicks.length / visits.length) * 100 : 0;
     return {
-      total: filteredEvents.length,
+      total: statsBaseEvents.length,
       visits: visits.length,
       uniqueVisitors,
       outboundClicks: outboundClicks.length,
       uniqueClickIds,
       ctr,
       conversions: conversions.length,
-      duplicates: filteredEvents.filter(e => e.is_duplicate).length,
-      noClickId: filteredEvents.filter(e => !e.click_id && !["click", "lp_view"].includes(e.canonical_event_name)).length,
-      totalAmount: filteredEvents.reduce((s, e) => s + (e.amount || 0), 0),
+      duplicates: statsBaseEvents.filter(e => e.is_duplicate).length,
+      noClickId: statsBaseEvents.filter(e => !e.click_id && !["click", "lp_view"].includes(e.canonical_event_name)).length,
+      totalAmount: statsBaseEvents.reduce((s, e) => s + (e.amount || 0), 0),
     };
-  }, [filteredEvents]);
+  }, [statsBaseEvents]);
 
   const clearFilters = () => {
     setPlatformFilter("all"); setEventFilter("all");
