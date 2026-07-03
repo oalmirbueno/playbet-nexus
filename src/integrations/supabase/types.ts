@@ -1758,6 +1758,7 @@ export type Database = {
       platform_accounts: {
         Row: {
           account_external_id: string | null
+          cpa_baseline_deposit: number | null
           cpa_value: number | null
           created_at: string | null
           dashboard_url: string | null
@@ -1780,6 +1781,7 @@ export type Database = {
         }
         Insert: {
           account_external_id?: string | null
+          cpa_baseline_deposit?: number | null
           cpa_value?: number | null
           created_at?: string | null
           dashboard_url?: string | null
@@ -1802,6 +1804,7 @@ export type Database = {
         }
         Update: {
           account_external_id?: string | null
+          cpa_baseline_deposit?: number | null
           cpa_value?: number | null
           created_at?: string | null
           dashboard_url?: string | null
