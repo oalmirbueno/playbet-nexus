@@ -212,6 +212,7 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId, readOnl
 
   /* ────────── save actions ────────── */
   const saveLpCopy = async () => {
+    if (readOnly) { toast.info("Somente leitura", { description: "Peça ao admin para editar a copy da LP." }); return; }
     if (!instance) { toast.info("Este link não tem LP vinculada"); return; }
     setSaving(true);
     try {
