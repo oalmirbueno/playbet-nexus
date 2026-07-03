@@ -352,18 +352,34 @@ export function defaultLayersFor(
   const landscape = size.w > size.h * 1.3;
   const headline = (input.gameName || "Novo jogo em alta");
   const layers: Layer[] = [];
-  const brandLogo = opts.brand?.logoSrc || PLAYBET_LOGO_SRC;
+  const platformLogo = opts.brand?.logoSrc || null;
   const badgeBg = opts.brand?.badgeBg || "#1E5FD9";
   const sealSrc = opts.brand?.sealSrc;
 
+  // ── Logo da PLATAFORMA (casa) — principal, canto superior esquerdo.
   layers.push({
-    kind: "image", id: crypto.randomUUID(), src: brandLogo,
-    label: opts.brand?.logoSrc ? `Logo ${input.platformName || "plataforma"}` : "Logo Playbet",
+    kind: "image", id: crypto.randomUUID(),
+    src: platformLogo || PLAYBET_LOGO_SRC,
+    label: platformLogo ? `Logo ${input.platformName || "plataforma"}` : "Logo Playbet",
     xPct: 6, yPct: vertical ? 4 : 6,
     widthPct: vertical ? 28 : 24,
     heightPct: vertical ? 6 : 8,
     radiusPct: 0, opacity: 1, fit: "contain", glow: null,
   });
+
+  // ── Assinatura PLAYBET (painel) — sempre presente como co-branding no canto superior direito,
+  //    só some quando a marca ativa já é PlayBet (evita duplicar).
+  if (platformLogo) {
+    layers.push({
+      kind: "image", id: crypto.randomUUID(),
+      src: PLAYBET_LOGO_SRC, label: "Assinatura PlayBet",
+      xPct: vertical ? 74 : 78, yPct: vertical ? 4 : 6,
+      widthPct: vertical ? 20 : 16,
+      heightPct: vertical ? 4 : 5,
+      radiusPct: 0, opacity: 0.85, fit: "contain", glow: null,
+    });
+  }
+
 
   if (input.platformName) {
     layers.push({

@@ -48,6 +48,8 @@ import Permissoes from "./pages/Permissoes";
 import Integracoes from "./pages/Integracoes";
 import DeveloperSettings from "./pages/DeveloperSettings";
 import TrackingDashboard from "./pages/TrackingDashboard";
+import BrandShowcase, { BrandIndex } from "./pages/BrandShowcase";
+
 import TrackingAccounts from "./pages/TrackingAccounts";
 import TrackingMetricsForm from "./pages/TrackingMetricsForm";
 import TrackingMappings from "./pages/TrackingMappings";
@@ -136,7 +138,10 @@ function AdminRoutes() {
         <Route path="/comercial" element={<ComercialPipeline />} />
         <Route path="/comercial/squads" element={<ComercialSquads />} />
         <Route path="/comercial/qualificacao" element={<ComercialQualificacao />} />
+        <Route path="/marcas" element={<BrandIndex />} />
+        <Route path="/marca/:brand" element={<BrandShowcase />} />
         <Route path="*" element={<NotFound />} />
+
       </Routes>
     </DashboardLayout>
   );
