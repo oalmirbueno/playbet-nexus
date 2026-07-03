@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { MousePointerClick, UserPlus, DollarSign, Gamepad2, Monitor, Users, Link2, FileText, ArrowRight, CheckCircle, Database, Trash2, Loader2 } from "lucide-react";
+import { MousePointerClick, UserPlus, DollarSign, Gamepad2, Monitor, Users, Link2, FileText, ArrowRight, CheckCircle, Database, Trash2, Loader2, TrendingUp, Wallet, Target, RefreshCw } from "lucide-react";
 import TrackingOverviewCard from "@/components/TrackingOverviewCard";
 import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
+import { useTrackingMetricsSummary } from "@/hooks/useTrackingMetricsSummary";
 import { useInfluencers, useGames, usePlatforms, useLandingPages, useTemplates, useUtms, useCampanhas, useSocios, useSaques, useConteudo } from "@/hooks/useSupabaseQuery";
 import { useQueryClient } from "@tanstack/react-query";
 import { seedDemoData, clearDemoData } from "@/services/seedDemoData";
