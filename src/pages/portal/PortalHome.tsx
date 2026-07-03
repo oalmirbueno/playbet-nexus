@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { MousePointerClick, UserPlus, Wallet, TrendingUp, Percent, Users, ArrowUpRight, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
+import { getMetricMoneyParts } from "@/lib/trackingMetrics";
 
 interface DayRow { data_ref: string; cliques: number; registros: number; ftd: number; revenue: number }
 
@@ -28,7 +29,7 @@ export default function PortalHome() {
 
       const [{ data: iRow }, { data: metrics }, { count: lc }] = await Promise.all([
         supabase.from("influencers").select("*, managers(name, team_name)").eq("id", infId).maybeSingle(),
-        supabase.from("tracking_metrics").select("data_ref, cliques, registros, ftd, revenue")
+        supabase.from("tracking_metrics").select("data_ref, cliques, registros, ftd, revenue, cpa_commission, revshare_commission, commission_total, origem_importacao")
           .eq("influencer_id", infId).eq("is_demo", false)
           .order("data_ref", { ascending: false }).limit(60),
         supabase.from("tracking_links").select("id", { count: "exact", head: true })
@@ -42,7 +43,7 @@ export default function PortalHome() {
         cliques: r.cliques ?? 0,
         registros: r.registros ?? 0,
         ftd: r.ftd ?? 0,
-        revenue: Number(r.revenue ?? 0),
+        revenue: getMetricMoneyParts(r).total,
       })));
       setLinkCount(lc ?? 0);
       setLoading(false);
@@ -78,7 +79,7 @@ export default function PortalHome() {
     { label: "Cliques", value: totals.clicks.toLocaleString("pt-BR"), icon: MousePointerClick },
     { label: "Cadastros", value: totals.regs.toLocaleString("pt-BR"), icon: UserPlus, sub: `${convReg.toFixed(1)}% conv.` },
     { label: "FTDs", value: totals.ftd.toLocaleString("pt-BR"), icon: TrendingUp, sub: `${convFtd.toFixed(1)}% conv.` },
-    { label: "Receita gerada", value: totals.revenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }), icon: Wallet },
+    { label: "Lucro real", value: totals.revenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 2 }), icon: Wallet },
   ];
 
   return (
@@ -90,7 +91,7 @@ export default function PortalHome() {
           <div>
             <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Olá{name ? `, ${name.split(" ")[0]}` : ""}</p>
             <h1 className="text-2xl md:text-3xl font-semibold tracking-tight mt-1">Seu painel de performance</h1>
-            <p className="text-sm text-muted-foreground mt-1 max-w-lg">Acompanhe cliques, cadastros, FTDs e receita atribuída aos seus links. Dados sincronizados em tempo real.</p>
+            <p className="text-sm text-muted-foreground mt-1 max-w-lg">Acompanhe cliques, cadastros, FTDs e lucro real atribuído aos seus links. Dados sincronizados em tempo real.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Link to="/portal/links" className="btn-primary text-[12px] px-3 py-2 inline-flex items-center gap-1.5">
@@ -124,8 +125,8 @@ export default function PortalHome() {
         <div className="md:col-span-2 glass-card p-5">
           <div className="flex items-baseline justify-between mb-3">
             <div>
-              <h3 className="section-title">Receita — últimos 14 dias</h3>
-              <p className="text-[11px] text-muted-foreground">Convertido em BRL</p>
+              <h3 className="section-title">Lucro real — últimos 14 dias</h3>
+              <p className="text-[11px] text-muted-foreground">RevShare + CPA em BRL</p>
             </div>
             <span className="text-[11px] text-muted-foreground">Máx {maxV.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })}</span>
           </div>
