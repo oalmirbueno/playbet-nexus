@@ -10,6 +10,7 @@ import {
 import { useTrackingMetrics, usePlatformAccounts, useTrackingEvents } from "@/hooks/useTrackingData";
 import { useInfluencers, useCampanhas, usePlatforms } from "@/hooks/useSupabaseQuery";
 import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip as ReTooltip,
