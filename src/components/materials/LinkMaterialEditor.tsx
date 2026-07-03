@@ -454,15 +454,15 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId, readOnl
 
                   <div className="space-y-2">
                     <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Headline</Label>
-                    <Input value={mHeadline} onChange={e => setMHeadline(e.target.value)} className="h-9 text-sm" />
+                    <Input value={mHeadline} onChange={e => setMHeadline(e.target.value)} disabled={readOnly} className="h-9 text-sm" />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">CTA</Label>
-                    <Input value={mCta} onChange={e => setMCta(e.target.value)} className="h-9 text-sm" />
+                    <Input value={mCta} onChange={e => setMCta(e.target.value)} disabled={readOnly} className="h-9 text-sm" />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Assinatura</Label>
-                    <Input value={mHandle} onChange={e => setMHandle(e.target.value)} className="h-9 text-sm" placeholder="@seuperfil" />
+                    <Input value={mHandle} onChange={e => setMHandle(e.target.value)} disabled={readOnly} className="h-9 text-sm" placeholder="@seuperfil" />
                   </div>
 
                   <div className="pt-3 border-t border-border/60 space-y-2">
