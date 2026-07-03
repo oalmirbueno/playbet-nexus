@@ -464,10 +464,15 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
           hideAutoText: true, hideAutoArt: true,
           layers: useLayers,
         });
-        downloadCreative(r, `playbet-${slugify(link.gameName || "criativo")}-${f}`);
+        downloadCreative(r, buildMaterialFilename({
+          brandKey: brandCtx?.brand?.key ?? link.platformName ?? "playbet",
+          tipo: `${f}-${style}`,
+          linkSlug: brandCtx?.linkSlug || link.gameName || link.id,
+        }));
         await new Promise(res => setTimeout(res, 120));
       }
       toast.success(which === "all" ? "Kit exportado" : "Criativo baixado");
+
     } catch (e) {
       toast.error("Erro ao exportar", { description: (e as Error).message });
     } finally { setRendering(false); }
