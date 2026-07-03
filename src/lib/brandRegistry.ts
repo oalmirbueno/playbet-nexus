@@ -129,8 +129,21 @@ const REGISTRY: Record<BrandKey, BrandKit> = {
     key: "vupi",
     name: "VUPI",
     slugAliases: ["vupi", "vupibet", "vupi-bet"],
-    logos: { mark: "" }, // aguardando upload da logo VUPI
-    seal: null,          // aguardando selo + nº autorização VUPI
+    logos: {
+      mark: vupiMarkViolet.url,          // "v" símbolo primário (violet)
+      wordmark: vupiWordDark.url,        // wordmark "vupi" em midnight
+      lockup: vupiWordDark.url,
+      lockupAlt: vupiWordWhite.url,      // wordmark em branco p/ fundos escuros
+    },
+    seal: {
+      // VUPI enviou apenas variante horizontal (light on light). Reutilizamos
+      // como base para ambos os fundos até receber as demais variantes.
+      horizontal: { light: vupiSeloH.url, dark: vupiSeloH.url },
+      vertical:   { light: vupiSeloH.url, dark: vupiSeloH.url },
+      license: "SPA/MF nº 1.762/2025",
+      alt: "18+ Jogue com responsabilidade. Autorização SPA/MF nº 1.762/2025",
+    },
+
     palette: {
       primary: "#5A00C2",
       primaryContrast: "#FFFFFF",
