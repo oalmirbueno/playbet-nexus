@@ -359,6 +359,7 @@ async function persist(
   brand: Brand,
   items: PerfItem[],
   ctx: AttributionCtx,
+  fallbackDate: string,
 ): Promise<number> {
   let inserted = 0;
   for (const it of items) {
@@ -367,7 +368,7 @@ async function persist(
       link?.platform_account_id ?? ctx.brandToAccountId.get(brand.brand_slug) ?? null;
     const platformId = ctx.brandToPlatformId.get(brand.brand_slug) ?? null;
 
-    const dateRef = (it.period || "").slice(0, 10);
+    const dateRef = normalizePeriod(it.period ?? "", fallbackDate);
     if (!dateRef) continue;
 
     const record: Record<string, any> = {
@@ -388,8 +389,9 @@ async function persist(
       original_currency: "BRL",
       origem_importacao: "panel_scraper_stellar",
       is_demo: false,
-      external_ref: `${brand.brand_slug}:${dateRef}:${it.campaign_name ?? "_"}`,
+      external_ref: `${brand.brand_slug}:${dateRef}:${it.campaign_name || "_aggregate"}`,
     };
+
     const { error } = await run.supabase
       .from("tracking_metrics")
       .upsert(record, { onConflict: "external_ref" });
