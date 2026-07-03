@@ -14,6 +14,7 @@ import {
   type ApplyReferenceCtx,
 } from "@/lib/creativeReferences";
 import type { Layer, CreativeFormat } from "@/lib/creativeStudio";
+import { CrestSearchPopover } from "@/components/materials/CrestSearchPopover";
 
 const CATS: { id: ReferenceCategory | "all"; label: string }[] = [
   { id: "all", label: "Todos" },
@@ -32,12 +33,18 @@ const ROLE_LABEL: Record<string, string> = {
   "team-crest-away": "Brasão visitante",
   "league-badge": "Logo da liga",
   "odd-value": "Valor da odd",
+  "odd-label": "Rótulo da odd",
+  "vs-divider": "Divisor central (VS)",
+  "match-info": "Info do jogo (data · local)",
   "headline": "Manchete",
   "subhead": "Subtítulo",
   "cta": "Call to action",
 };
 
 const IMAGE_ROLES = new Set(["hero-art", "game-logo", "team-crest-home", "team-crest-away", "league-badge"]);
+const CREST_ROLES = new Set(["team-crest-home", "team-crest-away"]);
+const LEAGUE_ROLES = new Set(["league-badge"]);
+
 
 interface Props {
   format: CreativeFormat;
