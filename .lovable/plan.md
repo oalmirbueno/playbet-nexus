@@ -1,98 +1,80 @@
-
 ## Objetivo
+Cada link de rastreio (influenciador / gerente / sócia / casa / jogo) puxa **automaticamente** a plataforma correta (PlayBet / Estrela Bet / VUPI…), aplicando **logo, paleta, tipografia, background, selo legal, licença e SEO** — sem misturar marcas — e o download do material sai fiel ao que foi montado (sem quebrar, torto ou dessincronizado).
 
-Ao gerar um tracking link, o sistema decide/oferece uma LP de Oportunidade correspondente, monta o preview automaticamente com o conteúdo certo (1 jogo, N jogos, odds, ou catálogo geral) e dispara os materiais criativos vinculados àquele link — tudo sincronizado, editável e sem digitação manual.
+---
 
-## Como o fluxo fica
+## 1. Resolver brand pelo link (fonte única da verdade)
 
-```text
-Criar link ──► detecta contexto (jogo/odds/catálogo)
-     │
-     ├─► LP: [usar existente] ou [criar nova instância]
-     │        └─► preview auto-montado no modo certo:
-     │             • single-game    (1 jogo → hero + CTA direto)
-     │             • multi-game     (3/5/10 jogos → grade)
-     │             • odds           (partidas/mercados)
-     │             • catálogo geral (todos os jogos da casa)
-     │        └─► editor: reordenar, ocultar, editar copy inline
-     │        └─► salva → reflete na LP pública
-     │
-     └─► Materiais: gera automático conforme regra da plataforma
-              (admin escolhe formatos × estilos por casa)
+Criar `src/lib/useLinkBrand.ts`:
+- Recebe `tracking_link_id` ou `platform_account_id`.
+- Faz join `tracking_links → platform_accounts → platforms` e chama `resolveBrand(platform)` do `brandRegistry`.
+- Retorna `{ brand, palette, typography, logos, seal, backgrounds, seo, isLegallyReady }`.
+- Cache com React Query (`['link-brand', linkId]`).
+
+Guard central `assertBrandReady(brand)` — bloqueia geração/publicação se `isLegallyReady === false` (sem selo/licença → erro claro, sem multa).
+
+## 2. Plugar no fluxo de Materiais
+
+`src/components/materials/CreativeStudio.tsx` e `LinkMaterialEditor.tsx`:
+- Ao selecionar/abrir um link, chamar `useLinkBrand(linkId)`.
+- Injetar automaticamente no canvas:
+  - Logo da plataforma (variante conforme fundo — dark/light/violet/midnight)
+  - Background da plataforma (ou combinar com AceleriQ quando pedido)
+  - Selo 18+ + nº de autorização SPA/MF **fixo no rodapé**
+  - Fonte display/body corretas via `brandFonts.ts`
+- Trocar de link ⇒ trocar toda a identidade (nunca misturar).
+- Componente `<BrandLockBadge/>` no header do editor mostrando "Marca travada: VUPI · SPA/MF 1.762/2025".
+
+## 3. Plugar em LP Instances / Oportunidades
+
+`src/pages/LPInstances.tsx`, `LpOpportunities.tsx`, `OpportunityWizard.tsx`, `InfluencerLanding.tsx`:
+- Resolver brand pelo `tracking_link_id` da rota (`/lp/:slug` ou `?ref=`).
+- Aplicar tokens da paleta via CSS vars no root da LP (`--brand-primary`, `--brand-ink`, `--brand-surface`).
+- Rodapé obrigatório com selo + licença da plataforma correta.
+- `<title>` + `<meta description>` + `og:*` gerados a partir de `brand.seo` (nome, tagline, licença).
+- Bloqueio de render se `!isLegallyReady`.
+
+## 4. Fix do download de materiais (quebrando/torto)
+
+Diagnóstico provável: `html2canvas` capturando antes de fontes/imagens carregarem, ou `devicePixelRatio` errado, ou CSS transform no wrapper.
+
+Ações em `CreativeStudio` (export):
+- Aguardar `document.fonts.ready` + `Promise.all(imgs.map(decode))` antes de capturar.
+- Trocar `html2canvas` por **`html-to-image`** (`toPng`) — mais estável com CSS moderno, com `pixelRatio: 2`, `cacheBust: true`, `skipFonts: false`.
+- Renderizar num **stage offscreen fixo** (ex.: 1080×1350 IG, 1080×1920 story, 1200×628 OG) com `transform: none` — não capturar direto do preview escalado.
+- Nome do arquivo: `{brand}_{tipo}_{link-slug}_{data}.png` para não confundir.
+- Fallback SVG→PNG server-side (edge function `render-material`) para 100% fidelidade quando o usuário pedir "alta qualidade".
+
+## 5. Rotas organizadas
+
+```
+/marca/:brand                 → showcase da marca (kit visual, selos, licença)
+/links/:linkId/material       → Creative Studio travado no brand do link
+/links/:linkId/lp             → LP editor travado no brand do link
+/lp/:slug                     → LP pública renderizada com brand correta
 ```
 
-## Entregas
+Sidebar agrupada por: **Marcas · Links · Materiais · LPs · Downloads**.
 
-### 1. Modo inteligente de LP (auto-detecção)
+## 6. Biblioteca de referências (odds/slots/cassino)
 
-Ao gerar o link, o backend classifica o `lp_mode` a partir do `link_category`, `game_slug` e quantidade de jogos escolhidos:
+`src/lib/creativeReferences.ts` — curadoria de layouts de referência (odds cards, slot showcases, jackpot banners) categorizados por tipo + brand. Usado como preset no Creative Studio (`"Aplicar layout: Odds destaque"`), sempre respeitando os tokens da brand travada.
 
-- **`single_game`** — 1 jogo selecionado → hero grande com a arte, CTA "Jogar agora" com deep link do jogo.
-- **`multi_game`** — 3, 5 ou 10 jogos → grade com artes reais e CTA individual por card.
-- **`odds`** — categoria `sports`/`odds` → cartelas de partidas/mercados.
-- **`catalog`** — sem jogo específico → todas as opções ativas da casa.
-
-Nunca mistura modos. A troca de modo é explícita no editor (dropdown).
-
-### 2. Passo "LP" dentro do QuickLinkDialog
-
-Novo bloco entre "Contexto" e "SUBID":
-
-- Opção **Usar LP existente** (select das instâncias ativas do influencer) **ou** **Criar nova instância**.
-- Ao criar: instancia derivada da LP base da plataforma, com `lp_mode`, `game_ids[]` e `hype_copy` já preenchidos.
-- Botão "Abrir preview" leva ao editor sem sair do fluxo.
-
-### 3. Editor visual da LP de Oportunidades
-
-Página nova `/admin/lps/oportunidades/:instanceId/editor`:
-
-- Preview 1:1 do que sai em produção (iframe da rota real).
-- Painel lateral: reordenar/ocultar seções (hero, grade de jogos, odds, prova social, footer), editar título/subtítulo/motivo do hype inline.
-- Botão "Trocar modo" (single/multi/odds/catalog) recarrega o preview.
-- Salvar → grava em `landing_page_instances.layout_config` (JSONB) e propaga para a LP pública.
-
-### 4. Materiais configuráveis por plataforma
-
-- Nova aba em `PlataformasPage`: **Regras de materiais** (matriz formato × estilo, toggle on/off por casa).
-- Ao criar o link, edge function `materials-autogenerate` lê a matriz da plataforma e enfileira os jobs. Cada material fica vinculado ao `tracking_link_id` (não só ao influencer).
-- Materiais aparecem em `/materiais` filtráveis por link.
+---
 
 ## Detalhes técnicos
 
-### Migrations
-- `landing_page_instances`: adicionar `lp_mode text`, `game_ids uuid[]`, `layout_config jsonb`, `source_tracking_link_id uuid`, `hype_copy jsonb`.
-- `tracking_links`: já tem `landing_page_instance_id`. Adicionar `lp_auto_generated boolean`.
-- Nova tabela `platform_material_rules(platform_id, format, style, enabled)` com GRANTs + RLS (admin CRUD, todos leem).
-- Nova tabela `link_materials(id, tracking_link_id, format, style, image_url, status, meta)` com GRANTs + RLS (influencer/gerente do link leem; admin CRUD).
+- **Sem quebrar nada existente**: `brandRegistry` já existe; esta fase só adiciona `useLinkBrand` + guards + refatora os 6 componentes citados para consumir o hook.
+- **DB**: nenhum schema novo. Reusa `tracking_links.platform_account_id` já existente.
+- **Migrações**: nenhuma.
+- **Edge functions**: opcional `render-material` (fase 5, só se quiser export server-side).
+- **Fonts**: `brandFonts.ts` já carrega Articulat CF + Playfair — só garantir `document.fonts.ready` no export.
 
-### Edge functions
-- `lp-autoconfigure` — recebe `{tracking_link_id}`, decide `lp_mode`, monta `layout_config` inicial, cria/atualiza instância.
-- `materials-autogenerate` — recebe `{tracking_link_id}`, aplica matriz da plataforma, renderiza via `creativeStudio` server-side (canvas em Deno via `skia-canvas` — se indisponível, gera manifest e o front renderiza sob demanda em cache).
+## Entregáveis desta rodada
+1. `useLinkBrand` + `assertBrandReady` + `<BrandLockBadge/>`
+2. Creative Studio + LinkMaterialEditor consumindo o hook (auto-injeção logo/selo/paleta/fonte/fundo)
+3. LP Instances / Oportunidades / InfluencerLanding com brand travada pelo link + SEO correto
+4. Export via `html-to-image` em stage offscreen (fix do "torto/quebrado")
+5. Rotas reorganizadas conforme mapa acima
 
-### Frontend
-- `QuickLinkDialog.tsx` — novo passo "LP".
-- `TrackingLinkForm.tsx` — mesmo passo em versão desktop.
-- `src/pages/admin/lps/OportunidadeLpEditor.tsx` — editor com preview + painel.
-- `src/lib/lpMode.ts` — heurística de detecção compartilhada.
-- `PlataformasPage.tsx` — aba "Materiais".
-- `MateriaisView.tsx` — filtro por link + preview.
-
-### Sync
-- Trigger `after insert on tracking_links` → chama `lp-autoconfigure` e `materials-autogenerate` (via `pg_net` ou fila em `job_queue`).
-- Editor salva → `landing_page_instances.updated_at` bump → LP pública re-renderiza (React Query invalidation via realtime).
-
-## Fora do escopo desta entrega
-
-- A/B testing de LPs (fica para depois).
-- Deep-link real dentro do provedor (usa URL padrão do jogo até termos API oficial).
-- Editor de materiais pixel-a-pixel (usa presets do `creativeStudio` atual).
-
-## Ordem de execução
-
-1. Migrations (schema + RLS + GRANTs).
-2. `lp-autoconfigure` + trigger.
-3. Passo "LP" nos dois dialogs de link.
-4. Editor visual da LP.
-5. Matriz de materiais na PlataformasPage + `materials-autogenerate`.
-6. MateriaisView filtrado por link.
-7. QA end-to-end: criar link → LP montada → editar → salvar → materiais na fila → aparecer em `/materiais`.
+Fica de fora desta rodada (avisar antes se quiser incluir): edge function de render server-side e biblioteca de referências de layout (itens 4 fallback e 6).

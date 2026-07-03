@@ -3,6 +3,9 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowRight, Zap, Gift, Users, Copy } from "lucide-react";
 import logo from "@/assets/logo.png";
+import { useLinkBrand } from "@/lib/useLinkBrand";
+import { BrandFooterSeal } from "@/components/brand/BrandFooterSeal";
+
 
 type LoadState = "loading" | "ready" | "not_found" | "inactive" | "no_domain";
 
@@ -349,6 +352,26 @@ export default function InfluencerLanding() {
   const [instanceCtx, setInstanceCtx] = useState<InstanceContext | null>(null);
   const [gameArts, setGameArts] = useState<GameArt[]>([]);
   const [clicking, setClicking] = useState(false);
+
+  // Brand travada pelo tracking_link — logo/selo/licença/SEO nunca se misturam entre plataformas.
+  const { data: brandCtx } = useLinkBrand(resolved?.tracking_link_id ?? null);
+
+  // SEO dinâmico por marca resolvida
+  useEffect(() => {
+    if (!brandCtx?.brand) return;
+    document.title = brandCtx.seo.title;
+    const setMeta = (name: string, content: string, attr: "name" | "property" = "name") => {
+      let el = document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${name}"]`);
+      if (!el) { el = document.createElement("meta"); el.setAttribute(attr, name); document.head.appendChild(el); }
+      el.content = content;
+    };
+    setMeta("description", brandCtx.seo.description);
+    setMeta("og:title", brandCtx.seo.ogTitle, "property");
+    setMeta("og:description", brandCtx.seo.description, "property");
+    setMeta("og:type", "website", "property");
+    setMeta("twitter:card", "summary_large_image");
+  }, [brandCtx?.brand?.key, brandCtx?.seo.title, brandCtx?.seo.description, brandCtx?.seo.ogTitle]);
+
 
   useEffect(() => {
     const id = "lp-public-scrollbar-style";
@@ -951,12 +974,17 @@ export default function InfluencerLanding() {
       )}
 
       {isSectionOn("footer") && (
-        <footer className="border-t border-white/[0.04] py-6 px-6 text-center">
-          <p className="text-[11px] text-gray-600 tracking-wide">
-            PlayBet © {new Date().getFullYear()} · Jogue com responsabilidade · 18+
+        <footer className="border-t border-white/[0.04] py-6 px-6 flex flex-col items-center gap-3">
+          {brandCtx?.brand?.seal ? (
+            <BrandFooterSeal brand={brandCtx.brand} variant="horizontal" tone="light" />
+          ) : null}
+          <p className="text-[11px] text-gray-600 tracking-wide text-center">
+            {brandCtx?.brand?.name ?? "PlayBet"} © {new Date().getFullYear()} · Jogue com responsabilidade · 18+
+            {brandCtx?.brand?.seal ? ` · ${brandCtx.brand.seal.license}` : ""}
           </p>
         </footer>
       )}
+
     </div>
   );
 

@@ -19,6 +19,9 @@ import {
 import {
   Loader2, Save, RefreshCw, Download, Sparkles, ExternalLink, Wand2, Layout,
 } from "lucide-react";
+import { useLinkBrand } from "@/lib/useLinkBrand";
+import { BrandLockBadge } from "@/components/brand/BrandLockBadge";
+
 
 interface Props {
   open: boolean;
@@ -57,6 +60,8 @@ const FORMATS: CreativeFormat[] = ["feed", "story", "landscape", "square_wa"];
 const STYLES: CreativeStyle[] = ["hype", "minimal", "editorial"];
 
 export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId }: Props) {
+  const { data: brandCtx } = useLinkBrand(trackingLinkId);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [link, setLink] = useState<LinkRow | null>(null);
@@ -269,10 +274,12 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId }: Props
                   </Badge>
                 )}
               </DialogTitle>
-              <DialogDescription className="text-xs">
-                {platformName || "Plataforma"} · edite textos/arte e veja o reflexo na LP.
+              <DialogDescription className="text-xs flex items-center gap-2 flex-wrap">
+                <span>{platformName || "Plataforma"} · edite textos/arte e veja o reflexo na LP.</span>
+                <BrandLockBadge ctx={brandCtx} className="text-[10px]" />
               </DialogDescription>
             </div>
+
             {lpPreviewUrl && (
               <a href={lpPreviewUrl} target="_blank" rel="noreferrer"
                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-secondary/40">
