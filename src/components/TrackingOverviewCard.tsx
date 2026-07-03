@@ -55,10 +55,14 @@ export default function TrackingOverviewCard() {
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-3">
+        <div className="grid grid-cols-2 sm:grid-cols-6 gap-3 mb-3">
           <div>
-            <p className="text-[10px] text-muted-foreground uppercase">Cliques reais</p>
-            <p className="text-lg font-bold">{consolidated.realClicksCount}</p>
+            <p className="text-[10px] text-muted-foreground uppercase">Visitas LP</p>
+            <p className="text-lg font-bold text-blue-500">{consolidated.lpViewCount}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase">Cliques saída</p>
+            <p className="text-lg font-bold text-emerald-500">{consolidated.outboundClickCount}</p>
           </div>
           <div>
             <p className="text-[10px] text-muted-foreground uppercase">Receita</p>
@@ -76,8 +80,8 @@ export default function TrackingOverviewCard() {
             <p className="text-lg font-bold">{links.length}</p>
           </div>
           <div>
-            <p className="text-[10px] text-muted-foreground uppercase">Eventos válidos</p>
-            <p className="text-lg font-bold">{consolidated.eventCount}</p>
+            <p className="text-[10px] text-muted-foreground uppercase">Conversões</p>
+            <p className="text-lg font-bold">{consolidated.conversionEventCount}</p>
           </div>
           <div>
             <p className="text-[10px] text-muted-foreground uppercase">Última atividade</p>

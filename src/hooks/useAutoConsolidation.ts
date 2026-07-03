@@ -6,6 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface ConsolidatedMetrics {
   totalClicks: number;
+  lpViewCount: number;
+  outboundClickCount: number;
+  conversionEventCount: number;
   totalRegistrations: number;
   totalFtd: number;
   totalDeposits: number;
@@ -153,7 +156,12 @@ export function useAutoConsolidation() {
     () => (trackingData?.events ?? []).filter(isValidTrackingEvent),
     [trackingData?.events],
   );
-  const realClicksCount = validEvents.filter((event) => event.canonical_event_name === "click").length;
+  const lpViewCount = validEvents.filter((event) => event.canonical_event_name === "lp_view").length;
+  const outboundClickCount = validEvents.filter((event) => event.canonical_event_name === "click").length;
+  const conversionEventCount = validEvents.filter(
+    (event) => !["lp_view", "click"].includes(event.canonical_event_name),
+  ).length;
+  const realClicksCount = outboundClickCount;
 
   const latestWithdrawable = useMemo(
     () => validEvents.find(isWithdrawableTrackingEvent) ?? null,
@@ -218,6 +226,9 @@ export function useAutoConsolidation() {
 
     const result: ConsolidatedMetrics = {
       totalClicks: realClicksCount,
+      lpViewCount,
+      outboundClickCount,
+      conversionEventCount,
       totalRegistrations: 0,
       totalFtd: 0,
       totalDeposits: 0,
@@ -324,7 +335,7 @@ export function useAutoConsolidation() {
     }
 
     return result;
-  }, [latestWithdrawable, platforms, realClicksCount, validEvents]);
+  }, [conversionEventCount, latestWithdrawable, lpViewCount, outboundClickCount, platforms, realClicksCount, validEvents]);
 
   return {
     consolidated,

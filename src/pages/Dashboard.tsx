@@ -153,12 +153,12 @@ export default function Dashboard() {
               )}
             </div>
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase">Cliques reais</p>
-              <p className="text-lg font-bold">{consolidated.realClicksCount}</p>
+              <p className="text-[10px] text-muted-foreground uppercase">Visitas LP</p>
+              <p className="text-lg font-bold">{consolidated.lpViewCount}</p>
             </div>
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase">Eventos válidos</p>
-              <p className="text-lg font-bold">{consolidated.eventCount}</p>
+              <p className="text-[10px] text-muted-foreground uppercase">Cliques saída</p>
+              <p className="text-lg font-bold">{consolidated.outboundClickCount}</p>
             </div>
           </div>
         </div>

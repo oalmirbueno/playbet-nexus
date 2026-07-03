@@ -194,7 +194,15 @@ function compactUnique(values: Array<string | null | undefined>) {
 function isInternalPreviewContext(): boolean {
   const host = window.location.hostname.toLowerCase();
   const referrer = document.referrer.toLowerCase();
+  const isEmbeddedPreview = (() => {
+    try {
+      return window.self !== window.top;
+    } catch {
+      return true;
+    }
+  })();
   return (
+    isEmbeddedPreview ||
     host === "localhost" ||
     host === "127.0.0.1" ||
     host.startsWith("id-preview--") ||

@@ -64,10 +64,10 @@ export default function DashboardExecutivo() {
     { label: "Caixa Asaas", value: formatBRL(totalPagosAsaas), sub: "Pago no período", icon: Landmark, path: "/financeiro" },
     { label: "Revenue Real", value: formatBRL(consolidated.revenueBrl || 0), sub: "Postbacks validados", icon: DollarSign, path: "/tracking" },
     { label: "Saldo Plataforma", value: formatBRL(consolidated.latestWithdrawableBrl || 0), sub: "Sacável agora", icon: Wallet, path: "/tracking" },
-    { label: "Cliques", value: String(consolidated.realClicksCount || 0), sub: "LP rastreados", icon: MousePointerClick, path: "/tracking" },
+    { label: "Cliques saída", value: String(consolidated.outboundClickCount || 0), sub: "Botão da LP / afiliado", icon: MousePointerClick, path: "/tracking/events" },
     { label: "Registros", value: String(consolidated.totalRegistrations || 0), sub: "Cadastros confirmados", icon: UserCheck, path: "/tracking" },
     { label: "FTDs", value: String(consolidated.totalFtd || 0), sub: "First-time deposits", icon: Target, path: "/tracking" },
-    { label: "Eventos", value: String(consolidated.eventCount || 0), sub: "Tracking total", icon: TrendingUp, path: "/tracking" },
+    { label: "Visitas LP", value: String(consolidated.lpViewCount || 0), sub: "Aberturas reais da LP", icon: TrendingUp, path: "/tracking/events" },
     { label: "Campanhas", value: String(campanhas.length || 0), sub: `${campanhas.filter((c: any) => c.status === "Ativa").length} ativas`, icon: Megaphone, path: "/campanhas" },
   ];
 
