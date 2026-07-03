@@ -8,7 +8,7 @@ import {
   Users, UserCheck, ShieldCheck, Gamepad2, Monitor, Link2, FileText, GitBranch,
   Calendar, PenTool, Lightbulb, Megaphone, BarChart3, ArrowRightLeft, Tag, ClipboardList,
   Settings, Scale, Lock, Plug, Menu, X, Bell, Search, ChevronDown, PanelLeftClose, PanelLeft,
-  Command, LogOut, Code2, Sparkles, Briefcase, KanbanSquare, CheckSquare, Wand2,
+  Command, LogOut, Code2, Sparkles, Briefcase, KanbanSquare, CheckSquare, Wand2, Radio,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import PreviewBanner from "@/components/PreviewBanner";
@@ -23,6 +23,7 @@ const sections: MenuSection[] = [
     items: [
       { label: "Dashboard", icon: LayoutDashboard, path: "/" },
       { label: "Tracking", icon: BarChart3, path: "/tracking" },
+      { label: "Status Postback", icon: Radio, path: "/tracking/status" },
       { label: "Pessoas", icon: Users, path: "/pessoas" },
     ],
   },

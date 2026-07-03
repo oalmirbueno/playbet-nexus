@@ -54,6 +54,7 @@ import TrackingMappings from "./pages/TrackingMappings";
 import TrackingEvents from "./pages/TrackingEvents";
 import TrackingSnapshots from "./pages/TrackingSnapshots";
 import TrackingLinks from "./pages/TrackingLinks";
+import TrackingStatus from "./pages/TrackingStatus";
 import Reconciliacao from "./pages/Reconciliacao";
 import NotFound from "./pages/NotFound";
 import InfluencerLanding from "./pages/InfluencerLanding";
@@ -129,6 +130,7 @@ function AdminRoutes() {
         <Route path="/tracking/events" element={<TrackingEvents />} />
         <Route path="/tracking/snapshots" element={<TrackingSnapshots />} />
         <Route path="/tracking/links" element={<TrackingLinks />} />
+        <Route path="/tracking/status" element={<TrackingStatus />} />
         <Route path="/materiais" element={<Materiais />} />
         <Route path="/tracking/reconciliacao" element={<Reconciliacao />} />
         <Route path="/comercial" element={<ComercialPipeline />} />
