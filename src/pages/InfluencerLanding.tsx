@@ -901,7 +901,7 @@ export default function InfluencerLanding() {
         </section>
       )}
 
-      {isSectionOn("games") && mode !== "odds" && (
+      {isSectionOn("games") && mode !== "odds" && !isPlatformDirect && (
         <section className="px-6 pb-16">
           <div className="max-w-xl mx-auto">
             <h2 className="text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500 mb-5">
