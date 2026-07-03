@@ -43,7 +43,8 @@ async function fetchEventStatusFromDB(): Promise<
     .from("tracking_events")
     .select("canonical_event_name, raw_event_name, event_timestamp")
     .eq("is_demo", false)
-    .or("status.is.null,status.neq.invalid_legacy")
+    .eq("is_duplicate", false)
+    .or("status.is.null,status.not.in.(invalid_legacy,invalid_internal_preview,duplicate_technical)")
     .order("event_timestamp", { ascending: false });
 
   if (error || !data) {
