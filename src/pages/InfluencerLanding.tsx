@@ -555,7 +555,13 @@ export default function InfluencerLanding() {
       { id: "cta", enabled: true },
       { id: "footer", enabled: true },
     ];
-  const isSectionOn = (id: string) => rawSections.find((s) => s.id === id)?.enabled ?? false;
+  const isSectionOn = (id: string) => {
+    const s = rawSections.find((s) => s.id === id);
+    if (s) return s.enabled;
+    // Sections not explicitly configured default to enabled (backward compat).
+    return true;
+  };
+
 
   const hypeTitle: string | null = instanceCtx?.hype_copy?.title ?? null;
   const hypeSub: string | null = instanceCtx?.hype_copy?.subtitle ?? null;
