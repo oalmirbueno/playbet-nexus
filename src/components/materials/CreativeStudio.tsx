@@ -150,9 +150,12 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     };
   }, []);
 
-  // Load persisted state on open / link change / format change
+  // Load persisted state on open / link change / format change.
+  // IMPORTANTE: aguardar brandCtx resolver antes de semear — senão o estúdio abre
+  // com layers genéricos (sem logo real da plataforma, sem selo, sem chrome PlayBet).
   useEffect(() => {
     if (!link || !open) return;
+    if (brandLoading) return; // aguarda marca resolver
     let cancelled = false;
     setHandle(link.handle || (link.shortUrl ? link.shortUrl.replace(/^https?:\/\//, "") : ""));
     setSelectedId(null);
@@ -166,10 +169,21 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
         ? (localSaved.updatedAt > databaseSaved.updatedAt ? localSaved : databaseSaved)
         : (databaseSaved ?? localSaved);
       if (saved) {
-        setLayers(saved.layers);
+        // Re-injeta chrome de marca caso o estado salvo seja anterior à resolução
+        // do brandKit ou tenha sido salvo sem logo/selo reais.
+        const brand = brandCtx?.brand ?? null;
+        const chromeSpec: BrandChromeSpec | undefined = brand ? {
+          playbetLogoSrc: playbetLogo,
+          platformLogoSrc: brand.logos.mark || brand.logos.wordmark || brand.logos.lockup,
+          platformBadgeBg: brand.palette.primary,
+          sealSrc: brand.seal?.horizontal.light,
+          sealLabel: brand.seal?.alt,
+        } : undefined;
+        const hydrated = chromeSpec ? ensureBrandChrome(saved.layers, chromeSpec) : saved.layers;
+        setLayers(hydrated);
         setStyle(saved.style);
         setSavedAt(saved.updatedAt);
-        setDirty(!saved.cloudSaved);
+        setDirty(!saved.cloudSaved || hydrated !== saved.layers);
       } else {
         setLayers(seedLayers(format));
         setSavedAt(null);
@@ -178,7 +192,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       setRenderKey(k => k + 1);
     })();
     return () => { cancelled = true; };
-  }, [link?.id, format, open, loadDatabaseState]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [link?.id, format, open, loadDatabaseState, brandLoading, brandCtx?.brand?.key]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Auto-save (debounced)
   useEffect(() => {
