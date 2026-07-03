@@ -538,7 +538,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     const src = brand?.seal?.horizontal.light || brand?.seal?.horizontal.dark;
     if (!src) { toast.error("Selo da plataforma indisponível"); return; }
     try {
-      await downloadRawAsset(src, `${slugify(brand?.name || link.platformName || "plataforma")}-selo-oficial`);
+      await downloadRawAsset(src, `${slugify(brand?.name || link?.platformName || "plataforma")}-selo-oficial`);
       toast.success(`Selo ${brand?.name || "plataforma"} baixado`);
     } catch (e) { toast.error("Falha ao baixar selo", { description: (e as Error).message }); }
   };
