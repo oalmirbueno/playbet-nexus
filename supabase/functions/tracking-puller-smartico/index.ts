@@ -106,7 +106,7 @@ async function fetchReport(apiKey: string, labelId: string | null, dateFrom: str
 function resolveAccount(row: SmarticoRow, accounts: AccountRow[]) {
   const brandId = str(pick(row, ["brand_id", "brandId", "brand"]));
   const brandName = lc(pick(row, ["brand_name", "brandName", "brand"]));
-  const linkName = lc(pick(row, ["link_name", "linkName", "affiliate_link_name"]));
+  const linkName = lc(pick(row, ["link_name", "linkName", "affiliate_link_name", "source_name", "hash_name"]));
   const hay = `${brandName} ${linkName}`;
 
   if (brandId) {
@@ -115,8 +115,14 @@ function resolveAccount(row: SmarticoRow, accounts: AccountRow[]) {
     );
     if (exact) return exact;
   }
-  if (hay.includes("estrela")) return accounts.find((a) => lc(a.platforms?.name).includes("estrela") || lc(a.nome_conta).includes("estrela")) ?? null;
-  if (hay.includes("vupi") || hay.includes("vupi")) return accounts.find((a) => lc(a.platforms?.name).includes("vupi") || lc(a.nome_conta).includes("vupi")) ?? null;
+
+  const estrela = accounts.find((a) => lc(a.platforms?.name).includes("estrela") || lc(a.nome_conta).includes("estrela")) ?? null;
+  const vupi = accounts.find((a) => /vupi|vipi/.test(lc(a.platforms?.name)) || /vupi|vipi/.test(lc(a.nome_conta))) ?? null;
+  if (hay.includes("estrela")) return estrela;
+  if (hay.includes("vupi") || hay.includes("vipi")) return vupi;
+
+  // Com mais de uma casa TAP/Smartico ativa, não chuta conta: sem afp/sub1
+  // ou brand explícita a linha é ignorada para não jogar tudo em Estrela/VUPI.
   return accounts.length === 1 ? accounts[0] : null;
 }
 
