@@ -523,6 +523,34 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     } catch (e) { toast.error("Falha ao baixar logo", { description: (e as Error).message }); }
   };
 
+  const downloadPlatformLogo = async () => {
+    const brand = brandCtx?.brand;
+    const src = brand?.logos.wordmark || brand?.logos.lockup || brand?.logos.mark;
+    if (!src) { toast.error("Logo da plataforma indisponível"); return; }
+    try {
+      await downloadRawAsset(src, `${slugify(brand?.name || link?.platformName || "plataforma")}-logo`);
+      toast.success(`Logo ${brand?.name || "plataforma"} baixada`);
+    } catch (e) { toast.error("Falha ao baixar logo", { description: (e as Error).message }); }
+  };
+
+  const downloadPlatformSeal = async () => {
+    const brand = brandCtx?.brand;
+    const src = brand?.seal?.horizontal.light || brand?.seal?.horizontal.dark;
+    if (!src) { toast.error("Selo da plataforma indisponível"); return; }
+    try {
+      await downloadRawAsset(src, `${slugify(brand?.name || link?.platformName || "plataforma")}-selo-oficial`);
+      toast.success(`Selo ${brand?.name || "plataforma"} baixado`);
+    } catch (e) { toast.error("Falha ao baixar selo", { description: (e as Error).message }); }
+  };
+
+  const downloadBrandKit = async () => {
+    await downloadPlaybetLogo().catch(() => {});
+    await new Promise(r => setTimeout(r, 150));
+    await downloadPlatformLogo().catch(() => {});
+    await new Promise(r => setTimeout(r, 150));
+    await downloadPlatformSeal().catch(() => {});
+  };
+
   const copyLink = async () => {
     if (!link?.shortUrl) return;
     try {
@@ -868,31 +896,63 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
               </Button>
 
               <div className="pt-2 mt-1 border-t border-border/40 space-y-1.5">
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground px-0.5">
-                  Ativos isolados
-                </Label>
-                <div className="grid grid-cols-2 gap-1.5">
-                  <Button
-                    onClick={downloadGameArt}
-                    disabled={!link.gameIconUrl}
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-[11px] px-2"
-                    title="Baixa apenas a imagem original do jogo, sem edição"
+                <div className="flex items-center justify-between px-0.5">
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Kit da marca · ativos isolados
+                  </Label>
+                  <button
+                    onClick={downloadBrandKit}
+                    className="text-[10px] text-primary hover:underline"
+                    title="Baixa PlayBet + logo da plataforma + selo oficial"
                   >
-                    <ImageDown className="w-3.5 h-3.5 mr-1.5" /> Logo do jogo
-                  </Button>
+                    Baixar tudo
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
                   <Button
                     onClick={downloadPlaybetLogo}
                     variant="outline"
                     size="sm"
                     className="h-8 text-[11px] px-2"
-                    title="Baixa a logo Playbet em PNG"
+                    title="Logo PlayBet (presente em todas as marcas)"
                   >
-                    <Package className="w-3.5 h-3.5 mr-1.5" /> Logo Playbet
+                    <Package className="w-3.5 h-3.5 mr-1.5" /> PlayBet
+                  </Button>
+                  <Button
+                    onClick={downloadPlatformLogo}
+                    disabled={!brandCtx?.brand?.logos?.wordmark && !brandCtx?.brand?.logos?.lockup && !brandCtx?.brand?.logos?.mark}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-[11px] px-2"
+                    title={`Logo oficial ${brandCtx?.brand?.name || "da plataforma"}`}
+                  >
+                    <Package className="w-3.5 h-3.5 mr-1.5 shrink-0" />
+                    <span className="truncate">{brandCtx?.brand?.name || "Plataforma"}</span>
+                  </Button>
+                  <Button
+                    onClick={downloadPlatformSeal}
+                    disabled={!brandCtx?.brand?.seal?.horizontal?.light && !brandCtx?.brand?.seal?.horizontal?.dark}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-[11px] px-2"
+                    title={`Selo oficial ${brandCtx?.brand?.name || "da plataforma"}`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5 mr-1.5 shrink-0" /> Selo
                   </Button>
                 </div>
+                {link.gameIconUrl && (
+                  <Button
+                    onClick={downloadGameArt}
+                    variant="ghost"
+                    size="sm"
+                    className="w-full h-7 text-[11px] text-muted-foreground hover:text-foreground"
+                    title="Baixa apenas a imagem original do jogo, sem edição"
+                  >
+                    <ImageDown className="w-3.5 h-3.5 mr-1.5" /> Arte do jogo (opcional)
+                  </Button>
+                )}
               </div>
+
 
               <Button onClick={() => setRenderKey(k => k + 1)} variant="ghost" size="sm" className="w-full h-8 text-xs text-muted-foreground">
                 <RefreshCw className="w-3.5 h-3.5 mr-2" /> Regenerar fundo
