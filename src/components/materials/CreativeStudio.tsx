@@ -740,9 +740,8 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                   playbetLogoSrc: playbetLogo,
                   ctaColor: brandCtx?.brand?.palette?.primary ?? "#FFC72C",
                   sealSrc: brandCtx?.brand?.seal?.horizontal?.light
-                    ?? brandCtx?.brand?.seal?.alt
                     ?? null,
-                  sealLabel: brandCtx?.brand?.seal?.label ?? null,
+                  sealLabel: brandCtx?.brand?.seal?.alt ?? null,
                 },
                 link: {
                   gameName: link.gameName,
