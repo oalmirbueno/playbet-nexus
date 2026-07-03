@@ -29,6 +29,8 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   trackingLinkId: string | null;
+  /** When true, hides all save controls and disables editable fields. Used by influencer/manager portals. */
+  readOnly?: boolean;
 }
 
 interface LinkRow {
