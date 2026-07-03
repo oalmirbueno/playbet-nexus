@@ -506,8 +506,11 @@ Deno.serve(async (req) => {
     const ctx = await buildAttribution(run, campaigns, brands);
 
     let total = 0;
+    const perBrand: Record<string, number> = {};
     for (const { brand, items } of allItems) {
-      total += await persist(run, brand, items, ctx, dateEnd);
+      const n = await persist(run, brand, items, ctx, dateEnd);
+      perBrand[brand.brand_slug] = n;
+      total += n;
     }
 
     await finishRun(
@@ -522,6 +525,7 @@ Deno.serve(async (req) => {
         ok: true,
         run_id: run.id,
         brands: brands.map((b) => b.brand_slug),
+        per_brand: perBrand,
         rows: total,
         window: { dateStart, dateEnd },
       }),
