@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Layers, ChevronDown, ChevronRight, Wand2, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
@@ -45,6 +45,20 @@ const IMAGE_ROLES = new Set(["hero-art", "game-logo", "team-crest-home", "team-c
 const CREST_ROLES = new Set(["team-crest-home", "team-crest-away"]);
 const LEAGUE_ROLES = new Set(["league-badge"]);
 
+function autoFillFor(role: ReferenceSlotFill["role"], ctx: Omit<ApplyReferenceCtx, "format" | "fills">): ReferenceSlotFill | undefined {
+  if ((role === "hero-art" || role === "game-logo") && ctx.link?.gameIconUrl) {
+    return { role, imageUrl: ctx.link.gameIconUrl };
+  }
+  if (role === "headline") return { role, text: ctx.link?.gameName || ctx.link?.hypeReason || ctx.brand.platformName || "Oportunidade em destaque" };
+  if (role === "subhead") return { role, text: ctx.link?.hypeReason || ctx.brand.platformName || "Oferta ativa" };
+  if (role === "cta") return { role, text: "APOSTAR AGORA →" };
+  if (role === "odd-value") return { role, text: "2.15" };
+  if (role === "odd-label") return { role, text: "Odd em destaque" };
+  if (role === "match-info") return { role, text: "Hoje · 18:30" };
+  if (role === "vs-divider") return { role, text: "VS" };
+  return undefined;
+}
+
 
 interface Props {
   format: CreativeFormat;
@@ -65,6 +79,10 @@ export function ApplyLayoutPanel({ format, ctx, onApply }: Props) {
     });
   }, [cat, format]);
 
+  useEffect(() => {
+    setOpenId(list[0]?.id ?? null);
+  }, [format, cat, list]);
+
   const updateFill = (refId: string, role: string, patch: Partial<ReferenceSlotFill>) => {
     setFills((prev) => {
       const cur = prev[refId] || {};
@@ -74,7 +92,11 @@ export function ApplyLayoutPanel({ format, ctx, onApply }: Props) {
   };
 
   const apply = (ref: CreativeReference) => {
-    const slotFills = Object.values(fills[ref.id] || {});
+    const manualFills = Object.values(fills[ref.id] || {});
+    const autoFills = ref.slots
+      .map((slot) => autoFillFor(slot.role, ctx))
+      .filter((fill): fill is ReferenceSlotFill => !!fill);
+    const slotFills = [...manualFills, ...autoFills];
     const layers = applyReference(ref, { ...ctx, format, fills: slotFills });
     onApply(layers);
     toast.success(`Layout aplicado: ${ref.label}`);
@@ -131,6 +153,19 @@ export function ApplyLayoutPanel({ format, ctx, onApply }: Props) {
                 </div>
               </button>
 
+              {!isOpen && (
+                <div className="px-2 pb-2">
+                  <Button
+                    onClick={() => apply(ref)}
+                    size="sm"
+                    variant="secondary"
+                    className="w-full h-7 text-[11px]"
+                  >
+                    <Wand2 className="w-3 h-3 mr-1.5" /> Aplicar automático
+                  </Button>
+                </div>
+              )}
+
               {isOpen && (
                 <div className="px-2 pb-2 pt-1 space-y-1.5 border-t border-border/40">
                   {ref.sourceHint && (
@@ -141,7 +176,8 @@ export function ApplyLayoutPanel({ format, ctx, onApply }: Props) {
                   )}
                   {ref.slots.map((s) => {
                     const isImg = IMAGE_ROLES.has(s.role);
-                    const fill = refFills[s.role];
+                    const manualFill = refFills[s.role];
+                    const fill = manualFill || autoFillFor(s.role, ctx);
                     const isCrest = CREST_ROLES.has(s.role);
                     const isLeague = LEAGUE_ROLES.has(s.role);
                     const autoFromLink =
@@ -150,7 +186,7 @@ export function ApplyLayoutPanel({ format, ctx, onApply }: Props) {
                       <div key={s.role + s.xPct} className="space-y-0.5">
                         <Label className="text-[10px] text-muted-foreground flex items-center gap-1">
                           {ROLE_LABEL[s.role] || s.role}
-                          {autoFromLink && !fill?.imageUrl && (
+                          {(autoFromLink || (!manualFill && fill)) && (
                             <span className="text-[9px] text-primary/80">(auto: link)</span>
                           )}
                           {fill?.imageUrl && isImg && (
