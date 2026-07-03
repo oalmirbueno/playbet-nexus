@@ -838,13 +838,13 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                   />
                 </div>
 
-                {/* Smart Odds */}
+                {/* Destaques inteligentes */}
                 {mode === "odds" && (
                   <div className="rounded-md border border-border/60 bg-secondary/20 p-3 space-y-2">
                     <div className="flex items-center gap-2">
                       <TrendingUp size={13} className="text-primary" />
                       <Label className="text-[10px] uppercase tracking-wider text-muted-foreground flex-1">
-                        Odds inteligentes
+                        Destaques inteligentes
                       </Label>
                       <button
                         type="button"

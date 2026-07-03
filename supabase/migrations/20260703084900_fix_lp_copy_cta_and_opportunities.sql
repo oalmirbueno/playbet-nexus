@@ -465,6 +465,6 @@ SET final_url = COALESCE(
     landing_page_id = COALESCE(tl.landing_page_id, lpi.landing_page_id),
     updated_at = now()
 FROM public.landing_page_instances lpi
-LEFT JOIN public.landing_pages lp ON lp.id = COALESCE(tl.landing_page_id, lpi.landing_page_id)
+LEFT JOIN public.landing_pages lp ON lp.id = lpi.landing_page_id
 WHERE tl.landing_page_instance_id = lpi.id
   AND COALESCE(tl.is_demo, false) = false;
