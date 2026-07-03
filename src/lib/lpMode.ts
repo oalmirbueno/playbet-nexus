@@ -1,8 +1,11 @@
 /**
  * LP mode detection - decides how the Landing Page renders
  * based on link context. Never mixes modes.
+ *
+ * `platform_direct` = LP limpa (só hero co-brand PlayBet + plataforma + selo + CTA).
+ * Serve quando o afiliado quer mandar direto para a plataforma, sem exibir jogo/odd.
  */
-export type LpMode = "single_game" | "multi_game" | "odds" | "catalog";
+export type LpMode = "single_game" | "multi_game" | "odds" | "catalog" | "platform_direct";
 
 export interface LpModeInput {
   linkCategory?: string | null;
@@ -25,6 +28,7 @@ export const LP_MODE_LABELS: Record<LpMode, string> = {
   single_game: "LP gerada · jogo único",
   multi_game: "LP gerada · vários jogos",
   odds: "LP em destaque",
+  platform_direct: "LP limpa · direto pra plataforma",
 };
 
 export const LP_MODE_HINTS: Record<LpMode, string> = {
@@ -32,6 +36,7 @@ export const LP_MODE_HINTS: Record<LpMode, string> = {
   single_game: "Modelo direto com arte real do jogo.",
   multi_game: "Grade de jogos com CTA por card.",
   odds: "Opções em destaque com CTA direto.",
+  platform_direct: "Hero co-brand PlayBet + plataforma, selo legal e CTA único. Sem jogos/odds.",
 };
 
 export const DEFAULT_SECTIONS: Array<{ id: string; label: string; enabled: boolean }> = [
@@ -73,5 +78,13 @@ export function defaultLayoutConfig(mode: LpMode) {
     if (features !== -1) sections[features].enabled = false;
   }
 
+  // LP limpa: só hero (com lockup co-brand) + rodapé. Nada de jogos/odds/benefícios.
+  if (mode === "platform_direct") {
+    if (features !== -1) sections[features].enabled = false;
+    if (games !== -1) sections[games].enabled = false;
+    if (odds !== -1) sections[odds].enabled = false;
+  }
+
   return { sections, mode };
 }
+
