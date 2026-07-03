@@ -253,6 +253,39 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId }: Props
     downloadCreative(preview, `playbet-${slugify(link.game_name || "criativo")}-${mFormat}`);
   };
 
+  const brand = brandCtx?.brand;
+  const platformLogoSrc = brand?.logos.wordmark || brand?.logos.lockup || brand?.logos.mark || null;
+  const platformSealSrc = brand?.seal?.horizontal.light || brand?.seal?.horizontal.dark || null;
+  const platformSlugForFile = slugify(brand?.name || platformName || "plataforma");
+
+  const downloadPlaybetLogo = async () => {
+    try {
+      await downloadRawAsset(playbetLogo, "playbet-logo");
+      toast.success("Logo PlayBet baixada");
+    } catch (e) { toast.error("Falha ao baixar logo PlayBet", { description: (e as Error).message }); }
+  };
+  const downloadPlatformLogo = async () => {
+    if (!platformLogoSrc) return toast.error("Logo da plataforma indisponível");
+    try {
+      await downloadRawAsset(platformLogoSrc, `${platformSlugForFile}-logo`);
+      toast.success(`Logo ${brand?.name || "plataforma"} baixada`);
+    } catch (e) { toast.error("Falha ao baixar logo", { description: (e as Error).message }); }
+  };
+  const downloadPlatformSeal = async () => {
+    if (!platformSealSrc) return toast.error("Selo da plataforma indisponível");
+    try {
+      await downloadRawAsset(platformSealSrc, `${platformSlugForFile}-selo-oficial`);
+      toast.success(`Selo ${brand?.name || "plataforma"} baixado`);
+    } catch (e) { toast.error("Falha ao baixar selo", { description: (e as Error).message }); }
+  };
+  const downloadBrandKit = async () => {
+    await downloadPlaybetLogo().catch(() => {});
+    await new Promise((r) => setTimeout(r, 120));
+    if (platformLogoSrc) { await downloadPlatformLogo().catch(() => {}); await new Promise((r) => setTimeout(r, 120)); }
+    if (platformSealSrc) { await downloadPlatformSeal().catch(() => {}); }
+  };
+
+
   const lpPreviewUrl = useMemo(() => {
     if (!lpSlug || !influencerSlug) return null;
     const inst = instance?.slug ? `?i=${encodeURIComponent(instance.slug)}` : "";
