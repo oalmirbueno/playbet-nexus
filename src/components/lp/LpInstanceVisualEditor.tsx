@@ -405,7 +405,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
     const nextCta = ctaForMode(nextMode, link?.link_category, gname);
     setSections(ensureCommunitySection(defaultLayoutConfig(nextMode).sections));
     setCopy((prev) => ({
-      title: titleForMode(nextMode, gname),
+      title: titleForMode(nextMode, gname, platformName),
       subtitle: adaptiveSubtitle(nextMode, gname, platformName),
       cta_label: nextCta,
     }));
