@@ -48,6 +48,8 @@ import Permissoes from "./pages/Permissoes";
 import Integracoes from "./pages/Integracoes";
 import DeveloperSettings from "./pages/DeveloperSettings";
 import TrackingDashboard from "./pages/TrackingDashboard";
+import BrandShowcase, { BrandIndex } from "./pages/BrandShowcase";
+
 import TrackingAccounts from "./pages/TrackingAccounts";
 import TrackingMetricsForm from "./pages/TrackingMetricsForm";
 import TrackingMappings from "./pages/TrackingMappings";
