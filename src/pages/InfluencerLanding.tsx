@@ -104,6 +104,25 @@ async function findTrackingLink(instanceId: string | null, influencerId: string,
   }
 
   if (instanceId) {
+    const { data: instance } = await supabase
+      .from("landing_page_instances")
+      .select("source_tracking_link_id")
+      .eq("id", instanceId)
+      .maybeSingle();
+
+    const sourceTrackingLinkId = (instance as any)?.source_tracking_link_id;
+    if (sourceTrackingLinkId) {
+      const { data } = await supabase
+        .from("tracking_links")
+        .select(select)
+        .eq("id", sourceTrackingLinkId)
+        .eq("is_demo", false)
+        .maybeSingle();
+      if (data) return data;
+    }
+  }
+
+  if (instanceId) {
     const { data } = await supabase
       .from("tracking_links")
       .select(select)
