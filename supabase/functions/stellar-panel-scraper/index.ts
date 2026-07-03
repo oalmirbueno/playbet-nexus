@@ -1,9 +1,13 @@
-// Stellar (Estrela Bet) affiliate panel scraper.
-// First pass: authenticates against the panel using provided credentials,
-// discovers report endpoints and stores a diagnostic payload so we can lock
-// in the exact parser next iteration. When it can already parse a report
-// (Smartico TAP JSON shape), it aggregates into tracking_metrics using
-// origem_importacao = 'panel_scraper_stellar', attributed by sub1/tracking_code.
+// Stellar (Estrela Bet / VUPI) affiliate panel scraper.
+//
+// Uses the official (undocumented publicly, but auto-discovered via /docs-json)
+// Partners API at us-partners-api-node.estrelabet.bet.br. Authenticates via
+// POST /api/auth/login, pulls the daily performance report grouped by campaign
+// for every brand tied to the account (Estrela Bet, VUPI, ...) and writes it
+// into tracking_metrics, attributing rows by campaign_name -> tracking_code.
+//
+// Run manually via `supabase functions invoke stellar-panel-scraper` or via the
+// scheduled hourly cron. Diagnostic payload is stored in panel_scraper_runs.
 
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from "npm:@supabase/supabase-js@2.45.0";
@@ -18,22 +22,17 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const PANEL_URL_RAW = (Deno.env.get("STELLAR_PANEL_URL") ?? "").trim();
 const PANEL_EMAIL = (Deno.env.get("STELLAR_PANEL_EMAIL") ?? "").trim();
 const PANEL_PASSWORD = (Deno.env.get("STELLAR_PANEL_PASSWORD") ?? "").trim();
 
-function normalizeBase(u: string) {
-  if (!u) return "";
-  let s = u.trim().replace(/\/+$/, "");
-  if (!/^https?:\/\//i.test(s)) s = "https://" + s;
-  return s;
-}
-
-const PANEL_BASE = normalizeBase(PANEL_URL_RAW);
+const STELLAR_API_BASE = "https://us-partners-api-node.estrelabet.bet.br/api";
+const STELLAR_ORIGIN = "https://partners.estrelabet.bet.br";
+const UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120";
 
 interface RunHandle {
   id: string;
-  discovery: Record<string, unknown>;
+  discovery: Record<string, any>;
   supabase: ReturnType<typeof createClient>;
 }
 
@@ -44,12 +43,16 @@ async function startRun(): Promise<RunHandle> {
     .insert({
       scraper_key: "stellar",
       status: "running",
-      discovery: { panel_base: PANEL_BASE },
+      discovery: { api_base: STELLAR_API_BASE },
     })
     .select("id")
     .single();
   if (error) throw error;
-  return { id: data.id as string, discovery: { panel_base: PANEL_BASE }, supabase };
+  return {
+    id: data.id as string,
+    discovery: { api_base: STELLAR_API_BASE, steps: [] as any[] },
+    supabase,
+  };
 }
 
 async function finishRun(
@@ -70,257 +73,411 @@ async function finishRun(
     .eq("id", run.id);
 }
 
-// ---------- Auth strategies ----------
-
-interface AuthSession {
-  strategy: string;
-  token?: string;
-  cookie?: string;
-}
-
-function mergeCookies(existing: string, setCookieHeader: string | null): string {
-  if (!setCookieHeader) return existing;
-  // Deno joins multiple Set-Cookie with ", " which is ambiguous. Split by ", " only where followed by "<token>=".
-  const parts = setCookieHeader.split(/,(?=\s*[A-Za-z0-9_\-]+=)/g);
-  const jar = new Map<string, string>();
-  existing.split(";").map((c) => c.trim()).filter(Boolean).forEach((c) => {
-    const [k, ...v] = c.split("="); jar.set(k, v.join("="));
+function log(run: RunHandle, step: string, payload: any) {
+  (run.discovery.steps as any[]).push({
+    at: new Date().toISOString(),
+    step,
+    ...payload,
   });
-  for (const raw of parts) {
-    const kv = raw.split(";")[0].trim();
-    if (!kv) continue;
-    const [k, ...v] = kv.split("=");
-    if (k) jar.set(k, v.join("="));
-  }
-  return Array.from(jar.entries()).map(([k, v]) => `${k}=${v}`).join("; ");
 }
 
-// Real API base discovered from the panel JS bundle.
-const STELLAR_API_BASE = "https://us-partners-api-node.estrelabet.bet.br/api";
-const STELLAR_ORIGIN = "https://partners.estrelabet.bet.br";
+// ------------------------------------------------------------------
+// Auth
+// ------------------------------------------------------------------
+interface Session {
+  token: string;
+  tenantId: string;
+  userId?: number;
+  email?: string;
+}
 
-async function authenticate(run: RunHandle): Promise<AuthSession | null> {
-  const attempts: any[] = [];
+function decodeJwtPayload(jwt: string): any {
   try {
-    const res = await fetch(`${STELLAR_API_BASE}/auth/login`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        accept: "application/json",
-        origin: STELLAR_ORIGIN,
-        referer: STELLAR_ORIGIN + "/",
-        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120",
-      },
-      body: JSON.stringify({ email: PANEL_EMAIL, password: PANEL_PASSWORD }),
-    });
-    const text = await res.text();
-    let json: any = null;
-    try { json = JSON.parse(text); } catch { /* html */ }
-    const cookie = res.headers.get("set-cookie") ?? "";
-    attempts.push({
-      step: "auth/login",
-      status: res.status,
-      has_json: !!json,
-      keys: json ? Object.keys(json).slice(0, 20) : [],
-      snippet: text.slice(0, 400),
-    });
-    run.discovery.auth_attempts = attempts;
-
-    if (!res.ok || !json) return null;
-
-    const token: string | undefined =
-      json.access_token || json.accessToken || json.token || json.jwt ||
-      json.data?.access_token || json.data?.accessToken || json.data?.token ||
-      json.result?.token || json.session?.token;
-
-    if (!token && !cookie) return null;
-
-    return { strategy: "estrelabet:auth/login", token, cookie: cookie ? cookie.split(",").map((c) => c.split(";")[0].trim()).join("; ") : undefined };
-  } catch (e) {
-    attempts.push({ step: "auth/login", error: String(e) });
-    run.discovery.auth_attempts = attempts;
+    const parts = jwt.split(".");
+    if (parts.length < 2) return null;
+    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const pad = b64.length % 4 === 0 ? "" : "=".repeat(4 - (b64.length % 4));
+    return JSON.parse(atob(b64 + pad));
+  } catch {
     return null;
   }
 }
 
+async function login(run: RunHandle): Promise<Session | null> {
+  const res = await fetch(`${STELLAR_API_BASE}/auth/login`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      accept: "application/json",
+      origin: STELLAR_ORIGIN,
+      referer: STELLAR_ORIGIN + "/",
+      "user-agent": UA,
+    },
+    body: JSON.stringify({ email: PANEL_EMAIL, password: PANEL_PASSWORD }),
+  });
+  const text = await res.text();
+  let json: any = null;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    /* html */
+  }
+  log(run, "auth/login", {
+    status: res.status,
+    keys: json ? Object.keys(json).slice(0, 20) : [],
+    snippet: text.slice(0, 300),
+  });
+  if (!res.ok || !json) return null;
 
-// ---------- Report discovery ----------
+  const token: string | undefined =
+    json.access_token ||
+    json.accessToken ||
+    json.token ||
+    json.jwt ||
+    json.data?.access_token ||
+    json.data?.accessToken ||
+    json.data?.token ||
+    json.result?.token;
+  if (!token) return null;
 
-interface ReportRow {
-  date: string;
-  tracking_code?: string;
-  registrations?: number;
-  ftd?: number;
-  deposits?: number;
-  deposits_amount?: number;
-  revenue?: number;
+  const payload = decodeJwtPayload(token) ?? {};
+  const tenantId = String(
+    json.tenant_id ??
+      json.tenantId ??
+      json.data?.tenant_id ??
+      payload.tenant_id ??
+      payload.tenantId ??
+      payload["custom:tenant_id"] ??
+      "1",
+  );
+  const userId =
+    json.id ??
+    json.user_id ??
+    json.data?.id ??
+    payload.id ??
+    payload.user_id;
+
+  log(run, "auth/decoded", {
+    tenantId,
+    userId,
+    payload_keys: Object.keys(payload).slice(0, 20),
+  });
+
+  return { token, tenantId, userId, email: PANEL_EMAIL };
 }
 
-async function fetchReport(session: AuthSession, run: RunHandle): Promise<ReportRow[] | null> {
-  const today = new Date();
-  const from = new Date(today);
-  from.setDate(from.getDate() - 7);
-  const fromStr = from.toISOString().slice(0, 10);
-  const toStr = today.toISOString().slice(0, 10);
-
-  const headers: Record<string, string> = {
+function apiHeaders(session: Session, brandSlug?: string): HeadersInit {
+  return {
     accept: "application/json",
     "content-type": "application/json",
     origin: STELLAR_ORIGIN,
     referer: STELLAR_ORIGIN + "/",
+    "user-agent": UA,
+    authorization: `Bearer ${session.token}`,
+    tenantid: session.tenantId,
+    "x-brand": brandSlug ?? "estrelabet",
   };
-  if (session.token) headers["authorization"] = `Bearer ${session.token}`;
-  if (session.cookie) headers["cookie"] = session.cookie;
-
-  // Probe against the real API host discovered from the panel bundle.
-  const candidates = [
-    { method: "GET", path: `/dashboard/summary?from=${fromStr}&to=${toStr}` },
-    { method: "GET", path: `/dashboard?from=${fromStr}&to=${toStr}` },
-    { method: "GET", path: `/reports/summary?from=${fromStr}&to=${toStr}` },
-    { method: "GET", path: `/reports/players?from=${fromStr}&to=${toStr}` },
-    { method: "GET", path: `/reports/deposits?from=${fromStr}&to=${toStr}` },
-    { method: "GET", path: `/reports/registrations?from=${fromStr}&to=${toStr}` },
-    { method: "GET", path: `/reports/subid?from=${fromStr}&to=${toStr}` },
-    { method: "GET", path: `/reports/affiliates?from=${fromStr}&to=${toStr}` },
-    { method: "GET", path: `/statistics?from=${fromStr}&to=${toStr}` },
-    { method: "GET", path: `/kpi?from=${fromStr}&to=${toStr}` },
-    { method: "GET", path: `/players?from=${fromStr}&to=${toStr}` },
-    { method: "POST", path: `/reports/query`, body: { from: fromStr, to: toStr } },
-  ];
-
-  const attempts: any[] = [];
-  for (const c of candidates) {
-    try {
-      const res = await fetch(STELLAR_API_BASE + c.path, {
-        method: c.method,
-        headers,
-        body: c.method === "POST" ? JSON.stringify(c.body) : undefined,
-      });
-      const text = await res.text();
-      let json: any = null;
-      try { json = JSON.parse(text); } catch { /* html */ }
-      attempts.push({ path: c.path, status: res.status, has_json: !!json, snippet: text.slice(0, 400) });
-
-      if (res.ok && json) {
-        // Best-effort mapping — real shape will be finalized after first successful run.
-        const rowsSrc: any[] = Array.isArray(json)
-          ? json
-          : json.rows || json.data || json.results || [];
-        if (Array.isArray(rowsSrc) && rowsSrc.length) {
-          const mapped: ReportRow[] = rowsSrc.map((r) => ({
-            date: r.date || r.day || r.event_date || toStr,
-            tracking_code: r.subid || r.sub1 || r.subid1 || r.tracking_code || r.click_id,
-            registrations: Number(r.registrations ?? r.regs ?? r.signups ?? 0),
-            ftd: Number(r.ftd ?? r.ftd_count ?? r.first_deposits ?? 0),
-            deposits: Number(r.deposits ?? r.deposits_count ?? 0),
-            deposits_amount: Number(r.deposits_amount ?? r.deposit_sum ?? r.deposit_total ?? 0),
-            revenue: Number(r.revenue ?? r.ngr ?? r.commission ?? 0),
-          }));
-          run.discovery.report_attempts = attempts;
-          run.discovery.report_success = { path: c.path, row_count: mapped.length };
-          return mapped;
-        }
-      }
-    } catch (e) {
-      attempts.push({ path: c.path, error: String(e) });
-    }
-  }
-
-  run.discovery.report_attempts = attempts;
-  return null;
 }
 
-// ---------- Persistence ----------
+async function apiGet<T = any>(
+  run: RunHandle,
+  session: Session,
+  path: string,
+  brandSlug?: string,
+): Promise<{ ok: boolean; status: number; data: T | null; raw: string }> {
+  const res = await fetch(STELLAR_API_BASE + path, {
+    method: "GET",
+    headers: apiHeaders(session, brandSlug),
+  });
+  const raw = await res.text();
+  let data: any = null;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    /* keep null */
+  }
+  log(run, `GET ${path}`, {
+    brand: brandSlug,
+    status: res.status,
+    snippet: raw.slice(0, 220),
+  });
+  return { ok: res.ok, status: res.status, data, raw };
+}
 
-async function persistRows(run: RunHandle, rows: ReportRow[]): Promise<number> {
-  // Attribute by sub1 (our tracking_code) -> tracking_links -> influencer/campaign/platform_account
-  const codes = Array.from(new Set(rows.map((r) => r.tracking_code).filter(Boolean))) as string[];
-  const { data: links } = await run.supabase
-    .from("tracking_links")
-    .select("tracking_code, influencer_id, campanha_id, platform_account_id")
-    .in("tracking_code", codes.length ? codes : ["__none__"]);
+// ------------------------------------------------------------------
+// Brands + report
+// ------------------------------------------------------------------
+interface Brand {
+  brand_id: number;
+  brand_name: string;
+  brand_slug: string;
+  brand_main: boolean;
+}
+
+interface PerfItem {
+  period: string;
+  visits: number;
+  registrations: number;
+  ftds: number;
+  amount_ftds: number;
+  deposits: number;
+  amount_deposit: number;
+  net_deposit: number;
+  cpa: number;
+  rev_share: number;
+  qftds_cpa: number;
+  campaign_name: string;
+  ggr: number;
+  ngr: number;
+  brand_id: string;
+  brand_name: string;
+}
+
+async function fetchBrands(run: RunHandle, session: Session): Promise<Brand[]> {
+  // Bootstrap using a default brand slug — the endpoint returns the full list.
+  const seeds = ["estrelabet", "vupi", "stellar"];
+  for (const seed of seeds) {
+    const r = await apiGet<Brand[]>(run, session, "/affiliate-brand", seed);
+    if (r.ok && Array.isArray(r.data) && r.data.length) return r.data;
+  }
+  return [];
+}
+
+async function fetchPerformance(
+  run: RunHandle,
+  session: Session,
+  brand: Brand,
+  dateStart: string,
+  dateEnd: string,
+): Promise<PerfItem[]> {
+  const qs = new URLSearchParams({
+    date_start: dateStart,
+    date_end: dateEnd,
+    group_by: "campaign",
+  });
+  const r = await apiGet<{ items: PerfItem[]; grouped_items?: any }>(
+    run,
+    session,
+    `/user/performance/report?${qs.toString()}`,
+    brand.brand_slug,
+  );
+  if (!r.ok || !r.data) return [];
+  const items = Array.isArray(r.data.items) ? r.data.items : [];
+  return items;
+}
+
+// ------------------------------------------------------------------
+// Persistence
+// ------------------------------------------------------------------
+interface AttributionCtx {
+  byCode: Map<string, any>;
+  brandToPlatformId: Map<string, string>;
+  brandToAccountId: Map<string, string>;
+}
+
+async function buildAttribution(
+  run: RunHandle,
+  campaigns: string[],
+  brands: Brand[],
+): Promise<AttributionCtx> {
+  const codes = Array.from(new Set(campaigns.filter(Boolean)));
   const byCode = new Map<string, any>();
-  (links ?? []).forEach((l: any) => byCode.set(l.tracking_code, l));
+  if (codes.length) {
+    const { data: links } = await run.supabase
+      .from("tracking_links")
+      .select(
+        "tracking_code, influencer_id, campanha_id, platform_account_id",
+      )
+      .in("tracking_code", codes);
+    (links ?? []).forEach((l: any) => byCode.set(l.tracking_code, l));
+  }
 
-  // Resolve platform_id for Estrela Bet (fallback attribution when link is unknown)
-  const { data: platform } = await run.supabase
-    .from("platforms")
-    .select("id")
-    .ilike("name", "%estrela%")
-    .maybeSingle();
-  const stellarPlatformId = (platform as any)?.id ?? null;
+  // Resolve platforms by brand slug/name.
+  const brandToPlatformId = new Map<string, string>();
+  const brandToAccountId = new Map<string, string>();
+  for (const b of brands) {
+    const candidates = [b.brand_name, b.brand_slug];
+    for (const c of candidates) {
+      if (!c) continue;
+      const { data: p } = await run.supabase
+        .from("platforms")
+        .select("id, name")
+        .ilike("name", `%${c}%`)
+        .limit(1)
+        .maybeSingle();
+      if (p?.id) {
+        brandToPlatformId.set(b.brand_slug, p.id as string);
+        // Try to resolve a default platform_account for the brand.
+        const { data: acc } = await run.supabase
+          .from("platform_accounts")
+          .select("id")
+          .eq("platform_id", p.id)
+          .limit(1)
+          .maybeSingle();
+        if (acc?.id) brandToAccountId.set(b.brand_slug, acc.id as string);
+        break;
+      }
+    }
+  }
+  return { byCode, brandToPlatformId, brandToAccountId };
+}
 
+async function persist(
+  run: RunHandle,
+  brand: Brand,
+  items: PerfItem[],
+  ctx: AttributionCtx,
+): Promise<number> {
   let inserted = 0;
-  for (const row of rows) {
-    const link = row.tracking_code ? byCode.get(row.tracking_code) : null;
-    const record = {
-      data_ref: row.date,
-      platform_id: link?.platform_account_id ? undefined : stellarPlatformId,
-      platform_account_id: link?.platform_account_id ?? null,
+  for (const it of items) {
+    const link = it.campaign_name ? ctx.byCode.get(it.campaign_name) : null;
+    const platformAccountId =
+      link?.platform_account_id ?? ctx.brandToAccountId.get(brand.brand_slug) ?? null;
+    const platformId = ctx.brandToPlatformId.get(brand.brand_slug) ?? null;
+
+    const dateRef = (it.period || "").slice(0, 10);
+    if (!dateRef) continue;
+
+    const record: Record<string, any> = {
+      data_ref: dateRef,
+      platform_id: platformAccountId ? null : platformId,
+      platform_account_id: platformAccountId,
       influencer_id: link?.influencer_id ?? null,
       campanha_id: link?.campanha_id ?? null,
-      registros: row.registrations ?? 0,
-      ftd: row.ftd ?? 0,
-      deposits_count: row.deposits ?? 0,
-      depositos_total: row.deposits_amount ?? 0,
-      revenue: row.revenue ?? 0,
-      commission_total: row.revenue ?? 0,
-      converted_amount: row.deposits_amount ?? 0,
+      registros: it.registrations ?? 0,
+      ftd: it.ftds ?? 0,
+      deposits_count: it.deposits ?? 0,
+      depositos_total: it.amount_deposit ?? 0,
+      revenue: it.ngr ?? it.ggr ?? 0,
+      commission_total: (it.cpa ?? 0) + (it.rev_share ?? 0),
+      converted_amount: it.amount_deposit ?? 0,
       converted_currency: "BRL",
-      original_amount: row.deposits_amount ?? 0,
+      original_amount: it.amount_deposit ?? 0,
       original_currency: "BRL",
       origem_importacao: "panel_scraper_stellar",
       is_demo: false,
+      external_ref: `${brand.brand_slug}:${dateRef}:${it.campaign_name ?? "_"}`,
     };
-    const { error } = await run.supabase.from("tracking_metrics").insert(record);
+    const { error } = await run.supabase
+      .from("tracking_metrics")
+      .upsert(record, { onConflict: "external_ref" });
     if (!error) inserted++;
+    else log(run, "persist_error", { error: error.message, external_ref: record.external_ref });
   }
   return inserted;
 }
 
-// ---------- Entry ----------
-
+// ------------------------------------------------------------------
+// Entry
+// ------------------------------------------------------------------
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS")
+    return new Response("ok", { headers: corsHeaders });
 
-  if (!PANEL_BASE || !PANEL_EMAIL || !PANEL_PASSWORD) {
+  if (!PANEL_EMAIL || !PANEL_PASSWORD) {
     return new Response(
-      JSON.stringify({ ok: false, error: "Missing STELLAR_PANEL_URL / STELLAR_PANEL_EMAIL / STELLAR_PANEL_PASSWORD" }),
-      { status: 400, headers: { ...corsHeaders, "content-type": "application/json" } },
+      JSON.stringify({
+        ok: false,
+        error:
+          "Missing STELLAR_PANEL_EMAIL / STELLAR_PANEL_PASSWORD secrets.",
+      }),
+      {
+        status: 400,
+        headers: { ...corsHeaders, "content-type": "application/json" },
+      },
     );
   }
 
   const run = await startRun();
   try {
-    const session = await authenticate(run);
+    // Optional overrides via request body: { days?: number, date_start?, date_end? }
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch {
+      /* noop */
+    }
+    const days = Math.max(1, Math.min(90, Number(body?.days ?? 7)));
+    const today = new Date();
+    const from = new Date(today);
+    from.setDate(from.getDate() - days);
+    const dateStart = (body?.date_start as string) || from.toISOString().slice(0, 10);
+    const dateEnd = (body?.date_end as string) || today.toISOString().slice(0, 10);
+    run.discovery.window = { dateStart, dateEnd, days };
+
+    const session = await login(run);
     if (!session) {
-      await finishRun(run, "discovery_only", 0, "Login não reconhecido — payload de discovery salvo em panel_scraper_runs.discovery para eu ajustar o parser.");
-      return new Response(JSON.stringify({ ok: false, run_id: run.id, stage: "auth" }), {
-        status: 200,
-        headers: { ...corsHeaders, "content-type": "application/json" },
-      });
+      await finishRun(run, "failed", 0, "Login falhou.");
+      return new Response(
+        JSON.stringify({ ok: false, run_id: run.id, stage: "auth" }),
+        { headers: { ...corsHeaders, "content-type": "application/json" } },
+      );
     }
 
-    const rows = await fetchReport(session, run);
-    if (!rows || rows.length === 0) {
-      await finishRun(run, "discovery_only", 0, "Login OK mas endpoint de relatório ainda não identificado — discovery salvo.");
-      return new Response(JSON.stringify({ ok: true, run_id: run.id, stage: "report_discovery" }), {
-        status: 200,
-        headers: { ...corsHeaders, "content-type": "application/json" },
-      });
+    // Sanity check /user/me to confirm session works.
+    await apiGet(run, session, "/user/me", "estrelabet");
+
+    const brands = await fetchBrands(run, session);
+    run.discovery.brands = brands.map((b) => ({
+      id: b.brand_id,
+      slug: b.brand_slug,
+      name: b.brand_name,
+    }));
+    if (!brands.length) {
+      await finishRun(
+        run,
+        "discovery_only",
+        0,
+        "Login OK mas nenhuma brand retornada em /affiliate-brand.",
+      );
+      return new Response(
+        JSON.stringify({ ok: true, run_id: run.id, stage: "brands_empty" }),
+        { headers: { ...corsHeaders, "content-type": "application/json" } },
+      );
     }
 
-    const inserted = await persistRows(run, rows);
-    await finishRun(run, "ok", inserted, `Importadas ${inserted} linhas.`);
-    return new Response(JSON.stringify({ ok: true, run_id: run.id, rows_imported: inserted }), {
-      status: 200,
-      headers: { ...corsHeaders, "content-type": "application/json" },
-    });
+    // Fetch all reports, collect campaigns, then attribute + persist.
+    const allItems: { brand: Brand; items: PerfItem[] }[] = [];
+    for (const b of brands) {
+      const items = await fetchPerformance(run, session, b, dateStart, dateEnd);
+      allItems.push({ brand: b, items });
+    }
+    const campaigns = allItems.flatMap((x) =>
+      x.items.map((i) => i.campaign_name),
+    );
+    const ctx = await buildAttribution(run, campaigns, brands);
+
+    let total = 0;
+    for (const { brand, items } of allItems) {
+      total += await persist(run, brand, items, ctx);
+    }
+
+    await finishRun(
+      run,
+      "ok",
+      total,
+      `Importadas ${total} linhas de ${brands.length} brand(s) entre ${dateStart} e ${dateEnd}.`,
+    );
+
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        run_id: run.id,
+        brands: brands.map((b) => b.brand_slug),
+        rows: total,
+        window: { dateStart, dateEnd },
+      }),
+      { headers: { ...corsHeaders, "content-type": "application/json" } },
+    );
   } catch (e) {
-    await finishRun(run, "failed", 0, String((e as Error)?.message ?? e));
-    return new Response(JSON.stringify({ ok: false, run_id: run.id, error: String((e as Error)?.message ?? e) }), {
-      status: 500,
-      headers: { ...corsHeaders, "content-type": "application/json" },
-    });
+    log(run, "fatal", { error: String(e) });
+    await finishRun(run, "failed", 0, `Erro: ${e}`);
+    return new Response(
+      JSON.stringify({ ok: false, run_id: run.id, error: String(e) }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "content-type": "application/json" },
+      },
+    );
   }
 });
