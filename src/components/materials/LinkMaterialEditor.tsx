@@ -314,8 +314,9 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId, readOnl
                 )}
               </DialogTitle>
               <DialogDescription className="text-xs flex items-center gap-2 flex-wrap">
-                <span>{platformName || "Plataforma"} · edite textos/arte e veja o reflexo na LP.</span>
+                <span>{platformName || "Plataforma"} · {readOnly ? "visualização — material já está pronto pra usar." : "edite textos/arte e veja o reflexo na LP."}</span>
                 <BrandLockBadge ctx={brandCtx} className="text-[10px]" />
+                {readOnly && <Badge variant="outline" className="text-[10px]">Somente leitura</Badge>}
               </DialogDescription>
             </div>
 
