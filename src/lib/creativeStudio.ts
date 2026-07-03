@@ -332,18 +332,33 @@ const FAMILY_STACK: Record<TextLayer["family"], string> = {
   grotesk: '"Space Grotesk", "Inter", sans-serif',
 };
 
+export interface BrandOverride {
+  /** Substitui a logo Playbet no canto do material pela logo da plataforma resolvida. */
+  logoSrc?: string;
+  /** Cor de fundo da badge do nome da plataforma (padrão: azul PlayBet #1E5FD9). */
+  badgeBg?: string;
+  /** Selo 18+ + licença. Se presente, é estampado no rodapé do material como camada obrigatória. */
+  sealSrc?: string;
+  /** Rótulo textual do selo — accessible/debug. */
+  sealLabel?: string;
+}
+
 export function defaultLayersFor(
   input: Pick<CreativeInput, "gameName" | "hypeReason" | "cta" | "handle" | "format" | "platformName" | "gameImageUrl">,
-  opts: { includeImages?: boolean } = {},
+  opts: { includeImages?: boolean; brand?: BrandOverride } = {},
 ): Layer[] {
   const size = FORMAT_SIZES[input.format];
   const vertical = size.h >= size.w * 1.2;
   const landscape = size.w > size.h * 1.3;
   const headline = (input.gameName || "Novo jogo em alta");
   const layers: Layer[] = [];
+  const brandLogo = opts.brand?.logoSrc || PLAYBET_LOGO_SRC;
+  const badgeBg = opts.brand?.badgeBg || "#1E5FD9";
+  const sealSrc = opts.brand?.sealSrc;
 
   layers.push({
-    kind: "image", id: crypto.randomUUID(), src: PLAYBET_LOGO_SRC, label: "Logo Playbet",
+    kind: "image", id: crypto.randomUUID(), src: brandLogo,
+    label: opts.brand?.logoSrc ? `Logo ${input.platformName || "plataforma"}` : "Logo Playbet",
     xPct: 6, yPct: vertical ? 4 : 6,
     widthPct: vertical ? 28 : 24,
     heightPct: vertical ? 6 : 8,
@@ -360,12 +375,11 @@ export function defaultLayersFor(
       fontSizePct: vertical ? 2.8 : 2,
       color: "#FFFFFF", weight: 700, align: "right",
       family: "grotesk", uppercase: true, shadow: false, lineHeight: 1,
-      bgColor: "#1E5FD9", bgPadPct: 55, bgRadiusPct: 50,
+      bgColor: badgeBg, bgPadPct: 55, bgRadiusPct: 50,
     });
   }
 
   if (opts.includeImages && input.gameImageUrl) {
-    // Hero game art as an image layer (movable)
     const heroWidth = vertical ? 72 : landscape ? 38 : 50;
     const heroHeight = vertical ? 42 : landscape ? 70 : 50;
     layers.push({
@@ -415,8 +429,21 @@ export function defaultLayersFor(
       family: "grotesk", uppercase: false, shadow: false, lineHeight: 1,
     });
   }
+
+  // ── Selo legal obrigatório (18+ / SPA-MF) — sempre no rodapé, nunca misturar plataforma.
+  if (sealSrc) {
+    layers.push({
+      kind: "image", id: crypto.randomUUID(), src: sealSrc,
+      label: opts.brand?.sealLabel || "Selo legal 18+",
+      xPct: vertical ? 4 : 6, yPct: vertical ? 96.5 : 96,
+      widthPct: vertical ? 46 : 34,
+      heightPct: vertical ? 3 : 3.2,
+      radiusPct: 0, opacity: 0.95, fit: "contain", glow: null,
+    });
+  }
   return layers;
 }
+
 
 async function drawLayers(ctx: CanvasRenderingContext2D, size: CreativeSize, layers: Layer[]) {
   for (const L of layers) {
