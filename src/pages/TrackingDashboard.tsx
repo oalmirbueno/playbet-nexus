@@ -85,6 +85,8 @@ export default function TrackingDashboard() {
       .channel("tracking-dashboard-live")
       .on("postgres_changes", { event: "*", schema: "public", table: "tracking_metrics" }, () => {
         qc.invalidateQueries({ queryKey: ["tracking_metrics"] });
+        qc.invalidateQueries({ queryKey: ["tracking_metrics_summary"] });
+        qc.invalidateQueries({ queryKey: ["financeiro_metrics"] });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "tracking_events" }, () => {
         qc.invalidateQueries({ queryKey: ["tracking_events"] });
@@ -120,6 +122,8 @@ export default function TrackingDashboard() {
       // Force React Query to refetch immediately.
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["tracking_metrics"] }),
+        qc.invalidateQueries({ queryKey: ["tracking_metrics_summary"] }),
+        qc.invalidateQueries({ queryKey: ["financeiro_metrics"] }),
         qc.invalidateQueries({ queryKey: ["tracking_events"] }),
         qc.invalidateQueries({ queryKey: ["platform_accounts"] }),
       ]);
