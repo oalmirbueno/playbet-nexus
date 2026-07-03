@@ -5,10 +5,22 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const DEFAULT_RULES = [
-  { format: "feed", style: "hype_neon" },
-  { format: "story", style: "hype_neon" },
-];
+/**
+ * Regras default por perfil de link.
+ * - platform_direct: link sem jogo, foco em co-brand PlayBet × Plataforma + selo.
+ * - default: link vinculado a jogo, com o estilo neon hype.
+ */
+const DEFAULT_RULES_BY_MODE: Record<string, Array<{ format: string; style: string }>> = {
+  platform_direct: [
+    { format: "feed", style: "platform_lockup" },
+    { format: "story", style: "platform_lockup" },
+    { format: "square_wa", style: "platform_lockup" },
+  ],
+  default: [
+    { format: "feed", style: "hype_neon" },
+    { format: "story", style: "hype_neon" },
+  ],
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -27,7 +39,9 @@ Deno.serve(async (req) => {
 
     const { data: link } = await supa
       .from("tracking_links")
-      .select("id, influencer_id, platform_account_id, game_slug, game_name, game_icon_url, link_category, hype_reason")
+      .select(
+        "id, influencer_id, platform_account_id, game_slug, game_name, game_icon_url, link_category, hype_reason",
+      )
       .eq("id", trackingLinkId)
       .maybeSingle();
 
@@ -43,7 +57,7 @@ Deno.serve(async (req) => {
       platformId = pa?.platform_id ?? null;
     }
 
-    // Load platform rules; fallback to defaults if none configured
+    // Carrega regras da plataforma; se nenhuma, aplica preset conforme o modo do link.
     let rules: Array<{ format: string; style: string }> = [];
     if (platformId) {
       const { data } = await supa
@@ -54,30 +68,59 @@ Deno.serve(async (req) => {
         .filter((r: any) => r.enabled && r.auto_on_new_link)
         .map((r: any) => ({ format: r.format, style: r.style }));
     }
-    if (rules.length === 0) rules = DEFAULT_RULES;
+    if (rules.length === 0) {
+      const isPlatformDirect = !link.game_slug && !link.game_name;
+      rules = isPlatformDirect
+        ? DEFAULT_RULES_BY_MODE.platform_direct
+        : DEFAULT_RULES_BY_MODE.default;
+    }
 
-    const rows = rules.map((r) => ({
-      tracking_link_id: trackingLinkId,
-      influencer_id: link.influencer_id,
-      platform_id: platformId,
-      game_slug: link.game_slug,
-      game_name: link.game_name,
-      format: r.format,
-      style: r.style,
-      status: "queued",
-      meta: {
-        icon_url: link.game_icon_url,
-        hype_reason: link.hype_reason,
-        link_category: link.link_category,
-      },
-    }));
+    // Idempotência: só insere combinações (format, style) ainda ausentes.
+    const { data: existing } = await supa
+      .from("link_materials")
+      .select("format, style")
+      .eq("tracking_link_id", trackingLinkId);
 
-    const { error } = await supa.from("link_materials").insert(rows);
-    if (error) throw new Error(error.message);
+    const existingKey = new Set(
+      (existing ?? []).map((r: any) => `${r.format}::${r.style}`),
+    );
 
-    return new Response(JSON.stringify({ ok: true, queued: rows.length }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    const rowsToInsert = rules
+      .filter((r) => !existingKey.has(`${r.format}::${r.style}`))
+      .map((r) => ({
+        tracking_link_id: trackingLinkId,
+        influencer_id: link.influencer_id,
+        platform_id: platformId,
+        game_slug: link.game_slug,
+        game_name: link.game_name,
+        format: r.format,
+        style: r.style,
+        status: "queued",
+        meta: {
+          icon_url: link.game_icon_url,
+          hype_reason: link.hype_reason,
+          link_category: link.link_category,
+          auto: true,
+          source: "materials-autogenerate",
+        },
+      }));
+
+    let inserted = 0;
+    if (rowsToInsert.length > 0) {
+      const { error } = await supa.from("link_materials").insert(rowsToInsert);
+      if (error) throw new Error(error.message);
+      inserted = rowsToInsert.length;
+    }
+
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        queued: inserted,
+        skipped: rules.length - inserted,
+        total_rules: rules.length,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e?.message || "unknown error" }), {
       status: 500,
