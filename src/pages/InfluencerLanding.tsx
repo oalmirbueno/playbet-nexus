@@ -344,6 +344,23 @@ function GameImage({
   );
 }
 
+function BrandLogoImage({ src, name }: { src?: string | null; name: string }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) {
+    return <span className="text-sm font-extrabold tracking-wide text-white">{name}</span>;
+  }
+  return (
+    <img
+      src={src}
+      alt={name}
+      className="h-11 object-contain"
+      loading="eager"
+      decoding="async"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 export default function InfluencerLanding() {
   const { slug: pathSlug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
@@ -426,13 +443,14 @@ export default function InfluencerLanding() {
         tl = data;
       }
 
+      const sourceSlug = normalizeSlug(tl?.game_slug || fallback?.game_slug);
       const fallbackSlug = normalizeSlug(fallback?.game_slug || tl?.game_slug);
       const fallbackName = fallback?.game_name || tl?.game_name || fallbackSlug;
       const fallbackIcon = fallback?.game_icon_url || tl?.game_icon_url || null;
       const instanceSlugs = compactUnique(slugs || []);
       const effectiveSlugs = instanceId
-        ? (instanceSlugs.length > 0 ? instanceSlugs : compactUnique([fallbackSlug]))
-        : compactUnique([...(slugs || []), fallbackSlug]);
+        ? (sourceSlug ? [sourceSlug] : (fallback?.source_tracking_link_id ? [] : instanceSlugs.slice(0, 1)))
+        : compactUnique([fallbackSlug || instanceSlugs[0]]).slice(0, 1);
       const linkIcon: GameArt | null = fallbackSlug
         ? { slug: fallbackSlug, name: fallbackName || fallbackSlug, icon_url: fallbackIcon }
         : null;
@@ -725,7 +743,11 @@ export default function InfluencerLanding() {
 
   const hasLink = !!resolved?.affiliate_link;
 
-  const mode = (instanceCtx?.lp_mode as string) || "catalog";
+  const storedMode = (instanceCtx?.lp_mode as string) || "catalog";
+  const hasSelectedGame = gameArts.length > 0 || Boolean(normalizeSlug(instanceCtx?.hype_copy?.game_slug));
+  const mode = (storedMode === "single_game" || storedMode === "multi_game") && !hasSelectedGame
+    ? "platform_direct"
+    : storedMode;
   const rawSections: Array<{ id: string; enabled: boolean }> =
     instanceCtx?.layout_config?.sections ?? [
       { id: "hero", enabled: true },
@@ -842,10 +864,9 @@ export default function InfluencerLanding() {
               <div className="mb-8 flex items-center justify-center gap-4">
                 <img src={logo} alt="PlayBet" className="h-11 opacity-95" />
                 <span className="text-white/30 text-xl font-light select-none">×</span>
-                <img
+                <BrandLogoImage
                   src={brandCtx.brand.logos.wordmark || brandCtx.brand.logos.lockup || brandCtx.brand.logos.mark}
-                  alt={brandCtx.brand.name}
-                  className="h-11 object-contain"
+                  name={brandCtx.brand.name}
                 />
               </div>
             ) : (

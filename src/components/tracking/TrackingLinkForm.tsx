@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { syncLinkAssetsBatch } from "@/lib/linkAssets";
 import { detectFromUrl, CATEGORY_LABELS, inferAttributionParam, type LinkCategory } from "@/lib/linkIntelligence";
 import GameArtwork from "@/components/tracking/GameArtwork";
-import { detectLpMode, LP_MODE_LABELS, LP_MODE_HINTS, type LpMode } from "@/lib/lpMode";
+import { detectLpMode, defaultLayoutConfig, LP_MODE_LABELS, LP_MODE_HINTS, type LpMode } from "@/lib/lpMode";
 
 interface Props {
   open: boolean;
@@ -396,7 +396,8 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
   const selectedInstance = lpInstances.find((i: any) => i.id === form.landing_page_instance_id);
   const selectedLP = landingPages.find((l: any) => l.id === form.landing_page_id);
   const selectedAccount = accounts.find(a => a.id === form.platform_account_id);
-  const platformName = platforms.find((p: any) => p.id === selectedAccount?.platform_id)?.name;
+  const selectedPlatform = platforms.find((p: any) => p.id === selectedAccount?.platform_id);
+  const platformName = selectedPlatform?.name;
 
   // Default slug = influencer slug (universal subid)
   const defaultSubid = (selectedInfluencer as any)?.slug || "";
@@ -457,8 +458,31 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
     // the public URL always match what the influencer sees in the form.
     if (useLp && selectedInstance && form.base_url) {
       const patch: Record<string, any> = {};
+      const hasGame = Boolean(form.game_slug || form.game_name);
+      const safeLpMode: LpMode = (effectiveLpMode === "single_game" || effectiveLpMode === "multi_game") && !hasGame
+        ? "platform_direct"
+        : effectiveLpMode;
+      const safeGameSlugs = safeLpMode === "platform_direct" || safeLpMode === "catalog" || !form.game_slug ? [] : [form.game_slug];
+      const existingHype = (selectedInstance as any).hype_copy || {};
       if (selectedInstance.affiliate_link !== trackedAffiliateUrl) patch.affiliate_link = trackedAffiliateUrl;
-      if (instanceMode !== effectiveLpMode) patch.lp_mode = effectiveLpMode;
+      if (instanceMode !== safeLpMode) patch.lp_mode = safeLpMode;
+      patch.game_slugs = safeGameSlugs;
+      patch.layout_config = defaultLayoutConfig(safeLpMode);
+      patch.hype_copy = {
+        ...existingHype,
+        title: existingHype.title || (safeLpMode === "platform_direct" ? (platformName ? `${platformName} com PlayBet` : "Oferta oficial") : undefined),
+        subtitle: existingHype.subtitle || (safeLpMode === "platform_direct" && platformName ? `Acesse ${platformName} agora com bônus oficial PlayBet.` : undefined),
+        cta_label: existingHype.cta_label || (safeLpMode === "platform_direct" ? "Acessar plataforma" : undefined),
+        game_slug: safeGameSlugs[0] || null,
+        game_name: safeGameSlugs[0] ? (form.game_name || null) : null,
+        game_icon_url: safeGameSlugs[0] ? (form.game_icon_url || null) : null,
+        category: form.link_category || existingHype.category || null,
+        platform_slug: selectedPlatform?.slug || existingHype.platform_slug || null,
+        platform_name: platformName || existingHype.platform_name || null,
+        bonus_offer: existingHype.bonus_offer || { enabled: safeLpMode !== "platform_direct" && safeLpMode !== "catalog" },
+        community_cta: existingHype.community_cta || { enabled: safeLpMode !== "platform_direct" && safeLpMode !== "catalog" },
+        auto: false,
+      };
       if (Object.keys(patch).length > 0) {
         try {
           await landingPageInstanceService.update(selectedInstance.id, patch);
