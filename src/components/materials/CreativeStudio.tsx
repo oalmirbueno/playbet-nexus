@@ -507,8 +507,10 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                 Estúdio · {link.gameName || "Sem título"}
                 {link.hypeReason && <Badge variant="secondary" className="text-[10px] font-normal"><Sparkles className="w-3 h-3 mr-1" />{link.hypeReason}</Badge>}
               </DialogTitle>
-              <DialogDescription className="text-xs flex items-center gap-2">
+              <DialogDescription className="text-xs flex items-center gap-2 flex-wrap">
                 {link.platformName || "Plataforma"} · {size.label} · {size.w}×{size.h}px
+                <BrandLockBadge ctx={brandCtx} className="text-[10px]" />
+
                 <span className={cn("inline-flex items-center gap-1", dirty ? "text-amber-500" : "text-primary/80")}>
                   <Save className="w-3 h-3" /> {dirty ? "alterações pendentes" : savedAt ? "salvo" : "rascunho"}
                 </span>
