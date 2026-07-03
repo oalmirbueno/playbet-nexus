@@ -181,13 +181,23 @@ export function LinkLpGrid({ influencerId, managerId, title = "LP por link", sho
   const copyLink = async (r: Row) => {
     const url = buildRowShareUrl(r);
     if (!url) return toast.error("LP sem slug público");
+    const check = validateSharedLpUrl(url, {
+      instanceSlug: r.lp_slug,
+      trackingCode: r.tracking_code,
+      influencerId: r.influencer_id,
+      campanhaId: r.campanha_id,
+    });
+    if (!check.ok) {
+      return toast.error("Link não corresponde à LP/tracking", { description: check.reason });
+    }
     try {
-      await navigator.clipboard.writeText(url);
-      toast.success("Link da LP copiado", { description: url });
+      await navigator.clipboard.writeText(check.url);
+      toast.success("Link da LP copiado", { description: check.url });
     } catch {
       toast.error("Não consegui copiar");
     }
   };
+
 
   return (
     <Card className="border-border/60">
