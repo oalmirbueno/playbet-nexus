@@ -392,6 +392,7 @@ export default function LpOpportunities() {
                     <TableRow>
                       <TableHead className="w-16">#</TableHead>
                       <TableHead>Título</TableHead>
+                      <TableHead>Marca</TableHead>
                       <TableHead>Categoria</TableHead>
                       <TableHead>LP</TableHead>
                       <TableHead className="w-16">Ativo</TableHead>
