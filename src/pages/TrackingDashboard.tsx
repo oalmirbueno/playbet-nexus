@@ -58,6 +58,7 @@ function periodRange(p: Period): { from?: string; to?: string; label: string } {
 
 export default function TrackingDashboard() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const [period, setPeriod] = useState<Period>("30d");
   const [syncing, setSyncing] = useState(false);
   const [showImport, setShowImport] = useState(false);
