@@ -39,6 +39,36 @@ export default function Dashboard() {
   const { data: saques } = useSaques();
   const { data: conteudos } = useConteudo();
   const { consolidated, hasData: hasTrackingData } = useAutoConsolidation();
+  const { summary: metricsSummary, isLoading: loadingMetrics, refetch: refetchMetrics } = useTrackingMetricsSummary("30d");
+  const [syncingPanel, setSyncingPanel] = useState(false);
+
+  const platformMap = useMemo(() => {
+    const m = new Map<string, any>();
+    (platforms ?? []).forEach((p: any) => m.set(p.id, p));
+    return m;
+  }, [platforms]);
+
+  const hasMetricsData = metricsSummary.profitBase > 0 || metricsSummary.ftd > 0 || metricsSummary.depositsTotal > 0;
+
+  const handleSyncPanels = async () => {
+    setSyncingPanel(true);
+    try {
+      await Promise.allSettled([
+        supabase.functions.invoke("stellar-panel-scraper", { body: { window_days: 3 } }),
+        supabase.functions.invoke("tracking-puller-smartico", { body: {} }),
+      ]);
+      await Promise.all([
+        refetchMetrics(),
+        queryClient.invalidateQueries({ queryKey: ["tracking_consolidated_real_source"] }),
+        queryClient.invalidateQueries({ queryKey: ["financeiro_metrics"] }),
+      ]);
+      toast({ title: "Painéis sincronizados" });
+    } catch (e: any) {
+      toast({ title: "Erro ao sincronizar", description: e.message, variant: "destructive" });
+    } finally {
+      setSyncingPanel(false);
+    }
+  };
 
   const counts: Record<string, number> = {
     platforms: platforms.length,
