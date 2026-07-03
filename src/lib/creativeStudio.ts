@@ -14,6 +14,15 @@ export const PLAYBET_LOGO_SRC = playbetLogo;
 export type CreativeFormat = "feed" | "story" | "landscape" | "square_wa";
 export type CreativeStyle = "hype" | "minimal" | "editorial";
 
+/**
+ * Marca camadas obrigatórias do "chrome" de marca (co-branding).
+ * Elas SEMPRE têm que estar presentes em qualquer exportação:
+ *  - "platform-logo"      → logo da casa/plataforma (topo-esquerda)
+ *  - "playbet-signature"  → assinatura PlayBet (topo-direita, co-branding)
+ *  - "legal-seal"         → selo legal 18+/SPA-MF (rodapé)
+ */
+export type BrandChromeSlot = "platform-logo" | "playbet-signature" | "legal-seal";
+
 export interface TextLayer {
   kind: "text";
   id: string;
@@ -32,6 +41,7 @@ export interface TextLayer {
   bgColor?: string | null;    // optional pill/box background
   bgPadPct?: number;          // padding for pill (% of font size)
   bgRadiusPct?: number;       // corner radius (% of height)
+  chrome?: BrandChromeSlot;   // marca camada como parte do chrome bloqueado
 }
 
 export interface ImageLayer {
@@ -49,9 +59,11 @@ export interface ImageLayer {
   glow?: string | null;       // hex accent glow color
   blur?: number;              // px of blur (for backdrop layers)
   brightness?: number;        // 0..2
+  chrome?: BrandChromeSlot;   // marca camada como parte do chrome bloqueado
 }
 
 export type Layer = TextLayer | ImageLayer;
+
 
 export interface CreativeInput {
   format: CreativeFormat;
