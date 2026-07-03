@@ -14,6 +14,8 @@ interface ResolvedLanding {
   instance_id: string | null;
   landing_page_id: string | null;
   tracking_link_id: string | null;
+  platform_account_id: string | null;
+  platform_id: string | null;
   click_id: string;
   click_id_param: string; // e.g. "sub1"
 }
@@ -86,12 +88,26 @@ async function findLPBaseByHostname(hostname: string) {
   return null;
 }
 
-/** Find tracking_link for a given instance or influencer (any status; prefer active) */
-async function findTrackingLink(instanceId: string | null, influencerId: string) {
+/** Find tracking_link for a given instance/influencer. Prefer the code carried by the public URL. */
+async function findTrackingLink(instanceId: string | null, influencerId: string, preferredCode?: string | null) {
+  const select = "id, click_id_param_name, base_url, short_url, final_url, campanha_id, status, tracking_code, platform_account_id, landing_page_id, landing_page_instance_id, platform_accounts(platform_id)";
+
+  if (preferredCode) {
+    let byCode = supabase
+      .from("tracking_links")
+      .select(select)
+      .eq("tracking_code", preferredCode)
+      .eq("influencer_id", influencerId)
+      .limit(1);
+    byCode = instanceId ? byCode.eq("landing_page_instance_id", instanceId) : byCode;
+    const { data } = await byCode.maybeSingle();
+    if (data) return data;
+  }
+
   if (instanceId) {
     const { data } = await supabase
       .from("tracking_links")
-      .select("id, click_id_param_name, base_url, short_url, final_url, campanha_id, status")
+      .select(select)
       .eq("landing_page_instance_id", instanceId)
       .order("status", { ascending: true }) // active < paused alphabetically
       .order("updated_at", { ascending: false })
@@ -102,7 +118,7 @@ async function findTrackingLink(instanceId: string | null, influencerId: string)
 
   const { data } = await supabase
     .from("tracking_links")
-    .select("id, click_id_param_name, base_url, short_url, final_url, campanha_id, status")
+    .select(select)
     .eq("influencer_id", influencerId)
     .order("status", { ascending: true })
     .order("updated_at", { ascending: false })
@@ -391,16 +407,19 @@ export default function InfluencerLanding() {
         instanceId: string | null,
         landingPageId: string | null,
       ) => {
-        const tl = await findTrackingLink(instanceId, influencerId);
+        const preferredTrackingCode = searchParams.get("sub1") || searchParams.get("afp") || searchParams.get("tracking_code");
+        const tl = await findTrackingLink(instanceId, influencerId, preferredTrackingCode);
         const paramName = tl?.click_id_param_name || "sub1";
         const fallbackOpportunity = await findOpportunityDestination(instanceId, landingPageId, tl?.id || null);
         const outboundAffiliate = [
-          affiliateLink,
+          fallbackOpportunity,
           (tl as any)?.base_url,
           (tl as any)?.short_url,
-          fallbackOpportunity,
+          affiliateLink,
           (tl as any)?.final_url,
         ].find((url) => url && !isPublicLpLoop(url, hostname, slug)) || "";
+        const platformAccountId = (tl as any)?.platform_account_id || null;
+        const platformId = (tl as any)?.platform_accounts?.platform_id || null;
 
         setResolved({
           affiliate_link: outboundAffiliate,
@@ -410,6 +429,8 @@ export default function InfluencerLanding() {
           instance_id: instanceId,
           landing_page_id: landingPageId,
           tracking_link_id: tl?.id || null,
+          platform_account_id: platformAccountId,
+          platform_id: platformId,
           click_id: clickId,
           click_id_param: paramName,
         });
@@ -426,6 +447,9 @@ export default function InfluencerLanding() {
             landing_page_id: landingPageId,
             landing_page_instance_id: instanceId,
             tracking_link_id: tl?.id || null,
+            platform_account_id: platformAccountId,
+            platform_id: platformId,
+            campanha_id: tl?.campanha_id || searchParams.get("sub3"),
             source_type: "landing_page",
             event_timestamp: new Date().toISOString(),
             raw_payload: {
@@ -436,6 +460,7 @@ export default function InfluencerLanding() {
               is_preview: searchParamsPreview(),
               sub2: searchParams.get("sub2"),
               sub3: searchParams.get("sub3"),
+              sub1: preferredTrackingCode,
               user_agent: navigator.userAgent,
               referrer: document.referrer || null,
             },
