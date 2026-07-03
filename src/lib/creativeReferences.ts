@@ -302,8 +302,37 @@ function slotToLayer(slot: LayoutSlot, ctx: ApplyReferenceCtx): Layer | null {
       bgPadPct: 60, bgRadiusPct: 50,
     } satisfies TextLayer;
   }
+  if (slot.role === "vs-divider") {
+    const text = (fill?.text || "VS").trim();
+    return {
+      kind: "text", ...base, text,
+      fontSizePct: vertical ? 10 : 8,
+      color: ctx.brand.ctaColor || "#FFC72C",
+      weight: 900, align,
+      family: "display", uppercase: true, shadow: true, lineHeight: 1,
+    } satisfies TextLayer;
+  }
+  if (slot.role === "match-info") {
+    const text = fill?.text || "Hoje · 18:30";
+    return {
+      kind: "text", ...base, text,
+      fontSizePct: vertical ? 3 : 2.4,
+      color: "#FFFFFFB3", weight: 600, align,
+      family: "grotesk", uppercase: true, shadow: false, lineHeight: 1.1,
+    } satisfies TextLayer;
+  }
+  if (slot.role === "odd-label") {
+    const text = fill?.text || "Vitória do mandante";
+    return {
+      kind: "text", ...base, text,
+      fontSizePct: vertical ? 3.4 : 2.8,
+      color: "#FFFFFFCC", weight: 700, align,
+      family: "grotesk", uppercase: true, shadow: false, lineHeight: 1.1,
+    } satisfies TextLayer;
+  }
   return null;
 }
+
 
 /** Frame obrigatório de marca: logo plataforma (topo-esq), assinatura PlayBet (topo-dir), selo legal (rodapé). */
 function brandFrame(ctx: ApplyReferenceCtx): Layer[] {
