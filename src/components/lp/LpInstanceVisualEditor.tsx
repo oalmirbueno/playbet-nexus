@@ -13,7 +13,7 @@ import { ArrowUp, ArrowDown, RefreshCw, ExternalLink, Loader2, Wand2, Users, Spa
 import { LP_MODE_LABELS, defaultLayoutConfig, type LpMode } from "@/lib/lpMode";
 import GameArtwork from "@/components/tracking/GameArtwork";
 import { suggestThreeOptions, computeOpportunityScore } from "@/lib/opportunityEngine";
-import { buildPublicLpUrl } from "@/lib/trackingUrl";
+import { buildPublicLpUrl, buildTrackedAffiliateUrl } from "@/lib/trackingUrl";
 import { buildLpBaseUrl } from "@/lib/lpPublicUrl";
 
 interface Props {
@@ -205,7 +205,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         // so already registered LPs keep working even if an older sync missed the FK.
         let { data: tl } = await supabase
           .from("tracking_links")
-          .select("id, influencer_id, campanha_id, tracking_code, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, platform_account_id, platform_accounts(platform_id, platforms(name))")
+          .select("id, influencer_id, campanha_id, tracking_code, click_id_param_name, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, short_url, platform_account_id, platform_accounts(platform_id, platforms(name))")
           .eq("landing_page_instance_id", instanceId)
           .order("created_at", { ascending: false })
           .limit(1)
@@ -213,7 +213,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         if (!tl && (inst as any).source_tracking_link_id) {
           const { data: sourceTl } = await supabase
             .from("tracking_links")
-            .select("id, influencer_id, campanha_id, tracking_code, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, platform_account_id, platform_accounts(platform_id, platforms(name))")
+            .select("id, influencer_id, campanha_id, tracking_code, click_id_param_name, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, short_url, platform_account_id, platform_accounts(platform_id, platforms(name))")
             .eq("id", (inst as any).source_tracking_link_id)
             .maybeSingle();
           tl = sourceTl;
@@ -483,6 +483,16 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
       };
       if (effectiveMode === "odds" && smartOdds.length) hype_copy.smart_odds = smartOdds;
 
+      const instanceAffiliateLink = link
+        ? buildTrackedAffiliateUrl(
+            link.base_url || link.short_url || instance?.affiliate_link || "",
+            link.click_id_param_name || "sub1",
+            link.tracking_code || "",
+            link.influencer_id || instance?.influencer_id || "",
+            link.campanha_id || "",
+          )
+        : instance?.affiliate_link || null;
+
       const { error } = await supabase
         .from("landing_page_instances")
         .update({
@@ -490,7 +500,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
           game_slugs: gameSlugs,
           layout_config: layoutConfig,
           hype_copy,
-          affiliate_link: link?.base_url || instance?.affiliate_link || null,
+          affiliate_link: instanceAffiliateLink,
         } as any)
         .eq("id", instanceId);
       if (error) throw new Error(error.message);
@@ -510,14 +520,14 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
 
       const { data: linkedTrackingLinks } = await supabase
         .from("tracking_links")
-        .select("id, influencer_id, campanha_id, tracking_code")
+        .select("id, influencer_id, campanha_id, tracking_code, click_id_param_name, base_url, short_url")
         .eq("landing_page_instance_id", instanceId);
 
       let linksToSync = ((linkedTrackingLinks || []) as any[]);
       if (!linksToSync.length && instance?.source_tracking_link_id) {
         const { data: sourceTl } = await supabase
           .from("tracking_links")
-          .select("id, influencer_id, campanha_id, tracking_code")
+          .select("id, influencer_id, campanha_id, tracking_code, click_id_param_name, base_url, short_url")
           .eq("id", instance.source_tracking_link_id)
           .maybeSingle();
         if (sourceTl) linksToSync = [sourceTl as any];
@@ -548,7 +558,6 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
             landing_page_id: instance?.landing_page_id || null,
             landing_page_instance_id: instanceId,
             final_url: shareUrls[idx] || null,
-            base_url: link?.base_url || undefined,
             use_lp: true,
             lp_auto_generated: true,
           } as any)
