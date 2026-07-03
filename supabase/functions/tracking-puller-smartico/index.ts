@@ -98,9 +98,9 @@ async function fetchReport(apiKey: string, labelId: string | null, dateFrom: str
     if (r.ok) return { payload: r.json, rows: extractRows(r.json), attempt: a.label };
     errors.push(`${a.label}:${r.status}:${(r.text || "").slice(0, 160)}`);
   }
-  const missingLabel = errors.some((e) => e.toLowerCase().includes("missing label"));
+  const missingLabel = errors.some((e) => /missing label|errcode.?:?\s*3|label.?id/i.test(e));
   if (missingLabel) {
-    throw new Error("Smartico retornou 'Missing label id'. Configure também SMARTICO_LABEL_ID/STELLAR_TAP_LABEL_ID no Edge Function; a chave atual sozinha não autoriza o relatório.");
+    throw new Error("Smartico exige label_id: configure a variável SMARTICO_LABEL_ID (ou STELLAR_TAP_LABEL_ID) — a chave sozinha não autoriza o relatório. Sem isso o pull volta zerado.");
   }
   throw new Error(`Smartico falhou: ${errors[0] ?? "sem resposta"}`);
 }
