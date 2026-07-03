@@ -118,3 +118,187 @@ export function referencesByCategory(cat: ReferenceCategory): CreativeReference[
 export function findReference(id: string): CreativeReference | null {
   return CREATIVE_REFERENCES.find((r) => r.id === id) ?? null;
 }
+
+/* ────────────────────────── applyReference ──────────────────────────
+ * Transforma um CreativeReference + contexto (marca + link + fills) em
+ * um array de Layers pronto para o Creative Studio. Já adiciona o frame
+ * obrigatório (logo plataforma + assinatura PlayBet + selo legal).
+ */
+import type { Layer, TextLayer, ImageLayer, CreativeFormat } from "./creativeStudio";
+import { FORMAT_SIZES } from "./creativeStudio";
+
+/** Preenchimentos que o usuário fornece por slot antes de aplicar. */
+export interface ReferenceSlotFill {
+  role: LayoutSlot["role"];
+  /** URL de imagem (para hero-art, brasões, logos, badges de liga). */
+  imageUrl?: string;
+  /** Texto (para odd-value, headline, subhead, cta). */
+  text?: string;
+}
+
+export interface ApplyReferenceCtx {
+  format: CreativeFormat;
+  /** Frame de marca: logo da plataforma + selo legal + cor CTA. */
+  brand: {
+    platformName?: string | null;
+    platformLogoSrc?: string | null;
+    playbetLogoSrc: string;
+    ctaColor?: string | null;   // background do CTA (primary da marca)
+    sealSrc?: string | null;
+    sealLabel?: string | null;
+  };
+  link?: {
+    gameName?: string | null;
+    gameIconUrl?: string | null;
+    hypeReason?: string | null;
+    shortUrl?: string | null;
+  } | null;
+  /** Overrides por slot (imagem/texto) escolhidos no painel. */
+  fills?: ReferenceSlotFill[];
+}
+
+const uid = () => (typeof crypto !== "undefined" && crypto.randomUUID
+  ? crypto.randomUUID()
+  : `id-${Math.random().toString(36).slice(2)}-${Date.now()}`);
+
+function fillFor(role: LayoutSlot["role"], fills?: ReferenceSlotFill[]): ReferenceSlotFill | undefined {
+  return fills?.find((f) => f.role === role);
+}
+
+function slotToLayer(slot: LayoutSlot, ctx: ApplyReferenceCtx): Layer | null {
+  const fill = fillFor(slot.role, ctx.fills);
+  const fmt = FORMAT_SIZES[ctx.format];
+  const vertical = fmt.h >= fmt.w * 1.2;
+
+  const base = {
+    id: uid(),
+    xPct: slot.xPct,
+    yPct: slot.yPct,
+    widthPct: slot.widthPct,
+  };
+
+  // ── Slots de IMAGEM
+  if (slot.role === "hero-art" || slot.role === "game-logo"
+    || slot.role === "team-crest-home" || slot.role === "team-crest-away"
+    || slot.role === "league-badge") {
+    const src =
+      fill?.imageUrl ||
+      (slot.role === "game-logo" || slot.role === "hero-art"
+        ? ctx.link?.gameIconUrl || undefined
+        : undefined);
+    if (!src) return null; // sem imagem, não cria a camada — usuário precisa preencher
+    const layer: ImageLayer = {
+      kind: "image",
+      ...base,
+      src,
+      label:
+        slot.role === "hero-art" ? "Arte principal" :
+        slot.role === "game-logo" ? "Logo do jogo" :
+        slot.role === "team-crest-home" ? "Brasão mandante" :
+        slot.role === "team-crest-away" ? "Brasão visitante" :
+        "Liga",
+      heightPct: slot.heightPct ?? slot.widthPct,
+      radiusPct: slot.role === "hero-art" ? 6 : 0,
+      opacity: 1,
+      fit: slot.role === "hero-art" ? "cover" : "contain",
+      glow: slot.role === "hero-art" ? (ctx.brand.ctaColor || null) : null,
+    };
+    return layer;
+  }
+
+  // ── Slots de TEXTO
+  const align = slot.align || "left";
+  if (slot.role === "odd-value") {
+    const text = (fill?.text || "2.15").trim();
+    return {
+      kind: "text", ...base, text,
+      fontSizePct: vertical ? 18 : 14,
+      color: "#FFFFFF", weight: 900, align,
+      family: "display", uppercase: true, shadow: true, lineHeight: 1,
+    } satisfies TextLayer;
+  }
+  if (slot.role === "headline") {
+    const text = fill?.text || ctx.link?.hypeReason || ctx.link?.gameName || "Manchete";
+    return {
+      kind: "text", ...base, text,
+      fontSizePct: vertical ? 9 : 7.5,
+      color: "#FFFFFF", weight: 900, align,
+      family: "display", uppercase: true, shadow: true, lineHeight: 1.02,
+    } satisfies TextLayer;
+  }
+  if (slot.role === "subhead") {
+    const text = fill?.text || ctx.brand.platformName || "Aposte com a Playbet";
+    return {
+      kind: "text", ...base, text,
+      fontSizePct: vertical ? 4.2 : 3.4,
+      color: "#FFFFFFCC", weight: 500, align,
+      family: "grotesk", uppercase: false, shadow: false, lineHeight: 1.15,
+    } satisfies TextLayer;
+  }
+  if (slot.role === "cta") {
+    const text = (fill?.text || "APOSTAR AGORA →").trim();
+    return {
+      kind: "text", ...base, text,
+      fontSizePct: vertical ? 4.5 : 3.6,
+      color: "#0B0B0F", weight: 800, align,
+      family: "grotesk", uppercase: true, shadow: false, lineHeight: 1,
+      bgColor: ctx.brand.ctaColor || "#FFC72C",
+      bgPadPct: 60, bgRadiusPct: 50,
+    } satisfies TextLayer;
+  }
+  return null;
+}
+
+/** Frame obrigatório de marca: logo plataforma (topo-esq), assinatura PlayBet (topo-dir), selo legal (rodapé). */
+function brandFrame(ctx: ApplyReferenceCtx): Layer[] {
+  const fmt = FORMAT_SIZES[ctx.format];
+  const vertical = fmt.h >= fmt.w * 1.2;
+  const layers: Layer[] = [];
+  const platformLogo = ctx.brand.platformLogoSrc || ctx.brand.playbetLogoSrc;
+
+  layers.push({
+    kind: "image", id: uid(),
+    src: platformLogo, label: `Logo ${ctx.brand.platformName || "plataforma"}`,
+    xPct: 6, yPct: vertical ? 4 : 6,
+    widthPct: vertical ? 28 : 24, heightPct: vertical ? 6 : 8,
+    radiusPct: 0, opacity: 1, fit: "contain", glow: null,
+  });
+
+  if (ctx.brand.platformLogoSrc) {
+    layers.push({
+      kind: "image", id: uid(),
+      src: ctx.brand.playbetLogoSrc, label: "Assinatura PlayBet",
+      xPct: vertical ? 74 : 78, yPct: vertical ? 4 : 6,
+      widthPct: vertical ? 20 : 16, heightPct: vertical ? 4 : 5,
+      radiusPct: 0, opacity: 0.85, fit: "contain", glow: null,
+    });
+  }
+
+  if (ctx.brand.sealSrc) {
+    layers.push({
+      kind: "image", id: uid(),
+      src: ctx.brand.sealSrc, label: ctx.brand.sealLabel || "Selo legal 18+",
+      xPct: vertical ? 4 : 6, yPct: vertical ? 96.5 : 96,
+      widthPct: vertical ? 46 : 34, heightPct: vertical ? 3 : 3.2,
+      radiusPct: 0, opacity: 0.95, fit: "contain", glow: null,
+    });
+  }
+  return layers;
+}
+
+export function applyReference(ref: CreativeReference, ctx: ApplyReferenceCtx): Layer[] {
+  const frame = brandFrame(ctx);
+  const content = ref.slots
+    .map((s) => slotToLayer(s, ctx))
+    .filter((l): l is Layer => l !== null);
+  return [...frame, ...content];
+}
+
+/** Slots que exigem uma URL de imagem preenchida pelo usuário (não têm fallback do link). */
+export function requiredImageSlots(ref: CreativeReference): LayoutSlot[] {
+  return ref.slots.filter((s) =>
+    s.role === "team-crest-home" ||
+    s.role === "team-crest-away" ||
+    s.role === "league-badge"
+  );
+}
