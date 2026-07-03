@@ -423,7 +423,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
   const applyAdaptiveCopy = () => {
     const gname = link?.game_name;
     setCopy({
-      title: titleForMode(mode, gname) || copy.title || "",
+      title: titleForMode(mode, gname, platformName) || copy.title || "",
       subtitle: link?.hype_reason || adaptiveSubtitle(mode, gname, platformName),
       cta_label: ctaForMode(mode, link?.link_category, gname),
     });
