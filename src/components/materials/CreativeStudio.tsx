@@ -24,6 +24,8 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useLinkBrand } from "@/lib/useLinkBrand";
 import { BrandLockBadge } from "@/components/brand/BrandLockBadge";
+import { buildMaterialFilename } from "@/lib/exportMaterial";
+
 
 
 export interface CreativeStudioLink {
