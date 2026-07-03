@@ -5,6 +5,8 @@ import { ArrowRight, Zap, Gift, Users, Copy } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { useLinkBrand, useBrandByPlatform } from "@/lib/useLinkBrand";
 import { BrandFooterSeal } from "@/components/brand/BrandFooterSeal";
+import { resolveEffectiveLpMode } from "@/lib/lpMode";
+
 
 
 type LoadState = "loading" | "ready" | "not_found" | "inactive" | "no_domain";
@@ -744,10 +746,12 @@ export default function InfluencerLanding() {
   const hasLink = !!resolved?.affiliate_link;
 
   const storedMode = (instanceCtx?.lp_mode as string) || "catalog";
-  const hasSelectedGame = gameArts.length > 0 || Boolean(normalizeSlug(instanceCtx?.hype_copy?.game_slug));
-  const mode = (storedMode === "single_game" || storedMode === "multi_game") && !hasSelectedGame
-    ? "platform_direct"
-    : storedMode;
+  const mode = resolveEffectiveLpMode({
+    storedMode,
+    hasResolvedGameArt: gameArts.length > 0,
+    hypeCopyGameSlug: normalizeSlug(instanceCtx?.hype_copy?.game_slug),
+  });
+
   const rawSections: Array<{ id: string; enabled: boolean }> =
     instanceCtx?.layout_config?.sections ?? [
       { id: "hero", enabled: true },
