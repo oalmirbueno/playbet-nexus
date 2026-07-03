@@ -19,6 +19,9 @@ import {
 import {
   Loader2, Save, RefreshCw, Download, Sparkles, ExternalLink, Wand2, Layout,
 } from "lucide-react";
+import { useLinkBrand } from "@/lib/useLinkBrand";
+import { BrandLockBadge } from "@/components/brand/BrandLockBadge";
+
 
 interface Props {
   open: boolean;
