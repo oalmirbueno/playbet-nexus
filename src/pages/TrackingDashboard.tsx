@@ -325,9 +325,9 @@ export default function TrackingDashboard() {
         <KpiCard
           variant="success"
           icon={<DollarSign size={16} />}
-          label="Receita"
+          label="Lucro real"
           value={fmtBRL(kpiReceita)}
-          hint={periodKpis.revshare > 0 ? `${fmtBRL(periodKpis.revshare)} RevShare` : "NGR/receita importada"}
+          hint={periodKpis.revshare > 0 ? `${fmtBRL(periodKpis.revshare)} RevShare` : "RevShare + CPA importado"}
         />
         <KpiCard
           variant="primary"
@@ -343,7 +343,7 @@ export default function TrackingDashboard() {
         <div className="lg:col-span-2 glass-card p-6">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="text-sm font-semibold text-foreground">Receita ao longo do período</h3>
+              <h3 className="text-sm font-semibold text-foreground">Lucro real ao longo do período</h3>
               <p className="text-xs text-muted-foreground mt-0.5">Em reais (R$)</p>
             </div>
             <TrendingUp size={16} className="text-accent" />
@@ -368,7 +368,7 @@ export default function TrackingDashboard() {
                       fontSize: 12,
                       color: "hsl(var(--foreground))",
                     }}
-                    formatter={(v: number) => [fmtBRL(v), "Receita"]}
+                    formatter={(v: number) => [fmtBRL(v), "Lucro real"]}
                   />
                   <Area
                     type="monotone"
