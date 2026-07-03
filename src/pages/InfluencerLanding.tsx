@@ -570,7 +570,7 @@ export default function InfluencerLanding() {
           clicked_at: new Date().toISOString(),
           user_agent: navigator.userAgent,
           referrer: document.referrer || null,
-          route: `/?ref=${slug}`,
+          route: window.location.pathname + window.location.search,
           source: "cta_click",
         } as any);
       }
