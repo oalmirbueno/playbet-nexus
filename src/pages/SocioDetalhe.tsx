@@ -5,6 +5,8 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { toast } from "@/hooks/use-toast";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { useSocios, useSaques } from "@/hooks/useSupabaseQuery";
+import { useFinanceiroData } from "@/hooks/useFinanceiroData";
+import { calculateSocioDistribution, formatBRL, readDistributionParams } from "@/lib/financialDistribution";
 
 const chartTooltip = { background: "hsl(0 0% 8%)", border: "1px solid hsl(0 0% 15%)", borderRadius: 8, color: "#fff", fontSize: 12 };
 
@@ -16,8 +18,11 @@ export default function SocioDetalhe() {
 
   const { data: socios, isLoading } = useSocios();
   const { data: saques } = useSaques();
+  const { distribution } = useFinanceiroData({ period: "30d" });
 
   const socio = socios.find((s: any) => s.id === id);
+  const liveDistribution = calculateSocioDistribution(distribution, readDistributionParams(), socios as any);
+  const liveSocio = liveDistribution.partnerRows.find((row) => row.id === id);
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
@@ -36,8 +41,13 @@ export default function SocioDetalhe() {
     );
   }
 
-  const sacado = Number(socio.ganhos || 0) - Number(socio.disponivel || 0);
   const saquesSocio = saques.filter((s: any) => s.nome?.toLowerCase().includes(socio.nome?.toLowerCase().split(" ")[0]?.toLowerCase() || "---"));
+  const paidStatuses = new Set(["Pago", "Pago via Asaas", "Confirmado", "Aprovado"]);
+  const sacado = saquesSocio
+    .filter((s: any) => paidStatuses.has(String(s.status ?? "")))
+    .reduce((acc: number, s: any) => acc + Number(s.valor || 0), 0);
+  const ganhos30d = liveSocio?.amount ?? 0;
+  const disponivel30d = Math.max(0, ganhos30d - sacado);
 
   return (
     <div className="space-y-6">
@@ -53,8 +63,8 @@ export default function SocioDetalhe() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="stat-card border-l-2 border-l-accent"><div className="flex items-center justify-between"><span className="text-[10px] text-muted-foreground uppercase">Ganhos Acumulados</span><TrendingUp size={14} className="text-muted-foreground" /></div><p className="text-xl font-bold">R$ {Number(socio.ganhos || 0).toLocaleString()}</p></div>
-        <div className="stat-card border-l-2 border-l-success"><div className="flex items-center justify-between"><span className="text-[10px] text-muted-foreground uppercase">Saldo Disponível</span><Wallet size={14} className="text-muted-foreground" /></div><p className="text-xl font-bold text-success">R$ {Number(socio.disponivel || 0).toLocaleString()}</p></div>
+        <div className="stat-card border-l-2 border-l-accent"><div className="flex items-center justify-between"><span className="text-[10px] text-muted-foreground uppercase">Ganhos 30d</span><TrendingUp size={14} className="text-muted-foreground" /></div><p className="text-xl font-bold">{formatBRL(ganhos30d)}</p></div>
+        <div className="stat-card border-l-2 border-l-success"><div className="flex items-center justify-between"><span className="text-[10px] text-muted-foreground uppercase">Saldo Disponível</span><Wallet size={14} className="text-muted-foreground" /></div><p className="text-xl font-bold text-success">{formatBRL(disponivel30d)}</p></div>
         <div className="stat-card border-l-2 border-l-primary"><div className="flex items-center justify-between"><span className="text-[10px] text-muted-foreground uppercase">Total Sacado</span><DollarSign size={14} className="text-muted-foreground" /></div><p className="text-xl font-bold">R$ {sacado.toLocaleString()}</p></div>
         <div className="stat-card border-l-2 border-l-info"><div className="flex items-center justify-between"><span className="text-[10px] text-muted-foreground uppercase">Último Saque</span><Clock size={14} className="text-muted-foreground" /></div><p className="text-sm font-bold">{socio.ultimo_saque || "-"}</p></div>
       </div>
@@ -73,7 +83,7 @@ export default function SocioDetalhe() {
             <h3 className="section-title">Visão Geral</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div><span className="text-[10px] text-muted-foreground uppercase">Participação</span><p className="font-bold text-lg">{socio.participacao}%</p></div>
-              <div><span className="text-[10px] text-muted-foreground uppercase">Ganhos</span><p className="font-bold text-lg text-accent">R$ {Number(socio.ganhos || 0).toLocaleString()}</p></div>
+              <div><span className="text-[10px] text-muted-foreground uppercase">Ganhos 30d</span><p className="font-bold text-lg text-accent">{formatBRL(ganhos30d)}</p></div>
               <div><span className="text-[10px] text-muted-foreground uppercase">Último Saque</span><p className="font-medium">{socio.ultimo_saque || "-"}</p></div>
               <div><span className="text-[10px] text-muted-foreground uppercase">Status</span><span className={socio.status === "Ativo" ? "badge-success" : "badge-neutral"}>{socio.status}</span></div>
             </div>

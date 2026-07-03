@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useFinanceiroData, type PeriodKey } from "@/hooks/useFinanceiroData";
 import { useRealtimeMetrics } from "@/hooks/useRealtimeMetrics";
+import { useSocios } from "@/hooks/useSupabaseQuery";
 import PeriodFilter from "@/components/financeiro/PeriodFilter";
 import KpiDuo from "@/components/financeiro/KpiDuo";
 import RankingTable from "@/components/financeiro/RankingTable";
@@ -24,6 +25,7 @@ export default function Financeiro() {
   const activeTab = params.get("tab") ?? "distribuicao";
   const queryClient = useQueryClient();
   const [syncing, setSyncing] = useState(false);
+  const { data: socios } = useSocios();
   useRealtimeMetrics();
 
   const setParam = (k: string, v: string) => {
@@ -137,6 +139,7 @@ export default function Financeiro() {
         <TabsContent value="distribuicao" className="mt-6">
           <DistributionCard
             breakdown={distribution}
+            socios={socios as any}
             sourceLabel={`Rev + CPA · ${range.label.toLowerCase()}`}
           />
         </TabsContent>

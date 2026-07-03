@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Edit, ArrowRight, Users } from "lucide-react";
+import { Plus, Edit, ArrowRight, Users, Wallet } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
@@ -7,12 +7,29 @@ import Breadcrumbs from "@/components/Breadcrumbs";
 import ExportDropdown from "@/components/ExportDropdown";
 import EmptyState from "@/components/EmptyState";
 import { useSocios } from "@/hooks/useSupabaseQuery";
+import { useFinanceiroData } from "@/hooks/useFinanceiroData";
+import { calculateSocioDistribution, formatBRL, readDistributionParams } from "@/lib/financialDistribution";
 
 export default function Socios() {
   const navigate = useNavigate();
   const { data, create, update, isLoading, isCreating, isUpdating } = useSocios();
+  const { distribution, saquesInPeriod, isLoading: isFinanceiroLoading } = useFinanceiroData({ period: "30d" });
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
+
+  const liveDistribution = calculateSocioDistribution(distribution, readDistributionParams(), data as any);
+  const liveBySocio = new Map(liveDistribution.partnerRows.map((row) => [row.id, row]));
+  const paidStatuses = new Set(["Pago", "Pago via Asaas", "Confirmado", "Aprovado"]);
+  const withdrawnBySocio = new Map<string, number>();
+  for (const socio of data as any[]) {
+    const firstName = String(socio.nome ?? "").trim().split(" ")[0]?.toLowerCase();
+    const paid = (saquesInPeriod ?? [])
+      .filter((saque: any) => String(saque.tipo ?? "").toLowerCase().includes("sócio") || String(saque.tipo ?? "").toLowerCase().includes("socio"))
+      .filter((saque: any) => paidStatuses.has(String(saque.status ?? "")))
+      .filter((saque: any) => firstName && String(saque.nome ?? "").toLowerCase().includes(firstName))
+      .reduce((acc: number, saque: any) => acc + Number(saque.valor || 0), 0);
+    withdrawnBySocio.set(socio.id, paid);
+  }
 
   const openCreate = () => {
     setEditing({ nome: "", participacao: 0, status: "Ativo" });
@@ -48,7 +65,11 @@ export default function Socios() {
           <p className="text-sm text-muted-foreground mt-1">Gestão societária - participação, ganhos e distribuição</p>
         </div>
         <div className="flex gap-2">
-          {data.length > 0 && <ExportDropdown data={data.map(({ id, nome, participacao, ganhos, disponivel, status }: any) => ({ id, nome, participacao, ganhos, disponivel, status }))} filename="socios-playbet" />}
+          {data.length > 0 && <ExportDropdown data={data.map(({ id, nome, participacao, status }: any) => {
+            const live = liveBySocio.get(id);
+            const withdrawn = withdrawnBySocio.get(id) ?? 0;
+            return { id, nome, participacao, ganhos_30d: live?.amount ?? 0, disponivel_30d: Math.max(0, (live?.amount ?? 0) - withdrawn), status };
+          })} filename="socios-playbet" />}
           <button className="btn-primary" onClick={openCreate}><Plus size={14} /> Adicionar Sócio</button>
         </div>
       </div>
@@ -64,8 +85,27 @@ export default function Socios() {
           />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {data.map((s: any) => (
+        <div className="space-y-4">
+          <div className="glass-card p-5 flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center text-primary"><Wallet size={17} /></div>
+              <div>
+                <p className="text-sm font-semibold">Distribuição ao vivo · últimos 30 dias</p>
+                <p className="text-xs text-muted-foreground">Mesma base do Financeiro: Rev + CPA, com participação real dos sócios.</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <p className="text-[10px] uppercase text-muted-foreground">Saldo dos sócios</p>
+              <p className="text-xl font-bold font-mono tabular-nums text-primary">{isFinanceiroLoading ? "—" : formatBRL(liveDistribution.partnersPool)}</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {data.map((s: any) => {
+            const live = liveBySocio.get(s.id);
+            const withdrawn = withdrawnBySocio.get(s.id) ?? 0;
+            const available = Math.max(0, (live?.amount ?? 0) - withdrawn);
+            return (
             <div key={s.id} className="glass-card p-5 hover:border-primary/30 transition-colors">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
@@ -81,14 +121,17 @@ export default function Socios() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2 text-sm mb-3">
-                <div><span className="text-xs text-muted-foreground">Ganhos</span><p className="font-semibold">R$ {Number(s.ganhos || 0).toLocaleString()}</p></div>
-                <div><span className="text-xs text-muted-foreground">Disponível</span><p className="font-semibold">R$ {Number(s.disponivel || 0).toLocaleString()}</p></div>
+                <div><span className="text-xs text-muted-foreground">Ganhos 30d</span><p className="font-semibold">{isFinanceiroLoading ? "—" : formatBRL(live?.amount ?? 0)}</p></div>
+                <div><span className="text-xs text-muted-foreground">Disponível</span><p className="font-semibold">{isFinanceiroLoading ? "—" : formatBRL(available)}</p></div>
               </div>
+              {withdrawn > 0 && <p className="text-[10px] text-muted-foreground">Sacado no período: {formatBRL(withdrawn)}</p>}
               <div className="mt-3 pt-3 border-t border-border">
                 <span className={s.status === "Ativo" ? "badge-success" : "badge-neutral"}>{s.status}</span>
               </div>
             </div>
-          ))}
+            );
+          })}
+          </div>
         </div>
       )}
 
