@@ -5,6 +5,7 @@ import { MousePointerClick, UserPlus, DollarSign, Gamepad2, Monitor, Users, Link
 import TrackingOverviewCard from "@/components/TrackingOverviewCard";
 import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
 import { useTrackingMetricsSummary } from "@/hooks/useTrackingMetricsSummary";
+import { useRealtimeMetrics } from "@/hooks/useRealtimeMetrics";
 import { useInfluencers, useGames, usePlatforms, useLandingPages, useTemplates, useUtms, useCampanhas, useSocios, useSaques, useConteudo } from "@/hooks/useSupabaseQuery";
 import { useQueryClient } from "@tanstack/react-query";
 import { seedDemoData, clearDemoData } from "@/services/seedDemoData";
