@@ -95,78 +95,54 @@ function mergeCookies(existing: string, setCookieHeader: string | null): string 
   return Array.from(jar.entries()).map(([k, v]) => `${k}=${v}`).join("; ");
 }
 
-async function nextAuthLogin(run: RunHandle): Promise<AuthSession | null> {
-  const attempts: any[] = [];
-  let cookie = "";
-
-  // 1. Fetch CSRF token
-  try {
-    const csrfRes = await fetch(PANEL_BASE + "/api/auth/csrf", {
-      headers: { accept: "application/json" },
-      redirect: "manual",
-    });
-    cookie = mergeCookies(cookie, csrfRes.headers.get("set-cookie"));
-    const csrfText = await csrfRes.text();
-    let csrfToken = "";
-    try { csrfToken = JSON.parse(csrfText).csrfToken || ""; } catch { /* ignore */ }
-    attempts.push({ step: "csrf", status: csrfRes.status, has_token: !!csrfToken, snippet: csrfText.slice(0, 200) });
-
-    if (!csrfToken) {
-      run.discovery.auth_attempts = attempts;
-      return null;
-    }
-
-    // 2. Try common NextAuth credential provider paths
-    const providers = ["credentials", "login", "email", "affiliates", "partners"];
-    for (const provider of providers) {
-      const body = new URLSearchParams({
-        csrfToken,
-        callbackUrl: PANEL_BASE + "/",
-        email: PANEL_EMAIL,
-        username: PANEL_EMAIL,
-        password: PANEL_PASSWORD,
-        json: "true",
-      });
-      const res = await fetch(PANEL_BASE + `/api/auth/callback/${provider}`, {
-        method: "POST",
-        headers: {
-          "content-type": "application/x-www-form-urlencoded",
-          accept: "application/json",
-          cookie,
-        },
-        body,
-        redirect: "manual",
-      });
-      cookie = mergeCookies(cookie, res.headers.get("set-cookie"));
-      const text = await res.text();
-      attempts.push({ step: `callback/${provider}`, status: res.status, cookie_len: cookie.length, snippet: text.slice(0, 300) });
-
-      // Success if we now have a session token cookie
-      if (/next-auth\.session-token|__Secure-next-auth\.session-token|authjs\.session-token/.test(cookie)) {
-        // Verify session
-        const sess = await fetch(PANEL_BASE + "/api/auth/session", {
-          headers: { accept: "application/json", cookie },
-        });
-        const sessText = await sess.text();
-        attempts.push({ step: "session-check", status: sess.status, snippet: sessText.slice(0, 400) });
-        if (sess.ok && sessText && sessText !== "{}" && !sessText.includes("null")) {
-          run.discovery.auth_attempts = attempts;
-          run.discovery.auth_success = { strategy: `nextauth:${provider}` };
-          return { strategy: `nextauth:${provider}`, cookie };
-        }
-      }
-    }
-  } catch (e) {
-    attempts.push({ step: "error", error: String(e) });
-  }
-
-  run.discovery.auth_attempts = attempts;
-  return null;
-}
+// Real API base discovered from the panel JS bundle.
+const STELLAR_API_BASE = "https://us-partners-api-node.estrelabet.bet.br/api";
+const STELLAR_ORIGIN = "https://partners.estrelabet.bet.br";
 
 async function authenticate(run: RunHandle): Promise<AuthSession | null> {
-  return await nextAuthLogin(run);
+  const attempts: any[] = [];
+  try {
+    const res = await fetch(`${STELLAR_API_BASE}/auth/login`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        accept: "application/json",
+        origin: STELLAR_ORIGIN,
+        referer: STELLAR_ORIGIN + "/",
+        "user-agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120",
+      },
+      body: JSON.stringify({ email: PANEL_EMAIL, password: PANEL_PASSWORD }),
+    });
+    const text = await res.text();
+    let json: any = null;
+    try { json = JSON.parse(text); } catch { /* html */ }
+    const cookie = res.headers.get("set-cookie") ?? "";
+    attempts.push({
+      step: "auth/login",
+      status: res.status,
+      has_json: !!json,
+      keys: json ? Object.keys(json).slice(0, 20) : [],
+      snippet: text.slice(0, 400),
+    });
+    run.discovery.auth_attempts = attempts;
+
+    if (!res.ok || !json) return null;
+
+    const token: string | undefined =
+      json.access_token || json.accessToken || json.token || json.jwt ||
+      json.data?.access_token || json.data?.accessToken || json.data?.token ||
+      json.result?.token || json.session?.token;
+
+    if (!token && !cookie) return null;
+
+    return { strategy: "estrelabet:auth/login", token, cookie: cookie ? cookie.split(",").map((c) => c.split(";")[0].trim()).join("; ") : undefined };
+  } catch (e) {
+    attempts.push({ step: "auth/login", error: String(e) });
+    run.discovery.auth_attempts = attempts;
+    return null;
+  }
 }
+
 
 // ---------- Report discovery ----------
 
