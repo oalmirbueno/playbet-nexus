@@ -19,6 +19,12 @@ export default function TrackingOverviewCard() {
   const { data: accounts } = usePlatformAccounts();
   const { data: links } = useTrackingLinks();
   const { consolidated, hasData: hasEvents } = useAutoConsolidation();
+  const { summary: metricsSummary } = useTrackingMetricsSummary("30d");
+
+  // Merge event-based numbers with panel-scraper metrics for a single source of truth.
+  const mergedRevenueBrl = Math.max(consolidated.revenueBrl, metricsSummary.revenue + metricsSummary.cpa);
+  const mergedConversions = Math.max(consolidated.conversionEventCount, metricsSummary.ftd + metricsSummary.registrations);
+  const hasMetrics = metricsSummary.profitBase > 0 || metricsSummary.ftd > 0;
 
   const lastEvent = consolidated.lastEventTimestamp
     ? new Date(consolidated.lastEventTimestamp).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
