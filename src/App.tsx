@@ -54,6 +54,7 @@ import TrackingMappings from "./pages/TrackingMappings";
 import TrackingEvents from "./pages/TrackingEvents";
 import TrackingSnapshots from "./pages/TrackingSnapshots";
 import TrackingLinks from "./pages/TrackingLinks";
+import TrackingStatus from "./pages/TrackingStatus";
 import Reconciliacao from "./pages/Reconciliacao";
 import NotFound from "./pages/NotFound";
 import InfluencerLanding from "./pages/InfluencerLanding";
