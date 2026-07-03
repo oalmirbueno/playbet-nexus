@@ -754,11 +754,23 @@ export default function InfluencerLanding() {
   const isCatalogMode = mode === "catalog";
   const isPlatformDirect = mode === "platform_direct";
   const isGeneratedMode = !isCatalogMode && !isPlatformDirect;
-  const displayGames = mode === "single_game" && primaryGame ? [primaryGame] : gameArts;
-  const heroGame = isPlatformDirect ? null : (primaryGame || null);
+  // Regra anti-duplicação: em `single_game` o jogo já aparece no hero — não
+  // repetimos ele na grade de "Jogo selecionado". Em `catalog` com 1 jogo,
+  // também evitamos o duplo (hero + grade). Em `multi_game`/`catalog` (2+),
+  // a grade é o valor da página e o hero fica sem arte de jogo específico.
+  const isMultiGame = mode === "multi_game" || (isCatalogMode && gameArts.length > 1);
+  const displayGames = isMultiGame ? gameArts : [];
+  const heroGame = isPlatformDirect
+    ? null
+    : isMultiGame
+      ? null
+      : (primaryGame || null);
   const bonusEnabled = !isPlatformDirect && bonusOffer?.enabled !== false;
   const communityEnabled = !isPlatformDirect && communityCta?.enabled !== false;
-  const showFeatures = isGeneratedMode && isSectionOn("features") && bonusEnabled && (bonusOffer?.title || bonusOffer?.code || primaryGame);
+  // Só mostramos a barra "Oferta oficial" quando há bônus real (código/CTA
+  // próprio). Sem isso, repetiria o mesmo jogo do hero e polui a página.
+  const hasRealBonus = Boolean(bonusOffer?.code) || Boolean(bonusEnabled && bonusOffer?.cta_label && bonusOffer.cta_label !== instanceCtx?.hype_copy?.cta_label);
+  const showFeatures = isGeneratedMode && isSectionOn("features") && bonusEnabled && hasRealBonus;
   const showCommunity = isSectionOn("community") && communityEnabled && (communityCta?.label || communityCta?.url);
   const platformName = brandCtx?.brand?.name ?? null;
   const defaultCta = isCatalogMode
