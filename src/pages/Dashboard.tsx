@@ -60,6 +60,8 @@ export default function Dashboard() {
       ]);
       await Promise.all([
         refetchMetrics(),
+        queryClient.invalidateQueries({ queryKey: ["tracking_metrics"] }),
+        queryClient.invalidateQueries({ queryKey: ["tracking_metrics_summary"] }),
         queryClient.invalidateQueries({ queryKey: ["tracking_consolidated_real_source"] }),
         queryClient.invalidateQueries({ queryKey: ["financeiro_metrics"] }),
       ]);
