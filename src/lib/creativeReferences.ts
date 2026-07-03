@@ -262,6 +262,7 @@ function brandFrame(ctx: ApplyReferenceCtx): Layer[] {
     xPct: 6, yPct: vertical ? 4 : 6,
     widthPct: vertical ? 28 : 24, heightPct: vertical ? 6 : 8,
     radiusPct: 0, opacity: 1, fit: "contain", glow: null,
+    chrome: "platform-logo",
   });
 
   if (ctx.brand.platformLogoSrc) {
@@ -271,6 +272,7 @@ function brandFrame(ctx: ApplyReferenceCtx): Layer[] {
       xPct: vertical ? 74 : 78, yPct: vertical ? 4 : 6,
       widthPct: vertical ? 20 : 16, heightPct: vertical ? 4 : 5,
       radiusPct: 0, opacity: 0.85, fit: "contain", glow: null,
+      chrome: "playbet-signature",
     });
   }
 
@@ -281,10 +283,12 @@ function brandFrame(ctx: ApplyReferenceCtx): Layer[] {
       xPct: vertical ? 4 : 6, yPct: vertical ? 96.5 : 96,
       widthPct: vertical ? 46 : 34, heightPct: vertical ? 3 : 3.2,
       radiusPct: 0, opacity: 0.95, fit: "contain", glow: null,
+      chrome: "legal-seal",
     });
   }
   return layers;
 }
+
 
 export function applyReference(ref: CreativeReference, ctx: ApplyReferenceCtx): Layer[] {
   const frame = brandFrame(ctx);
