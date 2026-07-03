@@ -78,6 +78,7 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId, readOnl
   const [preview, setPreview] = useState<RenderedCreative | null>(null);
   const [rendering, setRendering] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
+  const [reloadTick, setReloadTick] = useState(0);
 
   // Editable LP hype copy
   const [hcTitle, setHcTitle] = useState("");
