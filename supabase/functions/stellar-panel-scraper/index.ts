@@ -483,7 +483,7 @@ Deno.serve(async (req) => {
 
     let total = 0;
     for (const { brand, items } of allItems) {
-      total += await persist(run, brand, items, ctx);
+      total += await persist(run, brand, items, ctx, dateEnd);
     }
 
     await finishRun(
