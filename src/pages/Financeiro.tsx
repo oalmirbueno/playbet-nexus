@@ -1,14 +1,21 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { Loader2, RefreshCw } from "lucide-react";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { useFinanceiroData, type PeriodKey } from "@/hooks/useFinanceiroData";
+import { useRealtimeMetrics } from "@/hooks/useRealtimeMetrics";
 import PeriodFilter from "@/components/financeiro/PeriodFilter";
 import KpiDuo from "@/components/financeiro/KpiDuo";
 import RankingTable from "@/components/financeiro/RankingTable";
 import SaquesTab from "@/components/financeiro/SaquesTab";
 import DistributionCard from "@/components/DistributionCard";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+
 
 export default function Financeiro() {
   const [params, setParams] = useSearchParams();
