@@ -138,7 +138,7 @@ export function useAutoConsolidation() {
         supabase
           .from("tracking_events")
           .select(
-            "id, platform_id, canonical_event_name, event_timestamp, original_amount, original_currency, converted_amount_brl, exchange_rate, exchange_rate_timestamp, commission_amount, status, is_duplicate, transaction_id, raw_payload",
+            "id, platform_id, click_id, canonical_event_name, event_timestamp, original_amount, original_currency, converted_amount_brl, exchange_rate, exchange_rate_timestamp, commission_amount, status, is_duplicate, transaction_id, raw_payload",
           )
           .eq("is_demo", false)
           .order("event_timestamp", { ascending: false }),
