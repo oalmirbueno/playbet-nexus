@@ -643,8 +643,11 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
 
       toast({
         title: "LP salva",
-        description: publicShareUrl ? `Link ${effectiveMode === "catalog" ? "da LP padrão" : "da LP gerada"} atualizado e copiado.` : "Página preservada e preview atualizado.",
+        description: copiedShareUrl
+          ? `Link ${effectiveMode === "catalog" ? "da LP padrão" : "da LP gerada"} atualizado e copiado.`
+          : (publicShareUrl ? "LP salva. Link não foi copiado — revise os dados." : "Página preservada e preview atualizado."),
       });
+
       setPreviewKey((k) => k + 1);
     } catch (e: any) {
       toast({ title: "Erro ao salvar", description: e?.message, variant: "destructive" });
