@@ -395,15 +395,24 @@ async function persist(
     const accountFinancial = platformAccountId
       ? (await run.supabase
         .from("platform_accounts")
-        .select("revshare_percent,cpa_value")
+        .select("revshare_percent,cpa_value,cpa_baseline_deposit")
         .eq("id", platformAccountId)
         .maybeSingle()).data
       : null;
     const grossRevenue = Number(it.ngr ?? it.ggr ?? 0) || 0;
     const cpaUnit = Number(accountFinancial?.cpa_value ?? 0) || 0;
     const revPct = Number(accountFinancial?.revshare_percent ?? 0) || 0;
-    const cpaCommission = (Number(it.cpa ?? 0) || 0) || ((Number(it.ftds ?? 0) || 0) * cpaUnit);
+    const cpaBaseline = Number(accountFinancial?.cpa_baseline_deposit ?? 0) || 0;
+    const ftdCount = Number(it.ftds ?? 0) || 0;
+    const depositTotal = Number(it.amount_deposit ?? 0) || 0;
+    const avgFtd = ftdCount > 0 ? depositTotal / ftdCount : 0;
+    const meetsBaseline = cpaBaseline === 0 || avgFtd >= cpaBaseline;
+    const importedCpa = Number(it.cpa ?? 0) || 0;
+    const cpaCommission = importedCpa > 0
+      ? importedCpa
+      : (meetsBaseline ? ftdCount * cpaUnit : 0);
     const revShareCommission = (Number(it.rev_share ?? 0) || 0) || (grossRevenue * (revPct / 100));
+
 
     const record: Record<string, any> = {
       data_ref: dateRef,
