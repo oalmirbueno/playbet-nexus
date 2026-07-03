@@ -41,6 +41,8 @@ export interface TextLayer {
   bgColor?: string | null;    // optional pill/box background
   bgPadPct?: number;          // padding for pill (% of font size)
   bgRadiusPct?: number;       // corner radius (% of height)
+  opacity?: number;           // 0..1
+  rotateDeg?: number;         // rotation around visual center
   chrome?: BrandChromeSlot;   // marca camada como parte do chrome bloqueado
 }
 
@@ -59,6 +61,7 @@ export interface ImageLayer {
   glow?: string | null;       // hex accent glow color
   blur?: number;              // px of blur (for backdrop layers)
   brightness?: number;        // 0..2
+  rotateDeg?: number;         // rotation around visual center
   chrome?: BrandChromeSlot;   // marca camada como parte do chrome bloqueado
 }
 
@@ -498,10 +501,30 @@ export interface BrandChromeSpec {
 export function ensureBrandChrome(layers: Layer[], spec: BrandChromeSpec): Layer[] {
   const size = FORMAT_SIZES[spec.format];
   const vertical = size.h >= size.w * 1.2;
-  const has = (slot: BrandChromeSlot) => layers.some((l) => l.chrome === slot);
-  const out = [...layers];
-
   const platformLogo = spec.platformLogoSrc || null;
+  let out = layers
+    .map((layer): Layer | null => {
+      if (layer.chrome === "platform-logo" && layer.kind === "image") {
+        return {
+          ...layer,
+          src: platformLogo || PLAYBET_LOGO_SRC,
+          label: platformLogo ? `Logo ${spec.platformName || "plataforma"}` : "Logo Playbet",
+          fit: "contain",
+          opacity: 1,
+        };
+      }
+      if (layer.chrome === "playbet-signature" && layer.kind === "image") {
+        if (!platformLogo) return null;
+        return { ...layer, src: PLAYBET_LOGO_SRC, label: "Assinatura PlayBet", fit: "contain" };
+      }
+      if (layer.chrome === "legal-seal" && layer.kind === "image") {
+        if (!spec.sealSrc) return null;
+        return { ...layer, src: spec.sealSrc, label: spec.sealLabel || "Selo legal 18+", fit: "contain" };
+      }
+      return layer;
+    })
+    .filter((layer): layer is Layer => layer !== null);
+  const has = (slot: BrandChromeSlot) => out.some((l) => l.chrome === slot);
 
   if (!has("platform-logo")) {
     out.unshift({
@@ -567,7 +590,13 @@ async function drawImageLayer(ctx: CanvasRenderingContext2D, size: CreativeSize,
   const img = await loadImage(proxyUrl(L.src)).catch(() => null);
   if (!img) return;
   const radius = Math.min(dw, dh) * ((L.radiusPct ?? 0) / 100);
+  const rotate = ((L.rotateDeg ?? 0) * Math.PI) / 180;
   ctx.save();
+  if (rotate) {
+    ctx.translate(x + dw / 2, y + dh / 2);
+    ctx.rotate(rotate);
+    ctx.translate(-(x + dw / 2), -(y + dh / 2));
+  }
   ctx.globalAlpha = L.opacity ?? 1;
   if (L.blur) ctx.filter = `blur(${L.blur}px)${L.brightness ? ` brightness(${L.brightness})` : ""}`;
   else if (L.brightness) ctx.filter = `brightness(${L.brightness})`;
@@ -578,6 +607,11 @@ async function drawImageLayer(ctx: CanvasRenderingContext2D, size: CreativeSize,
   ctx.restore();
   if (L.glow) {
     ctx.save();
+    if (rotate) {
+      ctx.translate(x + dw / 2, y + dh / 2);
+      ctx.rotate(rotate);
+      ctx.translate(-(x + dw / 2), -(y + dh / 2));
+    }
     ctx.strokeStyle = hexToRgba(L.glow, 0.9);
     ctx.lineWidth = Math.max(2, Math.min(dw, dh) * 0.008);
     ctx.shadowColor = hexToRgba(L.glow, 0.6);
@@ -595,7 +629,14 @@ function drawTextLayer(ctx: CanvasRenderingContext2D, size: CreativeSize, L: Tex
   const x = (L.xPct / 100) * w;
   const y = (L.yPct / 100) * h;
   const text = L.uppercase ? L.text.toUpperCase() : L.text;
+  const rotate = ((L.rotateDeg ?? 0) * Math.PI) / 180;
   ctx.save();
+  if (rotate) {
+    ctx.translate(x + boxW / 2, y + fontPx);
+    ctx.rotate(rotate);
+    ctx.translate(-(x + boxW / 2), -(y + fontPx));
+  }
+  ctx.globalAlpha = L.opacity ?? 1;
   ctx.font = `${L.weight} ${fontPx}px ${FAMILY_STACK[L.family]}`;
   ctx.textBaseline = "top";
   ctx.textAlign = L.align;
