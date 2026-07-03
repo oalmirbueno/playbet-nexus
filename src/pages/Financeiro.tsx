@@ -1,20 +1,30 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { Loader2, RefreshCw } from "lucide-react";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { useFinanceiroData, type PeriodKey } from "@/hooks/useFinanceiroData";
+import { useRealtimeMetrics } from "@/hooks/useRealtimeMetrics";
 import PeriodFilter from "@/components/financeiro/PeriodFilter";
 import KpiDuo from "@/components/financeiro/KpiDuo";
 import RankingTable from "@/components/financeiro/RankingTable";
 import SaquesTab from "@/components/financeiro/SaquesTab";
 import DistributionCard from "@/components/DistributionCard";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+
 
 export default function Financeiro() {
   const [params, setParams] = useSearchParams();
   const period = (params.get("p") ?? "30d") as PeriodKey;
   const platformId = params.get("plat") ?? "all";
   const activeTab = params.get("tab") ?? "distribuicao";
+  const queryClient = useQueryClient();
+  const [syncing, setSyncing] = useState(false);
+  useRealtimeMetrics();
 
   const setParam = (k: string, v: string) => {
     const next = new URLSearchParams(params);
@@ -29,6 +39,26 @@ export default function Financeiro() {
     platforms, distribution, trackingTotals,
   } = useFinanceiroData({ period, platformId: platformId === "all" ? null : platformId });
 
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      await Promise.allSettled([
+        supabase.functions.invoke("stellar-panel-scraper", { body: { days: 30 } }),
+        supabase.functions.invoke("tracking-puller-smartico", { body: {} }),
+      ]);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["financeiro_metrics"] }),
+        queryClient.invalidateQueries({ queryKey: ["tracking_metrics_summary"] }),
+        queryClient.invalidateQueries({ queryKey: ["tracking_metrics"] }),
+      ]);
+      toast({ title: "Painéis sincronizados" });
+    } catch (e: any) {
+      toast({ title: "Erro ao sincronizar", description: e?.message, variant: "destructive" });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <Breadcrumbs items={[{ label: "Financeiro" }]} />
@@ -37,17 +67,24 @@ export default function Financeiro() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Financeiro</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Caixa real, revenue atribuído, ranking de geração e distribuição automática - uma fonte única de verdade.
+            Caixa real, revenue atribuído, ranking de geração e distribuição automática — atualização em tempo real.
           </p>
         </div>
-        <PeriodFilter
-          period={period}
-          onPeriodChange={(v) => setParam("p", v)}
-          platformId={platformId}
-          onPlatformChange={(v) => setParam("plat", v)}
-          platforms={platforms as any}
-        />
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button onClick={handleSync} disabled={syncing} size="sm" variant="outline">
+            {syncing ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+            {syncing ? "Sincronizando…" : "Atualizar agora"}
+          </Button>
+          <PeriodFilter
+            period={period}
+            onPeriodChange={(v) => setParam("p", v)}
+            platformId={platformId}
+            onPlatformChange={(v) => setParam("plat", v)}
+            platforms={platforms as any}
+          />
+        </div>
       </header>
+
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
