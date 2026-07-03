@@ -12,13 +12,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
-  renderCreative, downloadCreative, slugify,
+  renderCreative, downloadCreative, slugify, downloadRawAsset,
   FORMAT_SIZES, STYLE_LABEL,
   type CreativeFormat, type CreativeStyle, type CreativeInput, type RenderedCreative,
 } from "@/lib/creativeStudio";
+import playbetLogo from "@/assets/logo-mark.png";
 import {
-  Loader2, Save, RefreshCw, Download, Sparkles, ExternalLink, Wand2, Layout,
+  Loader2, Save, RefreshCw, Download, Sparkles, ExternalLink, Wand2, Layout, Package,
 } from "lucide-react";
+
 import { useLinkBrand } from "@/lib/useLinkBrand";
 import { BrandLockBadge } from "@/components/brand/BrandLockBadge";
 
