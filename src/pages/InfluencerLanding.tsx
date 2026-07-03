@@ -814,9 +814,21 @@ export default function InfluencerLanding() {
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-400/40 to-transparent" />
           </div>
           <div className="max-w-md mx-auto relative z-10 text-center">
-            <img src={logo} alt="PlayBet" className="h-11 mx-auto mb-8 opacity-95" />
+            {isPlatformDirect && brandCtx?.brand ? (
+              <div className="mb-8 flex items-center justify-center gap-4">
+                <img src={logo} alt="PlayBet" className="h-11 opacity-95" />
+                <span className="text-white/30 text-xl font-light select-none">×</span>
+                <img
+                  src={brandCtx.brand.logos.wordmark || brandCtx.brand.logos.lockup || brandCtx.brand.logos.mark}
+                  alt={brandCtx.brand.name}
+                  className="h-11 object-contain"
+                />
+              </div>
+            ) : (
+              <img src={logo} alt="PlayBet" className="h-11 mx-auto mb-8 opacity-95" />
+            )}
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] backdrop-blur border border-emerald-400/20 text-emerald-300 text-[10px] font-semibold uppercase tracking-[0.14em] mb-6">
-              <Zap size={11} /> {mode === "odds" ? "Em destaque" : isCatalogMode ? "Oportunidades" : "Oferta oficial"}
+              <Zap size={11} /> {mode === "odds" ? "Em destaque" : isCatalogMode ? "Oportunidades" : isPlatformDirect ? "Parceria oficial" : "Oferta oficial"}
             </div>
             {heroGame && (
               <div className="relative mx-auto mb-6 w-fit">
