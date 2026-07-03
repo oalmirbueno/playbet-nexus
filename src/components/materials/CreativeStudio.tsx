@@ -338,8 +338,8 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     const copy = {
       ...layer,
       id: crypto.randomUUID(),
-      xPct: Math.min(96 - layer.widthPct, layer.xPct + 3),
-      yPct: Math.min(96, layer.yPct + 3),
+      xPct: Math.max(0, Math.min(100 - layer.widthPct, layer.xPct + 3)),
+      yPct: Math.max(0, Math.min(96, layer.yPct + 3)),
       chrome: undefined,
     } as Layer;
     setLayers(ls => [...ls, copy]);
