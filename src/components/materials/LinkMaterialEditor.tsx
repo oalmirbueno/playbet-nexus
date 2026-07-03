@@ -502,24 +502,31 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId, readOnl
                     <>
                       <div className="space-y-2">
                         <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Título</Label>
-                        <Input value={hcTitle} onChange={e => setHcTitle(e.target.value)} className="h-9 text-sm" />
+                        <Input value={hcTitle} onChange={e => setHcTitle(e.target.value)} disabled={readOnly} className="h-9 text-sm" />
                       </div>
                       <div className="space-y-2">
                         <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Subtítulo / motivo do hype</Label>
-                        <Textarea value={hcSubtitle} onChange={e => setHcSubtitle(e.target.value)} rows={3} className="text-sm" />
+                        <Textarea value={hcSubtitle} onChange={e => setHcSubtitle(e.target.value)} disabled={readOnly} rows={3} className="text-sm" />
                       </div>
                       <div className="space-y-2">
                         <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">CTA</Label>
-                        <Input value={hcCta} onChange={e => setHcCta(e.target.value)} className="h-9 text-sm" />
+                        <Input value={hcCta} onChange={e => setHcCta(e.target.value)} disabled={readOnly} className="h-9 text-sm" />
                       </div>
                       <div className="pt-3 border-t border-border/60 space-y-2">
-                        <Button onClick={saveLpCopy} disabled={saving} className="w-full h-9 text-sm">
-                          {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                          Salvar e atualizar preview
-                        </Button>
+                        {!readOnly && (
+                          <Button onClick={saveLpCopy} disabled={saving} className="w-full h-9 text-sm">
+                            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                            Salvar e atualizar preview
+                          </Button>
+                        )}
                         <Button onClick={() => setIframeKey(k => k + 1)} variant="ghost" size="sm" className="w-full h-8 text-xs text-muted-foreground">
                           <RefreshCw className="w-3.5 h-3.5 mr-2" /> Recarregar preview
                         </Button>
+                        {readOnly && (
+                          <p className="text-[11px] text-muted-foreground text-center leading-snug">
+                            Copy da LP definida pelo admin. Sincroniza em tempo real.
+                          </p>
+                        )}
                       </div>
                     </>
                   )}
