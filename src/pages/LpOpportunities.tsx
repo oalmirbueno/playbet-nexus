@@ -405,8 +405,14 @@ export default function LpOpportunities() {
                       const overLimit =
                         r.campanha_id && (activeCountByCampaign.get(r.campanha_id) || 0) > 3;
                       const isHighlight = todaysHighlights.includes(r.id);
+                      const platformName = (platforms as any[]).find((p) => p.id === (r as any).platform_id)?.name || null;
+                      const brandKit = resolveBrand(platformName);
                       return (
-                        <TableRow key={r.id} className={isHighlight ? "bg-primary/[0.03]" : ""}>
+                        <TableRow
+                          key={r.id}
+                          className={isHighlight ? "bg-primary/[0.03]" : ""}
+                          style={brandKit ? { boxShadow: `inset 3px 0 0 ${brandKit.palette.primary}` } : undefined}
+                        >
                           <TableCell className="text-muted-foreground text-xs">
                             <div className="flex items-center gap-1">
                               {isHighlight && <Star className="w-3 h-3 text-amber-500 fill-amber-500" />}
@@ -426,6 +432,9 @@ export default function LpOpportunities() {
                             {r.subtitle && (
                               <div className="text-xs text-muted-foreground truncate max-w-md">{r.subtitle}</div>
                             )}
+                          </TableCell>
+                          <TableCell>
+                            <BrandChip brand={brandKit} fallbackLabel={platformName || "—"} />
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline" className="text-[10px] font-normal">
