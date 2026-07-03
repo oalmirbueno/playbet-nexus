@@ -2,6 +2,18 @@ import { supabase } from "@/integrations/supabase/client";
 
 const VALID_TRACKING_EVENT_STATUS_FILTER = "status.is.null,status.not.in.(invalid_legacy,invalid_internal_preview,duplicate_technical)";
 
+function toDayStartIso(value?: string) {
+  if (!value) return undefined;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return `${value}T00:00:00.000Z`;
+  return value;
+}
+
+function toDayEndIso(value?: string) {
+  if (!value) return undefined;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return `${value}T23:59:59.999Z`;
+  return value;
+}
+
 // ── Types ──────────────────────────────────────────────
 
 export interface PlatformAccountRow {
@@ -344,8 +356,10 @@ export const trackingEventService = {
     if (filters.influencer_id) q = q.eq("influencer_id", filters.influencer_id);
     if (filters.canonical_event_name) q = q.eq("canonical_event_name", filters.canonical_event_name);
     if (filters.source_type) q = q.eq("source_type", filters.source_type);
-    if (filters.date_from) q = q.gte("event_timestamp", filters.date_from);
-    if (filters.date_to) q = q.lte("event_timestamp", filters.date_to);
+    const dateFrom = toDayStartIso(filters.date_from);
+    const dateTo = toDayEndIso(filters.date_to);
+    if (dateFrom) q = q.gte("event_timestamp", dateFrom);
+    if (dateTo) q = q.lte("event_timestamp", dateTo);
     q = q.order("event_timestamp", { ascending: false }).limit(500);
     const { data, error } = await q;
     if (error) throw error;
