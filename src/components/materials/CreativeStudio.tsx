@@ -528,7 +528,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     const src = brand?.logos.wordmark || brand?.logos.lockup || brand?.logos.mark;
     if (!src) { toast.error("Logo da plataforma indisponível"); return; }
     try {
-      await downloadRawAsset(src, `${slugify(brand?.name || link.platformName || "plataforma")}-logo`);
+      await downloadRawAsset(src, `${slugify(brand?.name || link?.platformName || "plataforma")}-logo`);
       toast.success(`Logo ${brand?.name || "plataforma"} baixada`);
     } catch (e) { toast.error("Falha ao baixar logo", { description: (e as Error).message }); }
   };
