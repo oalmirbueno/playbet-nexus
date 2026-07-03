@@ -168,7 +168,29 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId, readOnl
       }
     })();
     return () => { cancelled = true; };
-  }, [open, trackingLinkId]);
+  }, [open, trackingLinkId, reloadTick]);
+
+  /* ────────── realtime: reflect admin edits live ────────── */
+  useEffect(() => {
+    if (!open || !trackingLinkId) return;
+    const bump = () => { setReloadTick(t => t + 1); setIframeKey(k => k + 1); };
+    const ch = supabase
+      .channel(`link-material-editor:${trackingLinkId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "link_materials", filter: `tracking_link_id=eq.${trackingLinkId}` }, bump)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "tracking_links", filter: `id=eq.${trackingLinkId}` }, bump)
+      .subscribe();
+    let instCh: ReturnType<typeof supabase.channel> | null = null;
+    if (instance?.id) {
+      instCh = supabase
+        .channel(`link-material-editor-inst:${instance.id}`)
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "landing_page_instances", filter: `id=eq.${instance.id}` }, bump)
+        .subscribe();
+    }
+    return () => {
+      supabase.removeChannel(ch);
+      if (instCh) supabase.removeChannel(instCh);
+    };
+  }, [open, trackingLinkId, instance?.id]);
 
   function hydrateMaterialForm(m: Material, tl: LinkRow) {
     const o = m.meta?.overrides ?? {};
