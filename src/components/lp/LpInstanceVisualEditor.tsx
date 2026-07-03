@@ -40,6 +40,7 @@ const SECTION_LABELS: Record<string, string> = {
 const PRIMARY_MODE_OPTIONS: Array<{ value: LpMode; title: string; badge: string }> = [
   { value: "catalog", title: "LP padrão", badge: "normal" },
   { value: "single_game", title: "LP gerada", badge: "jogo único" },
+  { value: "platform_direct", title: "LP limpa", badge: "só plataforma" },
 ];
 
 interface SmartOdd {
@@ -76,15 +77,17 @@ function isBonusCategory(category: string | null | undefined): boolean {
 function ctaForMode(lpMode: LpMode, category: string | null | undefined, gameName?: string | null): string {
   if (lpMode === "catalog") return "Acessar oportunidades";
   if (lpMode === "odds") return "Acessar oportunidades";
+  if (lpMode === "platform_direct") return "Acessar plataforma";
   if (isBonusCategory(category)) return "Resgatar bônus";
   if (lpMode === "multi_game") return "Ver jogos";
   return gameName ? `Jogar ${gameName}` : "Jogar agora";
 }
 
-function titleForMode(lpMode: LpMode, gameName?: string | null): string {
+function titleForMode(lpMode: LpMode, gameName?: string | null, platformName?: string | null): string {
   if (lpMode === "catalog") return "Oportunidades PlayBet";
   if (lpMode === "odds") return "Em destaque";
   if (lpMode === "multi_game") return "Jogos em alta";
+  if (lpMode === "platform_direct") return platformName ? `${platformName} com PlayBet` : "Oferta oficial";
   return gameName || "Oferta oficial";
 }
 
@@ -106,6 +109,10 @@ function adaptiveSubtitle(mode: LpMode, gameName?: string | null, platformName?:
     return `Oferta ativa${gameName ? ` para ${gameName}` : ""}${platformName ? ` na ${platformName}` : ""}.`;
   if (mode === "multi_game")
     return "Jogos em alta com ofertas oficiais.";
+  if (mode === "platform_direct")
+    return platformName
+      ? `Acesse ${platformName} agora com bônus oficial PlayBet.`
+      : "Acesse a plataforma oficial com bônus PlayBet.";
   return "Acesso rápido às melhores oportunidades.";
 }
 
@@ -232,7 +239,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
           const hype = (tl as any).hype_reason;
           const cat = (tl as any).link_category;
           setCopy(prev => ({
-            title: prev.title || titleForMode(m, gname),
+            title: prev.title || titleForMode(m, gname, pName),
             subtitle: prev.subtitle || hype || adaptiveSubtitle(m, gname, pName),
             cta_label: prev.cta_label || ctaForMode(m, cat, gname),
           }));
@@ -398,7 +405,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
     const nextCta = ctaForMode(nextMode, link?.link_category, gname);
     setSections(ensureCommunitySection(defaultLayoutConfig(nextMode).sections));
     setCopy((prev) => ({
-      title: titleForMode(nextMode, gname),
+      title: titleForMode(nextMode, gname, platformName),
       subtitle: adaptiveSubtitle(nextMode, gname, platformName),
       cta_label: nextCta,
     }));
@@ -416,7 +423,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
   const applyAdaptiveCopy = () => {
     const gname = link?.game_name;
     setCopy({
-      title: titleForMode(mode, gname) || copy.title || "",
+      title: titleForMode(mode, gname, platformName) || copy.title || "",
       subtitle: link?.hype_reason || adaptiveSubtitle(mode, gname, platformName),
       cta_label: ctaForMode(mode, link?.link_category, gname),
     });
@@ -456,7 +463,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
       const effectiveGameSlug = link?.game_slug || gameSlugs[0] || null;
       const effectiveGameName = link?.game_name || selectedGame?.game_name || null;
       const effectiveGameIconUrl = link?.game_icon_url || selectedGame?.icon_url || null;
-      const cleanTitle = copy.title || titleForMode(effectiveMode, effectiveGameName);
+      const cleanTitle = copy.title || titleForMode(effectiveMode, effectiveGameName, platformName);
       const cleanSubtitle = copy.subtitle || adaptiveSubtitle(effectiveMode, effectiveGameName, platformName);
       const cleanCta = copy.cta_label || ctaForMode(effectiveMode, link?.link_category, effectiveGameName) || null;
       const layoutConfig = { mode: effectiveMode, sections, updated_at: new Date().toISOString() };

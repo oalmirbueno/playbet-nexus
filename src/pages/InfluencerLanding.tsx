@@ -740,28 +740,43 @@ export default function InfluencerLanding() {
 
   const primaryGame = gameArts[0];
   const isCatalogMode = mode === "catalog";
-  const isGeneratedMode = !isCatalogMode;
+  const isPlatformDirect = mode === "platform_direct";
+  const isGeneratedMode = !isCatalogMode && !isPlatformDirect;
   const displayGames = mode === "single_game" && primaryGame ? [primaryGame] : gameArts;
-  const heroGame = primaryGame || null;
-  const bonusEnabled = bonusOffer?.enabled !== false;
-  const communityEnabled = communityCta?.enabled !== false;
+  const heroGame = isPlatformDirect ? null : (primaryGame || null);
+  const bonusEnabled = !isPlatformDirect && bonusOffer?.enabled !== false;
+  const communityEnabled = !isPlatformDirect && communityCta?.enabled !== false;
   const showFeatures = isGeneratedMode && isSectionOn("features") && bonusEnabled && (bonusOffer?.title || bonusOffer?.code || primaryGame);
   const showCommunity = isSectionOn("community") && communityEnabled && (communityCta?.label || communityCta?.url);
+  const platformName = brandCtx?.brand?.name ?? null;
   const defaultCta = isCatalogMode
     ? "Acessar oportunidades"
     : mode === "odds"
       ? "Acessar oportunidades"
-      : bonusEnabled && bonusOffer?.code
-        ? "Resgatar bônus"
-        : primaryGame?.name
-          ? `Jogar ${primaryGame.name}`
-          : "Jogar agora";
+      : isPlatformDirect
+        ? (platformName ? `Acessar ${platformName}` : "Acessar plataforma")
+        : bonusEnabled && bonusOffer?.code
+          ? "Resgatar bônus"
+          : primaryGame?.name
+            ? `Jogar ${primaryGame.name}`
+            : "Jogar agora";
   const configuredCta: string | null = (bonusEnabled ? bonusOffer?.cta_label : null) || instanceCtx?.hype_copy?.cta_label || null;
   const ctaLabel: string = isGeneratedMode && configuredCta?.toLowerCase().trim() === "acessar oportunidades"
     ? defaultCta
     : configuredCta || defaultCta;
-  const heroTitle = hypeTitle || (isCatalogMode ? "Oportunidades PlayBet" : primaryGame?.name || "Oferta oficial");
-  const heroSubtitle = hypeSub || (isCatalogMode ? "Acesso rápido às melhores oportunidades." : "Oferta ativa para jogar agora.");
+  const heroTitle = hypeTitle || (
+    isCatalogMode ? "Oportunidades PlayBet"
+    : isPlatformDirect ? (platformName ? `${platformName} com PlayBet` : "Oferta oficial")
+    : primaryGame?.name || "Oferta oficial"
+  );
+  const heroSubtitle = hypeSub || (
+    isCatalogMode ? "Acesso rápido às melhores oportunidades."
+    : isPlatformDirect
+      ? (platformName
+          ? `Acesse ${platformName} agora com bônus oficial PlayBet.`
+          : "Acesse a plataforma oficial com bônus PlayBet.")
+      : "Oferta ativa para jogar agora."
+  );
   const copyBonusCode = async () => {
     if (!bonusOffer?.code) return;
     try { await navigator.clipboard.writeText(bonusOffer.code); } catch {}
@@ -799,9 +814,21 @@ export default function InfluencerLanding() {
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-400/40 to-transparent" />
           </div>
           <div className="max-w-md mx-auto relative z-10 text-center">
-            <img src={logo} alt="PlayBet" className="h-11 mx-auto mb-8 opacity-95" />
+            {isPlatformDirect && brandCtx?.brand ? (
+              <div className="mb-8 flex items-center justify-center gap-4">
+                <img src={logo} alt="PlayBet" className="h-11 opacity-95" />
+                <span className="text-white/30 text-xl font-light select-none">×</span>
+                <img
+                  src={brandCtx.brand.logos.wordmark || brandCtx.brand.logos.lockup || brandCtx.brand.logos.mark}
+                  alt={brandCtx.brand.name}
+                  className="h-11 object-contain"
+                />
+              </div>
+            ) : (
+              <img src={logo} alt="PlayBet" className="h-11 mx-auto mb-8 opacity-95" />
+            )}
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] backdrop-blur border border-emerald-400/20 text-emerald-300 text-[10px] font-semibold uppercase tracking-[0.14em] mb-6">
-              <Zap size={11} /> {mode === "odds" ? "Em destaque" : isCatalogMode ? "Oportunidades" : "Oferta oficial"}
+              <Zap size={11} /> {mode === "odds" ? "Em destaque" : isCatalogMode ? "Oportunidades" : isPlatformDirect ? "Parceria oficial" : "Oferta oficial"}
             </div>
             {heroGame && (
               <div className="relative mx-auto mb-6 w-fit">
@@ -874,7 +901,7 @@ export default function InfluencerLanding() {
         </section>
       )}
 
-      {isSectionOn("games") && mode !== "odds" && (
+      {isSectionOn("games") && mode !== "odds" && !isPlatformDirect && (
         <section className="px-6 pb-16">
           <div className="max-w-xl mx-auto">
             <h2 className="text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500 mb-5">
