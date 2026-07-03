@@ -302,12 +302,20 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
         .select("id, game_name");
 
       if (error) throw error;
+
+      const insertedIds: string[] = (inserted ?? [])
+        .map((r: any) => r?.id)
+        .filter(Boolean);
+      if (insertedIds.length) {
+        syncLinkAssetsBatch(insertedIds, { useLp }, qc);
+      }
       await qc.invalidateQueries({ queryKey: ["tracking_links"] });
       toast({
         title: `${inserted?.length ?? rows.length} links criados em lote`,
         description: (inserted ?? rows).map((r: any) => r.game_name).filter(Boolean).join(", "),
       });
       onOpenChange(false);
+
     } catch (e: any) {
       const msg = e?.message?.includes("duplicate") || e?.code === "23505"
         ? "Alguns jogos já têm link para este influencer/LP. Remova os duplicados e tente de novo."
