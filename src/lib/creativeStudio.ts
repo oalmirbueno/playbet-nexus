@@ -115,7 +115,7 @@ const SUPABASE_URL =
   (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_SUPABASE_URL ??
   "";
 
-function proxyUrl(url: string): string {
+export function proxyUrl(url: string): string {
   if (!url) return url;
   // Data URLs, bundle imports and same-origin assets don't need proxying.
   if (url.startsWith("data:") || url.startsWith("blob:")) return url;
