@@ -26,6 +26,7 @@ import { useLinkBrand } from "@/lib/useLinkBrand";
 import { BrandLockBadge } from "@/components/brand/BrandLockBadge";
 import { buildMaterialFilename } from "@/lib/exportMaterial";
 import { ApplyLayoutPanel } from "@/components/materials/ApplyLayoutPanel";
+import { CaptureOddPanel } from "@/components/materials/CaptureOddPanel";
 
 
 
@@ -754,6 +755,16 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                 setLayers(newLayers);
                 setSelectedId(null);
                 setEditingTextId(null);
+                setDirty(true);
+              }}
+            />
+
+            <CaptureOddPanel
+              format={format}
+              suggestedUrl={link.shortUrl}
+              onCapture={(layer) => {
+                setLayers((ls) => [...ls, layer]);
+                setSelectedId(layer.id);
                 setDirty(true);
               }}
             />
