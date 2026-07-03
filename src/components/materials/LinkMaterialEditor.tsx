@@ -274,10 +274,12 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId }: Props
                   </Badge>
                 )}
               </DialogTitle>
-              <DialogDescription className="text-xs">
-                {platformName || "Plataforma"} · edite textos/arte e veja o reflexo na LP.
+              <DialogDescription className="text-xs flex items-center gap-2 flex-wrap">
+                <span>{platformName || "Plataforma"} · edite textos/arte e veja o reflexo na LP.</span>
+                <BrandLockBadge ctx={brandCtx} className="text-[10px]" />
               </DialogDescription>
             </div>
+
             {lpPreviewUrl && (
               <a href={lpPreviewUrl} target="_blank" rel="noreferrer"
                  className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-secondary/40">
