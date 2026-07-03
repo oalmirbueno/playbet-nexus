@@ -231,6 +231,7 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId, readOnl
   };
 
   const saveMaterial = async () => {
+    if (readOnly) { toast.info("Somente leitura", { description: "Peça ao admin para editar este material." }); return; }
     if (!activeMaterial) return;
     setSaving(true);
     try {
