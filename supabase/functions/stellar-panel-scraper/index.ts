@@ -78,55 +78,94 @@ interface AuthSession {
   cookie?: string;
 }
 
-async function tryJsonLogin(path: string, body: Record<string, unknown>) {
-  const url = PANEL_BASE + path;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "content-type": "application/json", accept: "application/json" },
-    body: JSON.stringify(body),
-    redirect: "manual",
+function mergeCookies(existing: string, setCookieHeader: string | null): string {
+  if (!setCookieHeader) return existing;
+  // Deno joins multiple Set-Cookie with ", " which is ambiguous. Split by ", " only where followed by "<token>=".
+  const parts = setCookieHeader.split(/,(?=\s*[A-Za-z0-9_\-]+=)/g);
+  const jar = new Map<string, string>();
+  existing.split(";").map((c) => c.trim()).filter(Boolean).forEach((c) => {
+    const [k, ...v] = c.split("="); jar.set(k, v.join("="));
   });
-  const setCookie = res.headers.get("set-cookie") ?? "";
-  let json: any = null;
-  const text = await res.text();
-  try { json = JSON.parse(text); } catch { /* not json */ }
-  return { url, status: res.status, setCookie, json, textSnippet: text.slice(0, 400) };
+  for (const raw of parts) {
+    const kv = raw.split(";")[0].trim();
+    if (!kv) continue;
+    const [k, ...v] = kv.split("=");
+    if (k) jar.set(k, v.join("="));
+  }
+  return Array.from(jar.entries()).map(([k, v]) => `${k}=${v}`).join("; ");
+}
+
+async function nextAuthLogin(run: RunHandle): Promise<AuthSession | null> {
+  const attempts: any[] = [];
+  let cookie = "";
+
+  // 1. Fetch CSRF token
+  try {
+    const csrfRes = await fetch(PANEL_BASE + "/api/auth/csrf", {
+      headers: { accept: "application/json" },
+      redirect: "manual",
+    });
+    cookie = mergeCookies(cookie, csrfRes.headers.get("set-cookie"));
+    const csrfText = await csrfRes.text();
+    let csrfToken = "";
+    try { csrfToken = JSON.parse(csrfText).csrfToken || ""; } catch { /* ignore */ }
+    attempts.push({ step: "csrf", status: csrfRes.status, has_token: !!csrfToken, snippet: csrfText.slice(0, 200) });
+
+    if (!csrfToken) {
+      run.discovery.auth_attempts = attempts;
+      return null;
+    }
+
+    // 2. Try common NextAuth credential provider paths
+    const providers = ["credentials", "login", "email", "affiliates", "partners"];
+    for (const provider of providers) {
+      const body = new URLSearchParams({
+        csrfToken,
+        callbackUrl: PANEL_BASE + "/",
+        email: PANEL_EMAIL,
+        username: PANEL_EMAIL,
+        password: PANEL_PASSWORD,
+        json: "true",
+      });
+      const res = await fetch(PANEL_BASE + `/api/auth/callback/${provider}`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          accept: "application/json",
+          cookie,
+        },
+        body,
+        redirect: "manual",
+      });
+      cookie = mergeCookies(cookie, res.headers.get("set-cookie"));
+      const text = await res.text();
+      attempts.push({ step: `callback/${provider}`, status: res.status, cookie_len: cookie.length, snippet: text.slice(0, 300) });
+
+      // Success if we now have a session token cookie
+      if (/next-auth\.session-token|__Secure-next-auth\.session-token|authjs\.session-token/.test(cookie)) {
+        // Verify session
+        const sess = await fetch(PANEL_BASE + "/api/auth/session", {
+          headers: { accept: "application/json", cookie },
+        });
+        const sessText = await sess.text();
+        attempts.push({ step: "session-check", status: sess.status, snippet: sessText.slice(0, 400) });
+        if (sess.ok && sessText && sessText !== "{}" && !sessText.includes("null")) {
+          run.discovery.auth_attempts = attempts;
+          run.discovery.auth_success = { strategy: `nextauth:${provider}` };
+          return { strategy: `nextauth:${provider}`, cookie };
+        }
+      }
+    }
+  } catch (e) {
+    attempts.push({ step: "error", error: String(e) });
+  }
+
+  run.discovery.auth_attempts = attempts;
+  return null;
 }
 
 async function authenticate(run: RunHandle): Promise<AuthSession | null> {
-  const attempts: any[] = [];
-  const shapes = [
-    { path: "/api/auth/login", body: { username: PANEL_EMAIL, password: PANEL_PASSWORD } },
-    { path: "/api/auth/login", body: { email: PANEL_EMAIL, password: PANEL_PASSWORD } },
-    { path: "/api/login", body: { email: PANEL_EMAIL, password: PANEL_PASSWORD } },
-    { path: "/api/v1/auth/login", body: { email: PANEL_EMAIL, password: PANEL_PASSWORD } },
-    { path: "/api/user/login", body: { username: PANEL_EMAIL, password: PANEL_PASSWORD } },
-  ];
-
-  for (const s of shapes) {
-    try {
-      const r = await tryJsonLogin(s.path, s.body);
-      attempts.push({ path: s.path, status: r.status, has_json: !!r.json, has_cookie: !!r.setCookie, snippet: r.textSnippet });
-
-      if (r.status >= 200 && r.status < 300) {
-        // Try to extract a bearer token from common fields
-        const j = r.json ?? {};
-        const token =
-          j.access_token || j.accessToken || j.token || j.jwt ||
-          j.data?.access_token || j.data?.token || j.data?.accessToken;
-        const cookie = r.setCookie ? r.setCookie.split(",").map((c) => c.split(";")[0].trim()).join("; ") : undefined;
-        if (token || cookie) {
-          run.discovery.auth_attempts = attempts;
-          run.discovery.auth_success = { path: s.path, has_token: !!token, has_cookie: !!cookie };
-          return { strategy: s.path, token: token as string | undefined, cookie };
-        }
-      }
-    } catch (e) {
-      attempts.push({ path: s.path, error: String(e) });
-    }
-  }
-  run.discovery.auth_attempts = attempts;
-  return null;
+  return await nextAuthLogin(run);
 }
 
 // ---------- Report discovery ----------
