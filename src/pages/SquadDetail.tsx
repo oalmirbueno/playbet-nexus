@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { getMetricMoneyParts } from "@/lib/trackingMetrics";
 
 const db = supabase as any;
 const brl = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -63,14 +64,14 @@ function useSquadDetail(squadId: string | undefined) {
       const since = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
       const { data, error } = await db
         .from("tracking_metrics")
-        .select("influencer_id, revenue")
+        .select("influencer_id, revenue, cpa_commission, revshare_commission, commission_total, origem_importacao")
         .in("influencer_id", ids)
         .gte("data_ref", since)
         .eq("is_demo", false);
       if (error) throw error;
       const map: Record<string, number> = {};
       for (const row of data ?? []) {
-        map[row.influencer_id] = (map[row.influencer_id] ?? 0) + Number(row.revenue ?? 0);
+        map[row.influencer_id] = (map[row.influencer_id] ?? 0) + getMetricMoneyParts(row).total;
       }
       return map;
     },
