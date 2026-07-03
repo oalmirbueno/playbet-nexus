@@ -24,20 +24,20 @@ export const LP_MODE_LABELS: Record<LpMode, string> = {
   catalog: "LP padrão",
   single_game: "LP gerada · jogo único",
   multi_game: "LP gerada · vários jogos",
-  odds: "LP odds / partidas",
+  odds: "LP em destaque",
 };
 
 export const LP_MODE_HINTS: Record<LpMode, string> = {
   catalog: "Modelo normal com CTA de oportunidades.",
   single_game: "Modelo direto com arte real do jogo.",
   multi_game: "Grade de jogos com CTA por card.",
-  odds: "Cartelas de partidas e mercados.",
+  odds: "Opções em destaque com CTA direto.",
 };
 
 export const DEFAULT_SECTIONS: Array<{ id: string; label: string; enabled: boolean }> = [
   { id: "hero", label: "Hero", enabled: true },
   { id: "games", label: "Jogos", enabled: true },
-  { id: "odds", label: "Odds/Partidas", enabled: false },
+  { id: "odds", label: "Em destaque", enabled: false },
   { id: "features", label: "Benefícios", enabled: true },
   { id: "cta", label: "CTA final", enabled: true },
   { id: "footer", label: "Rodapé", enabled: true },
