@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import type { BrandKit } from "@/lib/brandRegistry";
+import { useState } from "react";
 
 /**
  * Rodapé legal obrigatório para materiais e landing pages.
@@ -28,6 +29,7 @@ export function BrandFooterSeal({
   }
   const t = tone === "auto" ? "light" : tone;
   const seloUrl = brand.seal[variant][t];
+  const [imageFailed, setImageFailed] = useState(false);
   return (
     <div
       className={cn(
@@ -38,13 +40,18 @@ export function BrandFooterSeal({
       role="contentinfo"
       aria-label={brand.seal.alt}
     >
-      <img
-        src={seloUrl}
-        alt={brand.seal.alt}
-        className={cn("shrink-0", compact ? "h-6" : "h-8", variant === "vertical" && "h-14")}
-        loading="lazy"
-        decoding="async"
-      />
+      {!imageFailed ? (
+        <img
+          src={seloUrl}
+          alt={brand.seal.alt}
+          className={cn("shrink-0", compact ? "h-6" : "h-8", variant === "vertical" && "h-14")}
+          loading="lazy"
+          decoding="async"
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        <div className={cn("shrink-0 rounded border border-current/25 px-2 py-1 leading-tight font-semibold", compact ? "text-[9px]" : "text-[10px]")}>+18 · {brand.seal.license}</div>
+      )}
       {compact ? null : (
         <div className="leading-tight opacity-80">
           <div className="font-medium">Jogue com responsabilidade — 18+</div>
