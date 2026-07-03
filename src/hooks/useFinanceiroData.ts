@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useInfluencers, useManagers, usePlatforms, useSaques } from "@/hooks/useSupabaseQuery";
+import { getMetricMoneyParts } from "@/lib/trackingMetrics";
 
 export type PeriodKey = "7d" | "30d" | "mtd" | "ytd" | "all";
 
@@ -69,7 +70,7 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
       let q = supabase
         .from("tracking_metrics")
         .select(
-          "data_ref, platform_id, influencer_id, ftd, depositos_total, revenue, converted_amount, cpa_commission, revshare_commission, commission_total"
+          "data_ref, platform_id, influencer_id, registros, ftd, deposits_count, depositos_total, revenue, converted_amount, cpa_commission, revshare_commission, commission_total, origem_importacao"
         )
         .eq("is_demo", false)
         .lte("data_ref", endIso);
@@ -100,13 +101,26 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
       .reduce((acc: number, s: any) => acc + Number(s.valor || 0), 0);
   }, [saquesInPeriod]);
 
-  // Volume bruto (depósitos convertidos) — telemetria apenas, NÃO é base de distribuição
-  const revenueTracking = useMemo(() => {
+  const trackingTotals = useMemo(() => {
     return (metricsQuery.data ?? []).reduce(
-      (acc: number, m: any) => acc + Number(m.revshare_commission ?? m.revenue ?? 0) + Number(m.cpa_commission ?? 0),
-      0,
+      (acc, m: any) => {
+        const parts = getMetricMoneyParts(m);
+        acc.revShare += parts.revShare;
+        acc.cpa += parts.cpa;
+        acc.profitBase += parts.total;
+        acc.grossRevenue += parts.grossRevenue;
+        acc.depositsTotal += Number(m.depositos_total ?? m.converted_amount ?? 0);
+        acc.depositsCount += Number(m.deposits_count || 0);
+        acc.registrations += Number(m.registros || 0);
+        acc.ftd += Number(m.ftd || 0);
+        return acc;
+      },
+      { revShare: 0, cpa: 0, profitBase: 0, grossRevenue: 0, depositsTotal: 0, depositsCount: 0, registrations: 0, ftd: 0 },
     );
   }, [metricsQuery.data]);
+
+  // Receita oficial da operação = RevShare + CPA. Depósito/NGR ficam só como telemetria.
+  const revenueTracking = trackingTotals.profitBase;
 
   const influencerMap = useMemo(() => {
     const m = new Map<string, any>();
@@ -135,7 +149,7 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
       const b = buckets.get(key) ?? { ftd: 0, deposits: 0, revenue: 0 };
       b.ftd += Number((m as any).ftd || 0);
       b.deposits += Number((m as any).depositos_total || 0);
-      b.revenue += Number((m as any).revshare_commission ?? (m as any).revenue ?? 0) + Number((m as any).cpa_commission ?? 0);
+      b.revenue += getMetricMoneyParts(m as any).total;
       buckets.set(key, b);
     }
     return Array.from(buckets.entries()).map(([id, b]) => {
@@ -218,9 +232,7 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
     let managerCommissionsOwed = 0;
 
     for (const m of metricsQuery.data ?? []) {
-      const rev = Number((m as any).revshare_commission ?? (m as any).revenue ?? 0);
-      const cpa = Number((m as any).cpa_commission ?? 0);
-      const base = rev + cpa;
+      const base = getMetricMoneyParts(m as any).total;
       if (base <= 0) continue;
       profitBase += base;
 
@@ -256,6 +268,7 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
     caixaRealizado,
     revenueTracking,
     diff: caixaRealizado - revenueTracking,
+    trackingTotals,
     saquesInPeriod,
     saquesAll: saques ?? [],
     rankingInfluencers,
