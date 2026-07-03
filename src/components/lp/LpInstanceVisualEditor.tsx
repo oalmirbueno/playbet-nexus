@@ -40,6 +40,7 @@ const SECTION_LABELS: Record<string, string> = {
 const PRIMARY_MODE_OPTIONS: Array<{ value: LpMode; title: string; badge: string }> = [
   { value: "catalog", title: "LP padrão", badge: "normal" },
   { value: "single_game", title: "LP gerada", badge: "jogo único" },
+  { value: "platform_direct", title: "LP limpa", badge: "só plataforma" },
 ];
 
 interface SmartOdd {
