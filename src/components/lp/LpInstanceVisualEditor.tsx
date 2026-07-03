@@ -594,15 +594,35 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
       const syncError = syncResults.find((r: any) => r?.error)?.error;
       if (syncError) throw new Error(syncError.message);
 
+      const primaryLink = linksToSync[0] as any | undefined;
       const publicShareUrl = shareUrls[0]
         || (effectiveMode === "catalog"
           ? catalogShareUrl
           : buildPublicLpUrl(lpDomain, instance?.slug, instance?.influencer_id || "", "", basePage?.route))
         || publicUrl
         || "";
+      let copiedShareUrl = "";
       if (publicShareUrl) {
-        try { await navigator.clipboard.writeText(publicShareUrl); } catch {}
+        const validation = validateSharedLpUrl(publicShareUrl, {
+          instanceSlug: instance?.slug,
+          trackingCode: primaryLink?.tracking_code,
+          influencerId: primaryLink?.influencer_id || instance?.influencer_id,
+          campanhaId: primaryLink?.campanha_id,
+        });
+        if (!validation.ok) {
+          toast({
+            title: "Link não copiado",
+            description: `URL não bate com a LP/tracking: ${validation.reason}`,
+            variant: "destructive",
+          });
+        } else {
+          try {
+            await navigator.clipboard.writeText(validation.url);
+            copiedShareUrl = validation.url;
+          } catch {}
+        }
       }
+
 
       setMode(effectiveMode);
       setPreviewTab(effectiveMode === "catalog" ? "catalog" : "generated");
