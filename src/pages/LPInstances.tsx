@@ -11,7 +11,7 @@ import ExportDropdown from "@/components/ExportDropdown";
 import QuickLinkDialog from "@/components/QuickLinkDialog";
 import LpInstanceVisualEditor from "@/components/lp/LpInstanceVisualEditor";
 import { findPresetByName, buildPostbackUrlForEvent } from "@/config/platformPresets";
-import { BrandChip, useBrandFromPlatformId } from "@/components/brand/BrandScope";
+import { BrandChip } from "@/components/brand/BrandScope";
 import { resolveBrand } from "@/lib/brandRegistry";
 
 type EditingState = {
