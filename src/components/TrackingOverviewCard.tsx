@@ -72,14 +72,10 @@ export default function TrackingOverviewCard() {
             <p className="text-lg font-bold text-emerald-500">{consolidated.outboundClickCount}</p>
           </div>
           <div>
-            <p className="text-[10px] text-muted-foreground uppercase">Receita</p>
-            {consolidated.revenueOriginalCurrency !== "BRL" && consolidated.revenueOriginal > 0 ? (
-              <>
-                <p className="text-lg font-bold">{fmtCurrency(consolidated.revenueOriginal, consolidated.revenueOriginalCurrency)}</p>
-                <p className="text-[10px] text-muted-foreground">≈ {fmtCurrency(consolidated.revenueBrl, "BRL")}</p>
-              </>
-            ) : (
-              <p className="text-lg font-bold">{fmtCurrency(consolidated.revenueBrl, "BRL")}</p>
+            <p className="text-[10px] text-muted-foreground uppercase">Lucro real (Rev+CPA)</p>
+            <p className="text-lg font-bold text-primary">{fmtCurrency(mergedRevenueBrl, "BRL")}</p>
+            {consolidated.revenueOriginalCurrency !== "BRL" && consolidated.revenueOriginal > 0 && (
+              <p className="text-[10px] text-muted-foreground">≈ {fmtCurrency(consolidated.revenueOriginal, consolidated.revenueOriginalCurrency)}</p>
             )}
           </div>
           <div>
@@ -88,8 +84,13 @@ export default function TrackingOverviewCard() {
           </div>
           <div>
             <p className="text-[10px] text-muted-foreground uppercase">Conversões</p>
-            <p className="text-lg font-bold">{consolidated.conversionEventCount}</p>
+            <p className="text-lg font-bold">{mergedConversions}</p>
           </div>
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase">FTD (30d)</p>
+            <p className="text-lg font-bold">{metricsSummary.ftd}</p>
+          </div>
+        </div>
           <div>
             <p className="text-[10px] text-muted-foreground uppercase">Última atividade</p>
             <p className="text-xs font-medium mt-1">{lastEvent || "-"}</p>
