@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { useInfluencers, usePlatforms, useCampanhas, useSaques, useSocios, useManagers } from "@/hooks/useSupabaseQuery";
 import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
 import { useTrackingMetricsSummary } from "@/hooks/useTrackingMetricsSummary";
+import { useFinanceiroData } from "@/hooks/useFinanceiroData";
 
 const formatBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -21,6 +22,7 @@ export default function DashboardExecutivo() {
   const { data: socios } = useSocios();
   const { consolidated } = useAutoConsolidation();
   const { summary: metricsSummary } = useTrackingMetricsSummary("30d");
+  const { distribution: officialDistribution } = useFinanceiroData({ period: "30d" });
 
   const totalPagosAsaas = useMemo(
     () => saques.filter((s: any) => s.status === "Pago via Asaas").reduce((a: number, s: any) => a + Number(s.valor || 0), 0),
@@ -36,30 +38,20 @@ export default function DashboardExecutivo() {
     [influencers],
   );
 
-  const mediaComissaoInfluencer = useMemo(
-    () => (influencersOnly.length
-      ? influencersOnly.reduce((a: number, i: any) => a + Number(i.commission_percent || 0), 0) / influencersOnly.length
-      : 0),
-    [influencersOnly],
-  );
-
   const distribuicao = useMemo(() => {
-    const baseCaixa = totalPagosAsaas;
-    const basePlataforma = metricsSummary.profitBase;
-    const base = baseCaixa > 0 ? baseCaixa : basePlataforma;
-    const fonte = baseCaixa > 0 ? ("caixa" as const) : ("plataforma" as const);
-    const comissao = base * (mediaComissaoInfluencer / 100);
-    const operacional = base * 0.10;
+    const base = officialDistribution.profitBase;
+    const comissao = officialDistribution.influencerCommissionsOwed + officialDistribution.managerCommissionsOwed;
+    const operacional = Math.max(0, base - comissao) * 0.10;
     const baseSocietaria = base - comissao - operacional;
     return {
-      base, fonte, comissao, operacional, baseSocietaria,
+      base, fonte: "tracking" as const, comissao, operacional, baseSocietaria,
       porSocio: socios.map((s: any) => ({
         nome: s.nome,
         participacao: Number(s.participacao || 0),
         valor: baseSocietaria * (Number(s.participacao || 0) / 100),
       })),
     };
-  }, [totalPagosAsaas, metricsSummary.profitBase, socios, mediaComissaoInfluencer]);
+  }, [officialDistribution, socios]);
 
   // KPIs sempre visíveis - começam em zero e enchem conforme tracking + Asaas chegam
   const kpis = [
@@ -151,9 +143,7 @@ export default function DashboardExecutivo() {
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
               {distribuicao.base > 0
-                ? distribuicao.fonte === "caixa"
-                  ? "Calculada sobre caixa realizado (Asaas)"
-                  : "Projeção sobre lucro real importado (RevShare + CPA)"
+                ? "Calculada sobre lucro real importado (RevShare + CPA), descontando só links atribuídos"
                 : "Aguardando primeiro fechamento (caixa Asaas ou lucro real importado)."}
             </p>
           </div>
@@ -165,11 +155,11 @@ export default function DashboardExecutivo() {
         <div className="grid lg:grid-cols-2 gap-5">
           <div className="bg-secondary/30 rounded-lg p-4 font-mono text-xs space-y-1.5">
             <div className="flex justify-between">
-              <span className="text-accent">{distribuicao.fonte === "caixa" ? "Caixa Realizado" : "Lucro real importado"}</span>
+              <span className="text-accent">Lucro real importado</span>
               <span className="font-semibold tabular-nums">{formatBRL(distribuicao.base)}</span>
             </div>
             <div className="flex justify-between text-success">
-              <span>− Comissão Influencers ({mediaComissaoInfluencer.toFixed(1)}%)</span>
+              <span>− Comissões atribuídas (influencer/gerente)</span>
               <span className="tabular-nums">- {formatBRL(distribuicao.comissao)}</span>
             </div>
             <div className="flex justify-between text-primary">
