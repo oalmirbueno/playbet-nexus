@@ -740,6 +740,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                           objectFit: L.fit === "contain" ? "contain" : "cover",
                           borderRadius: `${L.radiusPct ?? 0}%`,
                           opacity: L.opacity ?? 1,
+                          transform: L.rotateDeg ? `rotate(${L.rotateDeg}deg)` : undefined,
                           boxShadow: L.glow ? `0 0 0 2px ${L.glow}, 0 0 24px ${L.glow}80` : undefined,
                         }}
                       />
@@ -789,6 +790,8 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                         fontWeight: L.weight,
                         fontSize: `${L.fontSizePct}cqw`,
                         color: L.color,
+                        opacity: L.opacity ?? 1,
+                        transform: L.rotateDeg ? `rotate(${L.rotateDeg}deg)` : undefined,
                         textAlign: L.align,
                         textTransform: L.uppercase ? "uppercase" : "none",
                         lineHeight: L.lineHeight ?? 1.05,
@@ -1041,7 +1044,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
 
 /* ─────────── inspectors ─────────── */
 
-function TextInspector({ layer, onChange }: { layer: TextLayer; onChange: (p: Partial<TextLayer>) => void }) {
+function TextInspector({ layer, brandAccent, onChange }: { layer: TextLayer; brandAccent: string; onChange: (p: Partial<TextLayer>) => void }) {
   return (
     <div className="space-y-3 pt-3 border-t border-border/60">
       <div className="space-y-1.5">
@@ -1067,7 +1070,22 @@ function TextInspector({ layer, onChange }: { layer: TextLayer; onChange: (p: Pa
       </div>
       <SliderField label="Largura" value={layer.widthPct} min={10} max={100} step={1} suffix="%" onChange={(v) => onChange({ widthPct: v })} />
       <SliderField label="Entrelinhas" value={layer.lineHeight ?? 1.05} min={0.8} max={2} step={0.05} onChange={(v) => onChange({ lineHeight: v })} />
+      <div className="grid grid-cols-2 gap-2">
+        <SliderField label="Opacidade" value={layer.opacity ?? 1} min={0} max={1} step={0.05} onChange={(v) => onChange({ opacity: v })} />
+        <SliderField label="Rotação" value={layer.rotateDeg ?? 0} min={-30} max={30} step={1} suffix="°" onChange={(v) => onChange({ rotateDeg: v })} />
+      </div>
       <ColorField label="Cor do texto" value={layer.color} onChange={(v) => onChange({ color: v })} />
+      <div className="grid grid-cols-4 gap-1">
+        {["#FFFFFF", "#0B0F1E", "#FFC72C", brandAccent].map((color) => (
+          <button
+            key={color}
+            onClick={() => onChange({ color })}
+            className="h-7 rounded border border-border/60"
+            style={{ background: color }}
+            title={color}
+          />
+        ))}
+      </div>
       <div className="flex items-center gap-1">
         {(["left", "center", "right"] as const).map(a => (
           <button key={a} onClick={() => onChange({ align: a })}
@@ -1090,7 +1108,7 @@ function TextInspector({ layer, onChange }: { layer: TextLayer; onChange: (p: Pa
       <div className="pt-2 border-t border-border/40 space-y-2">
         <div className="flex items-center justify-between">
           <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Fundo (pílula)</Label>
-          <button onClick={() => onChange({ bgColor: layer.bgColor ? null : "#FFC72C" })}
+          <button onClick={() => onChange({ bgColor: layer.bgColor ? null : brandAccent })}
             className={cn("text-[10px] px-2 py-0.5 rounded border",
               layer.bgColor ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground")}>
             {layer.bgColor ? "Ativo" : "Inativo"}
@@ -1099,6 +1117,7 @@ function TextInspector({ layer, onChange }: { layer: TextLayer; onChange: (p: Pa
         {layer.bgColor && (
           <>
             <ColorField label="Cor" value={layer.bgColor} onChange={(v) => onChange({ bgColor: v })} />
+            <SliderField label="Padding" value={layer.bgPadPct ?? 40} min={10} max={100} step={5} suffix="%" onChange={(v) => onChange({ bgPadPct: v })} />
             <SliderField label="Arredondamento" value={layer.bgRadiusPct ?? 20} min={0} max={50} step={1} suffix="%" onChange={(v) => onChange({ bgRadiusPct: v })} />
           </>
         )}
@@ -1107,7 +1126,7 @@ function TextInspector({ layer, onChange }: { layer: TextLayer; onChange: (p: Pa
   );
 }
 
-function ImageInspector({ layer, onChange }: { layer: ImageLayer; onChange: (p: Partial<ImageLayer>) => void }) {
+function ImageInspector({ layer, brandAccent, onChange }: { layer: ImageLayer; brandAccent: string; onChange: (p: Partial<ImageLayer>) => void }) {
   return (
     <div className="space-y-3 pt-3 border-t border-border/60">
       <div className="grid grid-cols-2 gap-2">
@@ -1117,13 +1136,20 @@ function ImageInspector({ layer, onChange }: { layer: ImageLayer; onChange: (p: 
       <SliderField label="Largura" value={layer.widthPct} min={5} max={100} step={1} suffix="%" onChange={(v) => onChange({ widthPct: v })} />
       <SliderField label="Altura" value={layer.heightPct} min={5} max={100} step={1} suffix="%" onChange={(v) => onChange({ heightPct: v })} />
       <SliderField label="Arredondamento" value={layer.radiusPct ?? 0} min={0} max={50} step={1} suffix="%" onChange={(v) => onChange({ radiusPct: v })} />
-      <SliderField label="Opacidade" value={layer.opacity ?? 1} min={0} max={1} step={0.05} onChange={(v) => onChange({ opacity: v })} />
+      <div className="grid grid-cols-2 gap-2">
+        <SliderField label="Opacidade" value={layer.opacity ?? 1} min={0} max={1} step={0.05} onChange={(v) => onChange({ opacity: v })} />
+        <SliderField label="Rotação" value={layer.rotateDeg ?? 0} min={-30} max={30} step={1} suffix="°" onChange={(v) => onChange({ rotateDeg: v })} />
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <SliderField label="Desfoque" value={layer.blur ?? 0} min={0} max={24} step={1} suffix="px" onChange={(v) => onChange({ blur: v || undefined })} />
+        <SliderField label="Exposição" value={layer.brightness ?? 1} min={0.2} max={2} step={0.05} onChange={(v) => onChange({ brightness: v })} />
+      </div>
       <div className="grid grid-cols-2 gap-2">
         <SelectField label="Ajuste" value={layer.fit ?? "cover"} onChange={(v) => onChange({ fit: v as ImageLayer["fit"] })}
           options={[["cover", "Preencher"], ["contain", "Conter"]]} />
         <div className="space-y-1">
           <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Brilho</Label>
-          <button onClick={() => onChange({ glow: layer.glow ? null : "#FFC72C" })}
+          <button onClick={() => onChange({ glow: layer.glow ? null : brandAccent })}
             className={cn("w-full h-8 text-[10px] rounded border",
               layer.glow ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground")}>
             {layer.glow ? "Contorno ligado" : "Desligado"}
