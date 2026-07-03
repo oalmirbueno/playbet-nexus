@@ -463,7 +463,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
       const effectiveGameSlug = link?.game_slug || gameSlugs[0] || null;
       const effectiveGameName = link?.game_name || selectedGame?.game_name || null;
       const effectiveGameIconUrl = link?.game_icon_url || selectedGame?.icon_url || null;
-      const cleanTitle = copy.title || titleForMode(effectiveMode, effectiveGameName);
+      const cleanTitle = copy.title || titleForMode(effectiveMode, effectiveGameName, platformName);
       const cleanSubtitle = copy.subtitle || adaptiveSubtitle(effectiveMode, effectiveGameName, platformName);
       const cleanCta = copy.cta_label || ctaForMode(effectiveMode, link?.link_category, effectiveGameName) || null;
       const layoutConfig = { mode: effectiveMode, sections, updated_at: new Date().toISOString() };
