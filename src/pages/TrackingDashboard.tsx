@@ -20,6 +20,7 @@ import {
   Trophy, Sparkle, Eye, UserPlus, MousePointerClick, DollarSign, WalletCards, BadgeDollarSign,
 } from "lucide-react";
 import HistoricalImportDialog from "@/components/tracking/HistoricalImportDialog";
+import { getMetricMoneyParts } from "@/lib/trackingMetrics";
 
 function fmtBRL(v: number) {
   return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -84,6 +85,8 @@ export default function TrackingDashboard() {
       .channel("tracking-dashboard-live")
       .on("postgres_changes", { event: "*", schema: "public", table: "tracking_metrics" }, () => {
         qc.invalidateQueries({ queryKey: ["tracking_metrics"] });
+        qc.invalidateQueries({ queryKey: ["tracking_metrics_summary"] });
+        qc.invalidateQueries({ queryKey: ["financeiro_metrics"] });
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "tracking_events" }, () => {
         qc.invalidateQueries({ queryKey: ["tracking_events"] });
@@ -119,6 +122,8 @@ export default function TrackingDashboard() {
       // Force React Query to refetch immediately.
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["tracking_metrics"] }),
+        qc.invalidateQueries({ queryKey: ["tracking_metrics_summary"] }),
+        qc.invalidateQueries({ queryKey: ["financeiro_metrics"] }),
         qc.invalidateQueries({ queryKey: ["tracking_events"] }),
         qc.invalidateQueries({ queryKey: ["platform_accounts"] }),
       ]);
@@ -132,17 +137,20 @@ export default function TrackingDashboard() {
 
   const periodKpis = useMemo(() => {
     return metrics.reduce(
-      (acc, m) => ({
-        visitas: acc.visitas + (m.cliques || 0),
-        cadastros: acc.cadastros + (m.registros || 0),
-        ftd: acc.ftd + (m.ftd || 0),
-        depositos: acc.depositos + (m.deposits_count || 0),
-        volumeDepositos: acc.volumeDepositos + (m.depositos_total || 0),
-        receita: acc.receita + (m.revenue || 0),
-        cpa: acc.cpa + (m.cpa_commission || 0),
-        revshare: acc.revshare + (m.revshare_commission || 0),
-        comissaoTotal: acc.comissaoTotal + (m.commission_total || 0),
-      }),
+      (acc, m) => {
+        const money = getMetricMoneyParts(m);
+        return {
+          visitas: acc.visitas + (m.cliques || 0),
+          cadastros: acc.cadastros + (m.registros || 0),
+          ftd: acc.ftd + (m.ftd || 0),
+          depositos: acc.depositos + (m.deposits_count || 0),
+          volumeDepositos: acc.volumeDepositos + (m.depositos_total || 0),
+          receita: acc.receita + money.total,
+          cpa: acc.cpa + money.cpa,
+          revshare: acc.revshare + money.revShare,
+          comissaoTotal: acc.comissaoTotal + money.total,
+        };
+      },
       { visitas: 0, cadastros: 0, ftd: 0, depositos: 0, volumeDepositos: 0, receita: 0, cpa: 0, revshare: 0, comissaoTotal: 0 },
     );
   }, [metrics]);
@@ -164,7 +172,7 @@ export default function TrackingDashboard() {
   const trend = useMemo(() => {
     const map = new Map<string, number>();
     metrics.forEach((m) => {
-      map.set(m.data_ref, (map.get(m.data_ref) || 0) + (m.revenue || 0));
+      map.set(m.data_ref, (map.get(m.data_ref) || 0) + getMetricMoneyParts(m).total);
     });
     return Array.from(map.entries())
       .sort(([a], [b]) => a.localeCompare(b))
@@ -183,7 +191,7 @@ export default function TrackingDashboard() {
       const entry = map.get(id) ?? { id, nome: inf?.name || "Sem nome", visitas: 0, receita: 0, cadastros: 0 };
       entry.visitas += m.cliques || 0;
       entry.cadastros += m.registros || 0;
-      entry.receita += m.revenue || 0;
+      entry.receita += getMetricMoneyParts(m).total;
       map.set(id, entry);
     });
     return Array.from(map.values()).sort((a, b) => b.receita - a.receita).slice(0, 5);
@@ -198,7 +206,7 @@ export default function TrackingDashboard() {
       const entry = map.get(id) ?? { id, nome: p?.name || "-", visitas: 0, receita: 0, cadastros: 0 };
       entry.visitas += m.cliques || 0;
       entry.cadastros += m.registros || 0;
-      entry.receita += m.revenue || 0;
+      entry.receita += getMetricMoneyParts(m).total;
       map.set(id, entry);
     });
     return Array.from(map.values()).sort((a, b) => b.receita - a.receita).slice(0, 5);
@@ -321,9 +329,9 @@ export default function TrackingDashboard() {
         <KpiCard
           variant="success"
           icon={<DollarSign size={16} />}
-          label="Receita"
+          label="Lucro real"
           value={fmtBRL(kpiReceita)}
-          hint={periodKpis.revshare > 0 ? `${fmtBRL(periodKpis.revshare)} RevShare` : "NGR/receita importada"}
+          hint={periodKpis.revshare > 0 ? `${fmtBRL(periodKpis.revshare)} RevShare` : "RevShare + CPA importado"}
         />
         <KpiCard
           variant="primary"
@@ -339,7 +347,7 @@ export default function TrackingDashboard() {
         <div className="lg:col-span-2 glass-card p-6">
           <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="text-sm font-semibold text-foreground">Receita ao longo do período</h3>
+              <h3 className="text-sm font-semibold text-foreground">Lucro real ao longo do período</h3>
               <p className="text-xs text-muted-foreground mt-0.5">Em reais (R$)</p>
             </div>
             <TrendingUp size={16} className="text-accent" />
@@ -364,7 +372,7 @@ export default function TrackingDashboard() {
                       fontSize: 12,
                       color: "hsl(var(--foreground))",
                     }}
-                    formatter={(v: number) => [fmtBRL(v), "Receita"]}
+                    formatter={(v: number) => [fmtBRL(v), "Lucro real"]}
                   />
                   <Area
                     type="monotone"

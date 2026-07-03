@@ -5,6 +5,7 @@ import { useManagerSync } from "@/hooks/useManagerSync";
 import { Copy, ExternalLink, Link2, Search, Power, PowerOff, ShieldAlert, Flame, Sparkles } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { resolveShareUrl } from "@/lib/trackingUrl";
+import { getMetricMoneyParts } from "@/lib/trackingMetrics";
 
 interface EnrichedLink {
   id: string;
@@ -60,7 +61,7 @@ export default function GerenteLinks() {
         .order("hype_priority", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: false }),
       supabase.from("tracking_metrics")
-        .select("platform_account_id, influencer_id, cliques, registros, ftd, revenue")
+        .select("platform_account_id, influencer_id, cliques, registros, ftd, revenue, cpa_commission, revshare_commission, commission_total, origem_importacao")
         .in("influencer_id", infIds).eq("is_demo", false),
     ]);
 
@@ -89,7 +90,7 @@ export default function GerenteLinks() {
       const k = metricsKey(mt.influencer_id, mt.platform_account_id);
       const cur = metricsAgg.get(k) ?? { clicks: 0, regs: 0, ftd: 0, revenue: 0 };
       cur.clicks += mt.cliques ?? 0; cur.regs += mt.registros ?? 0;
-      cur.ftd += mt.ftd ?? 0; cur.revenue += Number(mt.revenue ?? 0);
+      cur.ftd += mt.ftd ?? 0; cur.revenue += getMetricMoneyParts(mt).total;
       metricsAgg.set(k, cur);
     });
 
@@ -185,7 +186,7 @@ export default function GerenteLinks() {
           { label: "Links", value: filtered.length.toLocaleString("pt-BR") },
           { label: "Cliques", value: totals.clicks.toLocaleString("pt-BR") },
           { label: "FTDs", value: totals.ftd.toLocaleString("pt-BR") },
-          { label: "Receita", value: totals.revenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }) },
+          { label: "Lucro real", value: totals.revenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 2 }) },
         ].map(c => (
           <div key={c.label} className="glass-card p-4">
             <p className="text-[11px] text-muted-foreground mb-1">{c.label}</p>
@@ -264,7 +265,7 @@ export default function GerenteLinks() {
                 <MiniStat label="Cliques" value={l.metrics.clicks.toLocaleString("pt-BR")} />
                 <MiniStat label="Cadastros" value={l.metrics.regs.toLocaleString("pt-BR")} />
                 <MiniStat label="FTDs" value={l.metrics.ftd.toLocaleString("pt-BR")} />
-                <MiniStat label="Receita" value={l.metrics.revenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })} highlight />
+                <MiniStat label="Lucro" value={l.metrics.revenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 2 })} highlight />
               </div>
             </div>
           ))}

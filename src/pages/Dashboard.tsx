@@ -55,11 +55,13 @@ export default function Dashboard() {
     setSyncingPanel(true);
     try {
       await Promise.allSettled([
-        supabase.functions.invoke("stellar-panel-scraper", { body: { window_days: 3 } }),
+        supabase.functions.invoke("stellar-panel-scraper", { body: { days: 30 } }),
         supabase.functions.invoke("tracking-puller-smartico", { body: {} }),
       ]);
       await Promise.all([
         refetchMetrics(),
+        queryClient.invalidateQueries({ queryKey: ["tracking_metrics"] }),
+        queryClient.invalidateQueries({ queryKey: ["tracking_metrics_summary"] }),
         queryClient.invalidateQueries({ queryKey: ["tracking_consolidated_real_source"] }),
         queryClient.invalidateQueries({ queryKey: ["financeiro_metrics"] }),
       ]);
@@ -226,13 +228,13 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* Tracking Revenue Summary - when real tracking data exists */}
-      {hasTrackingData && ((consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0 || consolidated.revenueBrl > 0) && (
+      {/* Tracking Revenue Summary - fallback only. When panel metrics exist, the official card above is the source of truth. */}
+      {!hasMetricsData && hasTrackingData && ((consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0 || consolidated.revenueBrl > 0) && (
         <div className="glass-card p-6 border-l-4 border-l-primary cursor-pointer hover:bg-secondary/20 transition-colors" onClick={() => navigate("/tracking")}>
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h3 className="text-sm font-semibold">Saldo Plataforma (Tracking)</h3>
-              <p className="text-[10px] text-muted-foreground">Saldo real reportado pela plataforma</p>
+              <h3 className="text-sm font-semibold">Postbacks recebidos</h3>
+              <p className="text-[10px] text-muted-foreground">Fallback técnico quando não há relatório oficial importado</p>
             </div>
             <ArrowRight size={14} className="text-muted-foreground" />
           </div>
@@ -249,7 +251,7 @@ export default function Dashboard() {
               )}
             </div>
             <div>
-              <p className="text-[10px] text-muted-foreground uppercase">Receita (comissões)</p>
+              <p className="text-[10px] text-muted-foreground uppercase">Receita por postback</p>
               <p className="text-lg font-bold text-primary">
                 {consolidated.revenueOriginalCurrency !== "BRL" && consolidated.revenueOriginal > 0
                   ? consolidated.revenueOriginal.toLocaleString("pt-BR", { style: "currency", currency: "USD" })

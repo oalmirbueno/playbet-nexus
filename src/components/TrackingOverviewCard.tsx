@@ -21,10 +21,10 @@ export default function TrackingOverviewCard() {
   const { consolidated, hasData: hasEvents } = useAutoConsolidation();
   const { summary: metricsSummary } = useTrackingMetricsSummary("30d");
 
-  // Merge event-based numbers with panel-scraper metrics for a single source of truth.
-  const mergedRevenueBrl = Math.max(consolidated.revenueBrl, metricsSummary.revenue + metricsSummary.cpa);
+  // Single source of truth for money: imported panel metrics when present.
+  const hasMetrics = metricsSummary.profitBase > 0 || metricsSummary.ftd > 0 || metricsSummary.registrations > 0;
+  const mergedRevenueBrl = hasMetrics ? metricsSummary.profitBase : consolidated.revenueBrl;
   const mergedConversions = Math.max(consolidated.conversionEventCount, metricsSummary.ftd + metricsSummary.registrations);
-  const hasMetrics = metricsSummary.profitBase > 0 || metricsSummary.ftd > 0;
 
   const lastEvent = consolidated.lastEventTimestamp
     ? new Date(consolidated.lastEventTimestamp).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
@@ -74,7 +74,7 @@ export default function TrackingOverviewCard() {
           <div>
             <p className="text-[10px] text-muted-foreground uppercase">Lucro real (Rev+CPA)</p>
             <p className="text-lg font-bold text-primary">{fmtCurrency(mergedRevenueBrl, "BRL")}</p>
-            {consolidated.revenueOriginalCurrency !== "BRL" && consolidated.revenueOriginal > 0 && (
+            {!hasMetrics && consolidated.revenueOriginalCurrency !== "BRL" && consolidated.revenueOriginal > 0 && (
               <p className="text-[10px] text-muted-foreground">≈ {fmtCurrency(consolidated.revenueOriginal, consolidated.revenueOriginalCurrency)}</p>
             )}
           </div>
@@ -96,11 +96,11 @@ export default function TrackingOverviewCard() {
           <p className="text-xs font-medium mt-1">{lastEvent || (metricsSummary.latestDataRef ?? "-")}</p>
         </div>
 
-        {(consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0 && (
+        {!hasMetrics && (consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0 && (
           <div className="bg-background/50 rounded-lg p-2.5 mb-3 border border-border/50">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[10px] text-muted-foreground uppercase">Saldo Plataforma (real)</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Saldo técnico por postback</p>
                 {consolidated.latestWithdrawableCurrency && consolidated.latestWithdrawableCurrency !== "BRL" && consolidated.latestWithdrawableOriginal != null ? (
                   <>
                     <p className="text-sm font-bold">{fmtCurrency(consolidated.latestWithdrawableOriginal, consolidated.latestWithdrawableCurrency)}</p>

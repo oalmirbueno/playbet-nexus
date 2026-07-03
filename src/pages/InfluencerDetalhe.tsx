@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { useInfluencers, useLandingPageInstances, useCampanhas, useSaques, useConteudo } from "@/hooks/useSupabaseQuery";
 import { clickService } from "@/services/supabaseService";
+import { getMetricMoneyParts } from "@/lib/trackingMetrics";
 
 const chartTooltip = { background: "hsl(0 0% 8%)", border: "1px solid hsl(0 0% 15%)", borderRadius: 8, color: "#fff", fontSize: 12 };
 
@@ -30,6 +31,7 @@ export default function InfluencerDetalhe() {
   const [editLPOpen, setEditLPOpen] = useState(false);
   const [clicks, setClicks] = useState<any[]>([]);
   const [trackingEvents, setTrackingEvents] = useState<any[]>([]);
+  const [officialMetricRows, setOfficialMetricRows] = useState<any[]>([]);
 
   const { data: influencers, isLoading, update } = useInfluencers();
   const { data: instances } = useLandingPageInstances();
@@ -52,6 +54,12 @@ export default function InfluencerDetalhe() {
         .or("status.is.null,status.not.in.(invalid_legacy,invalid_internal_preview,duplicate_technical)")
         .order("event_timestamp", { ascending: false })
         .then(({ data: evts }) => setTrackingEvents(evts || []));
+      supabase
+        .from("tracking_metrics")
+        .select("data_ref, ftd, registros, deposits_count, depositos_total, cliques, revenue, cpa_commission, revshare_commission, commission_total, converted_amount, origem_importacao")
+        .eq("influencer_id", id)
+        .eq("is_demo", false)
+        .then(({ data }) => setOfficialMetricRows(data || []));
     }
   }, [id]);
 
@@ -61,25 +69,54 @@ export default function InfluencerDetalhe() {
 
   // Tracking metrics (before early returns for hooks rule)
   const trackingMetrics = useMemo(() => {
+    const hasOfficialRows = officialMetricRows.length > 0;
     const visits = trackingEvents.filter(e => e.canonical_event_name === "lp_view").length;
     const outboundClicks = trackingEvents.filter(e => e.canonical_event_name === "click").length;
     const conversionEvents = trackingEvents.filter(e => !["lp_view", "click"].includes(e.canonical_event_name));
-    const registrations = trackingEvents.filter(e => e.canonical_event_name === "registration").length;
-    const ftds = trackingEvents.filter(e => e.canonical_event_name === "ftd").length;
+    const eventRegistrations = trackingEvents.filter(e => e.canonical_event_name === "registration").length;
+    const eventFtds = trackingEvents.filter(e => e.canonical_event_name === "ftd").length;
     const deposits = trackingEvents.filter(e => ["deposit", "redeposit", "ftd"].includes(e.canonical_event_name));
-    const depositsTotal = deposits.reduce((s, e) => s + (e.converted_amount_brl || e.original_amount || 0), 0);
+    const eventDepositsTotal = deposits.reduce((s, e) => s + (e.converted_amount_brl || e.original_amount || 0), 0);
     const revenueEvents = trackingEvents.filter(e => e.canonical_event_name === "revenue");
-    const revenue = revenueEvents.reduce((s, e) => s + (e.converted_amount_brl || e.original_amount || 0), 0);
-    const revenueUsd = revenueEvents.reduce((s, e) => s + (e.original_amount || 0), 0);
+    const eventRevenue = revenueEvents.reduce((s, e) => s + (e.converted_amount_brl || e.original_amount || 0), 0);
     const redeposits = trackingEvents.filter(e => e.canonical_event_name === "redeposit").length;
+    const official = officialMetricRows.reduce((acc, row) => {
+      const money = getMetricMoneyParts(row);
+      const day = row.data_ref ? new Date(`${row.data_ref}T00:00:00`).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }) : null;
+      acc.registrations += Number(row.registros || 0);
+      acc.ftds += Number(row.ftd || 0);
+      acc.depositsTotal += Number(row.depositos_total ?? row.converted_amount ?? 0);
+      acc.depositsCount += Number(row.deposits_count || 0);
+      acc.revshare += money.revShare;
+      acc.cpa += money.cpa;
+      acc.profit += money.total;
+      if (day) acc.revByDay[day] = (acc.revByDay[day] || 0) + money.total;
+      return acc;
+    }, { registrations: 0, ftds: 0, depositsTotal: 0, depositsCount: 0, revshare: 0, cpa: 0, profit: 0, revByDay: {} as Record<string, number> });
+
     const revByDay: Record<string, number> = {};
     revenueEvents.forEach(e => {
       const day = new Date(e.event_timestamp).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
       revByDay[day] = (revByDay[day] || 0) + (e.converted_amount_brl || e.original_amount || 0);
     });
-    const revenueChart = Object.entries(revByDay).map(([data, valor]) => ({ data, valor: Number(valor.toFixed(2)) }));
-    return { visits, outboundClicks, registrations, ftds, depositsTotal, revenue, revenueUsd, redeposits, revenueChart, total: conversionEvents.length };
-  }, [trackingEvents]);
+    const chartSource = hasOfficialRows ? official.revByDay : revByDay;
+    const revenueChart = Object.entries(chartSource).map(([data, valor]) => ({ data, valor: Number(Number(valor).toFixed(2)) }));
+    return {
+      visits,
+      outboundClicks,
+      registrations: hasOfficialRows ? official.registrations : eventRegistrations,
+      ftds: hasOfficialRows ? official.ftds : eventFtds,
+      depositsTotal: hasOfficialRows ? official.depositsTotal : eventDepositsTotal,
+      depositsCount: hasOfficialRows ? official.depositsCount : deposits.length,
+      revenue: hasOfficialRows ? official.profit : eventRevenue,
+      revshare: hasOfficialRows ? official.revshare : eventRevenue,
+      cpa: hasOfficialRows ? official.cpa : 0,
+      redeposits,
+      revenueChart,
+      total: hasOfficialRows ? officialMetricRows.length : conversionEvents.length,
+      source: hasOfficialRows ? "painel oficial" : "postback",
+    };
+  }, [trackingEvents, officialMetricRows]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
@@ -144,8 +181,9 @@ export default function InfluencerDetalhe() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-        <div className="stat-card border-l-2 border-l-primary"><span className="text-[10px] text-muted-foreground uppercase">Revenue</span><p className="text-lg font-bold text-emerald-400">R$ {trackingMetrics.revenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p></div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+        <div className="stat-card border-l-2 border-l-primary"><span className="text-[10px] text-muted-foreground uppercase">Lucro real</span><p className="text-lg font-bold text-emerald-400">R$ {trackingMetrics.revenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p></div>
+        <div className="stat-card border-l-2 border-l-primary"><span className="text-[10px] text-muted-foreground uppercase">CPA</span><p className="text-lg font-bold">R$ {trackingMetrics.cpa.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p></div>
         <div className="stat-card border-l-2 border-l-accent"><span className="text-[10px] text-muted-foreground uppercase">FTDs</span><p className="text-lg font-bold">{trackingMetrics.ftds}</p></div>
         <div className="stat-card border-l-2 border-l-info"><span className="text-[10px] text-muted-foreground uppercase">Registros</span><p className="text-lg font-bold">{trackingMetrics.registrations}</p></div>
         <div className="stat-card border-l-2 border-l-success"><span className="text-[10px] text-muted-foreground uppercase">Comissão</span><p className="text-lg font-bold">{comissao}%</p></div>
@@ -214,8 +252,8 @@ export default function InfluencerDetalhe() {
         <div className="space-y-4 animate-fade-in">
           {/* KPIs */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <div className="stat-card border-l-2 border-l-primary"><span className="text-[10px] text-muted-foreground uppercase">Revenue (BRL)</span><p className="text-lg font-bold text-emerald-400">R$ {trackingMetrics.revenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p></div>
-            <div className="stat-card border-l-2 border-l-accent"><span className="text-[10px] text-muted-foreground uppercase">Revenue (USD)</span><p className="text-lg font-bold">$ {trackingMetrics.revenueUsd.toLocaleString("en-US", { minimumFractionDigits: 2 })}</p></div>
+            <div className="stat-card border-l-2 border-l-primary"><span className="text-[10px] text-muted-foreground uppercase">Lucro real</span><p className="text-lg font-bold text-emerald-400">R$ {trackingMetrics.revenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p></div>
+            <div className="stat-card border-l-2 border-l-accent"><span className="text-[10px] text-muted-foreground uppercase">CPA</span><p className="text-lg font-bold">R$ {trackingMetrics.cpa.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p></div>
             <div className="stat-card border-l-2 border-l-info"><span className="text-[10px] text-muted-foreground uppercase">Registros</span><p className="text-lg font-bold">{trackingMetrics.registrations}</p></div>
             <div className="stat-card border-l-2 border-l-success"><span className="text-[10px] text-muted-foreground uppercase">FTDs</span><p className="text-lg font-bold">{trackingMetrics.ftds}</p></div>
             <div className="stat-card border-l-2 border-l-warning"><span className="text-[10px] text-muted-foreground uppercase">Depósitos Total</span><p className="text-lg font-bold">R$ {trackingMetrics.depositsTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</p></div>
@@ -225,13 +263,13 @@ export default function InfluencerDetalhe() {
           {/* Revenue chart */}
           {trackingMetrics.revenueChart.length > 0 && (
             <div className="glass-card p-5">
-              <h3 className="section-title">Revenue por Dia (BRL)</h3>
+              <h3 className="section-title">Lucro real por dia ({trackingMetrics.source})</h3>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={trackingMetrics.revenueChart}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(0 0% 15%)" />
                   <XAxis dataKey="data" stroke="hsl(0 0% 40%)" fontSize={11} />
                   <YAxis stroke="hsl(0 0% 40%)" fontSize={11} />
-                  <Tooltip contentStyle={chartTooltip} formatter={(v: number) => [`R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, "Revenue"]} />
+                  <Tooltip contentStyle={chartTooltip} formatter={(v: number) => [`R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`, "Lucro real"]} />
                   <Bar dataKey="valor" fill="hsl(142 71% 45%)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>

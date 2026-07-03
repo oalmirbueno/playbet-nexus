@@ -42,7 +42,7 @@ export default function RankingTable({ rows, title, subjectLabel, emptyMessage }
         <div className="px-5 pt-5 pb-3 flex items-center justify-between">
           <div>
             <h3 className="text-sm font-semibold">{title}</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Ordenado por revenue atribuído no período</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Ordenado por lucro real atribuído no período</p>
           </div>
           <Badge variant="outline" className="text-[10px]">{rows.length} {rows.length === 1 ? "registro" : "registros"}</Badge>
         </div>
@@ -54,7 +54,7 @@ export default function RankingTable({ rows, title, subjectLabel, emptyMessage }
                 <th className="text-left px-3 py-2.5 font-medium">{subjectLabel}</th>
                 <th className="text-right px-3 py-2.5 font-medium">FTDs</th>
                 <th className="text-right px-3 py-2.5 font-medium">Depósitos</th>
-                <th className="text-right px-3 py-2.5 font-medium">Revenue</th>
+                <th className="text-right px-3 py-2.5 font-medium">Lucro real</th>
                 <th className="text-right px-3 py-2.5 font-medium">% total</th>
                 <th className="text-right px-5 py-2.5 font-medium">Comissão</th>
               </tr>
@@ -80,7 +80,7 @@ export default function RankingTable({ rows, title, subjectLabel, emptyMessage }
                   </td>
                   <td className="px-5 py-3 text-right tabular-nums">
                     <div className="font-semibold text-primary">{fmt(r.commission)}</div>
-                    <div className="text-[10px] text-muted-foreground">{r.commissionPct}% sobre revenue</div>
+                    <div className="text-[10px] text-muted-foreground">{r.commissionPct}% sobre Rev+CPA</div>
                   </td>
                 </tr>
               ))}

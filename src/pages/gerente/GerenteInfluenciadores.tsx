@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { useManagerSync } from "@/hooks/useManagerSync";
 import { Search, Users } from "lucide-react";
+import { getMetricMoneyParts } from "@/lib/trackingMetrics";
 
 type Row = {
   id: string; name: string; slug: string; instagram: string | null;
@@ -34,12 +35,12 @@ export default function GerenteInfluenciadores() {
         .order("name");
       const ids = (infs ?? []).map(i => i.id);
       const { data: metrics } = ids.length
-        ? await supabase.from("tracking_metrics").select("influencer_id, cliques, ftd, revenue").in("influencer_id", ids).eq("is_demo", false)
+        ? await supabase.from("tracking_metrics").select("influencer_id, cliques, ftd, revenue, cpa_commission, revshare_commission, commission_total, origem_importacao").in("influencer_id", ids).eq("is_demo", false)
         : { data: [] as any[] };
       const agg = new Map<string, { clicks: number; ftd: number; revenue: number }>();
       (metrics ?? []).forEach((mt: any) => {
         const cur = agg.get(mt.influencer_id) ?? { clicks: 0, ftd: 0, revenue: 0 };
-        cur.clicks += mt.cliques ?? 0; cur.ftd += mt.ftd ?? 0; cur.revenue += Number(mt.revenue ?? 0);
+        cur.clicks += mt.cliques ?? 0; cur.ftd += mt.ftd ?? 0; cur.revenue += getMetricMoneyParts(mt).total;
         agg.set(mt.influencer_id, cur);
       });
       setRows((infs ?? []).map(i => ({ ...i, ...(agg.get(i.id) ?? { clicks: 0, ftd: 0, revenue: 0 }) })));
@@ -103,7 +104,7 @@ export default function GerenteInfluenciadores() {
               <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-border/40">
                 <Mini label="Cliques" value={r.clicks.toLocaleString("pt-BR")} />
                 <Mini label="FTDs" value={r.ftd.toLocaleString("pt-BR")} />
-                <Mini label="Receita" value={r.revenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })} highlight />
+                <Mini label="Lucro" value={r.revenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 2 })} highlight />
               </div>
               {r.category && (
                 <div className="mt-2 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{r.category}</div>

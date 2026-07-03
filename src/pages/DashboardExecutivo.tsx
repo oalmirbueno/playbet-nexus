@@ -4,6 +4,8 @@ import { DollarSign, Users, Wallet, Target, MousePointerClick, Megaphone, ArrowR
 import { useNavigate } from "react-router-dom";
 import { useInfluencers, usePlatforms, useCampanhas, useSaques, useSocios, useManagers } from "@/hooks/useSupabaseQuery";
 import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
+import { useTrackingMetricsSummary } from "@/hooks/useTrackingMetricsSummary";
+import { useFinanceiroData } from "@/hooks/useFinanceiroData";
 
 const formatBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -19,6 +21,8 @@ export default function DashboardExecutivo() {
   const { data: saques } = useSaques();
   const { data: socios } = useSocios();
   const { consolidated } = useAutoConsolidation();
+  const { summary: metricsSummary } = useTrackingMetricsSummary("30d");
+  const { distribution: officialDistribution } = useFinanceiroData({ period: "30d" });
 
   const totalPagosAsaas = useMemo(
     () => saques.filter((s: any) => s.status === "Pago via Asaas").reduce((a: number, s: any) => a + Number(s.valor || 0), 0),
@@ -34,39 +38,30 @@ export default function DashboardExecutivo() {
     [influencers],
   );
 
-  const mediaComissaoInfluencer = useMemo(
-    () => (influencersOnly.length
-      ? influencersOnly.reduce((a: number, i: any) => a + Number(i.commission_percent || 0), 0) / influencersOnly.length
-      : 0),
-    [influencersOnly],
-  );
-
   const distribuicao = useMemo(() => {
-    const baseCaixa = totalPagosAsaas;
-    const basePlataforma = consolidated.latestWithdrawableBrl || consolidated.latestWithdrawableOriginal || 0;
-    const base = baseCaixa > 0 ? baseCaixa : basePlataforma;
-    const fonte = baseCaixa > 0 ? ("caixa" as const) : ("plataforma" as const);
-    const comissao = base * (mediaComissaoInfluencer / 100);
-    const operacional = base * 0.10;
+    const base = officialDistribution.profitBase;
+    const comissao = officialDistribution.influencerCommissionsOwed + officialDistribution.managerCommissionsOwed;
+    const operacional = Math.max(0, base - comissao) * 0.10;
     const baseSocietaria = base - comissao - operacional;
     return {
-      base, fonte, comissao, operacional, baseSocietaria,
+      base, fonte: "tracking" as const, comissao, operacional, baseSocietaria,
       porSocio: socios.map((s: any) => ({
         nome: s.nome,
         participacao: Number(s.participacao || 0),
         valor: baseSocietaria * (Number(s.participacao || 0) / 100),
       })),
     };
-  }, [totalPagosAsaas, consolidated, socios, mediaComissaoInfluencer]);
+  }, [officialDistribution, socios]);
 
   // KPIs sempre visíveis - começam em zero e enchem conforme tracking + Asaas chegam
   const kpis = [
     { label: "Caixa Asaas", value: formatBRL(totalPagosAsaas), sub: "Pago no período", icon: Landmark, path: "/financeiro" },
-    { label: "Revenue Real", value: formatBRL(consolidated.revenueBrl || 0), sub: "Postbacks validados", icon: DollarSign, path: "/tracking" },
-    { label: "Saldo Plataforma", value: formatBRL(consolidated.latestWithdrawableBrl || 0), sub: "Sacável agora", icon: Wallet, path: "/tracking" },
-    { label: "Cliques saída", value: String(consolidated.outboundClickCount || 0), sub: "Botão da LP / afiliado", icon: MousePointerClick, path: "/tracking/events" },
-    { label: "Registros", value: String(consolidated.totalRegistrations || 0), sub: "Cadastros confirmados", icon: UserCheck, path: "/tracking" },
-    { label: "FTDs", value: String(consolidated.totalFtd || 0), sub: "First-time deposits", icon: Target, path: "/tracking" },
+    { label: "Lucro Real", value: formatBRL(metricsSummary.profitBase || 0), sub: "Base de distribuição", icon: DollarSign, path: "/tracking" },
+    { label: "RevShare", value: formatBRL(metricsSummary.revenue || 0), sub: "Comissão Rev importada", icon: TrendingUp, path: "/tracking" },
+    { label: "CPA", value: formatBRL(metricsSummary.cpa || 0), sub: "Comissão CPA importada", icon: Wallet, path: "/tracking" },
+    { label: "Cliques", value: String(metricsSummary.clicks || consolidated.outboundClickCount || 0), sub: "Painel oficial / LP", icon: MousePointerClick, path: "/tracking/events" },
+    { label: "Registros", value: String(metricsSummary.registrations || consolidated.totalRegistrations || 0), sub: "Cadastros confirmados", icon: UserCheck, path: "/tracking" },
+    { label: "FTDs", value: String(metricsSummary.ftd || consolidated.totalFtd || 0), sub: "First-time deposits", icon: Target, path: "/tracking" },
     { label: "Visitas LP", value: String(consolidated.lpViewCount || 0), sub: "Aberturas reais da LP", icon: TrendingUp, path: "/tracking/events" },
     { label: "Campanhas", value: String(campanhas.length || 0), sub: `${campanhas.filter((c: any) => c.status === "Ativa").length} ativas`, icon: Megaphone, path: "/campanhas" },
   ];
@@ -148,10 +143,8 @@ export default function DashboardExecutivo() {
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
               {distribuicao.base > 0
-                ? distribuicao.fonte === "caixa"
-                  ? "Calculada sobre caixa realizado (Asaas)"
-                  : "Projeção sobre saldo da plataforma"
-                : "Aguardando primeiro fechamento (caixa Asaas ou saldo da plataforma)."}
+                ? "Calculada sobre lucro real importado (RevShare + CPA), descontando só links atribuídos"
+                : "Aguardando primeiro fechamento (caixa Asaas ou lucro real importado)."}
             </p>
           </div>
           <button onClick={() => navigate("/financeiro")} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
@@ -162,11 +155,11 @@ export default function DashboardExecutivo() {
         <div className="grid lg:grid-cols-2 gap-5">
           <div className="bg-secondary/30 rounded-lg p-4 font-mono text-xs space-y-1.5">
             <div className="flex justify-between">
-              <span className="text-accent">{distribuicao.fonte === "caixa" ? "Caixa Realizado" : "Saldo Plataforma"}</span>
+              <span className="text-accent">Lucro real importado</span>
               <span className="font-semibold tabular-nums">{formatBRL(distribuicao.base)}</span>
             </div>
             <div className="flex justify-between text-success">
-              <span>− Comissão Influencers ({mediaComissaoInfluencer.toFixed(1)}%)</span>
+              <span>− Comissões atribuídas (influencer/gerente)</span>
               <span className="tabular-nums">- {formatBRL(distribuicao.comissao)}</span>
             </div>
             <div className="flex justify-between text-primary">

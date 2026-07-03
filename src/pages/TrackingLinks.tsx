@@ -30,6 +30,7 @@ import type { TrackingLinkRow } from "@/services/trackingService";
 import { useToast } from "@/hooks/use-toast";
 import { resolveShareUrl } from "@/lib/trackingUrl";
 import GameArtwork from "@/components/tracking/GameArtwork";
+import { getMetricMoneyParts } from "@/lib/trackingMetrics";
 
 const ROLE_LABELS: Record<string, string> = {
   influencer: "Influencer",
@@ -108,7 +109,7 @@ export default function TrackingLinks() {
   // Aggregate KPIs
   const kpis = useMemo(() => {
     const activeInfIds = new Set(data.map(l => l.influencer_id).filter(Boolean) as string[]);
-    const totalRev = metrics.reduce((a, m: any) => a + Number(m.revenue ?? 0), 0);
+    const totalRev = metrics.reduce((a, m: any) => a + getMetricMoneyParts(m as any).total, 0);
     return {
       total: data.length,
       active: data.filter(l => (l.status ?? "active") === "active" && !isIncomplete(l)).length,
@@ -273,7 +274,7 @@ export default function TrackingLinks() {
           tone={kpis.incomplete ? "danger" : "muted"}
         />
         <KpiCard label="Influencers ativos" value={kpis.influencers.toLocaleString("pt-BR")} icon={Users} />
-        <KpiCard label="Receita rastreada" value={brl(kpis.revenue)} icon={ArrowUpRight} tone="primary" />
+        <KpiCard label="Lucro real rastreado" value={brl(kpis.revenue)} icon={ArrowUpRight} tone="primary" />
       </div>
 
       {/* Toolbar */}

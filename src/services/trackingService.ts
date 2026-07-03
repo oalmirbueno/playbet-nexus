@@ -84,6 +84,7 @@ export interface TrackingMetricRow {
   cpl_commission: number | null;
   revshare_commission: number | null;
   commission_total: number | null;
+  platform_accounts?: { revshare_percent?: number | null; cpa_value?: number | null } | null;
   qftd_count: number | null;
   qlead_count: number | null;
   observacoes: string | null;
@@ -238,7 +239,10 @@ export const platformAccountService = {
 // ── Tracking Metrics ───────────────────────────────────
 export const trackingMetricService = {
   async getAll(): Promise<TrackingMetricRow[]> {
-    const { data, error } = await sb.from("tracking_metrics").select("*").order("data_ref", { ascending: false });
+    const { data, error } = await sb
+      .from("tracking_metrics")
+      .select("*, platform_accounts(revshare_percent,cpa_value)")
+      .order("data_ref", { ascending: false });
     if (error) throw error;
     return data || [];
   },
@@ -250,7 +254,7 @@ export const trackingMetricService = {
     date_from?: string;
     date_to?: string;
   }): Promise<TrackingMetricRow[]> {
-    let q = sb.from("tracking_metrics").select("*");
+    let q = sb.from("tracking_metrics").select("*, platform_accounts(revshare_percent,cpa_value)");
     if (filters.platform_id) q = q.eq("platform_id", filters.platform_id);
     if (filters.influencer_id) q = q.eq("influencer_id", filters.influencer_id);
     if (filters.campanha_id) q = q.eq("campanha_id", filters.campanha_id);

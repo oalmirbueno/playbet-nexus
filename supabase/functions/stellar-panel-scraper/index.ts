@@ -392,6 +392,18 @@ async function persist(
 
     const dateRef = normalizePeriod(it.period ?? "", fallbackDate);
     if (!dateRef) continue;
+    const accountFinancial = platformAccountId
+      ? (await run.supabase
+        .from("platform_accounts")
+        .select("revshare_percent,cpa_value")
+        .eq("id", platformAccountId)
+        .maybeSingle()).data
+      : null;
+    const grossRevenue = Number(it.ngr ?? it.ggr ?? 0) || 0;
+    const cpaUnit = Number(accountFinancial?.cpa_value ?? 0) || 0;
+    const revPct = Number(accountFinancial?.revshare_percent ?? 0) || 0;
+    const cpaCommission = (Number(it.cpa ?? 0) || 0) || ((Number(it.ftds ?? 0) || 0) * cpaUnit);
+    const revShareCommission = (Number(it.rev_share ?? 0) || 0) || (grossRevenue * (revPct / 100));
 
     const record: Record<string, any> = {
       data_ref: dateRef,
@@ -405,8 +417,10 @@ async function persist(
       ftd: it.ftds ?? 0,
       deposits_count: it.deposits ?? 0,
       depositos_total: it.amount_deposit ?? 0,
-      revenue: it.ngr ?? it.ggr ?? 0,
-      commission_total: (it.cpa ?? 0) + (it.rev_share ?? 0),
+      revenue: grossRevenue,
+      cpa_commission: cpaCommission,
+      revshare_commission: revShareCommission,
+      commission_total: cpaCommission + revShareCommission,
       converted_amount: it.amount_deposit ?? 0,
       converted_currency: "BRL",
       original_amount: it.amount_deposit ?? 0,

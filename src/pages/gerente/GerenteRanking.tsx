@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { useManagerSync } from "@/hooks/useManagerSync";
 import { Trophy, Medal, Search } from "lucide-react";
+import { getMetricMoneyParts } from "@/lib/trackingMetrics";
 
 type Row = {
   id: string; name: string; slug: string; instagram: string | null;
@@ -41,7 +42,7 @@ export default function GerenteRanking() {
 
       const days = PERIODS.find(p => p.key === period)?.days;
       let query = supabase.from("tracking_metrics")
-        .select("influencer_id, revenue, ftd, cliques, registros, data_ref")
+        .select("influencer_id, revenue, cpa_commission, revshare_commission, commission_total, origem_importacao, ftd, cliques, registros, data_ref")
         .in("influencer_id", ids)
         .eq("is_demo", false);
       if (days) {
@@ -57,7 +58,7 @@ export default function GerenteRanking() {
       };
       for (const mt of metrics ?? []) {
         const r = byInf[mt.influencer_id]; if (!r) continue;
-        r.revenue += Number(mt.revenue ?? 0);
+        r.revenue += getMetricMoneyParts(mt).total;
         r.ftd += mt.ftd ?? 0;
         r.clicks += mt.cliques ?? 0;
         r.regs += mt.registros ?? 0;
@@ -105,7 +106,7 @@ export default function GerenteRanking() {
           { l: "Cliques", v: totals.clicks.toLocaleString("pt-BR") },
           { l: "Cadastros", v: totals.regs.toLocaleString("pt-BR") },
           { l: "FTDs", v: totals.ftd.toLocaleString("pt-BR") },
-          { l: "Receita", v: totals.revenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }) },
+          { l: "Lucro real", v: totals.revenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 2 }) },
         ].map(c => (
           <div key={c.l} className="glass-card p-4"><p className="text-[11px] text-muted-foreground mb-1">{c.l}</p><p className="text-xl font-semibold tabular-nums">{c.v}</p></div>
         ))}
@@ -117,7 +118,7 @@ export default function GerenteRanking() {
           <input className="input-field pl-8" placeholder="Buscar influenciador…" value={q} onChange={e => setQ(e.target.value)} />
         </div>
         <div className="flex items-center gap-1 text-[12px]">
-          {([["revenue", "Receita"], ["ftd", "FTDs"], ["clicks", "Cliques"], ["ftdRate", "Conv. FTD"]] as const).map(([k, l]) => (
+          {([["revenue", "Lucro"], ["ftd", "FTDs"], ["clicks", "Cliques"], ["ftdRate", "Conv. FTD"]] as const).map(([k, l]) => (
             <button key={k} onClick={() => setSort(k)}
               className={`px-3 py-1.5 rounded-lg border ${sort === k ? "bg-primary/15 text-primary border-primary/30" : "border-border/40 text-muted-foreground hover:text-foreground"}`}>
               {l}
@@ -144,7 +145,7 @@ export default function GerenteRanking() {
                 <th className="px-4 py-2 text-right">Cadastros</th>
                 <th className="px-4 py-2 text-right">FTDs</th>
                 <th className="px-4 py-2 text-right">Conv. FTD</th>
-                <th className="px-4 py-2 text-right">Receita</th>
+                <th className="px-4 py-2 text-right">Lucro real</th>
               </tr>
             </thead>
             <tbody>
