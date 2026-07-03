@@ -91,10 +91,9 @@ export default function TrackingOverviewCard() {
             <p className="text-lg font-bold">{metricsSummary.ftd}</p>
           </div>
         </div>
-          <div>
-            <p className="text-[10px] text-muted-foreground uppercase">Última atividade</p>
-            <p className="text-xs font-medium mt-1">{lastEvent || "-"}</p>
-          </div>
+        <div className="mb-3">
+          <p className="text-[10px] text-muted-foreground uppercase">Última atividade</p>
+          <p className="text-xs font-medium mt-1">{lastEvent || (metricsSummary.latestDataRef ?? "-")}</p>
         </div>
 
         {(consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0 && (
