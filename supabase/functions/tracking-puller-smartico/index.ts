@@ -218,14 +218,16 @@ Deno.serve(async (req) => {
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-  if (!apiKey) {
-    // Operação sem API key: tracking roda 100% via postback em tempo real.
+  if (!apiKey || !labelId) {
+    // Operação sem API key ou sem label_id: tracking roda 100% via postback em tempo real.
     // Retornamos 200 com mode=postback_only para não poluir logs de erro.
     return new Response(
       JSON.stringify({
         ok: true,
         mode: "postback_only",
-        message: "Sem API key nesta operação. Tracking ativo via postback em tempo real (Estrela Bet + VUPI). Nenhum pull executado.",
+        message: !apiKey
+          ? "Sem API key nesta operação. Tracking ativo via postback em tempo real (Estrela Bet + VUPI). Nenhum pull executado."
+          : "Sem SMARTICO_LABEL_ID configurado. Tracking ativo via postback em tempo real (Estrela Bet + VUPI). Nenhum pull executado.",
         inserted: 0,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
