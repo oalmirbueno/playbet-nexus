@@ -13,7 +13,7 @@ import { ArrowUp, ArrowDown, RefreshCw, ExternalLink, Loader2, Wand2, Users, Spa
 import { LP_MODE_LABELS, defaultLayoutConfig, type LpMode } from "@/lib/lpMode";
 import GameArtwork from "@/components/tracking/GameArtwork";
 import { suggestThreeOptions, computeOpportunityScore } from "@/lib/opportunityEngine";
-import { buildPublicLpUrl } from "@/lib/trackingUrl";
+import { buildPublicLpUrl, buildTrackedAffiliateUrl } from "@/lib/trackingUrl";
 import { buildLpBaseUrl } from "@/lib/lpPublicUrl";
 
 interface Props {
@@ -29,7 +29,7 @@ const SECTION_LABELS: Record<string, string> = {
   hero: "Hero",
   features: "Ofertas oficiais (card)",
   games: "Jogos",
-  odds: "Odds/Partidas",
+  odds: "Em destaque",
   community: "Comunidade",
   cta: "CTA final",
   footer: "Rodapé",
@@ -73,7 +73,7 @@ function isBonusCategory(category: string | null | undefined): boolean {
 
 function ctaForMode(lpMode: LpMode, category: string | null | undefined, gameName?: string | null): string {
   if (lpMode === "catalog") return "Acessar oportunidades";
-  if (lpMode === "odds") return "Apostar agora";
+  if (lpMode === "odds") return "Acessar oportunidades";
   if (isBonusCategory(category)) return "Resgatar bônus";
   if (lpMode === "multi_game") return "Ver jogos";
   return gameName ? `Jogar ${gameName}` : "Jogar agora";
@@ -81,7 +81,7 @@ function ctaForMode(lpMode: LpMode, category: string | null | undefined, gameNam
 
 function titleForMode(lpMode: LpMode, gameName?: string | null): string {
   if (lpMode === "catalog") return "Oportunidades PlayBet";
-  if (lpMode === "odds") return "Odds do dia";
+  if (lpMode === "odds") return "Em destaque";
   if (lpMode === "multi_game") return "Jogos em alta";
   return gameName || "Oferta oficial";
 }
@@ -205,7 +205,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         // so already registered LPs keep working even if an older sync missed the FK.
         let { data: tl } = await supabase
           .from("tracking_links")
-          .select("id, influencer_id, campanha_id, tracking_code, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, platform_account_id, platform_accounts(platform_id, platforms(name))")
+          .select("id, influencer_id, campanha_id, tracking_code, click_id_param_name, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, short_url, platform_account_id, platform_accounts(platform_id, platforms(name))")
           .eq("landing_page_instance_id", instanceId)
           .order("created_at", { ascending: false })
           .limit(1)
@@ -213,7 +213,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         if (!tl && (inst as any).source_tracking_link_id) {
           const { data: sourceTl } = await supabase
             .from("tracking_links")
-            .select("id, influencer_id, campanha_id, tracking_code, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, platform_account_id, platform_accounts(platform_id, platforms(name))")
+            .select("id, influencer_id, campanha_id, tracking_code, click_id_param_name, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, short_url, platform_account_id, platform_accounts(platform_id, platforms(name))")
             .eq("id", (inst as any).source_tracking_link_id)
             .maybeSingle();
           tl = sourceTl;
@@ -434,7 +434,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
 
   const pickTopOdds = (n = 3) => {
     setSmartOdds(oddsCandidates.slice(0, n));
-    toast({ title: `Top ${n} odds inteligentes selecionadas`, description: "Curadoria por score + proximidade + confiança do sinal." });
+    toast({ title: `Top ${n} opções selecionadas`, description: "Ordenadas por mercado simples, proximidade e sinal disponível." });
   };
 
   const toggleOdd = (o: SmartOdd) => {
@@ -450,31 +450,48 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
     const effectiveMode: LpMode = previewTab === "generated" && mode === "catalog" ? "single_game" : mode;
     setSaving(true);
     try {
+      const selectedGame = availableGames.find((g: any) => g.game_slug === gameSlugs[0]);
+      const effectiveGameSlug = link?.game_slug || gameSlugs[0] || null;
+      const effectiveGameName = link?.game_name || selectedGame?.game_name || null;
+      const effectiveGameIconUrl = link?.game_icon_url || selectedGame?.icon_url || null;
+      const cleanTitle = copy.title || titleForMode(effectiveMode, effectiveGameName);
+      const cleanSubtitle = copy.subtitle || adaptiveSubtitle(effectiveMode, effectiveGameName, platformName);
+      const cleanCta = copy.cta_label || ctaForMode(effectiveMode, link?.link_category, effectiveGameName) || null;
       const layoutConfig = { mode: effectiveMode, sections, updated_at: new Date().toISOString() };
       const hype_copy: any = {
-        title: copy.title || null,
-        subtitle: copy.subtitle || null,
-        cta_label: copy.cta_label || ctaForMode(effectiveMode, link?.link_category, link?.game_name) || null,
+        title: cleanTitle || null,
+        subtitle: cleanSubtitle || null,
+        cta_label: cleanCta,
         community_cta: {
           enabled: community.enabled,
-          label: community.label || null,
+          label: community.label || (effectiveGameName ? `Comunidade ${effectiveGameName}` : null),
           url: community.url || null,
           note: community.note || null,
         },
         bonus_offer: {
           enabled: bonusOffer.enabled,
-          title: bonusOffer.title || null,
+          title: bonusOffer.title || (effectiveGameName ? `Oferta ${effectiveGameName}` : null),
           code: bonusOffer.code || null,
           note: bonusOffer.note || null,
-          cta_label: bonusOffer.cta_label || copy.cta_label || ctaForMode(effectiveMode, link?.link_category, link?.game_name) || null,
+          cta_label: bonusOffer.cta_label || cleanCta,
         },
-        game_slug: link?.game_slug || gameSlugs[0] || null,
-        game_name: link?.game_name || availableGames.find((g: any) => g.game_slug === gameSlugs[0])?.game_name || null,
-        game_icon_url: link?.game_icon_url || availableGames.find((g: any) => g.game_slug === gameSlugs[0])?.icon_url || null,
+        game_slug: effectiveGameSlug,
+        game_name: effectiveGameName,
+        game_icon_url: effectiveGameIconUrl,
         category: link?.link_category || null,
         auto: false,
       };
       if (effectiveMode === "odds" && smartOdds.length) hype_copy.smart_odds = smartOdds;
+
+      const instanceAffiliateLink = link
+        ? buildTrackedAffiliateUrl(
+            link.base_url || link.short_url || instance?.affiliate_link || "",
+            link.click_id_param_name || "sub1",
+            link.tracking_code || "",
+            link.influencer_id || instance?.influencer_id || "",
+            link.campanha_id || "",
+          )
+        : instance?.affiliate_link || null;
 
       const { error } = await supabase
         .from("landing_page_instances")
@@ -483,6 +500,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
           game_slugs: gameSlugs,
           layout_config: layoutConfig,
           hype_copy,
+          affiliate_link: instanceAffiliateLink,
         } as any)
         .eq("id", instanceId);
       if (error) throw new Error(error.message);
@@ -502,14 +520,14 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
 
       const { data: linkedTrackingLinks } = await supabase
         .from("tracking_links")
-        .select("id, influencer_id, campanha_id, tracking_code")
+        .select("id, influencer_id, campanha_id, tracking_code, click_id_param_name, base_url, short_url")
         .eq("landing_page_instance_id", instanceId);
 
       let linksToSync = ((linkedTrackingLinks || []) as any[]);
       if (!linksToSync.length && instance?.source_tracking_link_id) {
         const { data: sourceTl } = await supabase
           .from("tracking_links")
-          .select("id, influencer_id, campanha_id, tracking_code")
+          .select("id, influencer_id, campanha_id, tracking_code, click_id_param_name, base_url, short_url")
           .eq("id", instance.source_tracking_link_id)
           .maybeSingle();
         if (sourceTl) linksToSync = [sourceTl as any];
@@ -612,10 +630,22 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
 
   const catalogPreviewSrc = useMemo(() => {
     if (!basePage) return null;
-    const base = buildLpBaseUrl(basePage.domain, basePage.route);
-    const sep = base.includes("?") ? "&" : "?";
-    return `${base}${sep}_preview=${previewKey}`;
-  }, [basePage, previewKey]);
+    const url = buildPublicLpUrl(
+      basePage.domain,
+      instance?.slug,
+      link?.influencer_id || instance?.influencer_id || "",
+      link?.campanha_id || "",
+      basePage.route,
+      link?.tracking_code || "",
+    );
+    if (!url) {
+      const base = buildLpBaseUrl(basePage.domain, basePage.route);
+      const sep = base.includes("?") ? "&" : "?";
+      return `${base}${sep}_preview=${previewKey}`;
+    }
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}_preview=${previewKey}`;
+  }, [basePage, instance?.slug, instance?.influencer_id, link?.influencer_id, link?.campanha_id, link?.tracking_code, previewKey]);
 
   const generatedPublicUrl = useMemo(() => {
     if (!instance?.slug) return publicUrl || null;
@@ -808,13 +838,13 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                   />
                 </div>
 
-                {/* Smart Odds */}
+                {/* Destaques inteligentes */}
                 {mode === "odds" && (
                   <div className="rounded-md border border-border/60 bg-secondary/20 p-3 space-y-2">
                     <div className="flex items-center gap-2">
                       <TrendingUp size={13} className="text-primary" />
                       <Label className="text-[10px] uppercase tracking-wider text-muted-foreground flex-1">
-                        Odds inteligentes
+                        Destaques inteligentes
                       </Label>
                       <button
                         type="button"
@@ -825,7 +855,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                       </button>
                     </div>
                     <p className="text-[10px] text-muted-foreground leading-relaxed">
-                      Ordenadas por mercado simples, proximidade do jogo e odd em destaque.
+                      Ordenadas por mercado simples, proximidade do jogo e sinal disponível.
                     </p>
                     <div className="flex gap-1.5">
                       <Button size="sm" variant="secondary" className="h-7 text-[10px] flex-1"

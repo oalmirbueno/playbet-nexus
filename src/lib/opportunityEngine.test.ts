@@ -31,7 +31,7 @@ describe("opportunityEngine.suggestThreeOptions", () => {
       status: "novo",
     } as unknown as LpSignalRow;
     const out = suggestThreeOptions({ event: baseEvent, signals: [signal] });
-    expect(out[2].badge).toBe("Curadoria PlayBet");
+    expect(out[2].badge).toBe("Em destaque");
     expect(out[2].market_type).toBe("ambas_marcam");
     expect(out[2].signal_confidence).toBe("alta");
   });

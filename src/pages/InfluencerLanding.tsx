@@ -87,8 +87,36 @@ async function findTrackingLink(instanceId: string | null, influencerId: string)
   return data || null;
 }
 
-/** Fallback: get any opportunity destination for the instance/influencer */
-async function findOpportunityDestination(instanceId: string | null, landingPageId: string | null) {
+function isPublicLpLoop(url: string | null | undefined, hostname: string, slug?: string | null): boolean {
+  if (!url) return false;
+  try {
+    const u = new URL(url, window.location.origin);
+    const host = u.hostname.toLowerCase();
+    const currentHost = hostname.split(":")[0].toLowerCase();
+    const isLpHost = host === currentHost || host.includes("oportunidades.playbet");
+    if (!isLpHost) return false;
+    const ref = u.searchParams.get("ref");
+    const isInstanceRoute = u.pathname.startsWith("/i/");
+    return Boolean(ref || isInstanceRoute || (slug && url.includes(slug)));
+  } catch {
+    return false;
+  }
+}
+
+/** Fallback: get the tracked affiliate destination from the bound opportunity. */
+async function findOpportunityDestination(instanceId: string | null, landingPageId: string | null, trackingLinkId?: string | null) {
+  if (trackingLinkId) {
+    const { data } = await supabase
+      .from("lp_opportunities")
+      .select("destination_url")
+      .eq("tracking_link_id", trackingLinkId)
+      .eq("is_active", true)
+      .not("destination_url", "is", null)
+      .order("updated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (data?.destination_url) return data.destination_url;
+  }
   if (!landingPageId && !instanceId) return null;
   const query = supabase
     .from("lp_opportunities")
@@ -309,9 +337,14 @@ export default function InfluencerLanding() {
       ) => {
         const tl = await findTrackingLink(instanceId, influencerId);
         const paramName = tl?.click_id_param_name || "sub1";
-        const fallbackOpportunity = await findOpportunityDestination(instanceId, landingPageId);
-        const outboundAffiliate =
-          affiliateLink || (tl as any)?.base_url || (tl as any)?.short_url || (tl as any)?.final_url || fallbackOpportunity || "";
+        const fallbackOpportunity = await findOpportunityDestination(instanceId, landingPageId, tl?.id || null);
+        const outboundAffiliate = [
+          affiliateLink,
+          (tl as any)?.base_url,
+          (tl as any)?.short_url,
+          fallbackOpportunity,
+          (tl as any)?.final_url,
+        ].find((url) => url && !isPublicLpLoop(url, hostname, slug)) || "";
 
         setResolved({
           affiliate_link: outboundAffiliate,
@@ -538,7 +571,7 @@ export default function InfluencerLanding() {
   const defaultCta = isCatalogMode
     ? "Acessar oportunidades"
     : mode === "odds"
-      ? "Apostar agora"
+      ? "Acessar oportunidades"
       : bonusOffer?.enabled && bonusOffer?.code
         ? "Resgatar bônus"
         : primaryGame?.name
@@ -564,7 +597,7 @@ export default function InfluencerLanding() {
           <div className="max-w-xl mx-auto relative z-10 text-center">
             <img src={logo} alt="PlayBet" className="h-16 mx-auto mb-8 opacity-90" />
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium mb-6">
-              <Zap size={12} /> {mode === "odds" ? "Odds oficiais" : isCatalogMode ? "Oportunidades" : "Oferta oficial"}
+              <Zap size={12} /> {mode === "odds" ? "Em destaque" : isCatalogMode ? "Oportunidades" : "Oferta oficial"}
             </div>
             {heroGame && (
               <GameImage
@@ -667,8 +700,8 @@ export default function InfluencerLanding() {
         <section className="px-6 pb-16">
           <div className="max-w-xl mx-auto">
             <div className="text-center mb-6">
-              <h2 className="text-xl font-bold mb-2">Odds do dia</h2>
-              <p className="text-sm text-gray-400">Opções em destaque com mercado simples e valor real</p>
+              <h2 className="text-xl font-bold mb-2">Em destaque</h2>
+              <p className="text-sm text-gray-400">Opções disponíveis para acessar agora</p>
             </div>
             {smartOdds.length > 0 ? (
               <div className="space-y-2">
@@ -699,7 +732,7 @@ export default function InfluencerLanding() {
                   onClick={handleCTA}
                   className="w-full mt-3 bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3 rounded-xl transition"
                 >
-                  Apostar agora →
+                  Acessar oportunidades →
                 </button>
               </div>
             ) : (
@@ -708,7 +741,7 @@ export default function InfluencerLanding() {
                 className="w-full max-w-md mx-auto block bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-6 hover:bg-emerald-500/15 transition"
               >
                 <p className="text-sm text-gray-300 mb-2">Ver todas as opções em destaque</p>
-                <p className="text-2xl font-extrabold text-emerald-400">Ver Odds →</p>
+                <p className="text-2xl font-extrabold text-emerald-400">Ver opções →</p>
               </button>
             )}
           </div>
