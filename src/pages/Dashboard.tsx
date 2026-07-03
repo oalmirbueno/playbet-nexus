@@ -55,7 +55,7 @@ export default function Dashboard() {
     setSyncingPanel(true);
     try {
       await Promise.allSettled([
-        supabase.functions.invoke("stellar-panel-scraper", { body: { window_days: 3 } }),
+        supabase.functions.invoke("stellar-panel-scraper", { body: { days: 30 } }),
         supabase.functions.invoke("tracking-puller-smartico", { body: {} }),
       ]);
       await Promise.all([
