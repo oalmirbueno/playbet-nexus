@@ -250,21 +250,53 @@ async function fetchPerformance(
   dateStart: string,
   dateEnd: string,
 ): Promise<PerfItem[]> {
-  const qs = new URLSearchParams({
-    date_start: dateStart,
-    date_end: dateEnd,
-    group_by: "campaign",
-  });
-  const r = await apiGet<{ items: PerfItem[]; grouped_items?: any }>(
-    run,
-    session,
-    `/user/performance/report?${qs.toString()}`,
-    brand.brand_slug,
-  );
-  if (!r.ok || !r.data) return [];
-  const items = Array.isArray(r.data.items) ? r.data.items : [];
-  return items;
+  // Try progressively more granular groupings; the API accepts a small set
+  // of keywords. We keep the first non-empty response that gives us a real
+  // per-day breakdown (period != "01/01/0001").
+  const groupings = ["day,campaign", "day", "date", "campaign"];
+  let lastItems: PerfItem[] = [];
+  for (const g of groupings) {
+    const qs = new URLSearchParams({
+      date_start: dateStart,
+      date_end: dateEnd,
+      group_by: g,
+    });
+    const r = await apiGet<{ items: PerfItem[]; grouped_items?: any }>(
+      run,
+      session,
+      `/user/performance/report?${qs.toString()}`,
+      brand.brand_slug,
+    );
+    if (!r.ok || !r.data) continue;
+    const items = Array.isArray(r.data.items) ? r.data.items : [];
+    if (!items.length) continue;
+    lastItems = items;
+    const hasRealDate = items.some(
+      (i) => i.period && !/^01\/01\/0001/.test(i.period),
+    );
+    if (hasRealDate) {
+      log(run, "performance/pick", { brand: brand.brand_slug, group_by: g, count: items.length });
+      return items;
+    }
+  }
+  // Fall back to whatever we got even if aggregated.
+  return lastItems;
 }
+
+// Convert API-provided period strings ("DD/MM/YYYY", "YYYY-MM-DD", ISO) to
+// canonical YYYY-MM-DD. When the API returns the sentinel "01/01/0001"
+// (aggregate-only), we clamp to the request's end date.
+function normalizePeriod(period: string, fallback: string): string {
+  if (!period) return fallback;
+  const p = period.trim();
+  if (/^01\/01\/0001/.test(p)) return fallback;
+  const iso = p.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const br = p.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (br) return `${br[3]}-${br[2]}-${br[1]}`;
+  return fallback;
+}
+
 
 // ------------------------------------------------------------------
 // Persistence
