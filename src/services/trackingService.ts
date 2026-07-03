@@ -76,6 +76,16 @@ export interface TrackingMetricRow {
   ftd_cr: number | null;
   rev_per_registration: number | null;
   rev_per_ftd: number | null;
+  original_amount?: number | null;
+  original_currency?: string | null;
+  converted_amount?: number | null;
+  converted_currency?: string | null;
+  cpa_commission: number | null;
+  cpl_commission: number | null;
+  revshare_commission: number | null;
+  commission_total: number | null;
+  qftd_count: number | null;
+  qlead_count: number | null;
   observacoes: string | null;
   origem_importacao: string | null;
   is_demo: boolean;
