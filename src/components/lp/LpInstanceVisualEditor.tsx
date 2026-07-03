@@ -683,17 +683,25 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0">
-        <DialogHeader className="px-6 pt-5 pb-3 border-b shrink-0">
-          <DialogTitle className="flex items-center gap-2">
-            <Wand2 size={16} className="text-primary" />
-            Editor visual da LP
-            {link?.game_name && (
-              <Badge variant="outline" className="text-[10px] font-normal ml-1">
-                {link.game_name}{platformName ? ` · ${platformName}` : ""}
-              </Badge>
-            )}
-          </DialogTitle>
-        </DialogHeader>
+        {(() => {
+          const brandKit = resolveBrand(platformName);
+          return (
+            <BrandScope brand={brandKit} accentBar>
+              <DialogHeader className="px-6 pt-5 pb-3 border-b shrink-0">
+                <DialogTitle className="flex items-center gap-2">
+                  <Wand2 size={16} className="text-primary" />
+                  Editor visual da LP
+                  {link?.game_name && (
+                    <Badge variant="outline" className="text-[10px] font-normal ml-1">
+                      {link.game_name}
+                    </Badge>
+                  )}
+                  <BrandChip brand={brandKit} fallbackLabel={platformName || "sem marca"} size="xs" className="ml-1" />
+                </DialogTitle>
+              </DialogHeader>
+            </BrandScope>
+          );
+        })()}
 
         <div className="flex-1 min-h-0 grid grid-cols-1 md:grid-cols-[380px_1fr] overflow-hidden">
           <div className="overflow-y-auto border-r px-5 py-4 space-y-5">
