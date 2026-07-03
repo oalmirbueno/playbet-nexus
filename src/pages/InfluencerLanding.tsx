@@ -767,9 +767,29 @@ export default function InfluencerLanding() {
     try { await navigator.clipboard.writeText(bonusOffer.code); } catch {}
   };
 
+  // ── Tokens da marca resolvida (nunca misturar entre plataformas) ──
+  const brandStyle = brandCtx?.brand ? {
+    ["--brand-primary" as any]: brandCtx.brand.palette.primary,
+    ["--brand-primary-contrast" as any]: brandCtx.brand.palette.primaryContrast,
+    ["--brand-secondary" as any]: brandCtx.brand.palette.secondary,
+    ["--brand-surface" as any]: brandCtx.brand.palette.surface,
+    ["--brand-ink" as any]: brandCtx.brand.palette.ink,
+    ["--brand-display" as any]: brandCtx.brand.typography.display,
+    ["--brand-body" as any]: brandCtx.brand.typography.body,
+  } : undefined;
+
   // ── Ready ──
   return (
-    <div className="min-h-screen bg-[#07070d] text-white overflow-x-hidden lp-public-page antialiased">
+    <div
+      className="min-h-screen text-white overflow-x-hidden lp-public-page antialiased"
+      style={{
+        background: brandCtx?.brand?.palette.surface || "#07070d",
+        color: brandCtx?.brand?.palette.ink || "#ffffff",
+        fontFamily: brandCtx?.brand?.typography.body || "Inter, system-ui, sans-serif",
+        ...brandStyle,
+      }}
+    >
+
       {isSectionOn("hero") && (
         <header className="relative pt-10 pb-16 px-6">
           {/* Aurora backdrop */}
