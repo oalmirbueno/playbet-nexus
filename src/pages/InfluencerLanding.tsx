@@ -431,6 +431,9 @@ export default function InfluencerLanding() {
             raw_payload: {
               slug,
               hostname,
+              path: window.location.pathname,
+              search: window.location.search,
+              is_preview: searchParamsPreview(),
               sub2: searchParams.get("sub2"),
               sub3: searchParams.get("sub3"),
               user_agent: navigator.userAgent,
@@ -532,18 +535,20 @@ export default function InfluencerLanding() {
     // tracking_event with platform_id resolved from the tracking_link,
     // so the click counts in tracking_metrics for the right casa.
     try {
-      await supabase.from("clicks").insert({
-        click_id: resolved.click_id,
-        influencer_id: resolved.influencer_id,
-        landing_page_id: resolved.landing_page_id,
-        landing_page_instance_id: resolved.instance_id,
-        tracking_link_id: resolved.tracking_link_id,
-        clicked_at: new Date().toISOString(),
-        user_agent: navigator.userAgent,
-        referrer: document.referrer || null,
-        route: `/?ref=${slug}`,
-        source: "cta_click",
-      } as any);
+      if (!isInternalPreviewContext()) {
+        await supabase.from("clicks").insert({
+          click_id: resolved.click_id,
+          influencer_id: resolved.influencer_id,
+          landing_page_id: resolved.landing_page_id,
+          landing_page_instance_id: resolved.instance_id,
+          tracking_link_id: resolved.tracking_link_id,
+          clicked_at: new Date().toISOString(),
+          user_agent: navigator.userAgent,
+          referrer: document.referrer || null,
+          route: `/?ref=${slug}`,
+          source: "cta_click",
+        } as any);
+      }
     } catch {
       // Don't block redirect
     }
