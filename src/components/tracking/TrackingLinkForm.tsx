@@ -10,6 +10,7 @@ import { landingPageInstanceService } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { syncLinkAssetsBatch } from "@/lib/linkAssets";
 import { detectFromUrl, CATEGORY_LABELS, inferAttributionParam, type LinkCategory } from "@/lib/linkIntelligence";
 import GameArtwork from "@/components/tracking/GameArtwork";
 import { detectLpMode, LP_MODE_LABELS, LP_MODE_HINTS, type LpMode } from "@/lib/lpMode";
