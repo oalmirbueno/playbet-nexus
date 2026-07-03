@@ -46,6 +46,8 @@ import { SportsEventsPanel } from "@/components/lp/SportsEventsPanel";
 import { SignalRoomPanel } from "@/components/lp/SignalRoomPanel";
 import { LinkLpGrid } from "@/components/lp/LinkLpGrid";
 import { isSelfLandingLoop } from "@/lib/opportunityDetect";
+import { BrandChip, BrandScope } from "@/components/brand/BrandScope";
+import { resolveBrand } from "@/lib/brandRegistry";
 
 const CATEGORIES = [
   { value: "sports", label: "Esportes" },
@@ -390,6 +392,7 @@ export default function LpOpportunities() {
                     <TableRow>
                       <TableHead className="w-16">#</TableHead>
                       <TableHead>Título</TableHead>
+                      <TableHead>Marca</TableHead>
                       <TableHead>Categoria</TableHead>
                       <TableHead>LP</TableHead>
                       <TableHead className="w-16">Ativo</TableHead>
@@ -402,8 +405,14 @@ export default function LpOpportunities() {
                       const overLimit =
                         r.campanha_id && (activeCountByCampaign.get(r.campanha_id) || 0) > 3;
                       const isHighlight = todaysHighlights.includes(r.id);
+                      const platformName = (platforms as any[]).find((p) => p.id === (r as any).platform_id)?.name || null;
+                      const brandKit = resolveBrand(platformName);
                       return (
-                        <TableRow key={r.id} className={isHighlight ? "bg-primary/[0.03]" : ""}>
+                        <TableRow
+                          key={r.id}
+                          className={isHighlight ? "bg-primary/[0.03]" : ""}
+                          style={brandKit ? { boxShadow: `inset 3px 0 0 ${brandKit.palette.primary}` } : undefined}
+                        >
                           <TableCell className="text-muted-foreground text-xs">
                             <div className="flex items-center gap-1">
                               {isHighlight && <Star className="w-3 h-3 text-amber-500 fill-amber-500" />}
@@ -423,6 +432,9 @@ export default function LpOpportunities() {
                             {r.subtitle && (
                               <div className="text-xs text-muted-foreground truncate max-w-md">{r.subtitle}</div>
                             )}
+                          </TableCell>
+                          <TableCell>
+                            <BrandChip brand={brandKit} fallbackLabel={platformName || "—"} />
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline" className="text-[10px] font-normal">
@@ -466,12 +478,21 @@ export default function LpOpportunities() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-3xl p-0 gap-0 max-h-[92vh] overflow-hidden flex flex-col">
           <DialogHeader className="sticky top-0 z-10 px-6 py-4 border-b border-border/60 bg-card/85 backdrop-blur-md">
-            <DialogTitle className="text-base font-semibold tracking-tight">
-              {editingId ? "Editar oportunidade" : "Nova oportunidade"}
-            </DialogTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Edição manual. Para detecção automática use o Assistente.
-            </p>
+            {(() => {
+              const platformName = (platforms as any[]).find((p) => p.id === form.platform_id)?.name || null;
+              const brandKit = resolveBrand(platformName);
+              return (
+                <BrandScope brand={brandKit} accentBar className="-mx-6 -my-4 px-6 py-4">
+                  <DialogTitle className="text-base font-semibold tracking-tight flex items-center gap-2">
+                    {editingId ? "Editar oportunidade" : "Nova oportunidade"}
+                    <BrandChip brand={brandKit} fallbackLabel={platformName || "sem plataforma"} size="xs" />
+                  </DialogTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Edição manual. Para detecção automática use o Assistente.
+                  </p>
+                </BrandScope>
+              );
+            })()}
           </DialogHeader>
 
           <div className="main-scroll flex-1 overflow-y-auto px-6 py-5 space-y-7 min-w-0">

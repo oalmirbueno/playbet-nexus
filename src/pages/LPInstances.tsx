@@ -11,6 +11,8 @@ import ExportDropdown from "@/components/ExportDropdown";
 import QuickLinkDialog from "@/components/QuickLinkDialog";
 import LpInstanceVisualEditor from "@/components/lp/LpInstanceVisualEditor";
 import { findPresetByName, buildPostbackUrlForEvent } from "@/config/platformPresets";
+import { BrandChip } from "@/components/brand/BrandScope";
+import { resolveBrand } from "@/lib/brandRegistry";
 
 type EditingState = {
   id?: string;
@@ -285,18 +287,22 @@ export default function LPInstances() {
         <table className="data-table">
           <thead>
             <tr>
-              <th>LP Base</th><th>Domínio</th><th>Influencer</th><th>Slug</th>
+              <th>LP Base</th><th>Marca</th><th>Domínio</th><th>Influencer</th><th>Slug</th>
               <th>Affiliate Link</th><th>URL Pública</th><th>Status</th><th>Ações</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={8} className="text-center text-muted-foreground py-8">Nenhuma instância encontrada</td></tr>
+              <tr><td colSpan={9} className="text-center text-muted-foreground py-8">Nenhuma instância encontrada</td></tr>
             ) : filtered.map(inst => {
               const pubUrl = buildPublicUrl(inst, getLP(inst.landing_page_id));
+              const platformId = getLPPlatformId(inst.landing_page_id);
+              const platformName = platformId ? getPlatformName(platformId) : null;
+              const brandKit = resolveBrand(platformName || null);
               return (
                 <tr key={inst.id}>
                   <td className="font-medium text-xs">{getLPName(inst.landing_page_id)}</td>
+                  <td className="text-xs"><BrandChip brand={brandKit} fallbackLabel={platformName || "—"} /></td>
                   <td className="font-mono text-xs text-muted-foreground">{getLPDomain(inst.landing_page_id) || <span className="text-destructive">sem domínio</span>}</td>
                   <td className="text-xs">{getInfluencerName(inst.influencer_id)}</td>
                   <td className="font-mono text-xs text-accent">{inst.slug}</td>
