@@ -206,6 +206,50 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
       .sort((a, b) => b.revenue - a.revenue);
   }, [baseInfluencerRows, influencerMap, managerMap]);
 
+  // ============= DISTRIBUIÇÃO OFICIAL: base = Rev (revshare) + CPA =============
+  // Regra: apenas linhas com influencer atribuído descontam comissão de influencer.
+  // Manager só desconta quando o influencer atribuído tem manager_id definido.
+  // Linhas sem influencer (só sócios) fluem 100% para o pool dos sócios.
+  const distribution = useMemo(() => {
+    let profitBase = 0;             // Rev + CPA total
+    let attributedProfit = 0;       // parcela com influencer atribuído
+    let unattributedProfit = 0;     // parcela sem influencer (100% sócios)
+    let influencerCommissionsOwed = 0;
+    let managerCommissionsOwed = 0;
+
+    for (const m of metricsQuery.data ?? []) {
+      const rev = Number((m as any).revshare_commission ?? (m as any).revenue ?? 0);
+      const cpa = Number((m as any).cpa_commission ?? 0);
+      const base = rev + cpa;
+      if (base <= 0) continue;
+      profitBase += base;
+
+      const infId = (m as any).influencer_id;
+      const inf = infId ? influencerMap.get(infId) : null;
+      if (inf) {
+        attributedProfit += base;
+        const infPct = Number(inf.commission_percent ?? 0);
+        influencerCommissionsOwed += base * (infPct / 100);
+        const mgr = inf.manager_id ? managerMap.get(inf.manager_id) : null;
+        if (mgr) {
+          const mgrPct = Number(mgr.commission_percent ?? 0);
+          managerCommissionsOwed += base * (mgrPct / 100);
+        }
+      } else {
+        unattributedProfit += base;
+      }
+    }
+
+    return {
+      profitBase,
+      attributedProfit,
+      unattributedProfit,
+      influencerCommissionsOwed,
+      managerCommissionsOwed,
+      netAfterCommissions: profitBase - influencerCommissionsOwed - managerCommissionsOwed,
+    };
+  }, [metricsQuery.data, influencerMap, managerMap]);
+
   return {
     range,
     isLoading: metricsQuery.isLoading,
@@ -219,6 +263,8 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
     rankingGerentes,
     platforms: platforms ?? [],
     platformMap,
+    distribution,
   };
 }
+
 
