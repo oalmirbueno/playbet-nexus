@@ -1,14 +1,22 @@
 export type TrackingMetricMoneyLike = {
   revenue?: number | null;
   ftd?: number | null;
+  depositos_total?: number | null;
+  converted_amount?: number | null;
   cpa_commission?: number | null;
   revshare_commission?: number | null;
   commission_total?: number | null;
   revshare_percent?: number | null;
   cpa_value?: number | null;
-  platform_accounts?: { revshare_percent?: number | null; cpa_value?: number | null } | null;
+  cpa_baseline_deposit?: number | null;
+  platform_accounts?: {
+    revshare_percent?: number | null;
+    cpa_value?: number | null;
+    cpa_baseline_deposit?: number | null;
+  } | null;
   origem_importacao?: string | null;
 };
+
 
 const money = (value: unknown) => {
   const n = Number(value ?? 0);
