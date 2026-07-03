@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { usePlatformAccounts, useTrackingLinks } from "@/hooks/useTrackingData";
 import { usePlatforms } from "@/hooks/useSupabaseQuery";
 import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
+import { useTrackingMetricsSummary } from "@/hooks/useTrackingMetricsSummary";
 import { Activity, ArrowRight, CheckCircle2, AlertTriangle, Radio } from "lucide-react";
 
 function fmtCurrency(value: number, currency: string) {
