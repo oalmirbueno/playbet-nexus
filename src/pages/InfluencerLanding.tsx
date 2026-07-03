@@ -546,15 +546,22 @@ export default function InfluencerLanding() {
   const hasLink = !!resolved?.affiliate_link;
 
   const mode = (instanceCtx?.lp_mode as string) || "catalog";
-  const sections: Array<{ id: string; enabled: boolean }> =
+  const rawSections: Array<{ id: string; enabled: boolean }> =
     instanceCtx?.layout_config?.sections ?? [
       { id: "hero", enabled: true },
       { id: "features", enabled: true },
       { id: "games", enabled: true },
+      { id: "community", enabled: true },
       { id: "cta", enabled: true },
       { id: "footer", enabled: true },
     ];
-  const isSectionOn = (id: string) => sections.find((s) => s.id === id)?.enabled ?? false;
+  const isSectionOn = (id: string) => {
+    const s = rawSections.find((s) => s.id === id);
+    if (s) return s.enabled;
+    // Sections not explicitly configured default to enabled (backward compat).
+    return true;
+  };
+
 
   const hypeTitle: string | null = instanceCtx?.hype_copy?.title ?? null;
   const hypeSub: string | null = instanceCtx?.hype_copy?.subtitle ?? null;
@@ -568,16 +575,20 @@ export default function InfluencerLanding() {
   const isGeneratedMode = !isCatalogMode;
   const displayGames = mode === "single_game" && primaryGame ? [primaryGame] : gameArts;
   const heroGame = primaryGame || null;
+  const bonusEnabled = bonusOffer?.enabled !== false;
+  const communityEnabled = communityCta?.enabled !== false;
+  const showFeatures = isGeneratedMode && isSectionOn("features") && bonusEnabled && (bonusOffer?.title || bonusOffer?.code || primaryGame);
+  const showCommunity = isSectionOn("community") && communityEnabled && (communityCta?.label || communityCta?.url);
   const defaultCta = isCatalogMode
     ? "Acessar oportunidades"
     : mode === "odds"
       ? "Acessar oportunidades"
-      : bonusOffer?.enabled && bonusOffer?.code
+      : bonusEnabled && bonusOffer?.code
         ? "Resgatar bônus"
         : primaryGame?.name
           ? `Jogar ${primaryGame.name}`
           : "Jogar agora";
-  const configuredCta: string | null = bonusOffer?.cta_label || instanceCtx?.hype_copy?.cta_label || null;
+  const configuredCta: string | null = (bonusEnabled ? bonusOffer?.cta_label : null) || instanceCtx?.hype_copy?.cta_label || null;
   const ctaLabel: string = isGeneratedMode && configuredCta?.toLowerCase().trim() === "acessar oportunidades"
     ? defaultCta
     : configuredCta || defaultCta;
@@ -590,87 +601,98 @@ export default function InfluencerLanding() {
 
   // ── Ready ──
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white overflow-x-hidden lp-public-page">
+    <div className="min-h-screen bg-[#07070d] text-white overflow-x-hidden lp-public-page antialiased">
       {isSectionOn("hero") && (
-        <header className="relative pt-8 pb-14 px-6">
-          <div className="absolute inset-0 bg-gradient-to-b from-emerald-600/10 via-transparent to-transparent pointer-events-none" />
-          <div className="max-w-xl mx-auto relative z-10 text-center">
-            <img src={logo} alt="PlayBet" className="h-16 mx-auto mb-8 opacity-90" />
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium mb-6">
-              <Zap size={12} /> {mode === "odds" ? "Em destaque" : isCatalogMode ? "Oportunidades" : "Oferta oficial"}
+        <header className="relative pt-10 pb-16 px-6">
+          {/* Aurora backdrop */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[520px] h-[520px] rounded-full bg-emerald-500/20 blur-[120px]" />
+            <div className="absolute top-24 right-[-80px] w-[280px] h-[280px] rounded-full bg-cyan-400/10 blur-[100px]" />
+            <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-400/40 to-transparent" />
+          </div>
+          <div className="max-w-md mx-auto relative z-10 text-center">
+            <img src={logo} alt="PlayBet" className="h-11 mx-auto mb-8 opacity-95" />
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] backdrop-blur border border-emerald-400/20 text-emerald-300 text-[10px] font-semibold uppercase tracking-[0.14em] mb-6">
+              <Zap size={11} /> {mode === "odds" ? "Em destaque" : isCatalogMode ? "Oportunidades" : "Oferta oficial"}
             </div>
             {heroGame && (
-              <GameImage
-                art={heroGame}
-                className="w-24 h-24 rounded-2xl mx-auto mb-5 object-cover shadow-xl shadow-emerald-500/20"
-                fallbackClassName="w-24 h-24 rounded-2xl mx-auto mb-5 bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center shadow-xl shadow-emerald-500/10"
-                iconSize={28}
-              />
+              <div className="relative mx-auto mb-6 w-fit">
+                <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-emerald-500/40 to-cyan-400/20 blur-2xl" />
+                <GameImage
+                  art={heroGame}
+                  className="relative w-28 h-28 rounded-3xl object-cover ring-1 ring-white/10 shadow-[0_20px_60px_-20px_rgba(16,185,129,0.6)]"
+                  fallbackClassName="relative w-28 h-28 rounded-3xl bg-gradient-to-br from-emerald-500/20 to-cyan-500/10 ring-1 ring-emerald-400/20 flex items-center justify-center"
+                  iconSize={32}
+                />
+              </div>
             )}
-            <h1 className="text-3xl sm:text-4xl font-extrabold leading-tight mb-3">
+            <h1 className="text-[28px] sm:text-4xl font-extrabold leading-[1.08] tracking-tight mb-4 bg-gradient-to-b from-white via-white to-white/70 bg-clip-text text-transparent">
               {heroTitle}
             </h1>
-            <p className="text-gray-400 text-sm sm:text-base max-w-md mx-auto mb-7">
+            <p className="text-gray-400 text-[13px] sm:text-sm leading-relaxed max-w-sm mx-auto mb-8">
               {heroSubtitle}
             </p>
             <button
               onClick={handleCTA}
               disabled={clicking || !hasLink}
-              className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-8 py-3.5 rounded-xl text-base transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-400/30 active:scale-[0.97]"
+              className="group relative inline-flex items-center gap-2 bg-gradient-to-b from-emerald-400 to-emerald-500 hover:from-emerald-300 hover:to-emerald-400 disabled:opacity-50 text-black font-bold px-9 py-3.5 rounded-2xl text-[15px] transition-all shadow-[0_10px_30px_-8px_rgba(16,185,129,0.7)] hover:shadow-[0_14px_40px_-8px_rgba(16,185,129,0.9)] active:scale-[0.97]"
             >
-              {clicking ? "Abrindo..." : ctaLabel} <ArrowRight size={18} />
+              <span className="absolute inset-0 rounded-2xl bg-gradient-to-b from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition" />
+              <span className="relative">{clicking ? "Abrindo..." : ctaLabel}</span>
+              <ArrowRight size={17} className="relative transition-transform group-hover:translate-x-0.5" />
             </button>
             {!hasLink && (
-              <p className="text-xs text-gray-500 mt-3">Link de cadastro em configuração.</p>
+              <p className="text-[11px] text-gray-500 mt-3">Link de cadastro em configuração.</p>
             )}
           </div>
         </header>
       )}
 
-      {isGeneratedMode && isSectionOn("features") && (bonusOffer?.enabled || primaryGame) && (
+      {showFeatures && (
         <section className="px-6 pb-14">
           <div className="max-w-md mx-auto">
-            <div className="rounded-2xl border border-emerald-500/20 bg-gradient-to-b from-emerald-500/[0.08] to-white/[0.02] p-6">
-              <div className="flex items-center gap-4">
-                <GameImage
-                  art={primaryGame}
-                  className="w-14 h-14 rounded-xl object-cover shrink-0"
-                  fallbackClassName="w-14 h-14 rounded-xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center shrink-0"
-                />
+            <div className="relative rounded-2xl border border-white/[0.06] bg-gradient-to-b from-white/[0.05] to-white/[0.015] p-5 overflow-hidden">
+              <div className="absolute -top-16 -right-16 w-40 h-40 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+              <div className="relative flex items-center gap-4">
+                {primaryGame && (
+                  <GameImage
+                    art={primaryGame}
+                    className="w-14 h-14 rounded-xl object-cover shrink-0 ring-1 ring-white/10"
+                    fallbackClassName="w-14 h-14 rounded-xl bg-emerald-500/15 ring-1 ring-emerald-400/20 flex items-center justify-center shrink-0"
+                  />
+                )}
                 <div className="min-w-0 flex-1 text-left">
-                  <p className="text-[10px] uppercase tracking-[0.16em] text-emerald-400/80 font-semibold mb-0.5">
+                  <p className="text-[9px] uppercase tracking-[0.18em] text-emerald-300/80 font-semibold mb-1">
                     Oferta oficial
                   </p>
-                  <h3 className="text-base font-bold truncate">
+                  <h3 className="text-[15px] font-bold truncate leading-tight">
                     {bonusOffer?.title || primaryGame?.name || "Bônus ativo"}
                   </h3>
                 </div>
               </div>
-              {bonusOffer?.enabled && bonusOffer.code && (
+              {bonusOffer?.code && (
                 <button
                   onClick={copyBonusCode}
-                  className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] hover:bg-white/[0.08] px-4 py-3 font-mono text-sm font-bold tracking-widest transition"
+                  className="relative mt-5 w-full inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/[0.06] hover:bg-emerald-500/[0.12] px-4 py-3 font-mono text-sm font-bold tracking-[0.24em] text-emerald-200 transition"
                 >
-                  {bonusOffer.code} <Copy size={14} />
+                  {bonusOffer.code} <Copy size={13} className="opacity-70" />
                 </button>
               )}
               {bonusOffer?.note && (
-                <p className="mt-3 text-[11px] text-gray-500 text-center">{bonusOffer.note}</p>
+                <p className="relative mt-3 text-[11px] text-gray-500 text-center">{bonusOffer.note}</p>
               )}
             </div>
           </div>
         </section>
       )}
 
-
-
       {isSectionOn("games") && mode !== "odds" && (
         <section className="px-6 pb-16">
-          <div className="max-w-xl mx-auto text-center">
-              <h2 className="text-xl font-bold mb-6">
-                {mode === "single_game" ? primaryGame?.name || "Jogo selecionado" : mode === "multi_game" ? "Jogos em alta" : "Catálogo"}
-              </h2>
-            <div className={`grid gap-3 ${displayGames.length === 1 ? "grid-cols-1 max-w-xs mx-auto" : "grid-cols-3"}`}>
+          <div className="max-w-xl mx-auto">
+            <h2 className="text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500 mb-5">
+              {mode === "single_game" ? "Jogo selecionado" : mode === "multi_game" ? "Jogos em alta" : "Catálogo"}
+            </h2>
+            <div className={`grid gap-2.5 ${displayGames.length === 1 ? "grid-cols-1 max-w-[220px] mx-auto" : "grid-cols-3"}`}>
               {(displayGames.length > 0
                 ? displayGames
                 : ["Fortune Tiger", "Aviator", "Mines", "Sweet Bonanza", "Gates of Olympus", "Spaceman"].map(
@@ -680,15 +702,16 @@ export default function InfluencerLanding() {
                 <button
                   key={g.slug}
                   onClick={handleCTA}
-                  className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 flex flex-col items-center gap-2 hover:border-emerald-500/30 transition"
+                  className="group relative bg-white/[0.025] hover:bg-white/[0.05] border border-white/[0.05] hover:border-emerald-400/30 rounded-xl p-3.5 flex flex-col items-center gap-2 transition-all overflow-hidden"
                 >
+                  <div className="absolute inset-x-0 -top-8 h-16 bg-emerald-400/10 blur-2xl opacity-0 group-hover:opacity-100 transition" />
                   <GameImage
                     art={g}
-                    className="w-14 h-14 rounded-lg object-cover"
-                    fallbackClassName="w-14 h-14 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center"
+                    className="relative w-14 h-14 rounded-lg object-cover ring-1 ring-white/5"
+                    fallbackClassName="relative w-14 h-14 rounded-lg bg-emerald-500/10 ring-1 ring-emerald-400/15 flex items-center justify-center"
                     iconSize={20}
                   />
-                  <span className="text-xs font-medium">{g.name}</span>
+                  <span className="relative text-[11px] font-medium leading-tight text-center line-clamp-2">{g.name}</span>
                 </button>
               ))}
             </div>
@@ -700,7 +723,7 @@ export default function InfluencerLanding() {
         <section className="px-6 pb-16">
           <div className="max-w-xl mx-auto">
             <div className="text-center mb-6">
-              <h2 className="text-xl font-bold mb-2">Em destaque</h2>
+              <h2 className="text-[11px] font-semibold uppercase tracking-[0.2em] text-gray-500 mb-2">Em destaque</h2>
               <p className="text-sm text-gray-400">Opções disponíveis para acessar agora</p>
             </div>
             {smartOdds.length > 0 ? (
@@ -709,17 +732,17 @@ export default function InfluencerLanding() {
                   <button
                     key={i}
                     onClick={handleCTA}
-                    className="w-full text-left bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] hover:border-emerald-500/40 rounded-xl p-4 transition-all group"
+                    className="w-full text-left bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] hover:border-emerald-400/40 rounded-xl p-4 transition-all group"
                   >
                     <div className="flex items-center justify-between gap-3 mb-1">
                       <span className="text-sm font-semibold truncate">{o.event_name}</span>
                       {o.odd_label && (
-                        <span className="text-emerald-400 font-extrabold text-lg tabular-nums shrink-0">{o.odd_label}</span>
+                        <span className="text-emerald-300 font-extrabold text-lg tabular-nums shrink-0">{o.odd_label}</span>
                       )}
                     </div>
                     <div className="flex items-center justify-between gap-2 text-xs text-gray-400">
                       <span className="truncate">{o.market_name}</span>
-                      {o.badge && <span className="text-[10px] uppercase tracking-wider text-emerald-400/80">{o.badge}</span>}
+                      {o.badge && <span className="text-[10px] uppercase tracking-wider text-emerald-300/80">{o.badge}</span>}
                     </div>
                     {o.starts_at && (
                       <p className="text-[10px] text-gray-500 mt-1">
@@ -728,47 +751,41 @@ export default function InfluencerLanding() {
                     )}
                   </button>
                 ))}
-                <button
-                  onClick={handleCTA}
-                  className="w-full mt-3 bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3 rounded-xl transition"
-                >
-                  Acessar oportunidades →
-                </button>
               </div>
             ) : (
               <button
                 onClick={handleCTA}
-                className="w-full max-w-md mx-auto block bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-6 hover:bg-emerald-500/15 transition"
+                className="w-full max-w-md mx-auto block bg-white/[0.03] border border-white/[0.06] rounded-2xl p-6 hover:border-emerald-400/40 transition text-center"
               >
-                <p className="text-sm text-gray-300 mb-2">Ver todas as opções em destaque</p>
-                <p className="text-2xl font-extrabold text-emerald-400">Ver opções →</p>
+                <p className="text-sm text-gray-400 mb-1">Ver todas as opções em destaque</p>
+                <p className="text-lg font-bold text-emerald-300">Ver opções →</p>
               </button>
             )}
           </div>
         </section>
       )}
 
-      {isSectionOn("community") && communityCta?.enabled && communityCta?.label && (
+      {showCommunity && (
         <section className="px-6 pb-16">
-          <div className="max-w-xl mx-auto bg-white/[0.03] border border-white/[0.08] rounded-2xl p-6 text-center">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-500/15 border border-emerald-500/30 mb-3">
-              <Users size={22} className="text-emerald-400" />
+          <div className="max-w-md mx-auto rounded-2xl border border-white/[0.06] bg-white/[0.02] p-6 text-center">
+            <div className="inline-flex items-center justify-center w-11 h-11 rounded-full bg-emerald-500/12 ring-1 ring-emerald-400/25 mb-3">
+              <Users size={20} className="text-emerald-300" />
             </div>
-            <h3 className="text-lg font-bold mb-1">{communityCta.label}</h3>
-            {communityCta.note && (
-              <p className="text-xs text-gray-400 mb-4 max-w-sm mx-auto">{communityCta.note}</p>
+            <h3 className="text-[15px] font-bold mb-1">{communityCta?.label || "Comunidade PlayBet"}</h3>
+            {communityCta?.note && (
+              <p className="text-[12px] text-gray-500 mb-4 max-w-sm mx-auto leading-relaxed">{communityCta.note}</p>
             )}
-            {communityCta.url ? (
+            {communityCta?.url ? (
               <a
                 href={communityCta.url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-2 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.12] px-6 py-2.5 rounded-xl text-sm font-semibold transition"
+                className="inline-flex items-center gap-1.5 bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] px-5 py-2 rounded-xl text-[13px] font-semibold transition"
               >
-                Acessar comunidade <ArrowRight size={14} />
+                Acessar comunidade <ArrowRight size={13} />
               </a>
             ) : (
-              <p className="text-[11px] text-gray-500">Link do grupo em configuração pelo influenciador.</p>
+              <p className="text-[11px] text-gray-600">Link do grupo em configuração pelo influenciador.</p>
             )}
           </div>
         </section>
@@ -780,22 +797,22 @@ export default function InfluencerLanding() {
             <button
               onClick={handleCTA}
               disabled={clicking || !hasLink}
-              className="inline-flex items-center gap-2 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-black font-bold px-8 py-3.5 rounded-xl text-base transition-all shadow-lg shadow-emerald-500/25 hover:shadow-emerald-400/30 active:scale-[0.97]"
+              className="inline-flex items-center gap-2 bg-gradient-to-b from-emerald-400 to-emerald-500 disabled:opacity-50 text-black font-bold px-9 py-3.5 rounded-2xl text-[15px] transition-all shadow-[0_10px_30px_-8px_rgba(16,185,129,0.7)] active:scale-[0.97]"
             >
-              {clicking ? "Abrindo..." : ctaLabel} <ArrowRight size={18} />
+              {clicking ? "Abrindo..." : ctaLabel} <ArrowRight size={17} />
             </button>
           </div>
         </section>
       )}
 
-
       {isSectionOn("footer") && (
-        <footer className="border-t border-white/[0.06] py-6 px-6 text-center">
-          <p className="text-xs text-gray-600">
+        <footer className="border-t border-white/[0.04] py-6 px-6 text-center">
+          <p className="text-[11px] text-gray-600 tracking-wide">
             PlayBet © {new Date().getFullYear()} · Jogue com responsabilidade · 18+
           </p>
         </footer>
       )}
     </div>
   );
+
 }
