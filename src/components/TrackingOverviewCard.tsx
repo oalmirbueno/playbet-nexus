@@ -96,11 +96,11 @@ export default function TrackingOverviewCard() {
           <p className="text-xs font-medium mt-1">{lastEvent || (metricsSummary.latestDataRef ?? "-")}</p>
         </div>
 
-        {(consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0 && (
+        {!hasMetrics && (consolidated.latestWithdrawableOriginal ?? consolidated.latestWithdrawableBrl ?? 0) > 0 && (
           <div className="bg-background/50 rounded-lg p-2.5 mb-3 border border-border/50">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[10px] text-muted-foreground uppercase">Saldo Plataforma (real)</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Saldo técnico por postback</p>
                 {consolidated.latestWithdrawableCurrency && consolidated.latestWithdrawableCurrency !== "BRL" && consolidated.latestWithdrawableOriginal != null ? (
                   <>
                     <p className="text-sm font-bold">{fmtCurrency(consolidated.latestWithdrawableOriginal, consolidated.latestWithdrawableCurrency)}</p>
