@@ -88,13 +88,14 @@ export default function TrackingLinkDetail({ link, onClose, accounts, influencer
     lpRoute: lp?.route,
     lpMode: instance?.lp_mode,
     instanceSlug: instance?.slug,
+    sub1: link.tracking_code,
     sub2: link.influencer_id || "",
     sub3: link.campanha_id || "",
   }) : "";
   const trackedAffiliateUrl: string = buildTrackedAffiliateUrl(
     primaryLink,
     link.click_id_param_name || "sub1",
-    (influencer as any)?.slug || "",
+    link.tracking_code || "",
     link.influencer_id || "",
     link.campanha_id || "",
   );

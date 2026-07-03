@@ -14,6 +14,8 @@ interface ResolvedLanding {
   instance_id: string | null;
   landing_page_id: string | null;
   tracking_link_id: string | null;
+  platform_account_id: string | null;
+  platform_id: string | null;
   click_id: string;
   click_id_param: string; // e.g. "sub1"
 }
@@ -86,12 +88,44 @@ async function findLPBaseByHostname(hostname: string) {
   return null;
 }
 
-/** Find tracking_link for a given instance or influencer (any status; prefer active) */
-async function findTrackingLink(instanceId: string | null, influencerId: string) {
+/** Find tracking_link for a given instance/influencer. Prefer the code carried by the public URL. */
+async function findTrackingLink(instanceId: string | null, influencerId: string, preferredCode?: string | null, affiliateUrl?: string | null) {
+  const select = "id, click_id_param_name, base_url, short_url, final_url, campanha_id, status, tracking_code, platform_account_id, landing_page_id, landing_page_instance_id, platform_accounts(platform_id)";
+
+  if (preferredCode) {
+    const { data } = await supabase
+      .from("tracking_links")
+      .select(select)
+      .eq("tracking_code", preferredCode)
+      .eq("influencer_id", influencerId)
+      .limit(1)
+      .maybeSingle();
+    if (data) return data;
+  }
+
+  if (instanceId) {
+    const { data: instance } = await supabase
+      .from("landing_page_instances")
+      .select("source_tracking_link_id")
+      .eq("id", instanceId)
+      .maybeSingle();
+
+    const sourceTrackingLinkId = (instance as any)?.source_tracking_link_id;
+    if (sourceTrackingLinkId) {
+      const { data } = await supabase
+        .from("tracking_links")
+        .select(select)
+        .eq("id", sourceTrackingLinkId)
+        .eq("is_demo", false)
+        .maybeSingle();
+      if (data) return data;
+    }
+  }
+
   if (instanceId) {
     const { data } = await supabase
       .from("tracking_links")
-      .select("id, click_id_param_name, base_url, short_url, final_url, campanha_id, status")
+      .select(select)
       .eq("landing_page_instance_id", instanceId)
       .order("status", { ascending: true }) // active < paused alphabetically
       .order("updated_at", { ascending: false })
@@ -100,9 +134,28 @@ async function findTrackingLink(instanceId: string | null, influencerId: string)
     if (data) return data;
   }
 
+  // Older LP instances can carry the affiliate URL but not the tracking_link_id.
+  // In that case, match by the actual destination host/path before using the
+  // "latest link" fallback, otherwise Estrela Bet and VUPI can be swapped.
+  if (affiliateUrl) {
+    const affiliateKey = urlMatchKey(affiliateUrl);
+    const codeFromAffiliate = extractTrackingCodeFromUrl(affiliateUrl);
+    const { data: candidates } = await supabase
+      .from("tracking_links")
+      .select(select)
+      .eq("influencer_id", influencerId)
+      .order("updated_at", { ascending: false })
+      .limit(50);
+    const matched = (candidates || []).find((tl: any) => {
+      if (codeFromAffiliate && tl.tracking_code === codeFromAffiliate) return true;
+      return affiliateKey && [tl.base_url, tl.short_url].some((url) => urlMatchKey(url) === affiliateKey);
+    });
+    if (matched) return matched;
+  }
+
   const { data } = await supabase
     .from("tracking_links")
-    .select("id, click_id_param_name, base_url, short_url, final_url, campanha_id, status")
+    .select(select)
     .eq("influencer_id", influencerId)
     .order("status", { ascending: true })
     .order("updated_at", { ascending: false })
@@ -110,6 +163,26 @@ async function findTrackingLink(instanceId: string | null, influencerId: string)
     .maybeSingle();
 
   return data || null;
+}
+
+function extractTrackingCodeFromUrl(value?: string | null) {
+  if (!value) return null;
+  try {
+    const u = new URL(value, window.location.origin);
+    return u.searchParams.get("sub1") || u.searchParams.get("afp") || u.searchParams.get("tracking_code");
+  } catch {
+    return null;
+  }
+}
+
+function urlMatchKey(value?: string | null) {
+  if (!value) return null;
+  try {
+    const u = new URL(value, window.location.origin);
+    return `${u.hostname.toLowerCase().replace(/^www\./, "")}${u.pathname.replace(/\/+$/, "")}`;
+  } catch {
+    return null;
+  }
 }
 
 function isPublicLpLoop(url: string | null | undefined, hostname: string, slug?: string | null): boolean {
@@ -391,16 +464,19 @@ export default function InfluencerLanding() {
         instanceId: string | null,
         landingPageId: string | null,
       ) => {
-        const tl = await findTrackingLink(instanceId, influencerId);
+        const preferredTrackingCode = searchParams.get("sub1") || searchParams.get("afp") || searchParams.get("tracking_code") || extractTrackingCodeFromUrl(affiliateLink);
+        const tl = await findTrackingLink(instanceId, influencerId, preferredTrackingCode, affiliateLink);
         const paramName = tl?.click_id_param_name || "sub1";
         const fallbackOpportunity = await findOpportunityDestination(instanceId, landingPageId, tl?.id || null);
         const outboundAffiliate = [
-          affiliateLink,
+          fallbackOpportunity,
           (tl as any)?.base_url,
           (tl as any)?.short_url,
-          fallbackOpportunity,
+          affiliateLink,
           (tl as any)?.final_url,
         ].find((url) => url && !isPublicLpLoop(url, hostname, slug)) || "";
+        const platformAccountId = (tl as any)?.platform_account_id || null;
+        const platformId = (tl as any)?.platform_accounts?.platform_id || null;
 
         setResolved({
           affiliate_link: outboundAffiliate,
@@ -410,6 +486,8 @@ export default function InfluencerLanding() {
           instance_id: instanceId,
           landing_page_id: landingPageId,
           tracking_link_id: tl?.id || null,
+          platform_account_id: platformAccountId,
+          platform_id: platformId,
           click_id: clickId,
           click_id_param: paramName,
         });
@@ -426,6 +504,9 @@ export default function InfluencerLanding() {
             landing_page_id: landingPageId,
             landing_page_instance_id: instanceId,
             tracking_link_id: tl?.id || null,
+            platform_account_id: platformAccountId,
+            platform_id: platformId,
+            campanha_id: tl?.campanha_id || searchParams.get("sub3"),
             source_type: "landing_page",
             event_timestamp: new Date().toISOString(),
             raw_payload: {
@@ -436,6 +517,7 @@ export default function InfluencerLanding() {
               is_preview: searchParamsPreview(),
               sub2: searchParams.get("sub2"),
               sub3: searchParams.get("sub3"),
+              sub1: preferredTrackingCode,
               user_agent: navigator.userAgent,
               referrer: document.referrer || null,
             },
@@ -545,7 +627,7 @@ export default function InfluencerLanding() {
           clicked_at: new Date().toISOString(),
           user_agent: navigator.userAgent,
           referrer: document.referrer || null,
-          route: `/?ref=${slug}`,
+          route: window.location.pathname + window.location.search,
           source: "cta_click",
         } as any);
       }

@@ -18,6 +18,14 @@ type AccountRow = {
   platforms?: { id: string; name: string | null; smartico_brand_id: string | null } | null;
 };
 
+type AttributionContext = {
+  tracking_link_id: string | null;
+  platform_account_id: string | null;
+  platform_id: string | null;
+  influencer_id: string | null;
+  campanha_id: string | null;
+};
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const isUuid = (v: unknown): v is string => typeof v === "string" && UUID_RE.test(v);
 const str = (v: unknown) => (v == null ? "" : String(v)).trim();
@@ -98,7 +106,7 @@ async function fetchReport(apiKey: string, labelId: string | null, dateFrom: str
 function resolveAccount(row: SmarticoRow, accounts: AccountRow[]) {
   const brandId = str(pick(row, ["brand_id", "brandId", "brand"]));
   const brandName = lc(pick(row, ["brand_name", "brandName", "brand"]));
-  const linkName = lc(pick(row, ["link_name", "linkName", "affiliate_link_name"]));
+  const linkName = lc(pick(row, ["link_name", "linkName", "affiliate_link_name", "source_name", "hash_name"]));
   const hay = `${brandName} ${linkName}`;
 
   if (brandId) {
@@ -107,9 +115,97 @@ function resolveAccount(row: SmarticoRow, accounts: AccountRow[]) {
     );
     if (exact) return exact;
   }
-  if (hay.includes("estrela")) return accounts.find((a) => lc(a.platforms?.name).includes("estrela") || lc(a.nome_conta).includes("estrela")) ?? null;
-  if (hay.includes("vupi") || hay.includes("vupi")) return accounts.find((a) => lc(a.platforms?.name).includes("vupi") || lc(a.nome_conta).includes("vupi")) ?? null;
+
+  const estrela = accounts.find((a) => lc(a.platforms?.name).includes("estrela") || lc(a.nome_conta).includes("estrela")) ?? null;
+  const vupi = accounts.find((a) => /vupi|vipi/.test(lc(a.platforms?.name)) || /vupi|vipi/.test(lc(a.nome_conta))) ?? null;
+  if (hay.includes("estrela")) return estrela;
+  if (hay.includes("vupi") || hay.includes("vipi")) return vupi;
+
+  // Com mais de uma casa TAP/Smartico ativa, não chuta conta: sem afp/sub1
+  // ou brand explícita a linha é ignorada para não jogar tudo em Estrela/VUPI.
   return accounts.length === 1 ? accounts[0] : null;
+}
+
+function attributionCode(row: SmarticoRow) {
+  return str(pick(row, ["afp", "sub1", "click_id", "clickid", "aff_sub", "s1"]));
+}
+
+async function buildAttributionMap(admin: ReturnType<typeof createClient>, rows: SmarticoRow[]) {
+  const codes = Array.from(new Set(rows.map(attributionCode).filter(Boolean)));
+  const byCode = new Map<string, AttributionContext>();
+  const byLinkId = new Map<string, AttributionContext>();
+  if (codes.length === 0) return byCode;
+
+  const { data: links } = await admin
+    .from("tracking_links")
+    .select("id, tracking_code, platform_account_id, influencer_id, campanha_id, platform_accounts(platform_id)")
+    .in("tracking_code", codes)
+    .eq("is_demo", false);
+
+  for (const link of (links ?? []) as any[]) {
+    const ctx: AttributionContext = {
+      tracking_link_id: link.id,
+      platform_account_id: link.platform_account_id,
+      platform_id: link.platform_accounts?.platform_id ?? null,
+      influencer_id: link.influencer_id ?? null,
+      campanha_id: link.campanha_id ?? null,
+    };
+    if (link.tracking_code) byCode.set(link.tracking_code, ctx);
+    byLinkId.set(link.id, ctx);
+  }
+
+  // When traffic comes through the public LP, the house receives a generated
+  // click id (clk_...) in afp/sub1. That id must be resolved through the click
+  // event created before redirecting, otherwise Estrela and VUPI collide.
+  const { data: events } = await admin
+    .from("tracking_events")
+    .select("click_id, tracking_link_id, platform_account_id, platform_id, influencer_id, campanha_id")
+    .in("click_id", codes)
+    .not("tracking_link_id", "is", null)
+    .order("event_timestamp", { ascending: false });
+
+  const missingLinkIds = new Set<string>();
+  for (const ev of (events ?? []) as any[]) {
+    if (!ev.click_id || byCode.has(ev.click_id)) continue;
+    const fromLink = ev.tracking_link_id ? byLinkId.get(ev.tracking_link_id) : null;
+    if (!fromLink && ev.tracking_link_id) missingLinkIds.add(ev.tracking_link_id);
+    byCode.set(ev.click_id, {
+      tracking_link_id: ev.tracking_link_id ?? null,
+      platform_account_id: ev.platform_account_id ?? fromLink?.platform_account_id ?? null,
+      platform_id: ev.platform_id ?? fromLink?.platform_id ?? null,
+      influencer_id: ev.influencer_id ?? fromLink?.influencer_id ?? null,
+      campanha_id: ev.campanha_id ?? fromLink?.campanha_id ?? null,
+    });
+  }
+
+  if (missingLinkIds.size > 0) {
+    const { data: missingLinks } = await admin
+      .from("tracking_links")
+      .select("id, platform_account_id, influencer_id, campanha_id, platform_accounts(platform_id)")
+      .in("id", Array.from(missingLinkIds));
+    for (const link of (missingLinks ?? []) as any[]) {
+      byLinkId.set(link.id, {
+        tracking_link_id: link.id,
+        platform_account_id: link.platform_account_id,
+        platform_id: link.platform_accounts?.platform_id ?? null,
+        influencer_id: link.influencer_id ?? null,
+        campanha_id: link.campanha_id ?? null,
+      });
+    }
+    for (const ev of (events ?? []) as any[]) {
+      const ctx = ev.tracking_link_id ? byLinkId.get(ev.tracking_link_id) : null;
+      if (!ev.click_id || !ctx) continue;
+      byCode.set(ev.click_id, {
+        tracking_link_id: ev.tracking_link_id ?? ctx.tracking_link_id,
+        platform_account_id: ev.platform_account_id ?? ctx.platform_account_id,
+        platform_id: ev.platform_id ?? ctx.platform_id,
+        influencer_id: ev.influencer_id ?? ctx.influencer_id,
+        campanha_id: ev.campanha_id ?? ctx.campanha_id,
+      });
+    }
+  }
+
+  return byCode;
 }
 
 Deno.serve(async (req) => {
@@ -139,17 +235,20 @@ Deno.serve(async (req) => {
     if (accErr) throw accErr;
 
     const report = await fetchReport(apiKey, labelId, dateFrom, dateTo);
+    const attributionByCode = await buildAttributionMap(admin, report.rows);
+    const accountById = new Map(((accounts ?? []) as AccountRow[]).map((a) => [a.id, a]));
     const buckets = new Map<string, any>();
     let skipped = 0;
 
     for (const row of report.rows) {
       const dataRef = str(pick(row, ["dt", "date", "data_ref", "day"])).slice(0, 10);
       if (!dataRef) { skipped++; continue; }
-      const account = resolveAccount(row, (accounts ?? []) as AccountRow[]);
+      const attr = attributionByCode.get(attributionCode(row));
+      const account = attr?.platform_account_id ? accountById.get(attr.platform_account_id) ?? null : resolveAccount(row, (accounts ?? []) as AccountRow[]);
       if (!account) { skipped++; continue; }
 
-      const influencerId = isUuid(pick(row, ["afp1", "sub2", "sub_id2"])) ? str(pick(row, ["afp1", "sub2", "sub_id2"])) : null;
-      const campanhaId = isUuid(pick(row, ["afp2", "sub3", "sub_id3"])) ? str(pick(row, ["afp2", "sub3", "sub_id3"])) : null;
+      const influencerId = attr?.influencer_id || (isUuid(pick(row, ["afp1", "sub2", "sub_id2"])) ? str(pick(row, ["afp1", "sub2", "sub_id2"])) : null);
+      const campanhaId = attr?.campanha_id || (isUuid(pick(row, ["afp2", "sub3", "sub_id3"])) ? str(pick(row, ["afp2", "sub3", "sub_id3"])) : null);
       const key = `${dataRef}|${account.platform_id}|${account.id}|${influencerId ?? "_"}|${campanhaId ?? "_"}`;
       const b = buckets.get(key) ?? { data_ref: dataRef, platform_id: account.platform_id, platform_account_id: account.id, influencer_id: influencerId, campanha_id: campanhaId, cliques: 0, registros: 0, ftd: 0, deposits_count: 0, depositos_total: 0, revenue: 0, api_commission: 0, cpa_unit: num(account.cpa_value), sample_brand: str(pick(row, ["brand_name", "brandName", "brand_id"])) };
       b.cliques += num(pick(row, ["visit_count", "click_count", "clicks", "visits"]));

@@ -37,6 +37,14 @@ function sanitizeTemplateString(val: string | null | undefined): string | null {
   return looksLikeTemplateValue(trimmed) ? null : trimmed;
 }
 
+function firstParam(params: Record<string, string>, keys: string[]): string | null {
+  for (const key of keys) {
+    const value = sanitizeTemplateString(params[key]);
+    if (value) return value;
+  }
+  return null;
+}
+
 function resolveEventTimestamp(params: Record<string, string>): string {
   const rawDate = sanitizeTemplateString(params.date);
   const rawTimestamp = sanitizeTemplateString(params.timestamp);
@@ -128,15 +136,26 @@ Deno.serve(async (req) => {
     // Resolve platform
     let platformId: string | null = null;
     let platformAccountId: string | null = null;
+    let trackingLinkId: string | null = null;
     let accountCurrency: string = "BRL";
 
     if (platformSlug) {
-      const { data: plat } = await supabase
+      let { data: plat } = await supabase
+        .from("platforms")
+        .select("id, currency")
+        .eq("slug", platformSlug)
+        .limit(1)
+        .maybeSingle();
+
+      if (!plat) {
+        const fallback = await supabase
         .from("platforms")
         .select("id, currency")
         .ilike("name", `%${platformSlug}%`)
         .limit(1)
-        .single();
+          .maybeSingle();
+        plat = fallback.data;
+      }
       if (plat) {
         platformId = plat.id;
       }
@@ -145,17 +164,70 @@ Deno.serve(async (req) => {
     // Look for platform_account_id in params or resolve from platform
     if (isValidUuid(params.platform_account_id)) {
       platformAccountId = params.platform_account_id;
-    } else if (platformId) {
-      const { data: acc } = await supabase
+    }
+
+    // Extract SUBIDs. Houses on TAP/Smartico commonly use `afp`, while other
+    // platforms may send sub1/click_id/clickid/aff_sub/s1.
+    const sub1 = firstParam(params, ["sub1", "afp", "click_id", "clickid", "aff_sub", "s1"]);
+    const sub2 = firstParam(params, ["sub2", "influencer_id"]);
+    const sub3 = firstParam(params, ["sub3", "campanha_id", "campaign_id"]);
+
+    const clickId = sub1;
+    let influencerId = toUuidOrNull(sub2);
+    let campanhaId = toUuidOrNull(sub3);
+
+    // Resolve by the actual tracking chain before falling back to platform name.
+    // 1) generated click_id recorded by LP click → tracking_events
+    // 2) affiliate URL code (afp/sub1) → tracking_links.tracking_code
+    if (clickId) {
+      const { data: clickEvent } = await supabase
+        .from("tracking_events")
+        .select("tracking_link_id, platform_account_id, platform_id, influencer_id, campanha_id")
+        .eq("click_id", clickId)
+        .not("tracking_link_id", "is", null)
+        .order("event_timestamp", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (clickEvent) {
+        trackingLinkId = clickEvent.tracking_link_id;
+        platformAccountId = platformAccountId || clickEvent.platform_account_id;
+        platformId = platformId || clickEvent.platform_id;
+        influencerId = influencerId || clickEvent.influencer_id;
+        campanhaId = campanhaId || clickEvent.campanha_id;
+      }
+
+      if (!trackingLinkId) {
+        const { data: link } = await supabase
+          .from("tracking_links")
+          .select("id, platform_account_id, influencer_id, campanha_id, platform_accounts(platform_id, moeda)")
+          .eq("tracking_code", clickId)
+          .eq("is_demo", false)
+          .limit(1)
+          .maybeSingle();
+
+        if (link) {
+          trackingLinkId = link.id;
+          platformAccountId = platformAccountId || link.platform_account_id;
+          platformId = platformId || (link.platform_accounts as any)?.platform_id || null;
+          accountCurrency = (link.platform_accounts as any)?.moeda || accountCurrency;
+          influencerId = influencerId || link.influencer_id;
+          campanhaId = campanhaId || link.campanha_id;
+        }
+      }
+    }
+
+    if (!platformAccountId && platformId) {
+      const { data: accounts } = await supabase
         .from("platform_accounts")
         .select("id, moeda")
         .eq("platform_id", platformId)
         .eq("is_active", true)
-        .limit(1)
-        .single();
-      if (acc) {
-        platformAccountId = acc.id;
-        accountCurrency = acc.moeda || "BRL";
+        .eq("is_demo", false)
+        .limit(2);
+      if (accounts?.length === 1) {
+        platformAccountId = accounts[0].id;
+        accountCurrency = accounts[0].moeda || "BRL";
       }
     }
 
@@ -194,15 +266,6 @@ Deno.serve(async (req) => {
     } else if (EVENT_ALIASES[rawEvent]) {
       canonicalEvent = EVENT_ALIASES[rawEvent];
     }
-
-    // Extract SUBIDs
-    const sub1 = sanitizeTemplateString(params.sub1 || params.click_id);
-    const sub2 = sanitizeTemplateString(params.sub2);
-    const sub3 = sanitizeTemplateString(params.sub3);
-
-    const clickId = sub1;
-    const influencerId = toUuidOrNull(sub2) || toUuidOrNull(sanitizeTemplateString(params.influencer_id));
-    const campanhaId = toUuidOrNull(sub3) || toUuidOrNull(sanitizeTemplateString(params.campanha_id));
 
     // Parse amount safely
     const amountParam = sanitizeTemplateString(params.amount);
@@ -250,6 +313,7 @@ Deno.serve(async (req) => {
     const eventRecord: Record<string, any> = {
       platform_id: platformId,
       platform_account_id: platformAccountId,
+      tracking_link_id: trackingLinkId,
       click_id: clickId,
       platform_user_id: sanitizeTemplateString(params.user_id || params.player_id),
       raw_event_name: rawEvent,
