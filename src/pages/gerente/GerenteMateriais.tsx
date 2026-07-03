@@ -17,5 +17,5 @@ export default function GerenteMateriais() {
   }, [user]);
 
   if (mgrId === undefined) return <Skeleton className="h-64 w-full" />;
-  return <MateriaisView managerId={mgrId} title="Materiais do Squad" showInfluencer />;
+  return <MateriaisView managerId={mgrId} title="Materiais do Squad" showInfluencer readOnly />;
 }

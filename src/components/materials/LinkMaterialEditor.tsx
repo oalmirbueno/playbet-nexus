@@ -29,6 +29,8 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   trackingLinkId: string | null;
+  /** When true, hides all save controls and disables editable fields. Used by influencer/manager portals. */
+  readOnly?: boolean;
 }
 
 interface LinkRow {
@@ -61,7 +63,7 @@ interface Material {
 const FORMATS: CreativeFormat[] = ["feed", "story", "landscape", "square_wa"];
 const STYLES: CreativeStyle[] = ["hype", "minimal", "editorial"];
 
-export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId }: Props) {
+export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId, readOnly = false }: Props) {
   const { data: brandCtx } = useLinkBrand(trackingLinkId);
 
   const [loading, setLoading] = useState(true);
@@ -76,6 +78,7 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId }: Props
   const [preview, setPreview] = useState<RenderedCreative | null>(null);
   const [rendering, setRendering] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
+  const [reloadTick, setReloadTick] = useState(0);
 
   // Editable LP hype copy
   const [hcTitle, setHcTitle] = useState("");
@@ -165,7 +168,29 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId }: Props
       }
     })();
     return () => { cancelled = true; };
-  }, [open, trackingLinkId]);
+  }, [open, trackingLinkId, reloadTick]);
+
+  /* ────────── realtime: reflect admin edits live ────────── */
+  useEffect(() => {
+    if (!open || !trackingLinkId) return;
+    const bump = () => { setReloadTick(t => t + 1); setIframeKey(k => k + 1); };
+    const ch = supabase
+      .channel(`link-material-editor:${trackingLinkId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "link_materials", filter: `tracking_link_id=eq.${trackingLinkId}` }, bump)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "tracking_links", filter: `id=eq.${trackingLinkId}` }, bump)
+      .subscribe();
+    let instCh: ReturnType<typeof supabase.channel> | null = null;
+    if (instance?.id) {
+      instCh = supabase
+        .channel(`link-material-editor-inst:${instance.id}`)
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "landing_page_instances", filter: `id=eq.${instance.id}` }, bump)
+        .subscribe();
+    }
+    return () => {
+      supabase.removeChannel(ch);
+      if (instCh) supabase.removeChannel(instCh);
+    };
+  }, [open, trackingLinkId, instance?.id]);
 
   function hydrateMaterialForm(m: Material, tl: LinkRow) {
     const o = m.meta?.overrides ?? {};
@@ -210,6 +235,7 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId }: Props
 
   /* ────────── save actions ────────── */
   const saveLpCopy = async () => {
+    if (readOnly) { toast.info("Somente leitura", { description: "Peça ao admin para editar a copy da LP." }); return; }
     if (!instance) { toast.info("Este link não tem LP vinculada"); return; }
     setSaving(true);
     try {
@@ -228,6 +254,7 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId }: Props
   };
 
   const saveMaterial = async () => {
+    if (readOnly) { toast.info("Somente leitura", { description: "Peça ao admin para editar este material." }); return; }
     if (!activeMaterial) return;
     setSaving(true);
     try {
@@ -310,8 +337,9 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId }: Props
                 )}
               </DialogTitle>
               <DialogDescription className="text-xs flex items-center gap-2 flex-wrap">
-                <span>{platformName || "Plataforma"} · edite textos/arte e veja o reflexo na LP.</span>
+                <span>{platformName || "Plataforma"} · {readOnly ? "visualização — material já está pronto pra usar." : "edite textos/arte e veja o reflexo na LP."}</span>
                 <BrandLockBadge ctx={brandCtx} className="text-[10px]" />
+                {readOnly && <Badge variant="outline" className="text-[10px]">Somente leitura</Badge>}
               </DialogDescription>
             </div>
 
@@ -449,26 +477,33 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId }: Props
 
                   <div className="space-y-2">
                     <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Headline</Label>
-                    <Input value={mHeadline} onChange={e => setMHeadline(e.target.value)} className="h-9 text-sm" />
+                    <Input value={mHeadline} onChange={e => setMHeadline(e.target.value)} disabled={readOnly} className="h-9 text-sm" />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">CTA</Label>
-                    <Input value={mCta} onChange={e => setMCta(e.target.value)} className="h-9 text-sm" />
+                    <Input value={mCta} onChange={e => setMCta(e.target.value)} disabled={readOnly} className="h-9 text-sm" />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Assinatura</Label>
-                    <Input value={mHandle} onChange={e => setMHandle(e.target.value)} className="h-9 text-sm" placeholder="@seuperfil" />
+                    <Input value={mHandle} onChange={e => setMHandle(e.target.value)} disabled={readOnly} className="h-9 text-sm" placeholder="@seuperfil" />
                   </div>
 
                   <div className="pt-3 border-t border-border/60 space-y-2">
-                    <Button onClick={saveMaterial} disabled={saving || !activeMaterial} className="w-full h-9 text-sm">
-                      {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                      Salvar material
-                    </Button>
+                    {!readOnly && (
+                      <Button onClick={saveMaterial} disabled={saving || !activeMaterial} className="w-full h-9 text-sm">
+                        {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                        Salvar material
+                      </Button>
+                    )}
                     <Button onClick={download} disabled={!preview} variant="secondary" className="w-full h-9 text-sm">
                       <Download className="w-4 h-4 mr-2" /> Baixar PNG
                     </Button>
-                    {!activeMaterial && (
+                    {readOnly && (
+                      <p className="text-[11px] text-muted-foreground text-center leading-snug">
+                        Material publicado pelo admin. Baixe e poste — as atualizações chegam em tempo real.
+                      </p>
+                    )}
+                    {!readOnly && !activeMaterial && (
                       <p className="text-[11px] text-muted-foreground text-center">
                         Este link ainda não tem materiais na fila — ajuste e baixe manualmente.
                       </p>
@@ -490,24 +525,31 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId }: Props
                     <>
                       <div className="space-y-2">
                         <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Título</Label>
-                        <Input value={hcTitle} onChange={e => setHcTitle(e.target.value)} className="h-9 text-sm" />
+                        <Input value={hcTitle} onChange={e => setHcTitle(e.target.value)} disabled={readOnly} className="h-9 text-sm" />
                       </div>
                       <div className="space-y-2">
                         <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Subtítulo / motivo do hype</Label>
-                        <Textarea value={hcSubtitle} onChange={e => setHcSubtitle(e.target.value)} rows={3} className="text-sm" />
+                        <Textarea value={hcSubtitle} onChange={e => setHcSubtitle(e.target.value)} disabled={readOnly} rows={3} className="text-sm" />
                       </div>
                       <div className="space-y-2">
                         <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">CTA</Label>
-                        <Input value={hcCta} onChange={e => setHcCta(e.target.value)} className="h-9 text-sm" />
+                        <Input value={hcCta} onChange={e => setHcCta(e.target.value)} disabled={readOnly} className="h-9 text-sm" />
                       </div>
                       <div className="pt-3 border-t border-border/60 space-y-2">
-                        <Button onClick={saveLpCopy} disabled={saving} className="w-full h-9 text-sm">
-                          {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                          Salvar e atualizar preview
-                        </Button>
+                        {!readOnly && (
+                          <Button onClick={saveLpCopy} disabled={saving} className="w-full h-9 text-sm">
+                            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                            Salvar e atualizar preview
+                          </Button>
+                        )}
                         <Button onClick={() => setIframeKey(k => k + 1)} variant="ghost" size="sm" className="w-full h-8 text-xs text-muted-foreground">
                           <RefreshCw className="w-3.5 h-3.5 mr-2" /> Recarregar preview
                         </Button>
+                        {readOnly && (
+                          <p className="text-[11px] text-muted-foreground text-center leading-snug">
+                            Copy da LP definida pelo admin. Sincroniza em tempo real.
+                          </p>
+                        )}
                       </div>
                     </>
                   )}

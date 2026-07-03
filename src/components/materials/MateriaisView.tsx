@@ -36,9 +36,11 @@ interface Props {
   title?: string;
   /** Whether to show the influencer column. */
   showInfluencer?: boolean;
+  /** When true, editor opens in view-only mode (portal/gerente). */
+  readOnly?: boolean;
 }
 
-export function MateriaisView({ influencerId, managerId, title = "Materiais", showInfluencer = false }: Props) {
+export function MateriaisView({ influencerId, managerId, title = "Materiais", showInfluencer = false, readOnly = false }: Props) {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
@@ -47,6 +49,9 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
   const [open, setOpen] = useState(false);
   const [editorLinkId, setEditorLinkId] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
+  const [reloadTick, setReloadTick] = useState(0);
+
+
 
   useEffect(() => {
     let cancelled = false;
@@ -118,7 +123,23 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
       }
     })();
     return () => { cancelled = true; };
-  }, [influencerId, managerId, showInfluencer]);
+  }, [influencerId, managerId, showInfluencer, reloadTick]);
+
+  // Realtime: reflect admin edits/new links live for portal & gerente.
+  useEffect(() => {
+    const bump = () => setReloadTick(t => t + 1);
+    const filter = influencerId ? `influencer_id=eq.${influencerId}` : undefined;
+    const ch = supabase.channel(`materials-view:${influencerId ?? managerId ?? "all"}`)
+      .on("postgres_changes",
+          filter
+            ? { event: "*", schema: "public", table: "tracking_links", filter }
+            : { event: "*", schema: "public", table: "tracking_links" },
+          bump)
+      .on("postgres_changes", { event: "*", schema: "public", table: "link_materials" }, bump)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "landing_page_instances" }, bump)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [influencerId, managerId]);
 
   const platforms = useMemo(() => {
     const set = new Set<string>();
@@ -223,7 +244,7 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
       )}
 
       <CreativeStudio open={open} onOpenChange={setOpen} link={active} />
-      <LinkMaterialEditor open={editorOpen} onOpenChange={setEditorOpen} trackingLinkId={editorLinkId} />
+      <LinkMaterialEditor open={editorOpen} onOpenChange={setEditorOpen} trackingLinkId={editorLinkId} readOnly={readOnly} />
     </div>
   );
 }
