@@ -726,7 +726,38 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                     <span className="text-[9.5px] text-muted-foreground leading-tight line-clamp-2">{t.tagline}</span>
                   </button>
                 ))}
-              </div>
+            </div>
+
+            <ApplyLayoutPanel
+              format={format}
+              ctx={{
+                brand: {
+                  platformName: brandCtx?.brand?.name ?? link.platformName,
+                  platformLogoSrc: brandCtx?.brand?.logos?.mark
+                    ?? brandCtx?.brand?.logos?.wordmark
+                    ?? brandCtx?.brand?.logos?.lockup
+                    ?? null,
+                  playbetLogoSrc: playbetLogo,
+                  ctaColor: brandCtx?.brand?.palette?.primary ?? "#FFC72C",
+                  sealSrc: brandCtx?.brand?.seal?.horizontal?.light
+                    ?? brandCtx?.brand?.seal?.alt
+                    ?? null,
+                  sealLabel: brandCtx?.brand?.seal?.label ?? null,
+                },
+                link: {
+                  gameName: link.gameName,
+                  gameIconUrl: link.gameIconUrl,
+                  hypeReason: link.hypeReason,
+                  shortUrl: link.shortUrl,
+                },
+              }}
+              onApply={(newLayers) => {
+                setLayers(newLayers);
+                setSelectedId(null);
+                setEditingTextId(null);
+                setDirty(true);
+              }}
+            />
             </div>
 
             <div className="space-y-2">
