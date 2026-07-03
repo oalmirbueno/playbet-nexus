@@ -571,7 +571,7 @@ export default function InfluencerLanding() {
   const defaultCta = isCatalogMode
     ? "Acessar oportunidades"
     : mode === "odds"
-      ? "Apostar agora"
+      ? "Acessar oportunidades"
       : bonusOffer?.enabled && bonusOffer?.code
         ? "Resgatar bônus"
         : primaryGame?.name
@@ -732,7 +732,7 @@ export default function InfluencerLanding() {
                   onClick={handleCTA}
                   className="w-full mt-3 bg-emerald-500 hover:bg-emerald-400 text-black font-bold py-3 rounded-xl transition"
                 >
-                  Apostar agora →
+                  Acessar oportunidades →
                 </button>
               </div>
             ) : (

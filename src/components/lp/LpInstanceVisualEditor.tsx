@@ -73,7 +73,7 @@ function isBonusCategory(category: string | null | undefined): boolean {
 
 function ctaForMode(lpMode: LpMode, category: string | null | undefined, gameName?: string | null): string {
   if (lpMode === "catalog") return "Acessar oportunidades";
-  if (lpMode === "odds") return "Apostar agora";
+  if (lpMode === "odds") return "Acessar oportunidades";
   if (isBonusCategory(category)) return "Resgatar bônus";
   if (lpMode === "multi_game") return "Ver jogos";
   return gameName ? `Jogar ${gameName}` : "Jogar agora";
