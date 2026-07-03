@@ -3242,6 +3242,10 @@ export type Database = {
         Returns: undefined
       }
       release_available_withdrawal_cycles: { Args: never; Returns: number }
+      resolve_platform_account_from_url: {
+        Args: { _url: string }
+        Returns: string
+      }
       validate_api_key: { Args: { _key: string }; Returns: boolean }
     }
     Enums: {
