@@ -68,6 +68,13 @@ import ebSealVDark from "@/assets/brands/estrela-bet/estrela-bet-selo-v-preto.pn
 import vupiBgViolet from "@/assets/brands/vupi/vupi-bg-violet.png.asset.json";
 import vupiBgLavender from "@/assets/brands/vupi/vupi-bg-lavender.png.asset.json";
 import vupiBgMidnight from "@/assets/brands/vupi/vupi-bg-midnight.png.asset.json";
+import vupiMarkViolet from "@/assets/brands/vupi/vupi-mark-violet.png.asset.json";
+import vupiMarkMidnight from "@/assets/brands/vupi/vupi-mark-midnight.png.asset.json";
+import vupiMarkLavender from "@/assets/brands/vupi/vupi-mark-lavender.png.asset.json";
+import vupiWordDark from "@/assets/brands/vupi/vupi-wordmark-dark.png.asset.json";
+import vupiWordWhite from "@/assets/brands/vupi/vupi-wordmark-white.png.asset.json";
+import vupiSeloH from "@/assets/brands/vupi/vupi-selo-h.png.asset.json";
+
 
 const REGISTRY: Record<BrandKey, BrandKit> = {
   playbet: {
