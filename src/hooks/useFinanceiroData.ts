@@ -220,6 +220,46 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
       .sort((a, b) => b.revenue - a.revenue);
   }, [baseInfluencerRows, influencerMap, managerMap]);
 
+  // ============= BREAKDOWN POR PLATAFORMA (Vupi, Estrela Bet, …) =============
+  const rankingPlatforms = useMemo(() => {
+    const buckets = new Map<string, {
+      revShare: number; cpa: number; profit: number; grossRevenue: number;
+      deposits: number; depositsCount: number; ftd: number; registros: number;
+    }>();
+    for (const m of metricsQuery.data ?? []) {
+      const key = (m as any).platform_id ?? "__sem__";
+      const b = buckets.get(key) ?? {
+        revShare: 0, cpa: 0, profit: 0, grossRevenue: 0,
+        deposits: 0, depositsCount: 0, ftd: 0, registros: 0,
+      };
+      const parts = getMetricMoneyParts(m as any);
+      b.revShare += parts.revShare;
+      b.cpa += parts.cpa;
+      b.profit += parts.total;
+      b.grossRevenue += parts.grossRevenue;
+      b.deposits += Number((m as any).depositos_total ?? (m as any).converted_amount ?? 0);
+      b.depositsCount += Number((m as any).deposits_count || 0);
+      b.ftd += Number((m as any).ftd || 0);
+      b.registros += Number((m as any).registros || 0);
+      buckets.set(key, b);
+    }
+    const total = Array.from(buckets.values()).reduce((a, b) => a + b.profit, 0) || 1;
+    return Array.from(buckets.entries())
+      .map(([id, b]) => {
+        const plat = id === "__sem__" ? null : platformMap.get(id);
+        return {
+          id,
+          name: plat?.name ?? plat?.slug ?? "Sem plataforma",
+          slug: plat?.slug ?? null,
+          logoUrl: plat?.logo_url ?? plat?.icon_url ?? null,
+          ...b,
+          share: (b.profit / total) * 100,
+        };
+      })
+      .sort((a, b) => b.profit - a.profit);
+  }, [metricsQuery.data, platformMap]);
+
+
   // ============= DISTRIBUIÇÃO OFICIAL: base = Rev (revshare) + CPA =============
   // Regra: apenas linhas com influencer atribuído descontam comissão de influencer.
   // Manager só desconta quando o influencer atribuído tem manager_id definido.
