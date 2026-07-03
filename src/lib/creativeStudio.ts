@@ -14,6 +14,15 @@ export const PLAYBET_LOGO_SRC = playbetLogo;
 export type CreativeFormat = "feed" | "story" | "landscape" | "square_wa";
 export type CreativeStyle = "hype" | "minimal" | "editorial";
 
+/**
+ * Marca camadas obrigatórias do "chrome" de marca (co-branding).
+ * Elas SEMPRE têm que estar presentes em qualquer exportação:
+ *  - "platform-logo"      → logo da casa/plataforma (topo-esquerda)
+ *  - "playbet-signature"  → assinatura PlayBet (topo-direita, co-branding)
+ *  - "legal-seal"         → selo legal 18+/SPA-MF (rodapé)
+ */
+export type BrandChromeSlot = "platform-logo" | "playbet-signature" | "legal-seal";
+
 export interface TextLayer {
   kind: "text";
   id: string;
@@ -32,6 +41,7 @@ export interface TextLayer {
   bgColor?: string | null;    // optional pill/box background
   bgPadPct?: number;          // padding for pill (% of font size)
   bgRadiusPct?: number;       // corner radius (% of height)
+  chrome?: BrandChromeSlot;   // marca camada como parte do chrome bloqueado
 }
 
 export interface ImageLayer {
@@ -49,9 +59,11 @@ export interface ImageLayer {
   glow?: string | null;       // hex accent glow color
   blur?: number;              // px of blur (for backdrop layers)
   brightness?: number;        // 0..2
+  chrome?: BrandChromeSlot;   // marca camada como parte do chrome bloqueado
 }
 
 export type Layer = TextLayer | ImageLayer;
+
 
 export interface CreativeInput {
   format: CreativeFormat;
@@ -365,6 +377,7 @@ export function defaultLayersFor(
     widthPct: vertical ? 28 : 24,
     heightPct: vertical ? 6 : 8,
     radiusPct: 0, opacity: 1, fit: "contain", glow: null,
+    chrome: "platform-logo",
   });
 
   // ── Assinatura PLAYBET (painel) — sempre presente como co-branding no canto superior direito,
@@ -377,8 +390,10 @@ export function defaultLayersFor(
       widthPct: vertical ? 20 : 16,
       heightPct: vertical ? 4 : 5,
       radiusPct: 0, opacity: 0.85, fit: "contain", glow: null,
+      chrome: "playbet-signature",
     });
   }
+
 
 
   if (input.platformName) {
@@ -455,10 +470,82 @@ export function defaultLayersFor(
       widthPct: vertical ? 46 : 34,
       heightPct: vertical ? 3 : 3.2,
       radiusPct: 0, opacity: 0.95, fit: "contain", glow: null,
+      chrome: "legal-seal",
     });
   }
   return layers;
 }
+
+/* ────────────────────────── brand chrome guard ────────────────────────── */
+
+export interface BrandChromeSpec {
+  format: CreativeFormat;
+  platformLogoSrc?: string | null;
+  platformName?: string | null;
+  sealSrc?: string | null;
+  sealLabel?: string | null;
+}
+
+/**
+ * Garante que TODO material saia com o chrome de co-branding obrigatório:
+ * logo da plataforma + assinatura PlayBet + selo legal.
+ *
+ * Se o usuário apagou/removeu alguma dessas camadas no editor, ela é reinjetada
+ * automaticamente aqui antes do render/export. Nunca compomos material sem
+ * o selo legal quando a marca tem um; nunca deixamos sair sem a marca PlayBet
+ * junto da marca da plataforma parceira.
+ */
+export function ensureBrandChrome(layers: Layer[], spec: BrandChromeSpec): Layer[] {
+  const size = FORMAT_SIZES[spec.format];
+  const vertical = size.h >= size.w * 1.2;
+  const has = (slot: BrandChromeSlot) => layers.some((l) => l.chrome === slot);
+  const out = [...layers];
+
+  const platformLogo = spec.platformLogoSrc || null;
+
+  if (!has("platform-logo")) {
+    out.unshift({
+      kind: "image", id: crypto.randomUUID(),
+      src: platformLogo || PLAYBET_LOGO_SRC,
+      label: platformLogo ? `Logo ${spec.platformName || "plataforma"}` : "Logo Playbet",
+      xPct: 6, yPct: vertical ? 4 : 6,
+      widthPct: vertical ? 28 : 24,
+      heightPct: vertical ? 6 : 8,
+      radiusPct: 0, opacity: 1, fit: "contain", glow: null,
+      chrome: "platform-logo",
+    });
+  }
+
+  // Só duplica a marca PlayBet quando a plataforma é DIFERENTE (co-branding real).
+  if (platformLogo && !has("playbet-signature")) {
+    out.push({
+      kind: "image", id: crypto.randomUUID(),
+      src: PLAYBET_LOGO_SRC, label: "Assinatura PlayBet",
+      xPct: vertical ? 74 : 78, yPct: vertical ? 4 : 6,
+      widthPct: vertical ? 20 : 16,
+      heightPct: vertical ? 4 : 5,
+      radiusPct: 0, opacity: 0.85, fit: "contain", glow: null,
+      chrome: "playbet-signature",
+    });
+  }
+
+  if (spec.sealSrc && !has("legal-seal")) {
+    out.push({
+      kind: "image", id: crypto.randomUUID(),
+      src: spec.sealSrc, label: spec.sealLabel || "Selo legal 18+",
+      xPct: vertical ? 4 : 6, yPct: vertical ? 96.5 : 96,
+      widthPct: vertical ? 46 : 34,
+      heightPct: vertical ? 3 : 3.2,
+      radiusPct: 0, opacity: 0.95, fit: "contain", glow: null,
+      chrome: "legal-seal",
+    });
+  }
+
+  return out;
+}
+
+
+
 
 
 async function drawLayers(ctx: CanvasRenderingContext2D, size: CreativeSize, layers: Layer[]) {

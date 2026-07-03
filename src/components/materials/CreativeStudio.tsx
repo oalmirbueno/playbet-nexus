@@ -2,10 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   renderCreative, downloadCreative, downloadRawAsset, slugify, defaultLayersFor,
-  FORMAT_SIZES, CREATIVE_TEMPLATES, applyTemplate,
+  FORMAT_SIZES, CREATIVE_TEMPLATES, applyTemplate, ensureBrandChrome,
   type CreativeFormat, type CreativeStyle, type CreativeInput, type RenderedCreative,
-  type Layer, type TextLayer, type ImageLayer,
+  type Layer, type TextLayer, type ImageLayer, type BrandChromeSpec,
 } from "@/lib/creativeStudio";
+
 import playbetLogo from "@/assets/logo-mark.png";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -459,10 +460,20 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     try {
       await saveLayout();
       const targets = which === "all" ? FORMATS : [which];
+      const brand = brandCtx?.brand ?? null;
       for (const f of targets) {
-        const useLayers = f === format
+        const chromeSpec: BrandChromeSpec = {
+          format: f,
+          platformLogoSrc: brand?.logos.mark || brand?.logos.wordmark || brand?.logos.lockup || null,
+          platformName: brand?.name || link.platformName || null,
+          sealSrc: brand?.seal?.horizontal.light ?? null,
+          sealLabel: brand?.seal?.alt ?? null,
+        };
+        const raw = f === format
           ? layers
           : (loadState(link.id, f)?.layers ?? seedLayers(f));
+        // Guard obrigatório: logo plataforma + assinatura PlayBet + selo legal SEMPRE presentes.
+        const useLayers = ensureBrandChrome(raw, chromeSpec);
         const r = await renderCreative({
           ...baseInput, format: f,
           hideAutoText: true, hideAutoArt: true,
@@ -481,6 +492,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       toast.error("Erro ao exportar", { description: (e as Error).message });
     } finally { setRendering(false); }
   };
+
 
   const downloadGameArt = async () => {
     if (!link?.gameIconUrl) { toast.error("Este link não tem arte do jogo"); return; }
