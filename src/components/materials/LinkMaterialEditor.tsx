@@ -466,14 +466,21 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId, readOnl
                   </div>
 
                   <div className="pt-3 border-t border-border/60 space-y-2">
-                    <Button onClick={saveMaterial} disabled={saving || !activeMaterial} className="w-full h-9 text-sm">
-                      {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                      Salvar material
-                    </Button>
+                    {!readOnly && (
+                      <Button onClick={saveMaterial} disabled={saving || !activeMaterial} className="w-full h-9 text-sm">
+                        {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                        Salvar material
+                      </Button>
+                    )}
                     <Button onClick={download} disabled={!preview} variant="secondary" className="w-full h-9 text-sm">
                       <Download className="w-4 h-4 mr-2" /> Baixar PNG
                     </Button>
-                    {!activeMaterial && (
+                    {readOnly && (
+                      <p className="text-[11px] text-muted-foreground text-center leading-snug">
+                        Material publicado pelo admin. Baixe e poste — as atualizações chegam em tempo real.
+                      </p>
+                    )}
+                    {!readOnly && !activeMaterial && (
                       <p className="text-[11px] text-muted-foreground text-center">
                         Este link ainda não tem materiais na fila — ajuste e baixe manualmente.
                       </p>
