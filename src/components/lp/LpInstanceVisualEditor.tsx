@@ -29,7 +29,7 @@ const SECTION_LABELS: Record<string, string> = {
   hero: "Hero",
   features: "Ofertas oficiais (card)",
   games: "Jogos",
-  odds: "Odds/Partidas",
+  odds: "Em destaque",
   community: "Comunidade",
   cta: "CTA final",
   footer: "Rodapé",
@@ -81,7 +81,7 @@ function ctaForMode(lpMode: LpMode, category: string | null | undefined, gameNam
 
 function titleForMode(lpMode: LpMode, gameName?: string | null): string {
   if (lpMode === "catalog") return "Oportunidades PlayBet";
-  if (lpMode === "odds") return "Odds do dia";
+  if (lpMode === "odds") return "Em destaque";
   if (lpMode === "multi_game") return "Jogos em alta";
   return gameName || "Oferta oficial";
 }
@@ -490,6 +490,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
           game_slugs: gameSlugs,
           layout_config: layoutConfig,
           hype_copy,
+          affiliate_link: link?.base_url || instance?.affiliate_link || null,
         } as any)
         .eq("id", instanceId);
       if (error) throw new Error(error.message);
@@ -547,6 +548,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
             landing_page_id: instance?.landing_page_id || null,
             landing_page_instance_id: instanceId,
             final_url: shareUrls[idx] || null,
+            base_url: link?.base_url || undefined,
             use_lp: true,
             lp_auto_generated: true,
           } as any)
