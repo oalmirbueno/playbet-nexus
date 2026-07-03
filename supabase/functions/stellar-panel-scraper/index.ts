@@ -166,21 +166,32 @@ async function fetchReport(session: AuthSession, run: RunHandle): Promise<Report
   const headers: Record<string, string> = {
     accept: "application/json",
     "content-type": "application/json",
+    origin: STELLAR_ORIGIN,
+    referer: STELLAR_ORIGIN + "/",
   };
   if (session.token) headers["authorization"] = `Bearer ${session.token}`;
   if (session.cookie) headers["cookie"] = session.cookie;
 
+  // Probe against the real API host discovered from the panel bundle.
   const candidates = [
-    { method: "GET", path: `/api/reports/affiliates?from=${fromStr}&to=${toStr}&group=subid,date` },
-    { method: "GET", path: `/api/report/subid?from=${fromStr}&to=${toStr}` },
-    { method: "POST", path: `/api/reporting/query`, body: { from: fromStr, to: toStr, dimensions: ["date", "subid"], metrics: ["registrations", "ftd", "deposits", "deposits_amount", "revenue"] } },
-    { method: "GET", path: `/api/dashboard/summary?from=${fromStr}&to=${toStr}` },
+    { method: "GET", path: `/dashboard/summary?from=${fromStr}&to=${toStr}` },
+    { method: "GET", path: `/dashboard?from=${fromStr}&to=${toStr}` },
+    { method: "GET", path: `/reports/summary?from=${fromStr}&to=${toStr}` },
+    { method: "GET", path: `/reports/players?from=${fromStr}&to=${toStr}` },
+    { method: "GET", path: `/reports/deposits?from=${fromStr}&to=${toStr}` },
+    { method: "GET", path: `/reports/registrations?from=${fromStr}&to=${toStr}` },
+    { method: "GET", path: `/reports/subid?from=${fromStr}&to=${toStr}` },
+    { method: "GET", path: `/reports/affiliates?from=${fromStr}&to=${toStr}` },
+    { method: "GET", path: `/statistics?from=${fromStr}&to=${toStr}` },
+    { method: "GET", path: `/kpi?from=${fromStr}&to=${toStr}` },
+    { method: "GET", path: `/players?from=${fromStr}&to=${toStr}` },
+    { method: "POST", path: `/reports/query`, body: { from: fromStr, to: toStr } },
   ];
 
   const attempts: any[] = [];
   for (const c of candidates) {
     try {
-      const res = await fetch(PANEL_BASE + c.path, {
+      const res = await fetch(STELLAR_API_BASE + c.path, {
         method: c.method,
         headers,
         body: c.method === "POST" ? JSON.stringify(c.body) : undefined,
