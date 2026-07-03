@@ -1,8 +1,12 @@
 export type TrackingMetricMoneyLike = {
   revenue?: number | null;
+  ftd?: number | null;
   cpa_commission?: number | null;
   revshare_commission?: number | null;
   commission_total?: number | null;
+  revshare_percent?: number | null;
+  cpa_value?: number | null;
+  platform_accounts?: { revshare_percent?: number | null; cpa_value?: number | null } | null;
   origem_importacao?: string | null;
 };
 
@@ -18,7 +22,12 @@ const money = (value: unknown) => {
  */
 export function getMetricMoneyParts(metric: TrackingMetricMoneyLike) {
   const grossRevenue = money(metric.revenue);
-  const cpa = Math.max(0, money(metric.cpa_commission));
+  const account = metric.platform_accounts;
+  const revsharePct = money(metric.revshare_percent ?? account?.revshare_percent);
+  const cpaUnit = money(metric.cpa_value ?? account?.cpa_value);
+  const ftd = money(metric.ftd);
+  const estimatedCpa = cpaUnit > 0 && ftd > 0 ? ftd * cpaUnit : 0;
+  const cpa = Math.max(0, money(metric.cpa_commission) || estimatedCpa);
   const explicitRevShare = Math.max(0, money(metric.revshare_commission));
   const commissionTotal = Math.max(0, money(metric.commission_total));
 
@@ -33,8 +42,14 @@ export function getMetricMoneyParts(metric: TrackingMetricMoneyLike) {
   }
 
   const source = String(metric.origem_importacao ?? "").toLowerCase();
-  const revenueIsGrossPanelValue = source.includes("panel_scraper") || source.includes("stellar");
-  const fallbackRevShare = revenueIsGrossPanelValue ? 0 : Math.max(0, grossRevenue);
+  const revenueIsGrossPanelValue =
+    source.includes("panel_scraper") ||
+    source.includes("stellar") ||
+    source.includes("smartico") ||
+    source.includes("plataforma") ||
+    source.includes("historico");
+  const estimatedRevShare = revsharePct > 0 ? Math.max(0, grossRevenue) * (revsharePct / 100) : 0;
+  const fallbackRevShare = revenueIsGrossPanelValue ? estimatedRevShare : Math.max(0, grossRevenue);
 
-  return { revShare: fallbackRevShare, cpa: 0, total: fallbackRevShare, grossRevenue };
+  return { revShare: fallbackRevShare, cpa, total: fallbackRevShare + cpa, grossRevenue };
 }
