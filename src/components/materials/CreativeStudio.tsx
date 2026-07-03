@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import { useLinkBrand } from "@/lib/useLinkBrand";
 import { BrandLockBadge } from "@/components/brand/BrandLockBadge";
 import { buildMaterialFilename } from "@/lib/exportMaterial";
+import { ApplyLayoutPanel } from "@/components/materials/ApplyLayoutPanel";
 
 
 
