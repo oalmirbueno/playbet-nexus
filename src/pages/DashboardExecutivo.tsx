@@ -153,8 +153,8 @@ export default function DashboardExecutivo() {
               {distribuicao.base > 0
                 ? distribuicao.fonte === "caixa"
                   ? "Calculada sobre caixa realizado (Asaas)"
-                  : "Projeção sobre saldo da plataforma"
-                : "Aguardando primeiro fechamento (caixa Asaas ou saldo da plataforma)."}
+                  : "Projeção sobre lucro real importado (RevShare + CPA)"
+                : "Aguardando primeiro fechamento (caixa Asaas ou lucro real importado)."}
             </p>
           </div>
           <button onClick={() => navigate("/financeiro")} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
