@@ -4,13 +4,17 @@ const VALID_TRACKING_EVENT_STATUS_FILTER = "status.is.null,status.not.in.(invali
 
 function toDayStartIso(value?: string) {
   if (!value) return undefined;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return `${value}T00:00:00.000Z`;
+  // Os eventos são consolidados no banco por America/Sao_Paulo.
+  // Quando o filtro vem de um input date (YYYY-MM-DD), convertemos o dia
+  // brasileiro inteiro para UTC para não zerar eventos que caíram após
+  // 00:00Z, mas ainda pertencem ao dia no Brasil.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return new Date(`${value}T00:00:00.000-03:00`).toISOString();
   return value;
 }
 
 function toDayEndIso(value?: string) {
   if (!value) return undefined;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return `${value}T23:59:59.999Z`;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return new Date(`${value}T23:59:59.999-03:00`).toISOString();
   return value;
 }
 
