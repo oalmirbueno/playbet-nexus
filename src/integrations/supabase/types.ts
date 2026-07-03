@@ -2688,10 +2688,13 @@ export type Database = {
           avg_ticket: number | null
           campanha_id: string | null
           cliques: number | null
+          commission_total: number | null
           conteudo_id: string | null
           converted_amount: number | null
           converted_currency: string | null
           cost_amount: number | null
+          cpa_commission: number | null
+          cpl_commission: number | null
           created_at: string | null
           custo_influencer: number | null
           custo_trafego: number | null
@@ -2716,6 +2719,8 @@ export type Database = {
           platform_account_id: string | null
           platform_id: string | null
           profit_amount: number | null
+          qftd_count: number | null
+          qlead_count: number | null
           redeposit_amount: number | null
           redepositos: number | null
           redeposits_count: number | null
@@ -2725,6 +2730,7 @@ export type Database = {
           rev_per_registration: number | null
           revenue: number | null
           revenue_liquido: number | null
+          revshare_commission: number | null
           roi: number | null
           saque_disponivel: number | null
           updated_at: string | null
@@ -2734,10 +2740,13 @@ export type Database = {
           avg_ticket?: number | null
           campanha_id?: string | null
           cliques?: number | null
+          commission_total?: number | null
           conteudo_id?: string | null
           converted_amount?: number | null
           converted_currency?: string | null
           cost_amount?: number | null
+          cpa_commission?: number | null
+          cpl_commission?: number | null
           created_at?: string | null
           custo_influencer?: number | null
           custo_trafego?: number | null
@@ -2762,6 +2771,8 @@ export type Database = {
           platform_account_id?: string | null
           platform_id?: string | null
           profit_amount?: number | null
+          qftd_count?: number | null
+          qlead_count?: number | null
           redeposit_amount?: number | null
           redepositos?: number | null
           redeposits_count?: number | null
@@ -2771,6 +2782,7 @@ export type Database = {
           rev_per_registration?: number | null
           revenue?: number | null
           revenue_liquido?: number | null
+          revshare_commission?: number | null
           roi?: number | null
           saque_disponivel?: number | null
           updated_at?: string | null
@@ -2780,10 +2792,13 @@ export type Database = {
           avg_ticket?: number | null
           campanha_id?: string | null
           cliques?: number | null
+          commission_total?: number | null
           conteudo_id?: string | null
           converted_amount?: number | null
           converted_currency?: string | null
           cost_amount?: number | null
+          cpa_commission?: number | null
+          cpl_commission?: number | null
           created_at?: string | null
           custo_influencer?: number | null
           custo_trafego?: number | null
@@ -2808,6 +2823,8 @@ export type Database = {
           platform_account_id?: string | null
           platform_id?: string | null
           profit_amount?: number | null
+          qftd_count?: number | null
+          qlead_count?: number | null
           redeposit_amount?: number | null
           redepositos?: number | null
           redeposits_count?: number | null
@@ -2817,6 +2834,7 @@ export type Database = {
           rev_per_registration?: number | null
           revenue?: number | null
           revenue_liquido?: number | null
+          revshare_commission?: number | null
           roi?: number | null
           saque_disponivel?: number | null
           updated_at?: string | null
@@ -3245,6 +3263,17 @@ export type Database = {
       resolve_platform_account_from_url: {
         Args: { _url: string }
         Returns: string
+      }
+      tracking_event_is_valid_for_metrics: {
+        Args: {
+          _canonical_event_name: string
+          _click_id: string
+          _is_demo: boolean
+          _is_duplicate: boolean
+          _status: string
+          _transaction_id: string
+        }
+        Returns: boolean
       }
       validate_api_key: { Args: { _key: string }; Returns: boolean }
     }

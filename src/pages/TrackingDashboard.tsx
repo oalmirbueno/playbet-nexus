@@ -8,7 +8,6 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useTrackingMetrics, usePlatformAccounts, useTrackingEvents } from "@/hooks/useTrackingData";
-import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
 import { useInfluencers, useCampanhas, usePlatforms } from "@/hooks/useSupabaseQuery";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -17,7 +16,7 @@ import {
 } from "recharts";
 import {
   Settings2, CloudDownload, RefreshCcw, TrendingUp, ArrowUpRight, ArrowDownRight,
-  Trophy, Sparkle, Eye, UserPlus, MousePointerClick, DollarSign,
+  Trophy, Sparkle, Eye, UserPlus, MousePointerClick, DollarSign, WalletCards, BadgeDollarSign,
 } from "lucide-react";
 import HistoricalImportDialog from "@/components/tracking/HistoricalImportDialog";
 
@@ -74,7 +73,6 @@ export default function TrackingDashboard() {
   const { data: campanhas } = useCampanhas();
   const { data: platforms } = usePlatforms();
   const { data: periodEvents } = useTrackingEvents(filters);
-  const { consolidated } = useAutoConsolidation();
 
   const handleSync = async () => {
     setSyncing(true);
@@ -85,7 +83,7 @@ export default function TrackingDashboard() {
       if (error) throw error;
       const r = data as { ok?: boolean; rows_received?: number; upserts?: number; error?: string };
       if (r?.ok === false) throw new Error(r.error || "Falha");
-      toast.success(`Sincronizado · ${r.upserts ?? 0} atualizações`);
+      toast.success(`Sincronizado · ${r.rows_received ?? 0} linhas lidas · ${r.upserts ?? 0} métricas atualizadas`);
     } catch (e) {
       toast.error(`Falha ao sincronizar: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
@@ -99,9 +97,14 @@ export default function TrackingDashboard() {
         visitas: acc.visitas + (m.cliques || 0),
         cadastros: acc.cadastros + (m.registros || 0),
         ftd: acc.ftd + (m.ftd || 0),
+        depositos: acc.depositos + (m.deposits_count || 0),
+        volumeDepositos: acc.volumeDepositos + (m.depositos_total || 0),
         receita: acc.receita + (m.revenue || 0),
+        cpa: acc.cpa + (m.cpa_commission || 0),
+        revshare: acc.revshare + (m.revshare_commission || 0),
+        comissaoTotal: acc.comissaoTotal + (m.commission_total || 0),
       }),
-      { visitas: 0, cadastros: 0, ftd: 0, receita: 0 },
+      { visitas: 0, cadastros: 0, ftd: 0, depositos: 0, volumeDepositos: 0, receita: 0, cpa: 0, revshare: 0, comissaoTotal: 0 },
     );
   }, [metrics]);
 
@@ -112,10 +115,12 @@ export default function TrackingDashboard() {
     return { visits, outboundClicks, conversions, total: periodEvents.length };
   }, [periodEvents]);
 
-  const kpiVisitas = periodEventKpis.visits || consolidated.lpViewCount || 0;
-  const kpiOutboundClicks = periodEventKpis.outboundClicks || consolidated.outboundClickCount || 0;
-  const kpiCadastros = periodKpis.cadastros || consolidated.totalRegistrations || 0;
-  const kpiReceita = periodKpis.receita || consolidated.revenueBrl || 0;
+  const kpiVisitas = periodEventKpis.visits;
+  const kpiOutboundClicks = periodEventKpis.outboundClicks;
+  const kpiCadastros = periodKpis.cadastros;
+  const kpiReceita = periodKpis.receita;
+  const kpiCpa = periodKpis.cpa;
+  const kpiComissaoTotal = periodKpis.comissaoTotal || periodKpis.cpa + periodKpis.revshare;
 
   const trend = useMemo(() => {
     const map = new Map<string, number>();
@@ -166,9 +171,8 @@ export default function TrackingDashboard() {
     1,
   );
 
-  const lastSync = consolidated.lastEventTimestamp
-    ? new Date(consolidated.lastEventTimestamp)
-    : null;
+  const lastSyncSource = metrics[0]?.updated_at || metrics[0]?.created_at || periodEvents[0]?.event_timestamp;
+  const lastSync = lastSyncSource ? new Date(lastSyncSource) : null;
 
   const insight = useMemo(() => {
     if (topInfluencers.length === 0 && topCasas.length === 0) {
@@ -246,7 +250,7 @@ export default function TrackingDashboard() {
       </div>
 
       {/* KPI cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-4">
         <KpiCard
           variant="primary"
           icon={<Eye size={16} />}
@@ -266,14 +270,28 @@ export default function TrackingDashboard() {
           icon={<UserPlus size={16} />}
           label="Cadastros"
           value={fmtNum(kpiCadastros)}
-          hint={`${periodEventKpis.conversions} conversões no período`}
+          hint={`${fmtNum(periodKpis.ftd)} FTD/QFTD`}
+        />
+        <KpiCard
+          variant="info"
+          icon={<WalletCards size={16} />}
+          label="Depósitos"
+          value={fmtNum(periodKpis.depositos)}
+          hint={fmtBRL(periodKpis.volumeDepositos)}
         />
         <KpiCard
           variant="success"
           icon={<DollarSign size={16} />}
           label="Receita"
           value={fmtBRL(kpiReceita)}
-          hint={kpiReceita > 0 ? "Saldo apurado no período" : "Aguardando primeira conversão"}
+          hint={periodKpis.revshare > 0 ? `${fmtBRL(periodKpis.revshare)} RevShare` : "NGR/receita importada"}
+        />
+        <KpiCard
+          variant="primary"
+          icon={<BadgeDollarSign size={16} />}
+          label="CPA"
+          value={fmtBRL(kpiCpa)}
+          hint={`Comissão total: ${fmtBRL(kpiComissaoTotal)}`}
         />
       </div>
 
