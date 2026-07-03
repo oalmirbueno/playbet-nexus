@@ -70,7 +70,7 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
       let q = supabase
         .from("tracking_metrics")
         .select(
-          "data_ref, platform_id, influencer_id, registros, ftd, deposits_count, depositos_total, revenue, converted_amount, cpa_commission, revshare_commission, commission_total, origem_importacao, platform_accounts(revshare_percent,cpa_value)"
+          "data_ref, platform_id, influencer_id, registros, ftd, deposits_count, depositos_total, revenue, converted_amount, cpa_commission, revshare_commission, commission_total, origem_importacao, platform_accounts(revshare_percent,cpa_value,cpa_baseline_deposit)"
         )
         .or("is_demo.is.false,is_demo.is.null")
         .lte("data_ref", endIso);
