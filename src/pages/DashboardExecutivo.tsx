@@ -4,6 +4,7 @@ import { DollarSign, Users, Wallet, Target, MousePointerClick, Megaphone, ArrowR
 import { useNavigate } from "react-router-dom";
 import { useInfluencers, usePlatforms, useCampanhas, useSaques, useSocios, useManagers } from "@/hooks/useSupabaseQuery";
 import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
+import { useTrackingMetricsSummary } from "@/hooks/useTrackingMetricsSummary";
 
 const formatBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -19,6 +20,7 @@ export default function DashboardExecutivo() {
   const { data: saques } = useSaques();
   const { data: socios } = useSocios();
   const { consolidated } = useAutoConsolidation();
+  const { summary: metricsSummary } = useTrackingMetricsSummary("30d");
 
   const totalPagosAsaas = useMemo(
     () => saques.filter((s: any) => s.status === "Pago via Asaas").reduce((a: number, s: any) => a + Number(s.valor || 0), 0),
@@ -43,7 +45,7 @@ export default function DashboardExecutivo() {
 
   const distribuicao = useMemo(() => {
     const baseCaixa = totalPagosAsaas;
-    const basePlataforma = consolidated.latestWithdrawableBrl || consolidated.latestWithdrawableOriginal || 0;
+    const basePlataforma = metricsSummary.profitBase;
     const base = baseCaixa > 0 ? baseCaixa : basePlataforma;
     const fonte = baseCaixa > 0 ? ("caixa" as const) : ("plataforma" as const);
     const comissao = base * (mediaComissaoInfluencer / 100);
@@ -57,16 +59,16 @@ export default function DashboardExecutivo() {
         valor: baseSocietaria * (Number(s.participacao || 0) / 100),
       })),
     };
-  }, [totalPagosAsaas, consolidated, socios, mediaComissaoInfluencer]);
+  }, [totalPagosAsaas, metricsSummary.profitBase, socios, mediaComissaoInfluencer]);
 
   // KPIs sempre visíveis - começam em zero e enchem conforme tracking + Asaas chegam
   const kpis = [
     { label: "Caixa Asaas", value: formatBRL(totalPagosAsaas), sub: "Pago no período", icon: Landmark, path: "/financeiro" },
-    { label: "Revenue Real", value: formatBRL(consolidated.revenueBrl || 0), sub: "Postbacks validados", icon: DollarSign, path: "/tracking" },
-    { label: "Saldo Plataforma", value: formatBRL(consolidated.latestWithdrawableBrl || 0), sub: "Sacável agora", icon: Wallet, path: "/tracking" },
+    { label: "Lucro Real", value: formatBRL(metricsSummary.profitBase || 0), sub: "RevShare + CPA importado", icon: DollarSign, path: "/tracking" },
+    { label: "Depósitos", value: formatBRL(metricsSummary.depositsTotal || 0), sub: `${metricsSummary.depositsCount || 0} transações`, icon: Wallet, path: "/tracking" },
     { label: "Cliques saída", value: String(consolidated.outboundClickCount || 0), sub: "Botão da LP / afiliado", icon: MousePointerClick, path: "/tracking/events" },
-    { label: "Registros", value: String(consolidated.totalRegistrations || 0), sub: "Cadastros confirmados", icon: UserCheck, path: "/tracking" },
-    { label: "FTDs", value: String(consolidated.totalFtd || 0), sub: "First-time deposits", icon: Target, path: "/tracking" },
+    { label: "Registros", value: String(metricsSummary.registrations || consolidated.totalRegistrations || 0), sub: "Cadastros confirmados", icon: UserCheck, path: "/tracking" },
+    { label: "FTDs", value: String(metricsSummary.ftd || consolidated.totalFtd || 0), sub: "First-time deposits", icon: Target, path: "/tracking" },
     { label: "Visitas LP", value: String(consolidated.lpViewCount || 0), sub: "Aberturas reais da LP", icon: TrendingUp, path: "/tracking/events" },
     { label: "Campanhas", value: String(campanhas.length || 0), sub: `${campanhas.filter((c: any) => c.status === "Ativa").length} ativas`, icon: Megaphone, path: "/campanhas" },
   ];
