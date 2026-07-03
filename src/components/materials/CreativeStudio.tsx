@@ -173,9 +173,9 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
         // do brandKit ou tenha sido salvo sem logo/selo reais.
         const brand = brandCtx?.brand ?? null;
         const chromeSpec: BrandChromeSpec | undefined = brand ? {
-          playbetLogoSrc: playbetLogo,
+          format,
           platformLogoSrc: brand.logos.mark || brand.logos.wordmark || brand.logos.lockup,
-          platformBadgeBg: brand.palette.primary,
+          platformName: brand.name,
           sealSrc: brand.seal?.horizontal.light,
           sealLabel: brand.seal?.alt,
         } : undefined;
