@@ -417,6 +417,13 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
 
     if (nextMode === "single_game" && link?.game_slug) {
       setGameSlugs([link.game_slug]);
+    } else if (nextMode === "platform_direct" || nextMode === "catalog") {
+      setGameSlugs([]);
+    }
+
+    if (nextMode === "platform_direct") {
+      setBonusOffer((prev) => ({ ...prev, enabled: false, cta_label: nextCta }));
+      setCommunity((prev) => ({ ...prev, enabled: false }));
     }
   };
 
@@ -460,9 +467,10 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
     setSaving(true);
     try {
       const selectedGame = availableGames.find((g: any) => g.game_slug === gameSlugs[0]);
-      const effectiveGameSlug = link?.game_slug || gameSlugs[0] || null;
-      const effectiveGameName = link?.game_name || selectedGame?.game_name || null;
-      const effectiveGameIconUrl = link?.game_icon_url || selectedGame?.icon_url || null;
+      const noGameMode = effectiveMode === "platform_direct" || effectiveMode === "catalog";
+      const effectiveGameSlug = noGameMode ? null : (link?.game_slug || gameSlugs[0] || null);
+      const effectiveGameName = noGameMode ? null : (link?.game_name || selectedGame?.game_name || null);
+      const effectiveGameIconUrl = noGameMode ? null : (link?.game_icon_url || selectedGame?.icon_url || null);
       const cleanTitle = copy.title || titleForMode(effectiveMode, effectiveGameName, platformName);
       const cleanSubtitle = copy.subtitle || adaptiveSubtitle(effectiveMode, effectiveGameName, platformName);
       const cleanCta = copy.cta_label || ctaForMode(effectiveMode, link?.link_category, effectiveGameName) || null;
@@ -506,7 +514,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         .from("landing_page_instances")
         .update({
           lp_mode: effectiveMode,
-          game_slugs: gameSlugs,
+          game_slugs: noGameMode ? [] : gameSlugs,
           layout_config: layoutConfig,
           hype_copy,
           affiliate_link: instanceAffiliateLink,
@@ -590,7 +598,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
       setInstance((prev: any) => prev ? {
         ...prev,
         lp_mode: effectiveMode,
-        game_slugs: gameSlugs,
+        game_slugs: noGameMode ? [] : gameSlugs,
         layout_config: layoutConfig,
         hype_copy,
       } : prev);

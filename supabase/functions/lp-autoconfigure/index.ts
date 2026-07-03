@@ -5,22 +5,23 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-type LpMode = "single_game" | "multi_game" | "odds" | "catalog";
+type LpMode = "single_game" | "multi_game" | "odds" | "catalog" | "platform_direct";
 
 function detectMode(linkCategory: string | null, gameSlug: string | null, extras: string[]): LpMode {
   const cat = (linkCategory || "").toLowerCase();
   if (["odds", "sports", "sportsbook", "esportes"].includes(cat)) return "odds";
   if (gameSlug && extras.length === 0) return "single_game";
   if ((gameSlug && extras.length >= 1) || extras.length >= 2) return "multi_game";
-  return "catalog";
+  return "platform_direct";
 }
 
 function defaultLayoutConfig(mode: LpMode) {
   const sections = [
     { id: "hero", label: "Hero", enabled: true },
-    { id: "games", label: "Jogos", enabled: mode !== "odds" },
+    { id: "games", label: "Jogos", enabled: mode !== "odds" && mode !== "platform_direct" && mode !== "catalog" },
     { id: "odds", label: "Odds/Partidas", enabled: mode === "odds" },
-    { id: "features", label: "Benefícios", enabled: true },
+    { id: "features", label: "Benefícios", enabled: mode !== "platform_direct" && mode !== "catalog" },
+    { id: "community", label: "Comunidade", enabled: mode !== "platform_direct" && mode !== "catalog" },
     { id: "cta", label: "CTA final", enabled: true },
     { id: "footer", label: "Rodapé", enabled: true },
   ];
@@ -64,7 +65,7 @@ Deno.serve(async (req) => {
     }
 
     const mode = detectMode(link.link_category, link.game_slug, extraGameSlugs);
-    const allSlugs = [link.game_slug, ...extraGameSlugs].filter(Boolean) as string[];
+    const allSlugs = mode === "platform_direct" ? [] : [link.game_slug, ...extraGameSlugs].filter(Boolean) as string[];
 
     // Enrich with real game metadata from platform_hyped_games
     let gameIds: string[] = [];
@@ -85,10 +86,12 @@ Deno.serve(async (req) => {
     const finalHypeCopy = {
       title: hypeCopy.title || null,
       subtitle: hypeCopy.subtitle || link.hype_reason || null,
-      cta_label: hypeCopy.cta_label || (mode === "odds" ? "Apostar agora" : "Jogar agora"),
-      game_slug: link.game_slug || null,
-      game_name: link.game_name || null,
-      game_icon_url: link.game_icon_url || null,
+      cta_label: hypeCopy.cta_label || (mode === "platform_direct" ? "Acessar plataforma" : mode === "odds" ? "Apostar agora" : "Jogar agora"),
+      game_slug: mode === "platform_direct" ? null : link.game_slug || null,
+      game_name: mode === "platform_direct" ? null : link.game_name || null,
+      game_icon_url: mode === "platform_direct" ? null : link.game_icon_url || null,
+      bonus_offer: { enabled: mode !== "platform_direct" },
+      community_cta: { enabled: mode !== "platform_direct" },
       auto: true,
     };
 
