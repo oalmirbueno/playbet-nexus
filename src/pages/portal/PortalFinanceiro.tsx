@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { Wallet, TrendingUp, Percent, ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { getMetricMoneyParts } from "@/lib/trackingMetrics";
 
 interface DayRow { data_ref: string; cliques: number; registros: number; ftd: number; revenue: number }
 
@@ -25,7 +26,7 @@ export default function PortalFinanceiro() {
 
       const [{ data: iRow }, { data: metrics }, { data: saques }] = await Promise.all([
         supabase.from("influencers").select("commission_percent, name").eq("id", infId).maybeSingle(),
-        supabase.from("tracking_metrics").select("data_ref, cliques, registros, ftd, revenue")
+        supabase.from("tracking_metrics").select("data_ref, cliques, registros, ftd, revenue, cpa_commission, revshare_commission, commission_total, origem_importacao")
           .eq("influencer_id", infId).eq("is_demo", false)
           .order("data_ref", { ascending: false }).limit(90),
         supabase.from("saques").select("valor, status").eq("influencer_id", infId),
@@ -34,7 +35,7 @@ export default function PortalFinanceiro() {
       setInf(iRow);
       setRows((metrics ?? []).map((r: any) => ({
         data_ref: r.data_ref, cliques: r.cliques ?? 0, registros: r.registros ?? 0,
-        ftd: r.ftd ?? 0, revenue: Number(r.revenue ?? 0),
+        ftd: r.ftd ?? 0, revenue: getMetricMoneyParts(r).total,
       })));
 
       let paid = 0, pending = 0;
@@ -69,7 +70,7 @@ export default function PortalFinanceiro() {
 
       {/* Cards de saldo */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <SaldoCard label="Receita gerada (90d)" value={brl(totals.revenue)} icon={TrendingUp} />
+        <SaldoCard label="Lucro real (90d)" value={brl(totals.revenue)} icon={TrendingUp} />
         <SaldoCard label={`Comissão total (${commissionPct}%)`} value={brl(totalCommission)} icon={Percent} tone="primary" />
         <SaldoCard label="Saques pendentes" value={brl(pendingTotal)} icon={Wallet} />
         <SaldoCard label="Disponível para saque" value={brl(available)} icon={Wallet} tone="success" />
@@ -94,7 +95,7 @@ export default function PortalFinanceiro() {
                 <th className="px-4 py-2 text-right">Cliques</th>
                 <th className="px-4 py-2 text-right">Cadastros</th>
                 <th className="px-4 py-2 text-right">FTD</th>
-                <th className="px-4 py-2 text-right">Receita</th>
+                  <th className="px-4 py-2 text-right">Lucro real</th>
                 <th className="px-4 py-2 text-right">Comissão</th>
               </tr>
             </thead>
