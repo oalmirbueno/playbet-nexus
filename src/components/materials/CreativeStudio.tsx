@@ -22,6 +22,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useLinkBrand } from "@/lib/useLinkBrand";
+import { BrandLockBadge } from "@/components/brand/BrandLockBadge";
+
 
 export interface CreativeStudioLink {
   id: string;
