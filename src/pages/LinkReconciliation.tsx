@@ -119,6 +119,13 @@ export default function LinkReconciliation() {
 
   return (
     <div className="p-6 space-y-6">
+      <Tabs defaultValue="links" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="links">Dashboard × Links</TabsTrigger>
+          <TabsTrigger value="odds"><Sigma className="h-3.5 w-3.5 mr-1.5" /> Odds compartilhadas</TabsTrigger>
+        </TabsList>
+        <TabsContent value="links" className="space-y-6 mt-0">
+
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Reconciliação Dashboard × Links</h1>
