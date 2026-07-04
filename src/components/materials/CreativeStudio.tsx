@@ -112,9 +112,15 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
   const [dirty, setDirty] = useState(false);
   const [savingLayout, setSavingLayout] = useState(false);
   const [oddsCtx, setOddsCtx] = useState<OddsContext | null>(null);
+  const [oddsFetched, setOddsFetched] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
 
-  const isOddsShare = (link?.linkCategory ?? "").toLowerCase() === "odds_share";
+  const autoOddsShare = (link?.linkCategory ?? "").toLowerCase() === "odds_share";
+  // Modo do estúdio: 'games' (arte tradicional de jogo) vs 'odds' (aposta compartilhada).
+  // Auto-seleciona 'odds' quando o link tem link_category = odds_share, mas o operador pode alternar.
+  const [engineMode, setEngineMode] = useState<"games" | "odds">(autoOddsShare ? "odds" : "games");
+  useEffect(() => { setEngineMode(autoOddsShare ? "odds" : "games"); }, [autoOddsShare, link?.id]);
+  const isOddsShare = engineMode === "odds";
 
   const selected = layers.find(l => l.id === selectedId) || null;
 
