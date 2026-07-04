@@ -6,6 +6,7 @@ import { useInfluencers, usePlatforms, useCampanhas, useSaques, useSocios, useMa
 import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
 import { useTrackingMetricsSummary } from "@/hooks/useTrackingMetricsSummary";
 import { useFinanceiroData } from "@/hooks/useFinanceiroData";
+import { useRealtimeMetrics } from "@/hooks/useRealtimeMetrics";
 import { calculateSocioDistribution, readDistributionParams } from "@/lib/financialDistribution";
 
 const formatBRL = (v: number) =>
@@ -15,6 +16,7 @@ const COLORS = ["hsl(var(--primary))", "hsl(var(--accent))", "hsl(var(--info, 20
 
 export default function DashboardExecutivo() {
   const navigate = useNavigate();
+  useRealtimeMetrics(); // atualiza tudo em tempo real (metrics/events/links/clicks)
   const { data: influencers } = useInfluencers();
   const { data: managers } = useManagers();
   const { data: platforms } = usePlatforms();
