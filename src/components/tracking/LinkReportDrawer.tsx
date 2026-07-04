@@ -7,8 +7,9 @@ import { getMetricMoneyParts } from "@/lib/trackingMetrics";
 import type { TrackingLinkRow, TrackingMetricRow } from "@/services/trackingService";
 import {
   MousePointerClick, Eye, ArrowUpRight, UserPlus, Wallet, Coins,
-  TrendingUp, Percent, DollarSign, Users, Briefcase, Award,
+  TrendingUp, Percent, DollarSign, Users, Briefcase, Award, Sigma, ExternalLink,
 } from "lucide-react";
+import { getOddsByLink, type TrackingLinkOddsRow } from "@/services/trackingLinkOddsService";
 
 interface Props {
   link: TrackingLinkRow | null;
