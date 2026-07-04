@@ -913,8 +913,13 @@ export default function InfluencerLanding() {
     let finalUrl = injectClickId(
       resolved.affiliate_link,
       resolved.click_id_param,
-      resolved.tracking_code || resolved.click_id,
+      // Sempre o click_id único por visita — o postback da casa devolve esse valor
+      // em sub1 e o trigger `sync_click_to_tracking_event` casa 1:1 com a linha em
+      // public.clicks. Usar tracking_code aqui colapsaria todas as visitas do link
+      // no mesmo id e destruiria a atribuição por clique.
+      resolved.click_id || resolved.tracking_code || "",
     );
+
     const fwd2 = searchParams.get("sub2") || resolved.influencer_id;
     const fwd3 = searchParams.get("sub3") || resolved.campanha_id;
     if (fwd2) finalUrl = injectClickId(finalUrl, "sub2", fwd2);
