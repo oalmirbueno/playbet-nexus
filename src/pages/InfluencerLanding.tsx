@@ -1144,18 +1144,14 @@ export default function InfluencerLanding() {
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-400/40 to-transparent" />
           </div>
           <div className={`max-w-md relative z-10 ${heroAlignClass}`}>
-            {isPlatformDirect && brandCtx?.brand ? (
+            {brandCtx?.brand && brandCtx.brand.key !== "playbet" ? (
               <div className={`mb-8 flex items-center gap-3 ${brandAssetsCfg.hero_align === "left" ? "justify-start" : brandAssetsCfg.hero_align === "right" ? "justify-end" : "justify-center"}`}>
-                <LogoSlot src={logo} name="PlayBet" className="opacity-95 justify-end" />
+                <LogoSlot src={logo} name="PlayBet" className="opacity-95" />
                 <span className="text-white/30 text-lg font-light select-none leading-none">×</span>
                 <BrandLogoImage
                   src={heroLogoSrc || brandCtx.brand.logos.wordmark || brandCtx.brand.logos.lockup || brandCtx.brand.logos.mark}
                   name={brandCtx.brand.name}
                 />
-              </div>
-            ) : heroLogoSrc && brandCtx?.brand ? (
-              <div className={`mb-8 flex ${brandAssetsCfg.hero_align === "left" ? "justify-start" : brandAssetsCfg.hero_align === "right" ? "justify-end" : "justify-center"}`}>
-                <BrandLogoImage src={heroLogoSrc} name={brandCtx.brand.name} />
               </div>
             ) : (
               <LogoSlot src={logo} name="PlayBet" className={`mb-8 opacity-95 ${brandAssetsCfg.hero_align === "left" ? "mr-auto" : brandAssetsCfg.hero_align === "right" ? "ml-auto" : "mx-auto"}`} />
