@@ -133,8 +133,8 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   }, [rawLink, currentPlatform?.name, detectedPlatform?.name]);
 
   useEffect(() => {
-    if (detection.category) setLinkCategory(detection.category);
     if (linkContext === LINK_CONTEXT_GAME) {
+      if (detection.category) setLinkCategory(detection.category);
       if (detection.gameSlug) setGameSlug(detection.gameSlug);
       if (detection.gameName) setGameName(detection.gameName);
     }
@@ -305,7 +305,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
         game_slug: linkContext === LINK_CONTEXT_GAME ? gameSlug || null : null,
         game_name: linkContext === LINK_CONTEXT_GAME ? gameName || null : null,
         game_icon_url: linkContext === LINK_CONTEXT_GAME ? gameIconUrl || null : null,
-        link_category: linkCategory || null,
+        link_category: linkContext === LINK_CONTEXT_GAME ? linkCategory || null : null,
         hype_reason: hypeReason || null,
         commission_percent: (selectedInfluencer as any)?.commission_percent ?? null,
         status: "active",
