@@ -539,7 +539,45 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
                   {landingPages.map((lp: any) => <SelectItem key={lp.id} value={lp.id}>{lp.name}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {/* LP mode: escolha entre padrão (catalog) x gerada (single_game / odds) x sem LP */}
+              <div className="grid grid-cols-3 gap-1.5 mt-2">
+                {([
+                  { v: "generated", label: "LP gerada", hint: "auto por link" },
+                  { v: "catalog", label: "LP padrão", hint: "vitrine da casa" },
+                  { v: "none", label: "Sem LP", hint: "afiliado direto" },
+                ] as const).map(opt => {
+                  const active = lpGeneration === opt.v;
+                  return (
+                    <button
+                      key={opt.v}
+                      type="button"
+                      onClick={() => setLpGeneration(opt.v)}
+                      className={`h-11 rounded-md border text-[11px] font-medium transition flex flex-col items-center justify-center leading-tight ${
+                        active
+                          ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/40"
+                          : "border-border/60 text-muted-foreground hover:text-foreground"
+                      }`}
+                      title={opt.hint}
+                    >
+                      <span>{opt.label}</span>
+                      <span className="text-[9px] opacity-70">{opt.hint}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1 leading-snug">
+                {lpGeneration === "generated"
+                  ? (linkContext === LINK_CONTEXT_ODDS
+                      ? "Vamos gerar uma LP em modo Odds com o bilhete embutido, marca da casa e CTA copy-and-paste."
+                      : linkContext === LINK_CONTEXT_GAME
+                        ? "LP focada no jogo selecionado, hero co-brand, hype e CTA de conversão."
+                        : "LP hero co-brand PlayBet + casa + CTA único, sem jogos.")
+                  : lpGeneration === "catalog"
+                    ? "Usa a vitrine padrão registrada. O CTA aponta para este link, mas as seções ficam da LP mãe."
+                    : "Sem LP: o afiliado abre direto na casa (sem página intermediária)."}
+              </p>
             </div>
+
 
             {/* 3. RAW LINK + auto detect */}
             <div>
