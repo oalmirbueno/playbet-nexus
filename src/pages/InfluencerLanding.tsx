@@ -331,7 +331,8 @@ interface GameArt {
 
 const SUPABASE_URL = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_SUPABASE_URL ?? "";
 const SUPABASE_ANON_KEY = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
-const LP_INSTANCE_SELECT = "id, slug, landing_page_id, affiliate_link, influencer_id, is_active, lp_mode, game_slugs, layout_config, hype_copy, source_tracking_link_id";
+const TRACKING_LINK_SELECT = "id, click_id_param_name, base_url, short_url, final_url, campanha_id, status, tracking_code, platform_account_id, landing_page_id, landing_page_instance_id, platform_accounts(platform_id, platforms(name, slug))";
+const LP_INSTANCE_SELECT = `id, slug, landing_page_id, affiliate_link, influencer_id, is_active, lp_mode, game_slugs, layout_config, hype_copy, source_tracking_link_id, source_tracking_link:tracking_links!landing_page_instances_source_tracking_link_id_fkey(${TRACKING_LINK_SELECT})`;
 
 function insertClickKeepAlive(payload: Record<string, unknown>) {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
@@ -458,7 +459,6 @@ function BrandLogoImage({ src, name }: { src?: string | null; name: string }) {
       className="h-11 object-contain"
       loading="eager"
       decoding="async"
-      fetchPriority="high"
       onError={() => setFailed(true)}
     />
   );
@@ -658,11 +658,12 @@ export default function InfluencerLanding() {
         instanceId: string | null,
         landingPageId: string | null,
         quickCtx?: InstanceContext | null,
+        sourceTrackingLink?: any,
       ) => {
         const preferredTrackingCode = setFastResolved(affiliateLink, influencerId, influencerName, instanceId, landingPageId, quickCtx);
-        const tl = await findTrackingLink(instanceId, influencerId, preferredTrackingCode, affiliateLink);
+        const tl = sourceTrackingLink || await findTrackingLink(instanceId, influencerId, preferredTrackingCode, affiliateLink);
         const paramName = tl?.click_id_param_name || "sub1";
-        const fallbackOpportunity = await findOpportunityDestination(instanceId, landingPageId, tl?.id || null);
+        const fallbackOpportunity = sourceTrackingLink ? null : await findOpportunityDestination(instanceId, landingPageId, tl?.id || null);
         const outboundAffiliate = [
           fallbackOpportunity,
           (tl as any)?.base_url,
@@ -753,13 +754,15 @@ export default function InfluencerLanding() {
             }]
           : [];
         setGameArts(fallbackArt);
-        void hydrateGameArts(instance.landing_page_id, instance.id, (instance as any).game_slugs || [], {
-          game_slug: (instance as any).hype_copy?.game_slug,
-          game_name: (instance as any).hype_copy?.game_name,
-          game_icon_url: (instance as any).hype_copy?.game_icon_url,
-          source_tracking_link_id: (instance as any).source_tracking_link_id,
-        });
-        void finalize(instance.affiliate_link, instance.influencer_id, "", instance.id, instance.landing_page_id, nextCtx);
+        if (fallbackArt.length > 0 || ((instance as any).game_slugs || []).length > 0) {
+          void hydrateGameArts(instance.landing_page_id, instance.id, (instance as any).game_slugs || [], {
+            game_slug: (instance as any).hype_copy?.game_slug,
+            game_name: (instance as any).hype_copy?.game_name,
+            game_icon_url: (instance as any).hype_copy?.game_icon_url,
+            source_tracking_link_id: (instance as any).source_tracking_link_id,
+          });
+        }
+        void finalize(instance.affiliate_link, instance.influencer_id, "", instance.id, instance.landing_page_id, nextCtx, (instance as any).source_tracking_link);
         return true;
       };
 
@@ -800,13 +803,15 @@ export default function InfluencerLanding() {
             }]
           : [];
         setGameArts(fallbackArt);
-        void hydrateGameArts(lpBase.id, instance.id, (instance as any).game_slugs || [], {
-          game_slug: (instance as any).hype_copy?.game_slug,
-          game_name: (instance as any).hype_copy?.game_name,
-          game_icon_url: (instance as any).hype_copy?.game_icon_url,
-          source_tracking_link_id: (instance as any).source_tracking_link_id,
-        });
-        void finalize(instance.affiliate_link, instance.influencer_id, "", instance.id, instance.landing_page_id, nextCtx);
+        if (fallbackArt.length > 0 || ((instance as any).game_slugs || []).length > 0) {
+          void hydrateGameArts(lpBase.id, instance.id, (instance as any).game_slugs || [], {
+            game_slug: (instance as any).hype_copy?.game_slug,
+            game_name: (instance as any).hype_copy?.game_name,
+            game_icon_url: (instance as any).hype_copy?.game_icon_url,
+            source_tracking_link_id: (instance as any).source_tracking_link_id,
+          });
+        }
+        void finalize(instance.affiliate_link, instance.influencer_id, "", instance.id, instance.landing_page_id, nextCtx, (instance as any).source_tracking_link);
         return;
       }
 
