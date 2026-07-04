@@ -642,13 +642,15 @@ export default function InfluencerLanding() {
           layout_config: (instance as any).layout_config,
           hype_copy: (instance as any).hype_copy,
         });
-        await hydrateGameArts(instance.landing_page_id, instance.id, (instance as any).game_slugs || [], {
-          game_slug: (instance as any).hype_copy?.game_slug,
-          game_name: (instance as any).hype_copy?.game_name,
-          game_icon_url: (instance as any).hype_copy?.game_icon_url,
-          source_tracking_link_id: (instance as any).source_tracking_link_id,
-        });
-        await finalize(instance.affiliate_link, instance.influencer_id, inf?.name || "", instance.id, instance.landing_page_id);
+        await Promise.all([
+          hydrateGameArts(instance.landing_page_id, instance.id, (instance as any).game_slugs || [], {
+            game_slug: (instance as any).hype_copy?.game_slug,
+            game_name: (instance as any).hype_copy?.game_name,
+            game_icon_url: (instance as any).hype_copy?.game_icon_url,
+            source_tracking_link_id: (instance as any).source_tracking_link_id,
+          }),
+          finalize(instance.affiliate_link, instance.influencer_id, inf?.name || "", instance.id, instance.landing_page_id),
+        ]);
         return;
       }
 
