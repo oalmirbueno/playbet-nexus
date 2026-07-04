@@ -149,6 +149,29 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
   const [odds, setOdds] = useState<OddsPanelValue>(emptyOddsValue);
   const isOddsShare = form.link_category === "odds_share";
 
+  const handleAffiliateInput = (value: string) => {
+    const split = splitAffiliateAndOddsUrls(value);
+    const draft = extractOddsDraftFromInput(value);
+    setForm(p => ({
+      ...p,
+      base_url: split.affiliateUrl || value,
+      ...(draft.isSharedOdds ? {
+        link_category: "odds_share",
+        game_slug: "",
+        game_name: "",
+        game_icon_url: "",
+      } : {}),
+    }));
+    if (draft.isSharedOdds) {
+      setOdds(prev => ({
+        ...prev,
+        bookmaker_share_url: draft.bookmaker_share_url || prev.bookmaker_share_url,
+        total_odd: draft.total_odd ?? prev.total_odd,
+        event_label: draft.event_label || prev.event_label,
+      }));
+    }
+  };
+
   // Load existing odds when editing a link that already has them
   useEffect(() => {
     let cancelled = false;
@@ -163,6 +186,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
           stake_suggested: row.stake_suggested,
           selections: (row.selections && row.selections.length ? row.selections : emptyOddsValue.selections),
           bookmaker_share_url: row.bookmaker_share_url ?? "",
+          screenshot_url: row.screenshot_url ?? "",
           event_label: row.event_label ?? "",
           event_starts_at: row.event_starts_at ? row.event_starts_at.slice(0, 16) : "",
           notes: row.notes ?? "",
