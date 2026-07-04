@@ -259,8 +259,10 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
       updatedAt: Date.parse(row?.updated_at ?? "") || layout.updatedAt || Date.now(),
       cloudSaved: true,
       engine,
+      oddsPreset: (layout.oddsPreset ?? undefined) as OddsPreset | undefined,
     };
   }, []);
+
 
   // Load persisted state on open / link change / format change.
   // IMPORTANTE: aguardar brandCtx resolver antes de semear — senão o estúdio abre
