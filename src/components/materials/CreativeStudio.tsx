@@ -8,7 +8,7 @@ import {
 } from "@/lib/creativeStudio";
 
 import playbetLogo from "@/assets/logo-mark.png";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -742,14 +742,14 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
                   <Badge variant="secondary" className="text-[10px] font-normal"><Sparkles className="w-3 h-3 mr-1" />{link.hypeReason}</Badge>
                 )}
               </DialogTitle>
-              <DialogDescription className="text-xs flex items-center gap-2 flex-wrap">
+              <div className="text-xs flex items-center gap-2 flex-wrap text-muted-foreground">
                 {link.platformName || "Plataforma"} · {size.label} · {size.w}×{size.h}px
                 <BrandLockBadge ctx={brandCtx} className="text-[10px]" />
 
                 <span className={cn("inline-flex items-center gap-1", dirty ? "text-amber-500" : "text-primary/80")}>
                   <Save className="w-3 h-3" /> {dirty ? "alterações pendentes" : savedAt ? "salvo" : "rascunho"}
                 </span>
-              </DialogDescription>
+              </div>
             </div>
             {!lockEngine && (
               <div className="inline-flex items-center rounded-md border border-border/60 bg-secondary/40 p-0.5 text-[11px] font-medium">
