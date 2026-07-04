@@ -829,7 +829,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                       <button
                         type="button"
                         className="text-[10px] text-muted-foreground hover:text-foreground"
-                        onClick={() => setBrandOverrideKey(null)}
+                        onClick={() => applyBrandOverride(null)}
                       >
                         usar detecção
                       </button>
@@ -842,7 +842,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                         <button
                           key={b.key}
                           type="button"
-                          onClick={() => setBrandOverrideKey(b.key)}
+                          onClick={() => applyBrandOverride(b.key)}
                           className={`flex items-center gap-1.5 px-2 h-7 rounded-md border text-[11px] transition ${
                             active
                               ? "border-primary bg-primary/10 text-foreground"
@@ -856,13 +856,26 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                       );
                     })}
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-1 leading-snug">
-                    {brandOverrideKey
-                      ? `Override manual: logo, selo, paleta e tipografia da ${getBrandKit(brandOverrideKey).name}.`
-                      : brandKit
-                        ? `Detectada pela plataforma: ${brandKit.name}. Selo e paleta são aplicados automaticamente.`
-                        : "Sem marca detectada — escolha uma casa acima para aplicar logo, selo e cores."}
-                  </p>
+                  <div className="flex items-center justify-between gap-2 mt-2">
+                    <p className="text-[10px] text-muted-foreground leading-snug flex-1">
+                      {brandOverrideKey
+                        ? `Override manual: logo, selo, paleta e tipografia da ${getBrandKit(brandOverrideKey).name}.`
+                        : brandKit
+                          ? `Detectada pela plataforma: ${brandKit.name}. Selo e paleta são aplicados automaticamente.`
+                          : "Sem marca detectada — escolha uma casa acima para aplicar logo, selo e cores."}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 px-2 text-[10px] shrink-0"
+                      onClick={() => applyBrandOverride(brandOverrideKey ?? brandKit?.key ?? null)}
+                      disabled={!brandOverrideKey && !brandKit?.key}
+                      title="Reaplica logo, selo e paleta e atualiza o preview"
+                    >
+                      <RefreshCw size={10} className="mr-1" /> Aplicar agora
+                    </Button>
+                  </div>
                 </div>
 
                 <div>
