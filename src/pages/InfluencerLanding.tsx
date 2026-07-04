@@ -840,7 +840,7 @@ export default function InfluencerLanding() {
       }
     }
 
-    window.location.assign(finalUrl);
+    window.location.href = finalUrl;
   }, [resolved, searchParams]);
 
   // ── Loading ──
