@@ -60,7 +60,11 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   const [campanhaId, setCampanhaId] = useState("");
   const [extraGameSlugs, setExtraGameSlugs] = useState<string[]>([]);
   const [odds, setOdds] = useState<OddsPanelValue>(emptyOddsValue);
+  // Marca que o operador escolheu manualmente o contexto — a detecção automática
+  // não deve mais sobrescrever a escolha (evita "misturar" odds com jogos).
+  const [contextTouched, setContextTouched] = useState(false);
   const [saving, setSaving] = useState(false);
+
 
   // Inline-create modal states
   const [newInfluencer, setNewInfluencer] = useState({ open: false, name: "", slug: "" });
@@ -85,8 +89,10 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       setCampanhaId("");
       setExtraGameSlugs([]);
       setOdds(emptyOddsValue);
+      setContextTouched(false);
     }
   }, [open, defaultInfluencerId, defaultLandingPageId]);
+
 
   const selectedInfluencer = useMemo(
     () => influencers.find((i: any) => i.id === influencerId),
@@ -141,7 +147,9 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
     const split = splitAffiliateAndOddsUrls(value);
     const draft = extractOddsDraftFromInput(value);
     setRawLink(split.affiliateUrl || value);
-    if (draft.isSharedOdds) {
+    // Só auto-migra para Odds se o operador ainda não fixou um contexto.
+    // Uma vez que ele clicou em "Sem jogo" ou "Jogos/cassino", respeitamos a escolha.
+    if (draft.isSharedOdds && !contextTouched) {
       setLinkContext(LINK_CONTEXT_ODDS);
       setLinkCategory("odds_share");
       setGameSlug("");
@@ -154,10 +162,27 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
         total_odd: draft.total_odd ?? prev.total_odd,
         event_label: draft.event_label || prev.event_label,
       }));
+    } else if (draft.isSharedOdds && linkContext === LINK_CONTEXT_ODDS) {
+      // Já está em odds → só enriquece o bilhete com dados detectados.
+      setOdds(prev => ({
+        ...prev,
+        bookmaker_share_url: draft.bookmaker_share_url || prev.bookmaker_share_url,
+        total_odd: draft.total_odd ?? prev.total_odd,
+        event_label: draft.event_label || prev.event_label,
+      }));
     }
   };
 
   useEffect(() => {
+    // Detecção não pode sobrescrever contexto manual.
+    if (contextTouched) {
+      if (linkContext === LINK_CONTEXT_GAME) {
+        if (detection.category && detection.category !== "odds_share") setLinkCategory(detection.category);
+        if (detection.gameSlug) setGameSlug(detection.gameSlug);
+        if (detection.gameName) setGameName(detection.gameName);
+      }
+      return;
+    }
     if (detection.isSharedOdds || detection.category === "odds_share") {
       setLinkContext(LINK_CONTEXT_ODDS);
       setLinkCategory("odds_share");
@@ -171,26 +196,28 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       if (detection.gameSlug) setGameSlug(detection.gameSlug);
       if (detection.gameName) setGameName(detection.gameName);
     }
-  }, [detection.category, detection.gameSlug, detection.gameName, detection.isSharedOdds, linkContext]);
+  }, [detection.category, detection.gameSlug, detection.gameName, detection.isSharedOdds, linkContext, contextTouched]);
 
-  const clearGameContext = () => {
-    setLinkContext(LINK_CONTEXT_NO_GAME);
-    setGameSlug("");
-    setGameName("");
-    setGameIconUrl("");
-    setExtraGameSlugs([]);
-    setHypeReason("");
-    setLinkCategory("");
+  // Handler único: garante reset do outro contexto ao trocar, evitando
+  // que odds "vazem" para jogos ou vice-versa.
+  const chooseContext = (ctx: typeof LINK_CONTEXT_GAME | typeof LINK_CONTEXT_NO_GAME | typeof LINK_CONTEXT_ODDS) => {
+    setContextTouched(true);
+    setLinkContext(ctx);
+    if (ctx === LINK_CONTEXT_NO_GAME) {
+      setGameSlug(""); setGameName(""); setGameIconUrl("");
+      setExtraGameSlugs([]); setHypeReason(""); setLinkCategory("");
+      setOdds(emptyOddsValue);
+    } else if (ctx === LINK_CONTEXT_ODDS) {
+      setGameSlug(""); setGameName(""); setGameIconUrl("");
+      setExtraGameSlugs([]); setHypeReason("");
+      setLinkCategory("odds_share");
+    } else {
+      // GAME → limpa bilhete, mantém jogo detectado.
+      setOdds(emptyOddsValue);
+      if (linkCategory === "odds_share") setLinkCategory("slots");
+    }
   };
 
-  const setOddsContext = () => {
-    setLinkContext(LINK_CONTEXT_ODDS);
-    setLinkCategory("odds_share");
-    setGameSlug("");
-    setGameName("");
-    setGameIconUrl("");
-    setExtraGameSlugs([]);
-  };
 
   const qc = useQueryClient();
   const [refreshingHype, setRefreshingHype] = useState(false);
@@ -532,31 +559,48 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
             </div>
 
             <div>
-              <Label className="text-xs font-medium">Tipo de link *</Label>
-              <div className="grid grid-cols-3 gap-2 mt-1">
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-xs font-medium">Tipo de link *</Label>
+                <span className="text-[10px] text-muted-foreground">
+                  {linkContext === LINK_CONTEXT_ODDS
+                    ? "Painel ativo: bilhete de odds"
+                    : linkContext === LINK_CONTEXT_GAME
+                      ? "Painel ativo: jogo/cassino"
+                      : "Painel ativo: link direto"}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={clearGameContext}
-                  className={`h-10 rounded-md border text-xs font-medium transition ${linkContext === LINK_CONTEXT_NO_GAME ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:text-foreground"}`}
+                  onClick={() => chooseContext(LINK_CONTEXT_NO_GAME)}
+                  className={`h-10 rounded-md border text-xs font-medium transition ${linkContext === LINK_CONTEXT_NO_GAME ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/40" : "border-border/60 text-muted-foreground hover:text-foreground"}`}
                 >
                   Sem jogo
                 </button>
                 <button
                   type="button"
-                  onClick={() => setOddsContext()}
-                  className={`h-10 rounded-md border text-xs font-medium transition ${linkContext === LINK_CONTEXT_ODDS ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:text-foreground"}`}
+                  onClick={() => chooseContext(LINK_CONTEXT_ODDS)}
+                  className={`h-10 rounded-md border text-xs font-medium transition ${linkContext === LINK_CONTEXT_ODDS ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/40" : "border-border/60 text-muted-foreground hover:text-foreground"}`}
                 >
                   <Sigma size={12} className="inline mr-1" /> Odds
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setLinkContext(LINK_CONTEXT_GAME); if (linkCategory === "odds_share") setLinkCategory("slots"); }}
-                  className={`h-10 rounded-md border text-xs font-medium transition ${linkContext === LINK_CONTEXT_GAME ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:text-foreground"}`}
+                  onClick={() => chooseContext(LINK_CONTEXT_GAME)}
+                  className={`h-10 rounded-md border text-xs font-medium transition ${linkContext === LINK_CONTEXT_GAME ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/40" : "border-border/60 text-muted-foreground hover:text-foreground"}`}
                 >
                   Jogos/cassino
                 </button>
               </div>
+              <p className="text-[10px] text-muted-foreground mt-1.5">
+                {linkContext === LINK_CONTEXT_ODDS
+                  ? "Salvaremos apenas o bilhete (odd total, seleções, screenshot). Jogo/categoria não são gravados."
+                  : linkContext === LINK_CONTEXT_GAME
+                    ? "Salvaremos jogo, categoria e hype. Bilhete de odds é ignorado."
+                    : "Salvaremos só o link afiliado — sem jogo e sem bilhete."}
+              </p>
             </div>
+
 
             {/* 4. PLATFORM (auto-detected) + ACCOUNT */}
             <div className="grid grid-cols-2 gap-2">
