@@ -12,6 +12,9 @@ import { calculateSocioDistribution, readDistributionParams } from "@/lib/financ
 const formatBRL = (v: number) =>
   v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
+const formatKpiBRL = (v: number) =>
+  v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+
 const COLORS = ["hsl(var(--primary))", "hsl(var(--accent))", "hsl(var(--info, 200 80% 60%))"];
 
 export default function DashboardExecutivo() {
@@ -66,9 +69,9 @@ export default function DashboardExecutivo() {
   // KPIs sempre visíveis - começam em zero e enchem conforme tracking + Asaas chegam
   const kpis = [
     { label: "Caixa Asaas", value: formatBRL(totalPagosAsaas), sub: "Pago no período", icon: Landmark, path: "/financeiro" },
-    { label: "Lucro Real", value: loadingMetrics ? "…" : formatBRL(liveMetrics.profitBase), sub: "Base de distribuição", icon: DollarSign, path: "/tracking" },
-    { label: "RevShare", value: loadingMetrics ? "…" : formatBRL(liveMetrics.revenue), sub: "Comissão Rev importada", icon: TrendingUp, path: "/tracking" },
-    { label: "CPA", value: loadingMetrics ? "…" : formatBRL(liveMetrics.cpa), sub: "Comissão CPA importada", icon: Wallet, path: "/tracking" },
+    { label: "Lucro Real", value: loadingMetrics ? "…" : formatKpiBRL(liveMetrics.profitBase), sub: "Base de distribuição", icon: DollarSign, path: "/tracking" },
+    { label: "RevShare", value: loadingMetrics ? "…" : formatKpiBRL(liveMetrics.revenue), sub: "Comissão Rev importada", icon: TrendingUp, path: "/tracking" },
+    { label: "CPA", value: loadingMetrics ? "…" : formatKpiBRL(liveMetrics.cpa), sub: "Comissão CPA importada", icon: Wallet, path: "/tracking" },
     { label: "Cliques", value: String(liveMetrics.clicks || consolidated.outboundClickCount || 0), sub: "Painel oficial / LP", icon: MousePointerClick, path: "/tracking/events" },
     { label: "Registros", value: String(liveMetrics.registrations || consolidated.totalRegistrations || 0), sub: "Cadastros confirmados", icon: UserCheck, path: "/tracking" },
     { label: "FTDs", value: String(liveMetrics.ftd || consolidated.totalFtd || 0), sub: "First-time deposits", icon: Target, path: "/tracking" },
