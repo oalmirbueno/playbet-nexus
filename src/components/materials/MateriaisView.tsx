@@ -186,6 +186,9 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
         <StatCard icon={<Download className="w-4 h-4" />} label="Formatos por link" value={4} />
       </div>
 
+      {/* Kit da marca inline — baixar sem abrir editor */}
+      <BrandKitInlineCard platformHints={rows.map(r => r.platform_name)} />
+
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-2">
         <div className="relative flex-1">
