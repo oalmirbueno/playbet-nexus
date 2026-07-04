@@ -152,6 +152,15 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
   const [previewKey, setPreviewKey] = useState(0);
   const [basePage, setBasePage] = useState<{ name: string | null; domain: string | null; route: string | null; slug: string | null } | null>(null);
   const [previewTab, setPreviewTab] = useState<"generated" | "catalog">("generated");
+  const [brandAssets, setBrandAssets] = useState<BrandAssetsConfig>({
+    header_logo: "lockup",
+    hero_logo: "lockup",
+    hero_align: "center",
+    footer_seal: "h-light",
+    show_wordmark: true,
+  });
+  const [dragSectionIdx, setDragSectionIdx] = useState<number | null>(null);
+
 
 
   useEffect(() => {
