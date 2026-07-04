@@ -9,7 +9,8 @@ type LpMode = "single_game" | "multi_game" | "odds" | "catalog" | "platform_dire
 
 function detectMode(linkCategory: string | null, gameSlug: string | null, extras: string[]): LpMode {
   const cat = (linkCategory || "").toLowerCase();
-  if (["odds", "sports", "sportsbook", "esportes"].includes(cat)) return "odds";
+  // odds_share (bilhete compartilhado) e categorias esportivas → LP em modo "odds"
+  if (["odds", "odds_share", "sports", "sportsbook", "esportes"].includes(cat)) return "odds";
   if (gameSlug && extras.length === 0) return "single_game";
   if ((gameSlug && extras.length >= 1) || extras.length >= 2) return "multi_game";
   return "platform_direct";
