@@ -128,7 +128,7 @@ const REGISTRY: Record<BrandKey, BrandKit> = {
   vupi: {
     key: "vupi",
     name: "VUPI",
-    slugAliases: ["vupi", "vupibet", "vupi-bet"],
+    slugAliases: ["vupi", "vupibet", "vupi-bet", "vupi bet", "vupi.bet", "vupi_bet"],
     logos: {
       mark: vupiMarkViolet.url,          // "v" símbolo primário (violet)
       wordmark: vupiWordDark.url,        // wordmark "vupi" em midnight
