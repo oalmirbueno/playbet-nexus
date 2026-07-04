@@ -299,7 +299,7 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
       saveState(link.id, format, engineMode, { layers, style: engineMode === "odds" ? "odds_hype" : style, editorMode, updatedAt: Date.now(), cloudSaved: false, engine: engineMode });
     }, 300);
     return () => clearTimeout(t);
-  }, [layers, style, editorMode, link?.id, format, open, dirty]);
+  }, [layers, style, editorMode, link?.id, format, open, dirty, engineMode]);
 
   const baseInput = useMemo<CreativeInput | null>(() => {
     if (!link) return null;
