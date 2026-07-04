@@ -245,8 +245,8 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
   useEffect(() => {
     if (!link || !open) return;
     if (brandLoading) return; // aguarda marca resolver
-    // Aguarda odds resolver quando é aposta compartilhada (evita seed sem contexto).
-    if (isOddsShare && oddsCtx === null) return;
+    // Aguarda o fetch inicial de odds concluir (evita seed sem contexto quando é odds_share).
+    if (isOddsShare && !oddsFetched) return;
     let cancelled = false;
     setHandle(link.handle || (link.shortUrl ? link.shortUrl.replace(/^https?:\/\//, "") : ""));
     setSelectedId(null);
@@ -274,7 +274,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       setRenderKey(k => k + 1);
     })();
     return () => { cancelled = true; };
-  }, [link?.id, format, open, loadDatabaseState, brandLoading, brandCtx?.brand?.key, applyBrandChrome, isOddsShare, oddsCtx?.total_odd, oddsCtx?.event_label]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [link?.id, format, open, loadDatabaseState, brandLoading, brandCtx?.brand?.key, applyBrandChrome, engineMode, oddsFetched, oddsCtx?.total_odd, oddsCtx?.event_label]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
   // Auto-save (debounced)
