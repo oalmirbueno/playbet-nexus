@@ -297,9 +297,10 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
     if (resolvedInstance?.slug) return resolvedInstance.slug;
     const baseSlug = ((selectedInfluencer as any)?.slug || (selectedInfluencer as any)?.name || "ref")
       .toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/^-|-$/g, "") || "ref";
-    const taken = new Set(
-      lpInstances.filter((i: any) => i.landing_page_id === landingPageId).map((i: any) => i.slug),
-    );
+    // Slug precisa ser único GLOBALMENTE (rota /i/{slug} não filtra por LP).
+    // Sem isso, duas instâncias com o mesmo slug em LPs diferentes colidem
+    // e o link copiado pode abrir a LP errada.
+    const taken = new Set(lpInstances.map((i: any) => i.slug));
     let slug = baseSlug;
     let n = 2;
     while (taken.has(slug)) { slug = `${baseSlug}-${n++}`; }
