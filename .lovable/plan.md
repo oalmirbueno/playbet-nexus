@@ -1,66 +1,82 @@
-## Objetivo
+# Engine de Odds — Roadmap em 3 Fases
 
-Sempre que um link for gerado — por qualquer usuário (admin, gerente ou influencer), em qualquer entrada (QuickLink, formulário completo, lote de jogos em alta, wizard guiado) — os materiais e a LP nascem prontos, alinhados ao contexto do link (jogo/plataforma/marca), sem duplicatas e sem quebrar em erro de sync.
+Cada fase é entregável e validável antes da próxima. Nenhuma fase quebra o que já existe.
 
-## Diagnóstico atual
+---
 
-| Entrada de criação de link | Autogen materiais | Autoconfig LP |
-|---|---|---|
-| `QuickLinkDialog` | Sim | Sim |
-| `TrackingLinkForm` (individual, via `TrackingLinks.handleSave`) | **Não** | **Não** |
-| `TrackingLinkForm.applyAllHypedBatch` (lote) | **Não** | **Não** |
-| `TrackingLinks.handleWizardComplete` (wizard) | **Não** | **Não** |
+## Fase 1 — Tracking de Odds nos Links
 
-Além disso, `materials-autogenerate` insere blind (roda 2x → duplicatas em `link_materials`).
+**Problema:** Links do tipo "odds / aposta compartilhada" não são reconhecidos como categoria própria, não guardam o payload da odd (evento, mercado, seleções, odd total) e por isso não aparecem no relatório do link nem na Central.
 
-## Correções
+**Entregas:**
+1. Novo campo `link_category = 'odds_share'` reconhecido pelo `TrackingLinkForm` com sub-tipo (`single`, `multipla`, `sistema`).
+2. Nova tabela `tracking_link_odds` (1:1 com `tracking_links`) guardando:
+   - `bet_type` (single/múltipla/sistema)
+   - `total_odd` (numeric)
+   - `selections jsonb` (evento, mercado, seleção, odd unitária por perna)
+   - `screenshot_url` (opcional, se já veio da Fase 2)
+   - `platform_id` resolvido do link
+   - `bookmaker_share_url` original (quando existir)
+3. Detector automático (`src/lib/oddsDetect.ts`) que, ao colar a URL da casa, identifica a plataforma pelo domínio usando `platforms.tracking_domains` e pré-seleciona o `platform_account`.
+4. `LinkReportDrawer` ganha aba "Odd" mostrando as pernas, odd total, status (live/liquidada) e mesma tabela de métricas já existente (cliques, LP view, FTDs, comissão) — **tudo puxando por `tracking_link_id`**, exatamente como os outros tipos.
+5. Central de Links: badge "Odd Compartilhada" + coluna "Odd" (valor total).
 
-### 1. Helper único `syncLinkAssets(linkId, opts)`
-Novo arquivo `src/lib/linkAssets.ts`. Dispara `materials-autogenerate` + (se `useLp`) `lp-autoconfigure` em `Promise.allSettled`, faz `invalidateQueries` para `link_materials` e `landing_page_instances`, engole erros silenciosamente com log (fire-and-forget, nunca bloqueia UX de criação).
+**Regra:** se a URL colada não bater com nenhuma casa cadastrada, bloqueia com toast "Casa não cadastrada — cadastre em Plataformas antes de gerar o link" (conforme sua escolha).
 
-Assinatura:
-```ts
-syncLinkAssets(linkId, {
-  useLp: boolean,
-  extraGameSlugs?: string[],
-  hypeCopy?: { subtitle?: string | null },
-  qc: QueryClient,
-})
+---
+
+## Fase 2 — Gerador de Material de Odd
+
+**Problema:** Não existe fluxo para transformar um print (ou URL) de odd em criativo com selo/identidade da casa.
+
+**Entregas:**
+1. Nova aba **"Odd"** no `CreativeStudio` (`src/components/materials/CaptureOddPanel.tsx` já existe como esqueleto — expandir).
+2. Duas fontes de entrada:
+   - **Upload manual** (drag-and-drop / colar imagem do clipboard).
+   - **Captura automática por URL** via edge function `capture-odd-screenshot` (já existe) usando Playwright headless nas casas suportadas. Fallback silencioso → upload manual se falhar.
+3. Formulário lateral pré-preenchido a partir do link vinculado (se veio da Fase 1):
+   - Evento, mercado, seleções, odd total, casa detectada, brand kit.
+4. Composição do material (canvas HTML → PNG via html2canvas):
+   - Print da odd em card com cantos arredondados.
+   - Selo da casa (do brand registry, com bloqueio de posicionamento oficial).
+   - Cabeçalho com identidade da casa (cores, fonte, logotipo).
+   - CTA + slug do influenciador (opcional).
+   - Rodapé legal automático (18+ / jogue com responsabilidade).
+5. Bloqueio: se o link não tiver `platform_id` resolvido ou casa não estiver cadastrada, exibe estado vazio com CTA "Cadastrar casa".
+6. Persistência em `link_materials` com `material_type = 'odd_share'` (aparece no portal do influenciador imediatamente).
+
+---
+
+## Fase 3 — LP Automática de Odds
+
+**Problema:** LPs geradas de link de odds ficam genéricas, sem as odds em destaque, sem identidade da casa e sem referências reais.
+
+**Entregas:**
+1. Novo `lp_mode = 'odds_share'` no `lp-autoconfigure` (já suporta `odds`, adicionar variante):
+   - Seção Hero com o evento (times/logos reais buscados de `clubCrests`).
+   - Card grande da odd (as mesmas pernas da Fase 1) com botão "Copiar aposta na {Casa}".
+   - Seção de outras odds relacionadas ao mesmo campeonato (via `lp_events` + `lp_opportunities` já indexados).
+   - Seção de identidade da casa (cores, wordmark, selo — puxado do brand registry travado).
+   - CTA final destino = link afiliado da própria casa.
+2. Detecção de identidade **real** (não placeholder):
+   - Se a casa tem brand kit registrado → usa tokens travados (cores, fontes Articulat CF, selos oficiais).
+   - Referências de crest dos times via `clubCrests` (já existe) — sem placeholder cinza.
+3. Performance: LP continua com o mesmo pipeline de SSR-hydrate e edge cache já em uso (abertura < 1s).
+4. Autogeração dispara no `POST` do link (Fase 1) → `lp-autoconfigure` recebe `lp_mode='odds_share'` + payload das seleções → cria `landing_page_instance` pronta.
+5. Editor visual (`LpInstanceVisualEditor`) ganha preset "Odds Share" com blocos travados na ordem correta mas com copy editável.
+
+---
+
+## Ordem de execução
+
+```text
+Fase 1 (tracking)  ──► valida no Link Report + Central
+       │
+       ▼
+Fase 2 (material)  ──► valida no Creative Studio + Portal
+       │
+       ▼
+Fase 3 (LP auto)   ──► valida abrindo a LP pública gerada
 ```
 
-### 2. Cablar helper em todos os pontos de entrada
-- `QuickLinkDialog.handleSave` → substituir bloco inline pelo helper.
-- `TrackingLinks.handleSave` → após `create(cleaned)`, chamar helper com o `id` retornado.
-- `TrackingLinks.handleWizardComplete` → idem.
-- `TrackingLinkForm.applyAllHypedBatch` → após `insert(rows).select("id")`, iterar `inserted` e disparar helper por link (sequencial, 100ms de gap para não flodar a edge).
-
-Requer: garantir que `useTrackingLinks().create` retorne o registro (`.select().single()`) — verificar/ajustar em `useTrackingData`.
-
-### 3. Tornar `materials-autogenerate` idempotente
-Edge function `supabase/functions/materials-autogenerate/index.ts`:
-- Antes de `insert`, buscar `link_materials` existentes por `tracking_link_id`.
-- Montar `rows` apenas para as combinações `(format, style)` ainda ausentes.
-- Retornar `{ ok, queued, skipped }`.
-
-Sem migration necessária (usa constraint natural, sem upsert).
-
-### 4. Regras default sensíveis ao modo `platform_direct`
-Quando o link não tem `game_slug` (LP limpa / envio direto à plataforma), as `DEFAULT_RULES` da edge function trocam para o preset de co-brand (`feed` + `story` com style `platform_lockup`) em vez de `hype_neon`. Isso faz o material inicial já entregar o lockup PlayBet × Plataforma + selo, alinhado com a decisão já tomada no `CreativeStudio`.
-
-### 5. Feedback de UI unificado
-Toast padrão pós-criação em todos os fluxos: "Link criado · materiais e LP sincronizando". Sem popup bloqueante — o `MateriaisView` já reage via `invalidateQueries`.
-
-## Arquivos tocados
-
-- **novo** `src/lib/linkAssets.ts`
-- `src/components/QuickLinkDialog.tsx` — usa helper
-- `src/pages/TrackingLinks.tsx` — usa helper em `handleSave` + `handleWizardComplete`
-- `src/components/tracking/TrackingLinkForm.tsx` — usa helper no `applyAllHypedBatch`
-- `src/hooks/useTrackingData.ts` — garantir `create` retorna id (checar antes)
-- `supabase/functions/materials-autogenerate/index.ts` — idempotência + preset `platform_direct`
-
-## Fora de escopo
-
-- Renderização de PNGs no servidor (materiais continuam gerados client-side no Studio; a edge function só provisiona as *linhas* de material com metadata correto).
-- Alteração no schema de `link_materials`.
-- Mudança nas RLS existentes.
+Após cada fase peço para você validar antes de seguir. Aprovado?
