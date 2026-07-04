@@ -1046,6 +1046,9 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                     value={copy.cta_label}
                     onChange={(e) => setCopy({ ...copy, cta_label: e.target.value })}
                   />
+                  <Button type="button" size="sm" variant="outline" className="h-7 w-full mt-2 text-[10px]" onClick={applyCopy}>
+                    <Check size={11} className="mr-1" /> Aplicar copy
+                  </Button>
                 </div>
 
                 {/* Bonus */}
