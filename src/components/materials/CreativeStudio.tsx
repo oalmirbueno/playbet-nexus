@@ -331,10 +331,10 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
   useEffect(() => {
     if (!link || !open || !dirty) return;
     const t = setTimeout(() => {
-      saveState(link.id, format, engineMode, { layers, style: engineMode === "odds" ? "odds_hype" : style, editorMode, updatedAt: Date.now(), cloudSaved: false, engine: engineMode, oddsPreset: engineMode === "odds" ? oddsPreset : undefined });
+      saveState(link.id, format, engineMode, { layers, style: engineMode === "odds" ? "odds_hype" : style, editorMode, updatedAt: Date.now(), cloudSaved: false, engine: engineMode, oddsPreset: engineMode === "odds" ? oddsPreset : undefined, brandOverrideKey });
     }, 300);
     return () => clearTimeout(t);
-  }, [layers, style, editorMode, link?.id, format, open, dirty, engineMode, oddsPreset]);
+  }, [layers, style, editorMode, link?.id, format, open, dirty, engineMode, oddsPreset, brandOverrideKey]);
 
 
   const baseInput = useMemo<CreativeInput | null>(() => {
