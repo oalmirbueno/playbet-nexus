@@ -400,8 +400,16 @@ export default function TrackingLinks() {
               <Card key={infId} className={missing ? "border-destructive/30" : ""}>
                 <CardContent className="p-0">
                   {/* Group header */}
-                  <button
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => toggleExpanded(infId)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        toggleExpanded(infId);
+                      }
+                    }}
                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary/40 transition-colors"
                   >
                     {isOpen ? <ChevronDown size={14} className="text-muted-foreground" /> : <ChevronRight size={14} className="text-muted-foreground" />}
@@ -444,7 +452,7 @@ export default function TrackingLinks() {
                     >
                       <Plus size={11} /> Novo link
                     </Button>
-                  </button>
+                  </div>
 
                   {/* Links */}
                   {isOpen && (
