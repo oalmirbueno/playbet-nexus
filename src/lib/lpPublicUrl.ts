@@ -21,11 +21,18 @@ export function buildLpBaseUrl(
   return `${base}${cleanRoute.startsWith("/") ? cleanRoute : `/${cleanRoute}`}`;
 }
 
-export function buildLpPublicUrl(
+export function buildInstanceLpBaseUrl(
   domain: string | null | undefined,
   slug: string | null | undefined,
 ): string | null {
   if (!slug) return null;
   const base = normalizeLpDomain(domain);
   return `${base}/i/${encodeURIComponent(slug)}`;
+}
+
+export function buildLpPublicUrl(
+  domain: string | null | undefined,
+  slug: string | null | undefined,
+): string | null {
+  return buildInstanceLpBaseUrl(domain, slug);
 }
