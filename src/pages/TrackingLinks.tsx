@@ -81,6 +81,7 @@ export default function TrackingLinks() {
   const platMap = useMemo(() => new Map((platforms as any[]).map(p => [p.id, p])), [platforms]);
   const lpMap = useMemo(() => new Map((landingPages as any[]).map(l => [l.id, l])), [landingPages]);
   const instMap = useMemo(() => new Map((lpInstances as any[]).map(i => [i.id, i])), [lpInstances]);
+  const mgrMap = useMemo(() => new Map((managers as any[]).map((m: any) => [m.id, m])), [managers]);
 
   const isIncomplete = (l: TrackingLinkRow) => !l.platform_account_id || !l.influencer_id || !(l.base_url || l.final_url);
 
