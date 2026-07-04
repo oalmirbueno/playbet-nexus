@@ -279,8 +279,10 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
       cloudSaved: true,
       engine,
       oddsPreset: (layout.oddsPreset ?? undefined) as OddsPreset | undefined,
+      brandOverrideKey: (layout.brandOverrideKey ?? null) as BrandKey | null,
     };
   }, []);
+
 
 
   // Load persisted state on open / link change / format change.
