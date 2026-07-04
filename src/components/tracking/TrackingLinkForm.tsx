@@ -146,6 +146,31 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
   const [creatingInstance, setCreatingInstance] = useState(false);
   const [batchApplying, setBatchApplying] = useState(false);
   const [refreshingHype, setRefreshingHype] = useState(false);
+  const [odds, setOdds] = useState<OddsPanelValue>(emptyOddsValue);
+  const isOddsShare = form.link_category === "odds_share";
+
+  // Load existing odds when editing a link that already has them
+  useEffect(() => {
+    let cancelled = false;
+    if (!form.id) { setOdds(emptyOddsValue); return; }
+    (async () => {
+      try {
+        const row = await getOddsByLink(form.id!);
+        if (cancelled || !row) return;
+        setOdds({
+          bet_type: row.bet_type,
+          total_odd: row.total_odd,
+          stake_suggested: row.stake_suggested,
+          selections: (row.selections && row.selections.length ? row.selections : emptyOddsValue.selections),
+          bookmaker_share_url: row.bookmaker_share_url ?? "",
+          event_label: row.event_label ?? "",
+          event_starts_at: row.event_starts_at ? row.event_starts_at.slice(0, 16) : "",
+          notes: row.notes ?? "",
+        });
+      } catch { /* silent */ }
+    })();
+    return () => { cancelled = true; };
+  }, [form.id]);
 
   // ── Link intelligence: auto-detect platform/category/game from pasted URL ──
   const detection = useMemo(
