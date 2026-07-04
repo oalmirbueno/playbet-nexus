@@ -516,8 +516,8 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
               <Input
                 className="h-9 text-xs font-mono mt-1"
                 value={rawLink}
-                onChange={(e) => setRawLink(e.target.value)}
-                placeholder="https://qualquer-casa.com/?p=xxxx"
+                onChange={(e) => handleRawLink(e.target.value)}
+                placeholder="Cole link afiliado ou afiliado + bilhete de odds"
               />
               {rawLink && (
                 <div className="mt-1.5 flex items-center justify-between gap-2">
@@ -533,20 +533,27 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
 
             <div>
               <Label className="text-xs font-medium">Tipo de link *</Label>
-              <div className="grid grid-cols-2 gap-2 mt-1">
+              <div className="grid grid-cols-3 gap-2 mt-1">
                 <button
                   type="button"
                   onClick={clearGameContext}
                   className={`h-10 rounded-md border text-xs font-medium transition ${linkContext === LINK_CONTEXT_NO_GAME ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:text-foreground"}`}
                 >
-                  Sem jogo · LP limpa
+                  Sem jogo
                 </button>
                 <button
                   type="button"
-                  onClick={() => setLinkContext(LINK_CONTEXT_GAME)}
+                  onClick={() => setOddsContext()}
+                  className={`h-10 rounded-md border text-xs font-medium transition ${linkContext === LINK_CONTEXT_ODDS ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:text-foreground"}`}
+                >
+                  <Sigma size={12} className="inline mr-1" /> Odds
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setLinkContext(LINK_CONTEXT_GAME); if (linkCategory === "odds_share") setLinkCategory("slots"); }}
                   className={`h-10 rounded-md border text-xs font-medium transition ${linkContext === LINK_CONTEXT_GAME ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:text-foreground"}`}
                 >
-                  Com jogo
+                  Jogos/cassino
                 </button>
               </div>
             </div>
@@ -584,6 +591,10 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
                 </Select>
               </div>
             </div>
+
+            {(rawLink || currentPlatformId) && linkContext === LINK_CONTEXT_ODDS && (
+              <OddsSharePanel value={odds} onChange={setOdds} />
+            )}
 
             {(rawLink || currentPlatformId) && linkContext === LINK_CONTEXT_GAME && (
               <div className="rounded-md border border-primary/20 bg-primary/5 p-2.5 space-y-2">
@@ -675,7 +686,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Jogo / odds / estratégia</Label>
+                    <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Jogo / estratégia</Label>
                     <Input
                       className="h-8 text-xs"
                       value={gameName}
@@ -684,7 +695,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
                         setGameName(name);
                         setGameSlug(name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
                       }}
-                      placeholder="Fortune Tiger, odds do dia…"
+                      placeholder="Fortune Tiger, Aviator…"
                     />
                   </div>
                 </div>
@@ -743,7 +754,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
                   </div>
                   <div>
                     <p className="text-[9px] font-semibold text-primary uppercase tracking-wider">Contexto</p>
-                    <code className="block text-[10px] font-mono text-foreground truncate">{gameName || CATEGORY_LABELS[linkCategory as LinkCategory] || "auto"}</code>
+                    <code className="block text-[10px] font-mono text-foreground truncate">{linkContext === LINK_CONTEXT_ODDS ? (odds.event_label || "odds") : gameName || CATEGORY_LABELS[linkCategory as LinkCategory] || "auto"}</code>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
