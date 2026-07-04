@@ -332,21 +332,21 @@ export default function TrackingDashboard() {
           icon={<UserPlus size={16} />}
           label="Cadastros"
           value={fmtNum(kpiCadastros)}
-          hint={`${fmtNum(periodKpis.ftd)} FTD/QFTD`}
+          hint={`${fmtNum(kpiFtd)} FTD/QFTD`}
         />
         <KpiCard
           variant="info"
           icon={<WalletCards size={16} />}
           label="Depósitos"
-          value={fmtNum(periodKpis.depositos)}
-          hint={fmtBRL(periodKpis.volumeDepositos)}
+          value={fmtNum(kpiDepositosCount)}
+          hint={fmtBRL(kpiDepositosVolume)}
         />
         <KpiCard
           variant="success"
           icon={<DollarSign size={16} />}
           label="Lucro real"
           value={fmtBRL(kpiReceita)}
-          hint={periodKpis.revshare > 0 ? `${fmtBRL(periodKpis.revshare)} RevShare` : "RevShare + CPA importado"}
+          hint={kpiRevshare > 0 ? `${fmtBRL(kpiRevshare)} RevShare` : "RevShare + CPA importado"}
         />
         <KpiCard
           variant="primary"
