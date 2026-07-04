@@ -319,7 +319,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
       game_slug: g.game_slug,
       game_name: g.game_name,
       game_icon_url: g.icon_url || "",
-      link_category: g.category || p.link_category,
+      link_category: g.category || (p.link_category === "odds_share" ? "slots" : p.link_category),
       hype_reason: g.hype_reason || p.hype_reason,
     }));
     toast({ title: `Aplicado: ${g.game_name}`, description: g.hype_reason || "Jogo em alta selecionado." });
