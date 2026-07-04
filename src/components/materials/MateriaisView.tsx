@@ -187,65 +187,79 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
         <StatCard icon={<Download className="w-4 h-4" />} label="Formatos por link" value={4} />
       </div>
 
-      {/* Kit da marca inline — baixar sem abrir editor */}
-      <BrandKitInlineCard />
-
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por jogo, plataforma…"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="pl-9 h-9 text-sm"
-          />
-        </div>
-        <div className="flex gap-1 overflow-x-auto">
-          <FilterChip active={platformFilter === "all"} onClick={() => setPlatformFilter("all")}>
-            Todas ({rows.length})
-          </FilterChip>
-          {platforms.map(p => (
-            <FilterChip key={p} active={platformFilter === p} onClick={() => setPlatformFilter(p)}>
-              {p}
-            </FilterChip>
-          ))}
-        </div>
+      {/* Top view selector — Artes | Kits da marca */}
+      <div className="flex items-center gap-1 p-1 rounded-lg border border-border/60 bg-secondary/30 w-fit">
+        <ViewChip active={view === "artes"} onClick={() => setView("artes")}>
+          <ImageIcon className="w-3.5 h-3.5 mr-1.5" /> Artes dos links
+          <span className="ml-1.5 text-[10px] opacity-70">({withArt.length + brandKits.length})</span>
+        </ViewChip>
+        <ViewChip active={view === "kits"} onClick={() => setView("kits")}>
+          <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Kits da marca
+        </ViewChip>
       </div>
 
-      {/* Grid */}
-      {loading ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-          {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="aspect-square rounded-lg" />)}
-        </div>
-      ) : filtered.length === 0 ? (
-        <EmptyState />
-      ) : (
+      {view === "artes" ? (
         <>
-          {withArt.length > 0 && (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-              {withArt.map(r => (
-                <CreativeCard key={r.id} row={r} showInfluencer={showInfluencer}
-                  onOpen={() => { setActive(toStudioLink(r)); setOpen(true); }}
-                  onEdit={() => { setEditorLinkId(r.id); setEditorOpen(true); }} />
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por jogo, plataforma…"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                className="pl-9 h-9 text-sm"
+              />
+            </div>
+            <div className="flex gap-1 overflow-x-auto">
+              <FilterChip active={platformFilter === "all"} onClick={() => setPlatformFilter("all")}>
+                Todas ({rows.length})
+              </FilterChip>
+              {platforms.map(p => (
+                <FilterChip key={p} active={platformFilter === p} onClick={() => setPlatformFilter(p)}>
+                  {p}
+                </FilterChip>
               ))}
             </div>
-          )}
-          {brandKits.length > 0 && (
-            <div>
-              <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
-                Kit da marca · links sem jogo ({brandKits.length})
-              </p>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {brandKits.map(r => (
-                  <CreativeCard key={r.id} row={r} showInfluencer={showInfluencer}
-                    onOpen={() => { setEditorLinkId(r.id); setEditorOpen(true); }}
-                    onEdit={() => { setEditorLinkId(r.id); setEditorOpen(true); }} muted />
-                ))}
-              </div>
+          </div>
+
+          {/* Grid */}
+          {loading ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {Array.from({ length: 8 }).map((_, i) => <Skeleton key={i} className="aspect-square rounded-lg" />)}
             </div>
+          ) : filtered.length === 0 ? (
+            <EmptyState />
+          ) : (
+            <>
+              {withArt.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                  {withArt.map(r => (
+                    <CreativeCard key={r.id} row={r} showInfluencer={showInfluencer}
+                      onOpen={() => { setActive(toStudioLink(r)); setOpen(true); }}
+                      onEdit={() => { setEditorLinkId(r.id); setEditorOpen(true); }} />
+                  ))}
+                </div>
+              )}
+              {brandKits.length > 0 && (
+                <div>
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
+                    Links sem jogo ({brandKits.length})
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {brandKits.map(r => (
+                      <CreativeCard key={r.id} row={r} showInfluencer={showInfluencer}
+                        onOpen={() => { setEditorLinkId(r.id); setEditorOpen(true); }}
+                        onEdit={() => { setEditorLinkId(r.id); setEditorOpen(true); }} muted />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </>
+      ) : (
+        <BrandKitsSection />
       )}
 
       <CreativeStudio open={open} onOpenChange={setOpen} link={active} />
