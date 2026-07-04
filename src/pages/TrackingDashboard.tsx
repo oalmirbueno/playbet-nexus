@@ -79,6 +79,12 @@ export default function TrackingDashboard() {
   const { data: platforms } = usePlatforms();
   const { data: periodEvents } = useTrackingEvents(filters);
 
+  // Mesma fonte oficial do Dashboard e do Financeiro — garante que os
+  // números aqui NUNCA divergem dos outros painéis.
+  const summaryPeriodKey = period === "7d" ? "7d" : period === "mes" ? "mtd" : "30d";
+  const { summary } = useTrackingMetricsSummary(summaryPeriodKey as any);
+  useRealtimeMetrics();
+
   // Realtime: refresh the dashboard the second a new row lands in
   // tracking_metrics or tracking_events, so the panel scraper cron and the
   // "Atualizar agora" button show up without a manual refresh.
