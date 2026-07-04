@@ -267,30 +267,45 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         setPreviewTab(resolvedMode === "catalog" ? "catalog" : "generated");
         setSections(ensureCommunitySection(!hasAnyGame ? defaultLayoutConfig("platform_direct").sections : rawSections));
 
-        // Adaptive auto-fill for empty copy fields
+        // Adaptive auto-fill from the linked tracking link.
+        // When the user hasn't explicitly saved (auto !== false), the link is
+        // the source of truth and OVERWRITES any stale defaults left over from
+        // triggers or the previous LP template. Once the user hits "Apply",
+        // hype_copy.auto flips to false and their edits stick.
         const autoFlag = hc.auto !== false;
         if (tl) {
           const gname = (tl as any).game_name;
           const hype = (tl as any).hype_reason;
           const cat = (tl as any).link_category;
-          setCopy(prev => ({
-            title: prev.title || titleForMode(resolvedMode, gname, pName),
-            subtitle: prev.subtitle || hype || adaptiveSubtitle(resolvedMode, gname, pName),
-            cta_label: prev.cta_label || ctaForMode(resolvedMode, cat, gname),
-          }));
-          setCommunity(prev => ({
-            enabled: prev.enabled,
-            label: prev.label || (gname ? `Comunidade ${gname}` : "Comunidade PlayBet"),
-            url: prev.url,
-            note: prev.note,
-          }));
-          setBonusOffer(prev => ({
-            enabled: prev.enabled,
-            title: prev.title || (isBonusCategory(cat) ? `Bônus ${gname || "exclusivo"}` : "Oferta oficial"),
-            code: prev.code,
-            note: prev.note || "Use no cadastro.",
-            cta_label: prev.cta_label || ctaForMode(resolvedMode, cat, gname),
-          }));
+          const linkTitle = titleForMode(resolvedMode, gname, pName);
+          const linkSubtitle = hype || adaptiveSubtitle(resolvedMode, gname, pName);
+          const linkCta = ctaForMode(resolvedMode, cat, gname);
+          const linkCommunity = gname ? `Comunidade ${gname}` : "Comunidade PlayBet";
+          const linkBonusTitle = isBonusCategory(cat) ? `Bônus ${gname || "exclusivo"}` : "Oferta oficial";
+
+          if (autoFlag) {
+            setCopy({ title: linkTitle, subtitle: linkSubtitle, cta_label: linkCta });
+            setCommunity(prev => ({ ...prev, label: linkCommunity }));
+            setBonusOffer(prev => ({
+              ...prev,
+              title: linkBonusTitle,
+              note: prev.note || "Use no cadastro.",
+              cta_label: linkCta,
+            }));
+          } else {
+            setCopy(prev => ({
+              title: prev.title || linkTitle,
+              subtitle: prev.subtitle || linkSubtitle,
+              cta_label: prev.cta_label || linkCta,
+            }));
+            setCommunity(prev => ({ ...prev, label: prev.label || linkCommunity }));
+            setBonusOffer(prev => ({
+              ...prev,
+              title: prev.title || linkBonusTitle,
+              note: prev.note || "Use no cadastro.",
+              cta_label: prev.cta_label || linkCta,
+            }));
+          }
         }
 
         if (platformId) {
