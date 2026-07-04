@@ -1711,6 +1711,90 @@ export type Database = {
         }
         Relationships: []
       }
+      odds_reconciliations: {
+        Row: {
+          created_at: string
+          divergent: boolean
+          gaps: Json
+          id: string
+          links_expired_event: number
+          links_without_bookmaker_url: number
+          links_without_material: number
+          links_without_screenshot: number
+          materials_failed: number
+          materials_ready: number
+          materials_total: number
+          notes: string | null
+          odds_avg_total_odd: number
+          odds_links_ids: Json
+          odds_links_multipla: number
+          odds_links_single: number
+          odds_links_sistema: number
+          odds_links_total: number
+          odds_selections_total: number
+          period_end: string
+          period_label: string
+          period_start: string | null
+          platform_id: string | null
+          run_at: string
+          severity: string
+        }
+        Insert: {
+          created_at?: string
+          divergent?: boolean
+          gaps?: Json
+          id?: string
+          links_expired_event?: number
+          links_without_bookmaker_url?: number
+          links_without_material?: number
+          links_without_screenshot?: number
+          materials_failed?: number
+          materials_ready?: number
+          materials_total?: number
+          notes?: string | null
+          odds_avg_total_odd?: number
+          odds_links_ids?: Json
+          odds_links_multipla?: number
+          odds_links_single?: number
+          odds_links_sistema?: number
+          odds_links_total?: number
+          odds_selections_total?: number
+          period_end: string
+          period_label: string
+          period_start?: string | null
+          platform_id?: string | null
+          run_at?: string
+          severity?: string
+        }
+        Update: {
+          created_at?: string
+          divergent?: boolean
+          gaps?: Json
+          id?: string
+          links_expired_event?: number
+          links_without_bookmaker_url?: number
+          links_without_material?: number
+          links_without_screenshot?: number
+          materials_failed?: number
+          materials_ready?: number
+          materials_total?: number
+          notes?: string | null
+          odds_avg_total_odd?: number
+          odds_links_ids?: Json
+          odds_links_multipla?: number
+          odds_links_single?: number
+          odds_links_sistema?: number
+          odds_links_total?: number
+          odds_selections_total?: number
+          period_end?: string
+          period_label?: string
+          period_start?: string | null
+          platform_id?: string | null
+          run_at?: string
+          severity?: string
+        }
+        Relationships: []
+      }
       panel_reconciliations: {
         Row: {
           brand_name: string | null
