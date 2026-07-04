@@ -70,6 +70,7 @@ import PortalFinanceiro from "./pages/portal/PortalFinanceiro";
 import PortalSaques from "./pages/portal/PortalSaques";
 import PortalPerfil from "./pages/portal/PortalPerfil";
 import Materiais from "./pages/Materiais";
+import MateriaisKits from "./pages/MateriaisKits";
 import GerenteHome from "./pages/gerente/GerenteHome";
 import GerenteMateriais from "./pages/gerente/GerenteMateriais";
 import GerenteRanking from "./pages/gerente/GerenteRanking";
@@ -134,6 +135,7 @@ function AdminRoutes() {
         <Route path="/tracking/links" element={<TrackingLinks />} />
         <Route path="/tracking/status" element={<TrackingStatus />} />
         <Route path="/materiais" element={<Materiais />} />
+        <Route path="/materiais/kits" element={<MateriaisKits />} />
         <Route path="/tracking/reconciliacao" element={<Reconciliacao />} />
         <Route path="/comercial" element={<ComercialPipeline />} />
         <Route path="/comercial/squads" element={<ComercialSquads />} />

@@ -187,7 +187,7 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
       </div>
 
       {/* Kit da marca inline — baixar sem abrir editor */}
-      <BrandKitInlineCard platformHints={rows.map(r => r.platform_name)} />
+      <BrandKitInlineCard />
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-2">
