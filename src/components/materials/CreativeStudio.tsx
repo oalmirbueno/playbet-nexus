@@ -549,8 +549,10 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
           style: effectiveStyle,
           layers,
           updatedAt: now,
+          ...(engineMode === "odds" ? { oddsPreset } : {}),
         },
       };
+
 
       if (existingRow?.id) {
         const { error } = await supabase
