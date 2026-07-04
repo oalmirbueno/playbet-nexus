@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, Search, ImageIcon, Wand2, Layers, Download, Pencil, Sigma, TrendingUp } from "lucide-react";
+import { Sparkles, Search, ImageIcon, Wand2, Layers, Pencil, Sigma, TrendingUp, Gamepad2, TicketCheck, AlertCircle } from "lucide-react";
 import { CreativeStudio, type CreativeStudioLink } from "@/components/materials/CreativeStudio";
 import { LinkMaterialEditor } from "@/components/materials/LinkMaterialEditor";
 import { BrandKitsSection } from "@/components/materials/BrandKitsSection";
@@ -61,7 +61,7 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
   const [editorLinkId, setEditorLinkId] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
-  const [view, setView] = useState<"artes" | "kits">("artes");
+  const [view, setView] = useState<"odds" | "games" | "kits">("odds");
 
 
 
@@ -210,37 +210,41 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
           <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
         </div>
         <p className="text-sm text-muted-foreground">
-          Cada link novo já vira material pronto — com jogo vira criativo; sem jogo vira kit da marca separado por plataforma.
+          Dois estúdios separados: odds/apostas esportivas sincronizadas pelo link e jogos com artes próprias.
         </p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard icon={<Layers className="w-4 h-4" />} label="Links elegíveis" value={rows.length} />
-        <StatCard icon={<ImageIcon className="w-4 h-4" />} label="Arte de jogo" value={withArt.length} accent />
-        <StatCard icon={<Sigma className="w-4 h-4" />} label="Apostas / Odds" value={oddsRows.length} />
+        <StatCard icon={<Sigma className="w-4 h-4" />} label="Estúdio Odds" value={oddsRows.length} accent />
+        <StatCard icon={<Gamepad2 className="w-4 h-4" />} label="Estúdio Jogos" value={withArt.length} />
         <StatCard icon={<Sparkles className="w-4 h-4" />} label="Em alta" value={rows.filter(r => r.hype_reason).length} />
       </div>
 
-      {/* Top view selector — Artes | Kits da marca */}
+      {/* Top view selector — Odds | Jogos | Kits */}
       <div className="flex items-center gap-1 p-1 rounded-lg border border-border/60 bg-secondary/30 w-fit">
-        <ViewChip active={view === "artes"} onClick={() => setView("artes")}>
-          <ImageIcon className="w-3.5 h-3.5 mr-1.5" /> Artes dos links
-          <span className="ml-1.5 text-[10px] opacity-70">({withArt.length + brandKits.length})</span>
+        <ViewChip active={view === "odds"} onClick={() => setView("odds")}>
+          <Sigma className="w-3.5 h-3.5 mr-1.5" /> Estúdio Odds
+          <span className="ml-1.5 text-[10px] opacity-70">({oddsRows.length})</span>
+        </ViewChip>
+        <ViewChip active={view === "games"} onClick={() => setView("games")}>
+          <Gamepad2 className="w-3.5 h-3.5 mr-1.5" /> Estúdio Jogos
+          <span className="ml-1.5 text-[10px] opacity-70">({withArt.length})</span>
         </ViewChip>
         <ViewChip active={view === "kits"} onClick={() => setView("kits")}>
           <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Kits da marca
         </ViewChip>
       </div>
 
-      {view === "artes" ? (
+      {view !== "kits" ? (
         <>
           {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <Input
-                placeholder="Buscar por jogo, plataforma…"
+                placeholder={view === "odds" ? "Buscar por odd, evento, plataforma…" : "Buscar por jogo, plataforma…"}
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 className="pl-9 h-9 text-sm"
@@ -267,15 +271,20 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
             <EmptyState />
           ) : (
             <>
-              {oddsRows.length > 0 && (
+              {view === "odds" && oddsRows.length > 0 && (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-md bg-primary/15 flex items-center justify-center">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-6 h-6 rounded-md bg-primary/15 flex items-center justify-center shrink-0">
                       <Sigma className="w-3.5 h-3.5 text-primary" />
                     </div>
                     <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                      Apostas compartilhadas · engine de odds ({oddsRows.length})
+                      Apostas esportivas · estúdio sincronizado ({oddsRows.length})
                     </p>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] bg-primary/5 border-primary/30">
+                      <TicketCheck className="w-3 h-3 mr-1" /> tracking_link_odds
+                    </Badge>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {oddsRows.map(r => (
@@ -286,11 +295,17 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
                   </div>
                 </div>
               )}
-              {withArt.length > 0 && (
+              {view === "odds" && oddsRows.length === 0 && <EmptyState mode="odds" />}
+              {view === "games" && withArt.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                    Arte de jogo ({withArt.length})
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-md bg-secondary flex items-center justify-center">
+                      <Gamepad2 className="w-3.5 h-3.5 text-muted-foreground" />
+                    </div>
+                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                      Jogos · estúdio de criativos ({withArt.length})
+                    </p>
+                  </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {withArt.map(r => (
                       <CreativeCard key={r.id} row={r} showInfluencer={showInfluencer}
@@ -300,20 +315,7 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
                   </div>
                 </div>
               )}
-              {brandKits.length > 0 && (
-                <div>
-                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
-                    Links sem jogo ({brandKits.length})
-                  </p>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                    {brandKits.map(r => (
-                      <CreativeCard key={r.id} row={r} showInfluencer={showInfluencer}
-                        onOpen={() => { setEditorLinkId(r.id); setEditorOpen(true); }}
-                        onEdit={() => { setEditorLinkId(r.id); setEditorOpen(true); }} muted />
-                    ))}
-                  </div>
-                </div>
-              )}
+              {view === "games" && withArt.length === 0 && <EmptyState mode="games" />}
             </>
           )}
         </>
@@ -321,7 +323,7 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
         <BrandKitsSection />
       )}
 
-      <CreativeStudio open={open} onOpenChange={setOpen} link={active} />
+      <CreativeStudio open={open} onOpenChange={setOpen} link={active} engine={active?.linkCategory === "odds_share" ? "odds" : "games"} lockEngine />
       <LinkMaterialEditor open={editorOpen} onOpenChange={setEditorOpen} trackingLinkId={editorLinkId} readOnly={readOnly} />
     </div>
   );
@@ -353,15 +355,17 @@ function OddsCard({
       tabIndex={0}
       onClick={onOpen}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
-      className="group relative overflow-hidden rounded-lg border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card hover:border-primary/70 hover:shadow-lg transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/60"
+      className="group relative overflow-hidden rounded-lg border border-primary/30 bg-card hover:border-primary/70 hover:shadow-lg transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/60"
     >
       <div className="aspect-square relative">
         {o?.screenshot_url ? (
           <img src={o.screenshot_url} alt="Screenshot da odd" className="absolute inset-0 w-full h-full object-cover opacity-70" loading="lazy" />
         ) : (
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,199,44,0.15),transparent_60%)]" />
+          <div className="absolute inset-0 bg-secondary/40 flex items-center justify-center">
+            <Sigma className="w-12 h-12 text-primary/30" />
+          </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/35 to-transparent" />
 
         <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground border-0 text-[10px] font-semibold">
           <Sigma className="w-2.5 h-2.5 mr-1" /> Aposta {type}
@@ -374,21 +378,26 @@ function OddsCard({
 
         <div className="absolute inset-x-0 bottom-0 p-3 pr-12 space-y-1 pointer-events-none">
           <div className="flex items-end gap-2">
-            <div className="text-primary font-black text-3xl tracking-tight leading-none drop-shadow">{odd}</div>
-            <div className="text-white/60 text-[10px] uppercase tracking-wider pb-1">odd total</div>
+          <div className="text-primary font-black text-3xl tracking-tight leading-none drop-shadow">{odd}</div>
+            <div className="text-foreground/60 text-[10px] uppercase tracking-wider pb-1">odd total</div>
           </div>
-          <div className="text-white font-semibold text-sm truncate drop-shadow">
+          <div className="text-foreground font-semibold text-sm truncate drop-shadow">
             {o?.event_label || row.game_name || "Aposta compartilhada"}
           </div>
-          <div className="text-white/70 text-[10px] uppercase tracking-wider truncate flex items-center gap-1.5">
+          <div className="text-foreground/70 text-[10px] uppercase tracking-wider truncate flex items-center gap-1.5">
             <TrendingUp className="w-2.5 h-2.5" />
             {legs} {legs === 1 ? "seleção" : "seleções"} · {row.platform_name || "Plataforma"}
             {showInfluencer && row.influencer_name ? ` · ${row.influencer_name}` : ""}
           </div>
+          {!o && (
+            <div className="inline-flex items-center gap-1 text-[10px] text-amber-500">
+              <AlertCircle className="w-3 h-3" /> aguardando odds do link
+            </div>
+          )}
         </div>
         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-primary/20 backdrop-blur-[2px] flex items-center justify-center pointer-events-none">
           <div className="bg-primary text-primary-foreground text-xs font-semibold px-3 py-2 rounded-md shadow-lg flex items-center gap-1.5">
-            <Wand2 className="w-3.5 h-3.5" /> Gerar material da odd
+            <Wand2 className="w-3.5 h-3.5" /> Abrir estúdio de odds
           </div>
         </div>
       </div>
@@ -497,17 +506,19 @@ function CreativeCard({
   );
 }
 
-function EmptyState() {
+function EmptyState({ mode = "all" }: { mode?: "all" | "odds" | "games" }) {
+  const isOdds = mode === "odds";
+  const isGames = mode === "games";
   return (
     <Card className="border-dashed border-border/60">
       <CardContent className="py-16 text-center space-y-3">
         <div className="w-14 h-14 mx-auto rounded-full bg-secondary/40 flex items-center justify-center">
-          <Wand2 className="w-6 h-6 text-muted-foreground" />
+          {isOdds ? <Sigma className="w-6 h-6 text-muted-foreground" /> : isGames ? <Gamepad2 className="w-6 h-6 text-muted-foreground" /> : <Wand2 className="w-6 h-6 text-muted-foreground" />}
         </div>
         <div>
-          <p className="text-sm font-medium">Nenhum link ainda</p>
+          <p className="text-sm font-medium">{isOdds ? "Nenhuma aposta esportiva ainda" : isGames ? "Nenhum jogo com arte ainda" : "Nenhum link ainda"}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Crie um tracking link — o material aparece aqui automaticamente.
+            {isOdds ? "Gere um link de aposta compartilhada — o estúdio puxa a odd automaticamente." : isGames ? "Vincule um jogo ao tracking link — o estúdio de jogos aparece aqui." : "Crie um tracking link — o material aparece aqui automaticamente."}
           </p>
         </div>
         <Button asChild variant="secondary" size="sm">
