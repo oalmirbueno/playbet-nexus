@@ -28,16 +28,16 @@ export default function DashboardExecutivo() {
   const { data: socios } = useSocios();
   const { consolidated } = useAutoConsolidation();
   const { summary: metricsSummary, isLoading: loadingMetrics } = useTrackingMetricsSummary("30d");
-  const { distribution: officialDistribution, trackingTotals } = useFinanceiroData({ period: "30d" });
+  const { distribution: officialDistribution } = useFinanceiroData({ period: "30d" });
 
   const liveMetrics = useMemo(() => ({
-    profitBase: trackingTotals.profitBase || metricsSummary.profitBase || 0,
-    revenue: trackingTotals.revShare || metricsSummary.revenue || 0,
-    cpa: trackingTotals.cpa || metricsSummary.cpa || 0,
+    profitBase: metricsSummary.profitBase || 0,
+    revenue: metricsSummary.revenue || 0,
+    cpa: metricsSummary.cpa || 0,
     clicks: metricsSummary.clicks || 0,
-    registrations: trackingTotals.registrations || metricsSummary.registrations || 0,
-    ftd: trackingTotals.ftd || metricsSummary.ftd || 0,
-  }), [metricsSummary, trackingTotals]);
+    registrations: metricsSummary.registrations || 0,
+    ftd: metricsSummary.ftd || 0,
+  }), [metricsSummary]);
 
   const totalPagosAsaas = useMemo(
     () => saques.filter((s: any) => s.status === "Pago via Asaas").reduce((a: number, s: any) => a + Number(s.valor || 0), 0),

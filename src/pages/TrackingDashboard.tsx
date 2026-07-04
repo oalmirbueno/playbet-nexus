@@ -25,7 +25,7 @@ import HistoricalImportDialog from "@/components/tracking/HistoricalImportDialog
 import { getMetricMoneyParts } from "@/lib/trackingMetrics";
 
 function fmtBRL(v: number) {
-  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+  return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 function fmtNum(v: number) {
   if (!Number.isFinite(v)) return "0";
@@ -193,7 +193,7 @@ export default function TrackingDashboard() {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, receita]) => ({
         date: date.slice(5),
-        receita: Math.round(receita),
+        receita,
       }));
   }, [metrics]);
 
