@@ -596,27 +596,25 @@ export default function InfluencerLanding() {
         if (!instance) { setState("not_found"); return; }
         if (!instance.is_active) { setState("inactive"); return; }
 
-        const { data: inf } = await supabase
-          .from("influencers")
-          .select("name")
-          .eq("id", instance.influencer_id)
-          .maybeSingle();
-
         setInstanceCtx({
           lp_mode: (instance as any).lp_mode,
           game_slugs: (instance as any).game_slugs,
           layout_config: (instance as any).layout_config,
           hype_copy: (instance as any).hype_copy,
         });
-        await Promise.all([
-          hydrateGameArts(lpBase.id, instance.id, (instance as any).game_slugs || [], {
-            game_slug: (instance as any).hype_copy?.game_slug,
-            game_name: (instance as any).hype_copy?.game_name,
-            game_icon_url: (instance as any).hype_copy?.game_icon_url,
-            source_tracking_link_id: (instance as any).source_tracking_link_id,
-          }),
-          finalize(instance.affiliate_link, instance.influencer_id, inf?.name || "", instance.id, instance.landing_page_id),
-        ]);
+        const infPromise = supabase
+          .from("influencers")
+          .select("name")
+          .eq("id", instance.influencer_id)
+          .maybeSingle();
+        const artsPromise = hydrateGameArts(lpBase.id, instance.id, (instance as any).game_slugs || [], {
+          game_slug: (instance as any).hype_copy?.game_slug,
+          game_name: (instance as any).hype_copy?.game_name,
+          game_icon_url: (instance as any).hype_copy?.game_icon_url,
+          source_tracking_link_id: (instance as any).source_tracking_link_id,
+        });
+        const [{ data: inf }] = await Promise.all([infPromise, artsPromise]);
+        await finalize(instance.affiliate_link, instance.influencer_id, inf?.name || "", instance.id, instance.landing_page_id);
         return;
       }
 
