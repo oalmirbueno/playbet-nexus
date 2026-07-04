@@ -329,10 +329,54 @@ interface GameArt {
   icon_url: string | null;
 }
 
+interface CachedLpSnapshot {
+  resolved: ResolvedLanding;
+  instanceCtx: InstanceContext | null;
+  gameArts: GameArt[];
+  storedAt: number;
+}
+
 const SUPABASE_URL = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_SUPABASE_URL ?? "";
 const SUPABASE_ANON_KEY = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
 const TRACKING_LINK_SELECT = "id, click_id_param_name, base_url, short_url, final_url, campanha_id, status, tracking_code, platform_account_id, landing_page_id, landing_page_instance_id, platform_accounts(platform_id, platforms(name, slug))";
 const LP_INSTANCE_SELECT = `id, slug, landing_page_id, affiliate_link, influencer_id, is_active, lp_mode, game_slugs, layout_config, hype_copy, source_tracking_link_id, source_tracking_link:tracking_links!landing_page_instances_source_tracking_link_id_fkey(${TRACKING_LINK_SELECT})`;
+const LP_CACHE_TTL_MS = 15 * 60 * 1000;
+
+function lpCacheKey(slug?: string | null) {
+  return `playbet_lp_snapshot:v2:${slug || "default"}`;
+}
+
+function readCachedLpSnapshot(slug?: string | null): CachedLpSnapshot | null {
+  if (!slug) return null;
+  try {
+    const raw = window.sessionStorage.getItem(lpCacheKey(slug)) || window.localStorage.getItem(lpCacheKey(slug));
+    if (!raw) return null;
+    const snapshot = JSON.parse(raw) as CachedLpSnapshot;
+    if (!snapshot?.resolved || Date.now() - snapshot.storedAt > LP_CACHE_TTL_MS) return null;
+    snapshot.resolved.click_id = getOrCreatePageClickId(slug);
+    return snapshot;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedLpSnapshot(slug: string | null | undefined, snapshot: Omit<CachedLpSnapshot, "storedAt">) {
+  if (!slug || !snapshot.resolved?.affiliate_link) return;
+  try {
+    const payload = JSON.stringify({ ...snapshot, storedAt: Date.now() });
+    window.sessionStorage.setItem(lpCacheKey(slug), payload);
+    window.localStorage.setItem(lpCacheKey(slug), payload);
+  } catch {}
+}
+
+function runWhenIdle(task: () => void) {
+  const w = window as typeof window & { requestIdleCallback?: (cb: () => void, options?: { timeout?: number }) => number };
+  if (w.requestIdleCallback) {
+    w.requestIdleCallback(task, { timeout: 1200 });
+    return;
+  }
+  window.setTimeout(task, 180);
+}
 
 function insertClickKeepAlive(payload: Record<string, unknown>) {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
@@ -447,31 +491,42 @@ function GameImage({
   );
 }
 
-function BrandLogoImage({ src, name }: { src?: string | null; name: string }) {
+function LogoSlot({ src, name, className = "" }: { src?: string | null; name: string; className?: string }) {
   const [failed, setFailed] = useState(false);
   if (!src || failed) {
-    return <span className="text-sm font-extrabold tracking-wide text-white">{name}</span>;
+    return (
+      <span className={`inline-flex h-7 w-[92px] shrink-0 items-center justify-center text-center text-xs font-extrabold tracking-wide text-white ${className}`}>
+        {name}
+      </span>
+    );
   }
   return (
-    <img
-      src={src}
-      alt={name}
-      className="h-7 w-auto object-contain"
-      loading="eager"
-      decoding="async"
-      onError={() => setFailed(true)}
-    />
+    <span className={`inline-flex h-7 w-[92px] shrink-0 items-center justify-center ${className}`}>
+      <img
+        src={src}
+        alt={name}
+        className="max-h-5 max-w-full object-contain"
+        loading="eager"
+        decoding="async"
+        onError={() => setFailed(true)}
+      />
+    </span>
   );
+}
+
+function BrandLogoImage({ src, name }: { src?: string | null; name: string }) {
+  return <LogoSlot src={src} name={name} />;
 }
 
 export default function InfluencerLanding() {
   const { slug: pathSlug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
   const slug = searchParams.get("ref") || pathSlug;
-  const [state, setState] = useState<LoadState>("loading");
-  const [resolved, setResolved] = useState<ResolvedLanding | null>(null);
-  const [instanceCtx, setInstanceCtx] = useState<InstanceContext | null>(null);
-  const [gameArts, setGameArts] = useState<GameArt[]>([]);
+  const cachedSnapshot = readCachedLpSnapshot(slug);
+  const [state, setState] = useState<LoadState>(() => cachedSnapshot ? "ready" : "loading");
+  const [resolved, setResolved] = useState<ResolvedLanding | null>(() => cachedSnapshot?.resolved ?? null);
+  const [instanceCtx, setInstanceCtx] = useState<InstanceContext | null>(() => cachedSnapshot?.instanceCtx ?? null);
+  const [gameArts, setGameArts] = useState<GameArt[]>(() => cachedSnapshot?.gameArts ?? []);
   const clickingRef = useRef(false);
 
   // Brand travada pela plataforma do link. Para LP pública, resolve de forma síncrona
@@ -523,6 +578,16 @@ export default function InfluencerLanding() {
 
   useEffect(() => {
     if (!slug) { setState("not_found"); return; }
+
+    const cached = readCachedLpSnapshot(slug);
+    if (cached) {
+      setResolved(cached.resolved);
+      setInstanceCtx(cached.instanceCtx);
+      setGameArts(cached.gameArts || []);
+      setState("ready");
+    } else {
+      setState("loading");
+    }
 
     const hydrateGameArts = async (
       landingPageId: string | null,
@@ -630,7 +695,7 @@ export default function InfluencerLanding() {
         const quickAffiliate = isPublicLpLoop(affiliateLink, hostname, slug) ? "" : affiliateLink;
         const quickPlatformSlug = quickCtx?.hype_copy?.platform_slug as string | null | undefined;
         const quickPlatformName = quickCtx?.hype_copy?.platform_name as string | null | undefined;
-        setResolved({
+        const quickResolved: ResolvedLanding = {
           affiliate_link: quickAffiliate,
           influencer_id: influencerId,
           campanha_id: searchParams.get("sub3"),
@@ -646,8 +711,10 @@ export default function InfluencerLanding() {
           platform_name: quickPlatformName || null,
           platform_slug: quickPlatformSlug || null,
           tracking_code: preferredTrackingCode,
-        });
+        };
+        setResolved(quickResolved);
         setState("ready");
+        writeCachedLpSnapshot(slug, { resolved: quickResolved, instanceCtx: quickCtx ?? null, gameArts: [] });
         return preferredTrackingCode;
       };
 
@@ -659,6 +726,7 @@ export default function InfluencerLanding() {
         landingPageId: string | null,
         quickCtx?: InstanceContext | null,
         sourceTrackingLink?: any,
+        snapshotGameArts: GameArt[] = [],
       ) => {
         const preferredTrackingCode = setFastResolved(affiliateLink, influencerId, influencerName, instanceId, landingPageId, quickCtx);
         const tl = sourceTrackingLink || await findTrackingLink(instanceId, influencerId, preferredTrackingCode, affiliateLink);
@@ -677,7 +745,7 @@ export default function InfluencerLanding() {
         const platformSlug = (tl as any)?.platform_accounts?.platforms?.slug || null;
         const brand = resolveBrand(platformSlug) || resolveBrand(platformName) || resolveBrand((quickCtx?.hype_copy?.platform_slug as string | null | undefined) || null);
 
-        setResolved({
+        const finalResolved: ResolvedLanding = {
           affiliate_link: outboundAffiliate,
           influencer_id: influencerId,
           campanha_id: tl?.campanha_id || searchParams.get("sub3"),
@@ -693,37 +761,41 @@ export default function InfluencerLanding() {
           platform_name: platformName,
           platform_slug: platformSlug,
           tracking_code: tl?.tracking_code || preferredTrackingCode,
-        });
+        };
+        setResolved(finalResolved);
+        writeCachedLpSnapshot(slug, { resolved: finalResolved, instanceCtx: quickCtx ?? null, gameArts: snapshotGameArts });
 
         // Register real public LP views only. Admin/editor previews must never
         // inflate production tracking.
         if (shouldSendLpView(slug, clickId)) {
-          supabase.from("tracking_events").insert({
-            canonical_event_name: "lp_view",
-            raw_event_name: "lp_view",
-            click_id: clickId,
-            influencer_id: influencerId,
-            landing_page_id: landingPageId,
-            landing_page_instance_id: instanceId,
-            tracking_link_id: tl?.id || null,
-            platform_account_id: platformAccountId,
-            platform_id: platformId,
-            campanha_id: tl?.campanha_id || searchParams.get("sub3"),
-            source_type: "landing_page",
-            event_timestamp: new Date().toISOString(),
-            raw_payload: {
-              slug,
-              hostname,
-              path: window.location.pathname,
-              search: window.location.search,
-              is_preview: searchParamsPreview(),
-              sub2: searchParams.get("sub2"),
-              sub3: searchParams.get("sub3"),
-              sub1: preferredTrackingCode,
-              user_agent: navigator.userAgent,
-              referrer: document.referrer || null,
-            },
-          }).then(() => {});
+          runWhenIdle(() => {
+            supabase.from("tracking_events").insert({
+              canonical_event_name: "lp_view",
+              raw_event_name: "lp_view",
+              click_id: clickId,
+              influencer_id: influencerId,
+              landing_page_id: landingPageId,
+              landing_page_instance_id: instanceId,
+              tracking_link_id: tl?.id || null,
+              platform_account_id: platformAccountId,
+              platform_id: platformId,
+              campanha_id: tl?.campanha_id || searchParams.get("sub3"),
+              source_type: "landing_page",
+              event_timestamp: new Date().toISOString(),
+              raw_payload: {
+                slug,
+                hostname,
+                path: window.location.pathname,
+                search: window.location.search,
+                is_preview: searchParamsPreview(),
+                sub2: searchParams.get("sub2"),
+                sub3: searchParams.get("sub3"),
+                sub1: preferredTrackingCode,
+                user_agent: navigator.userAgent,
+                referrer: document.referrer || null,
+              },
+            }).then(() => {});
+          });
         }
 
       };
@@ -754,15 +826,15 @@ export default function InfluencerLanding() {
             }]
           : [];
         setGameArts(fallbackArt);
-        if (fallbackArt.length > 0 || ((instance as any).game_slugs || []).length > 0) {
-          void hydrateGameArts(instance.landing_page_id, instance.id, (instance as any).game_slugs || [], {
+        if (!cached && (fallbackArt.length > 0 || ((instance as any).game_slugs || []).length > 0)) {
+          runWhenIdle(() => void hydrateGameArts(instance.landing_page_id, instance.id, (instance as any).game_slugs || [], {
             game_slug: (instance as any).hype_copy?.game_slug,
             game_name: (instance as any).hype_copy?.game_name,
             game_icon_url: (instance as any).hype_copy?.game_icon_url,
             source_tracking_link_id: (instance as any).source_tracking_link_id,
-          });
+          }));
         }
-        void finalize(instance.affiliate_link, instance.influencer_id, "", instance.id, instance.landing_page_id, nextCtx, (instance as any).source_tracking_link);
+        void finalize(instance.affiliate_link, instance.influencer_id, "", instance.id, instance.landing_page_id, nextCtx, (instance as any).source_tracking_link, fallbackArt);
         return true;
       };
 
@@ -803,15 +875,15 @@ export default function InfluencerLanding() {
             }]
           : [];
         setGameArts(fallbackArt);
-        if (fallbackArt.length > 0 || ((instance as any).game_slugs || []).length > 0) {
-          void hydrateGameArts(lpBase.id, instance.id, (instance as any).game_slugs || [], {
+        if (!cached && (fallbackArt.length > 0 || ((instance as any).game_slugs || []).length > 0)) {
+          runWhenIdle(() => void hydrateGameArts(lpBase.id, instance.id, (instance as any).game_slugs || [], {
             game_slug: (instance as any).hype_copy?.game_slug,
             game_name: (instance as any).hype_copy?.game_name,
             game_icon_url: (instance as any).hype_copy?.game_icon_url,
             source_tracking_link_id: (instance as any).source_tracking_link_id,
-          });
+          }));
         }
-        void finalize(instance.affiliate_link, instance.influencer_id, "", instance.id, instance.landing_page_id, nextCtx, (instance as any).source_tracking_link);
+        void finalize(instance.affiliate_link, instance.influencer_id, "", instance.id, instance.landing_page_id, nextCtx, (instance as any).source_tracking_link, fallbackArt);
         return;
       }
 
@@ -883,7 +955,7 @@ export default function InfluencerLanding() {
   if (state === "not_found") {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center text-white px-6 text-center">
-        <img src={logo} alt="PlayBet" className="h-8 w-auto mb-8 opacity-80" width={360} height={55} />
+        <LogoSlot src={logo} name="PlayBet" className="mb-8 opacity-80" />
         <h1 className="text-2xl font-bold mb-2">Página não encontrada</h1>
         <p className="text-sm text-gray-400 max-w-sm">O link que você acessou não está disponível ou não existe. Verifique o endereço e tente novamente.</p>
       </div>
@@ -894,7 +966,7 @@ export default function InfluencerLanding() {
   if (state === "no_domain") {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center text-white px-6 text-center">
-        <img src={logo} alt="PlayBet" className="h-8 w-auto mb-8 opacity-80" width={360} height={55} />
+        <LogoSlot src={logo} name="PlayBet" className="mb-8 opacity-80" />
         <h1 className="text-2xl font-bold mb-2">Domínio não configurado</h1>
         <p className="text-sm text-gray-400 max-w-sm">Este domínio ainda não foi vinculado a uma Landing Page no painel central da PlayBet.</p>
       </div>
@@ -905,7 +977,7 @@ export default function InfluencerLanding() {
   if (state === "inactive") {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center text-white px-6 text-center">
-        <img src={logo} alt="PlayBet" className="h-8 w-auto mb-8 opacity-80" width={360} height={55} />
+        <LogoSlot src={logo} name="PlayBet" className="mb-8 opacity-80" />
         <h1 className="text-2xl font-bold mb-2">Página temporariamente indisponível</h1>
         <p className="text-sm text-gray-400 max-w-sm">Este link está temporariamente fora do ar. Tente novamente mais tarde.</p>
       </div>
@@ -1034,8 +1106,8 @@ export default function InfluencerLanding() {
           </div>
           <div className="max-w-md mx-auto relative z-10 text-center">
             {isPlatformDirect && brandCtx?.brand ? (
-              <div className="mb-8 flex items-center justify-center gap-4">
-              <img src={logo} alt="PlayBet" className="h-7 w-auto opacity-95" loading="eager" decoding="async" width={360} height={55} />
+              <div className="mb-8 flex items-center justify-center gap-3">
+                <LogoSlot src={logo} name="PlayBet" className="opacity-95" />
                 <span className="text-white/30 text-lg font-light select-none">×</span>
                 <BrandLogoImage
                   src={brandCtx.brand.logos.wordmark || brandCtx.brand.logos.lockup || brandCtx.brand.logos.mark}
@@ -1043,7 +1115,7 @@ export default function InfluencerLanding() {
                 />
               </div>
             ) : (
-              <img src={logo} alt="PlayBet" className="h-7 w-auto mx-auto mb-8 opacity-95" loading="eager" decoding="async" width={360} height={55} />
+              <LogoSlot src={logo} name="PlayBet" className="mx-auto mb-8 opacity-95" />
             )}
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] backdrop-blur border border-emerald-400/20 text-emerald-300 text-[10px] font-semibold uppercase tracking-[0.14em] mb-6">
               <Zap size={11} /> {mode === "odds" ? "Em destaque" : isCatalogMode ? "Oportunidades" : isPlatformDirect ? "Parceria oficial" : "Oferta oficial"}
