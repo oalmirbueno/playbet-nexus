@@ -11,6 +11,15 @@ import { LinkMaterialEditor } from "@/components/materials/LinkMaterialEditor";
 import { BrandKitsSection } from "@/components/materials/BrandKitsSection";
 import { toast } from "sonner";
 
+interface OddsSummary {
+  bet_type: "single" | "multipla" | "sistema";
+  total_odd: number | null;
+  event_label: string | null;
+  legs_count: number;
+  bookmaker_share_url: string | null;
+  screenshot_url: string | null;
+}
+
 interface Row {
   id: string;
   game_name: string | null;
@@ -26,6 +35,7 @@ interface Row {
   created_at: string;
   platform_name?: string | null;
   influencer_name?: string | null;
+  odds?: OddsSummary | null;
 }
 
 interface Props {
