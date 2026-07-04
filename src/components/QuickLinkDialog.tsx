@@ -471,6 +471,26 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
               )}
             </div>
 
+            <div>
+              <Label className="text-xs font-medium">Tipo de link *</Label>
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                <button
+                  type="button"
+                  onClick={clearGameContext}
+                  className={`h-10 rounded-md border text-xs font-medium transition ${linkContext === LINK_CONTEXT_NO_GAME ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:text-foreground"}`}
+                >
+                  Sem jogo · LP limpa
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLinkContext(LINK_CONTEXT_GAME)}
+                  className={`h-10 rounded-md border text-xs font-medium transition ${linkContext === LINK_CONTEXT_GAME ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:text-foreground"}`}
+                >
+                  Com jogo
+                </button>
+              </div>
+            </div>
+
             {/* 4. PLATFORM (auto-detected) + ACCOUNT */}
             <div className="grid grid-cols-2 gap-2">
               <div>
