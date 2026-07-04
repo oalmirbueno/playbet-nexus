@@ -466,6 +466,35 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
     });
   };
 
+  const applyBrandOverride = async (nextKey: BrandKey | null) => {
+    setBrandOverrideKey(nextKey);
+    if (!instanceId) return;
+    try {
+      const currentLc = (instance?.layout_config as any) || {};
+      const nextLc = { ...currentLc, brand_override_key: nextKey, updated_at: new Date().toISOString() };
+      const { error } = await supabase
+        .from("landing_page_instances")
+        .update({ layout_config: nextLc } as any)
+        .eq("id", instanceId);
+      if (error) throw new Error(error.message);
+      setInstance((prev: any) => prev ? { ...prev, layout_config: nextLc } : prev);
+      setPreviewKey((k) => k + 1);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["landing_page_instances"] }),
+        queryClient.refetchQueries({ queryKey: ["landing_page_instances"], type: "active" }),
+      ]);
+      const kit = nextKey ? getBrandKit(nextKey) : null;
+      toast({
+        title: nextKey ? `Marca aplicada: ${kit?.name}` : "Override removido",
+        description: nextKey
+          ? "Logo, selo e paleta atualizados na LP pública."
+          : "Voltando a usar a marca detectada pela plataforma do link.",
+      });
+    } catch (e: any) {
+      toast({ title: "Não foi possível aplicar a marca", description: e?.message, variant: "destructive" });
+    }
+  };
+
   const handleSave = async () => {
     if (!instanceId) return;
     const requestedMode: LpMode = previewTab === "generated" && mode === "catalog" ? "single_game" : mode;
