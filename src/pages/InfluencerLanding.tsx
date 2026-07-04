@@ -353,6 +353,7 @@ function readCachedLpSnapshot(slug?: string | null): CachedLpSnapshot | null {
     if (!raw) return null;
     const snapshot = JSON.parse(raw) as CachedLpSnapshot;
     if (!snapshot?.resolved || Date.now() - snapshot.storedAt > LP_CACHE_TTL_MS) return null;
+    snapshot.resolved.click_id = getOrCreatePageClickId(slug);
     return snapshot;
   } catch {
     return null;
@@ -521,10 +522,11 @@ export default function InfluencerLanding() {
   const { slug: pathSlug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
   const slug = searchParams.get("ref") || pathSlug;
-  const [state, setState] = useState<LoadState>("loading");
-  const [resolved, setResolved] = useState<ResolvedLanding | null>(null);
-  const [instanceCtx, setInstanceCtx] = useState<InstanceContext | null>(null);
-  const [gameArts, setGameArts] = useState<GameArt[]>([]);
+  const cachedSnapshot = readCachedLpSnapshot(slug);
+  const [state, setState] = useState<LoadState>(() => cachedSnapshot ? "ready" : "loading");
+  const [resolved, setResolved] = useState<ResolvedLanding | null>(() => cachedSnapshot?.resolved ?? null);
+  const [instanceCtx, setInstanceCtx] = useState<InstanceContext | null>(() => cachedSnapshot?.instanceCtx ?? null);
+  const [gameArts, setGameArts] = useState<GameArt[]>(() => cachedSnapshot?.gameArts ?? []);
   const clickingRef = useRef(false);
 
   // Brand travada pela plataforma do link. Para LP pública, resolve de forma síncrona
@@ -576,6 +578,16 @@ export default function InfluencerLanding() {
 
   useEffect(() => {
     if (!slug) { setState("not_found"); return; }
+
+    const cached = readCachedLpSnapshot(slug);
+    if (cached) {
+      setResolved(cached.resolved);
+      setInstanceCtx(cached.instanceCtx);
+      setGameArts(cached.gameArts || []);
+      setState("ready");
+    } else {
+      setState("loading");
+    }
 
     const hydrateGameArts = async (
       landingPageId: string | null,
@@ -683,7 +695,7 @@ export default function InfluencerLanding() {
         const quickAffiliate = isPublicLpLoop(affiliateLink, hostname, slug) ? "" : affiliateLink;
         const quickPlatformSlug = quickCtx?.hype_copy?.platform_slug as string | null | undefined;
         const quickPlatformName = quickCtx?.hype_copy?.platform_name as string | null | undefined;
-        setResolved({
+        const quickResolved: ResolvedLanding = {
           affiliate_link: quickAffiliate,
           influencer_id: influencerId,
           campanha_id: searchParams.get("sub3"),
@@ -699,8 +711,10 @@ export default function InfluencerLanding() {
           platform_name: quickPlatformName || null,
           platform_slug: quickPlatformSlug || null,
           tracking_code: preferredTrackingCode,
-        });
+        };
+        setResolved(quickResolved);
         setState("ready");
+        writeCachedLpSnapshot(slug, { resolved: quickResolved, instanceCtx: quickCtx ?? null, gameArts: [] });
         return preferredTrackingCode;
       };
 
@@ -730,7 +744,7 @@ export default function InfluencerLanding() {
         const platformSlug = (tl as any)?.platform_accounts?.platforms?.slug || null;
         const brand = resolveBrand(platformSlug) || resolveBrand(platformName) || resolveBrand((quickCtx?.hype_copy?.platform_slug as string | null | undefined) || null);
 
-        setResolved({
+        const finalResolved: ResolvedLanding = {
           affiliate_link: outboundAffiliate,
           influencer_id: influencerId,
           campanha_id: tl?.campanha_id || searchParams.get("sub3"),
@@ -746,37 +760,41 @@ export default function InfluencerLanding() {
           platform_name: platformName,
           platform_slug: platformSlug,
           tracking_code: tl?.tracking_code || preferredTrackingCode,
-        });
+        };
+        setResolved(finalResolved);
+        writeCachedLpSnapshot(slug, { resolved: finalResolved, instanceCtx: quickCtx ?? null, gameArts });
 
         // Register real public LP views only. Admin/editor previews must never
         // inflate production tracking.
         if (shouldSendLpView(slug, clickId)) {
-          supabase.from("tracking_events").insert({
-            canonical_event_name: "lp_view",
-            raw_event_name: "lp_view",
-            click_id: clickId,
-            influencer_id: influencerId,
-            landing_page_id: landingPageId,
-            landing_page_instance_id: instanceId,
-            tracking_link_id: tl?.id || null,
-            platform_account_id: platformAccountId,
-            platform_id: platformId,
-            campanha_id: tl?.campanha_id || searchParams.get("sub3"),
-            source_type: "landing_page",
-            event_timestamp: new Date().toISOString(),
-            raw_payload: {
-              slug,
-              hostname,
-              path: window.location.pathname,
-              search: window.location.search,
-              is_preview: searchParamsPreview(),
-              sub2: searchParams.get("sub2"),
-              sub3: searchParams.get("sub3"),
-              sub1: preferredTrackingCode,
-              user_agent: navigator.userAgent,
-              referrer: document.referrer || null,
-            },
-          }).then(() => {});
+          runWhenIdle(() => {
+            supabase.from("tracking_events").insert({
+              canonical_event_name: "lp_view",
+              raw_event_name: "lp_view",
+              click_id: clickId,
+              influencer_id: influencerId,
+              landing_page_id: landingPageId,
+              landing_page_instance_id: instanceId,
+              tracking_link_id: tl?.id || null,
+              platform_account_id: platformAccountId,
+              platform_id: platformId,
+              campanha_id: tl?.campanha_id || searchParams.get("sub3"),
+              source_type: "landing_page",
+              event_timestamp: new Date().toISOString(),
+              raw_payload: {
+                slug,
+                hostname,
+                path: window.location.pathname,
+                search: window.location.search,
+                is_preview: searchParamsPreview(),
+                sub2: searchParams.get("sub2"),
+                sub3: searchParams.get("sub3"),
+                sub1: preferredTrackingCode,
+                user_agent: navigator.userAgent,
+                referrer: document.referrer || null,
+              },
+            }).then(() => {});
+          });
         }
 
       };
@@ -807,13 +825,13 @@ export default function InfluencerLanding() {
             }]
           : [];
         setGameArts(fallbackArt);
-        if (fallbackArt.length > 0 || ((instance as any).game_slugs || []).length > 0) {
-          void hydrateGameArts(instance.landing_page_id, instance.id, (instance as any).game_slugs || [], {
+        if (!cached && (fallbackArt.length > 0 || ((instance as any).game_slugs || []).length > 0)) {
+          runWhenIdle(() => void hydrateGameArts(instance.landing_page_id, instance.id, (instance as any).game_slugs || [], {
             game_slug: (instance as any).hype_copy?.game_slug,
             game_name: (instance as any).hype_copy?.game_name,
             game_icon_url: (instance as any).hype_copy?.game_icon_url,
             source_tracking_link_id: (instance as any).source_tracking_link_id,
-          });
+          }));
         }
         void finalize(instance.affiliate_link, instance.influencer_id, "", instance.id, instance.landing_page_id, nextCtx, (instance as any).source_tracking_link);
         return true;
@@ -856,13 +874,13 @@ export default function InfluencerLanding() {
             }]
           : [];
         setGameArts(fallbackArt);
-        if (fallbackArt.length > 0 || ((instance as any).game_slugs || []).length > 0) {
-          void hydrateGameArts(lpBase.id, instance.id, (instance as any).game_slugs || [], {
+        if (!cached && (fallbackArt.length > 0 || ((instance as any).game_slugs || []).length > 0)) {
+          runWhenIdle(() => void hydrateGameArts(lpBase.id, instance.id, (instance as any).game_slugs || [], {
             game_slug: (instance as any).hype_copy?.game_slug,
             game_name: (instance as any).hype_copy?.game_name,
             game_icon_url: (instance as any).hype_copy?.game_icon_url,
             source_tracking_link_id: (instance as any).source_tracking_link_id,
-          });
+          }));
         }
         void finalize(instance.affiliate_link, instance.influencer_id, "", instance.id, instance.landing_page_id, nextCtx, (instance as any).source_tracking_link);
         return;
