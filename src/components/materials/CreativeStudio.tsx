@@ -700,8 +700,16 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
             )}
             <div className="flex-1 min-w-0">
               <DialogTitle className="text-base flex items-center gap-2 truncate">
-                Estúdio · {link.gameName || "Sem título"}
-                {link.hypeReason && <Badge variant="secondary" className="text-[10px] font-normal"><Sparkles className="w-3 h-3 mr-1" />{link.hypeReason}</Badge>}
+                {isOddsShare ? "Estúdio · Aposta compartilhada" : `Estúdio · ${link.gameName || "Sem título"}`}
+                {isOddsShare && (
+                  <Badge className="text-[10px] font-semibold bg-primary text-primary-foreground border-0">
+                    Engine Odds
+                    {oddsCtx?.total_odd ? ` · ${oddsCtx.total_odd.toFixed(2).replace(".", ",")}x` : ""}
+                  </Badge>
+                )}
+                {!isOddsShare && link.hypeReason && (
+                  <Badge variant="secondary" className="text-[10px] font-normal"><Sparkles className="w-3 h-3 mr-1" />{link.hypeReason}</Badge>
+                )}
               </DialogTitle>
               <DialogDescription className="text-xs flex items-center gap-2 flex-wrap">
                 {link.platformName || "Plataforma"} · {size.label} · {size.w}×{size.h}px
