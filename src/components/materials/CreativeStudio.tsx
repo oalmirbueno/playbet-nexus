@@ -519,8 +519,9 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
     setSavingLayout(true);
     const now = Date.now();
     const effectiveStyle = engineMode === "odds" ? "odds_hype" : style === "odds_hype" ? "hype" : style;
-    const snapshot: SavedState = { layers, style: effectiveStyle, editorMode: true, updatedAt: now, cloudSaved: false, engine: engineMode };
+    const snapshot: SavedState = { layers, style: effectiveStyle, editorMode: true, updatedAt: now, cloudSaved: false, engine: engineMode, oddsPreset: engineMode === "odds" ? oddsPreset : undefined };
     saveState(link.id, format, engineMode, snapshot);
+
 
     try {
       const { data: existing, error: readError } = await supabase
