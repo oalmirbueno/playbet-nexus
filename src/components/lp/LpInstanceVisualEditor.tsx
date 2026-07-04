@@ -795,6 +795,49 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
+                    <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Marca aplicada</Label>
+                    {brandOverrideKey && (
+                      <button
+                        type="button"
+                        className="text-[10px] text-muted-foreground hover:text-foreground"
+                        onClick={() => setBrandOverrideKey(null)}
+                      >
+                        usar detecção
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {brandOptions.map((b) => {
+                      const active = (brandOverrideKey ?? brandKit?.key) === b.key;
+                      return (
+                        <button
+                          key={b.key}
+                          type="button"
+                          onClick={() => setBrandOverrideKey(b.key)}
+                          className={`flex items-center gap-1.5 px-2 h-7 rounded-md border text-[11px] transition ${
+                            active
+                              ? "border-primary bg-primary/10 text-foreground"
+                              : "border-border/60 text-muted-foreground hover:border-primary/60 hover:text-foreground"
+                          }`}
+                          title={`Aplicar identidade ${b.name}`}
+                        >
+                          <span className="w-2.5 h-2.5 rounded-sm" style={{ background: b.palette.primary }} />
+                          {b.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1 leading-snug">
+                    {brandOverrideKey
+                      ? `Override manual: logo, selo, paleta e tipografia da ${getBrandKit(brandOverrideKey).name}.`
+                      : brandKit
+                        ? `Detectada pela plataforma: ${brandKit.name}. Selo e paleta são aplicados automaticamente.`
+                        : "Sem marca detectada — escolha uma casa acima para aplicar logo, selo e cores."}
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
                     <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Copy</Label>
                     {link && (
                       <button
