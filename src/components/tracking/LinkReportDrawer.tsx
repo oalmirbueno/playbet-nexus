@@ -47,6 +47,23 @@ export default function LinkReportDrawer({ link, onClose, influencer, manager }:
     (async () => {
       setLoading(true);
       try {
+        // Panel-scraper rows são frequentemente órfãs (sem influencer/campaign/LP),
+        // mas carregam platform_account_id. Unimos todas as linhas que casam com
+        // qualquer chave do link para que cadastros, FTDs, depósitos e financeiro
+        // apareçam mesmo quando a atribuição fina falta.
+        const orParts: string[] = [];
+        if (link.platform_account_id) orParts.push(`platform_account_id.eq.${link.platform_account_id}`);
+        if (link.influencer_id) orParts.push(`influencer_id.eq.${link.influencer_id}`);
+        if (link.landing_page_instance_id) orParts.push(`landing_page_instance_id.eq.${link.landing_page_instance_id}`);
+        if (link.campanha_id) orParts.push(`campanha_id.eq.${link.campanha_id}`);
+
+        const metricsPromise = orParts.length
+          ? (supabase as any).from("tracking_metrics")
+              .select("*, platform_accounts(revshare_percent,cpa_value,cpa_baseline_deposit)")
+              .or("is_demo.is.false,is_demo.is.null")
+              .or(orParts.join(","))
+          : Promise.resolve({ data: [], error: null });
+
         const [clicksRes, eventsRes, metricsRes] = await Promise.all([
           supabase.from("clicks").select("id, clicked_at", { count: "exact" })
             .eq("tracking_link_id", link.id)
@@ -56,25 +73,26 @@ export default function LinkReportDrawer({ link, onClose, influencer, manager }:
             .eq("is_demo", false)
             .eq("is_duplicate", false)
             .limit(5000),
-          link.landing_page_instance_id
-            ? (supabase as any).from("tracking_metrics")
-                .select("*, platform_accounts(revshare_percent,cpa_value,cpa_baseline_deposit)")
-                .eq("landing_page_instance_id", link.landing_page_instance_id)
-                .eq("is_demo", false)
-            : Promise.resolve({ data: [], error: null }),
+          metricsPromise,
         ]);
 
         if (cancelled) return;
 
         const clicks = clicksRes.count ?? (clicksRes.data?.length ?? 0);
         const events = eventsRes.data ?? [];
-        const metrics = (metricsRes.data ?? []) as TrackingMetricRow[];
+        const seen = new Set<string>();
+        const metrics = ((metricsRes.data ?? []) as TrackingMetricRow[]).filter(m => {
+          if (seen.has(m.id)) return false;
+          seen.add(m.id);
+          return true;
+        });
 
         const lpViews = events.filter(e => e.canonical_event_name === "lp_view").length;
         const ctaClicks = events.filter(e => e.canonical_event_name === "click").length;
-        const registrations = events.filter(e => ["registration", "signup", "lead"].includes(e.canonical_event_name)).length;
+        let registrations = events.filter(e => ["registration", "signup", "lead"].includes(e.canonical_event_name)).length;
 
         let ftd = 0, depositsTotal = 0, depositsCount = 0, revShare = 0, cpa = 0, commissionTotal = 0;
+        let regsFromMetrics = 0;
         for (const m of metrics) {
           const parts = getMetricMoneyParts(m as any);
           revShare += parts.revShare;
@@ -83,9 +101,10 @@ export default function LinkReportDrawer({ link, onClose, influencer, manager }:
           ftd += Number(m.ftd || 0);
           depositsTotal += Number(m.depositos_total || (m as any).converted_amount || 0);
           depositsCount += Number(m.deposits_count || 0);
+          regsFromMetrics += Number(m.registros || 0);
         }
+        if (regsFromMetrics > registrations) registrations = regsFromMetrics;
 
-        // Fallback: derive FTD from events if no metrics rows exist
         if (ftd === 0) {
           ftd = events.filter(e => ["ftd", "first_deposit"].includes(e.canonical_event_name)).length;
         }
@@ -93,7 +112,6 @@ export default function LinkReportDrawer({ link, onClose, influencer, manager }:
         const avgTicket = ftd > 0 ? depositsTotal / ftd : 0;
         const ftdCr = lpViews > 0 ? ftd / lpViews : 0;
 
-        // Daily series (union clicks + ftd events, last 30 days)
         const byDay = new Map<string, { clicks: number; ftd: number }>();
         const isoDay = (t: string) => t.slice(0, 10);
         const cutoff = Date.now() - 30 * 24 * 3600 * 1000;
@@ -112,6 +130,14 @@ export default function LinkReportDrawer({ link, onClose, influencer, manager }:
           cur.ftd += 1;
           byDay.set(d, cur);
         });
+        for (const m of metrics) {
+          const f = Number(m.ftd || 0);
+          if (!f || !m.data_ref) continue;
+          if (new Date(m.data_ref).getTime() < cutoff) continue;
+          const cur = byDay.get(m.data_ref) || { clicks: 0, ftd: 0 };
+          cur.ftd += f;
+          byDay.set(m.data_ref, cur);
+        }
         const daily = Array.from(byDay.entries())
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([date, v]) => ({ date, ...v }));
@@ -130,7 +156,7 @@ export default function LinkReportDrawer({ link, onClose, influencer, manager }:
       }
     })();
     return () => { cancelled = true; };
-  }, [link?.id, link?.landing_page_instance_id]);
+  }, [link?.id, link?.landing_page_instance_id, link?.platform_account_id, link?.influencer_id, link?.campanha_id]);
 
   const commissions = useMemo(() => {
     const total = agg?.commissionTotal ?? 0;
