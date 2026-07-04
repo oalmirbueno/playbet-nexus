@@ -1356,7 +1356,7 @@ export default function InfluencerLanding() {
       {isSectionOn("footer") && (
         <footer className="border-t border-white/[0.04] py-6 px-6 flex flex-col items-center gap-3">
           {brandCtx?.brand?.seal ? (
-            <BrandFooterSeal brand={brandCtx.brand} variant="horizontal" tone="light" />
+            <BrandFooterSeal brand={brandCtx.brand} variant={footerSealVariant} tone={footerSealTone} />
           ) : null}
           <p className="text-[11px] text-gray-600 tracking-wide text-center">
             {brandCtx?.brand?.name ?? "PlayBet"} © {new Date().getFullYear()} · Jogue com responsabilidade · 18+
