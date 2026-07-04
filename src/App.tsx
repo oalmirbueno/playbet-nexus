@@ -135,6 +135,7 @@ function AdminRoutes() {
         <Route path="/tracking/links" element={<TrackingLinks />} />
         <Route path="/tracking/status" element={<TrackingStatus />} />
         <Route path="/materiais" element={<Materiais />} />
+        <Route path="/materiais/kits" element={<MateriaisKits />} />
         <Route path="/tracking/reconciliacao" element={<Reconciliacao />} />
         <Route path="/comercial" element={<ComercialPipeline />} />
         <Route path="/comercial/squads" element={<ComercialSquads />} />
