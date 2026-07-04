@@ -7,6 +7,7 @@ export type LinkCategory =
   | "casino"
   | "sports"
   | "odds"
+  | "odds_share"
   | "live"
   | "crash"
   | "slots"
@@ -237,6 +238,7 @@ export const CATEGORY_LABELS: Record<LinkCategory, string> = {
   casino: "Cassino",
   sports: "Esportes",
   odds: "Odds / Super odds",
+  odds_share: "Aposta compartilhada",
   live: "Cassino ao vivo",
   crash: "Crash",
   slots: "Slots",
