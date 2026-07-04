@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
     }
 
     const mode = detectMode(link.link_category, link.game_slug, extraGameSlugs);
-    const allSlugs = mode === "platform_direct" ? [] : [link.game_slug, ...extraGameSlugs].filter(Boolean) as string[];
+    const allSlugs = (mode === "platform_direct" || mode === "odds") ? [] : [link.game_slug, ...extraGameSlugs].filter(Boolean) as string[];
 
     // Enrich with real game metadata from platform_hyped_games
     let gameIds: string[] = [];
@@ -79,22 +79,64 @@ Deno.serve(async (req) => {
       gameIds = (games ?? []).map((g: any) => g.id);
     }
 
+    // Puxa o bilhete de odds ligado ao link (mesmo padrão do materials-autogenerate)
+    // para popular hero, subtitle e smart_odds da LP automaticamente.
+    let oddsTicket: any = null;
+    if (mode === "odds") {
+      const { data: odds } = await supa
+        .from("tracking_link_odds")
+        .select("bet_type,total_odd,event_label,bookmaker_share_url,screenshot_url,selections,stake_suggested,event_starts_at")
+        .eq("tracking_link_id", trackingLinkId)
+        .maybeSingle();
+      oddsTicket = odds ?? null;
+    }
+
     const layoutConfig = {
       ...defaultLayoutConfig(mode),
       updated_at: new Date().toISOString(),
     };
 
-    const finalHypeCopy = {
-      title: hypeCopy.title || null,
-      subtitle: hypeCopy.subtitle || link.hype_reason || null,
-      cta_label: hypeCopy.cta_label || (mode === "platform_direct" ? "Acessar plataforma" : mode === "odds" ? "Apostar agora" : "Jogar agora"),
-      game_slug: mode === "platform_direct" ? null : link.game_slug || null,
-      game_name: mode === "platform_direct" ? null : link.game_name || null,
-      game_icon_url: mode === "platform_direct" ? null : link.game_icon_url || null,
-      bonus_offer: { enabled: mode !== "platform_direct" },
+    const oddsTitle = oddsTicket?.event_label
+      ? `Bilhete ${oddsTicket.bet_type === "multipla" ? "múltipla" : oddsTicket.bet_type === "sistema" ? "sistema" : "simples"} · ${oddsTicket.event_label}`
+      : "Bilhete compartilhado";
+    const oddsSubtitle = oddsTicket?.total_odd
+      ? `Odd total ${Number(oddsTicket.total_odd).toFixed(2)}${oddsTicket?.selections?.length ? ` · ${oddsTicket.selections.length} seleção(ões)` : ""}`
+      : (link.hype_reason || "Copia e cola direto na casa.");
+
+    const smartOddsFromTicket = Array.isArray(oddsTicket?.selections)
+      ? oddsTicket.selections.map((s: any) => ({
+          event_name: String(s.event ?? oddsTicket?.event_label ?? ""),
+          market_name: String(s.market ?? ""),
+          odd_label: s.odd ? String(s.odd) : null,
+          badge: String(s.pick ?? ""),
+        }))
+      : [];
+
+    const finalHypeCopy: any = {
+      title: hypeCopy.title || (mode === "odds" ? oddsTitle : null),
+      subtitle: hypeCopy.subtitle || (mode === "odds" ? oddsSubtitle : link.hype_reason || null),
+      cta_label: hypeCopy.cta_label || (mode === "platform_direct" ? "Acessar plataforma" : mode === "odds" ? "Copiar e apostar" : "Jogar agora"),
+      game_slug: (mode === "platform_direct" || mode === "odds") ? null : link.game_slug || null,
+      game_name: (mode === "platform_direct" || mode === "odds") ? null : link.game_name || null,
+      game_icon_url: (mode === "platform_direct" || mode === "odds") ? null : link.game_icon_url || null,
+      bonus_offer: { enabled: mode !== "platform_direct" && mode !== "odds" },
       community_cta: { enabled: mode !== "platform_direct" },
       auto: true,
     };
+    if (mode === "odds" && oddsTicket) {
+      finalHypeCopy.odds_ticket = {
+        bet_type: oddsTicket.bet_type ?? null,
+        total_odd: oddsTicket.total_odd ?? null,
+        stake_suggested: oddsTicket.stake_suggested ?? null,
+        event_label: oddsTicket.event_label ?? null,
+        event_starts_at: oddsTicket.event_starts_at ?? null,
+        bookmaker_share_url: oddsTicket.bookmaker_share_url ?? null,
+        screenshot_url: oddsTicket.screenshot_url ?? null,
+        selections: oddsTicket.selections ?? [],
+      };
+      if (smartOddsFromTicket.length) finalHypeCopy.smart_odds = smartOddsFromTicket;
+      if (oddsTicket.screenshot_url) finalHypeCopy.hero_image_url = oddsTicket.screenshot_url;
+    }
 
     // Create or update the LP instance
     let instanceId = link.landing_page_instance_id;
