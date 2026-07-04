@@ -120,7 +120,9 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
   const [savingLayout, setSavingLayout] = useState(false);
   const [oddsCtx, setOddsCtx] = useState<OddsContext | null>(null);
   const [oddsFetched, setOddsFetched] = useState(false);
+  const [oddsPreset, setOddsPreset] = useState<OddsPreset>("bilhete");
   const stageRef = useRef<HTMLDivElement>(null);
+
 
   const autoOddsShare = (link?.linkCategory ?? "").toLowerCase() === "odds_share";
   // Modo do estúdio: 'games' (arte tradicional de jogo) vs 'odds' (aposta compartilhada).
