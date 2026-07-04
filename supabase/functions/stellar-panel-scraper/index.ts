@@ -378,15 +378,17 @@ async function resolveTrafficLink(
   platformAccountId: string | null,
   dateStart: string,
   dateEnd: string,
+  expectedVisits = 0,
 ): Promise<any | null> {
   if (!platformAccountId) return null;
 
   const { data: events } = await run.supabase
     .from("tracking_events")
-    .select("tracking_link_id,status")
+    .select("tracking_link_id,status,canonical_event_name")
     .eq("platform_account_id", platformAccountId)
     .eq("is_demo", false)
     .eq("is_duplicate", false)
+    .eq("canonical_event_name", "click")
     .not("tracking_link_id", "is", null)
     .gte("event_timestamp", `${dateStart}T00:00:00.000Z`)
     .lt("event_timestamp", `${dayEndExclusive(dateEnd)}T00:00:00.000Z`)
@@ -402,14 +404,37 @@ async function resolveTrafficLink(
   const ranked = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
   if (!ranked.length || (ranked[1] && ranked[1][1] === ranked[0][1])) return null;
 
+  const top = ranked[0];
+  const second = ranked[1]?.[1] ?? 0;
+  if (expectedVisits > 0) {
+    const tolerance = Math.max(1, Math.ceil(expectedVisits * 0.1));
+    const exactMatches = ranked.filter(([, count]) => Math.abs(count - expectedVisits) <= tolerance);
+    const dominantMatch = top[1] >= expectedVisits * 0.8 && second <= Math.max(1, expectedVisits * 0.15);
+    if (exactMatches.length !== 1 && !dominantMatch) {
+      log(run, "attribution/traffic_ambiguous", {
+        platformAccountId,
+        expectedVisits,
+        ranked: ranked.slice(0, 5).map(([id, count]) => ({ id, count })),
+      });
+      return null;
+    }
+  } else if (top[1] < 3 || (second > 0 && top[1] < second * 3)) {
+    log(run, "attribution/traffic_ambiguous", {
+      platformAccountId,
+      expectedVisits,
+      ranked: ranked.slice(0, 5).map(([id, count]) => ({ id, count })),
+    });
+    return null;
+  }
+
   const { data: link } = await run.supabase
     .from("tracking_links")
     .select("id, tracking_code, influencer_id, campanha_id, platform_account_id, landing_page_id, landing_page_instance_id")
-    .eq("id", ranked[0][0])
+    .eq("id", top[0])
     .eq("is_demo", false)
     .maybeSingle();
 
-  if (link) log(run, "attribution/traffic_link", { platformAccountId, tracking_code: link.tracking_code, events: ranked[0][1] });
+  if (link) log(run, "attribution/traffic_link", { platformAccountId, tracking_code: link.tracking_code, clicks: top[1], expectedVisits });
   return link ?? null;
 }
 
@@ -449,7 +474,7 @@ async function persist(
     if (!link) {
       const trafficStart = isRollingAggregatePeriod(rawPeriod) ? dateStart : dateRef;
       const trafficEnd = isRollingAggregatePeriod(rawPeriod) ? fallbackDate : dateRef;
-      link = await resolveTrafficLink(run, platformAccountId, trafficStart, trafficEnd);
+      link = await resolveTrafficLink(run, platformAccountId, trafficStart, trafficEnd, Number(it.visits ?? 0) || 0);
     }
     const accountFinancial = platformAccountId
       ? (await run.supabase
