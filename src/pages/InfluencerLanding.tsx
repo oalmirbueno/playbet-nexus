@@ -663,17 +663,23 @@ export default function InfluencerLanding() {
     })();
   }, [slug]);
 
-  const handleCTA = useCallback(async () => {
+  const handleCTA = useCallback(() => {
     if (!resolved?.affiliate_link || clicking) return;
     setClicking(true);
 
-    // Insert CTA click into legacy `clicks` table - DB trigger
-    // `sync_click_to_tracking_event` then creates the canonical
-    // tracking_event with platform_id resolved from the tracking_link,
-    // so the click counts in tracking_metrics for the right casa.
-    try {
-      if (!isInternalPreviewContext()) {
-        await supabase.from("clicks").insert({
+    // Build final URL first so redirect is instantaneous.
+    let finalUrl = injectClickId(resolved.affiliate_link, resolved.click_id_param, resolved.click_id);
+    const fwd2 = searchParams.get("sub2") || resolved.influencer_id;
+    const fwd3 = searchParams.get("sub3") || resolved.campanha_id;
+    if (fwd2) finalUrl = injectClickId(finalUrl, "sub2", fwd2);
+    if (fwd3) finalUrl = injectClickId(finalUrl, "sub3", fwd3);
+
+    // Fire-and-forget: never block the redirect on the click insert.
+    // The DB trigger `sync_click_to_tracking_event` will create the canonical
+    // tracking_event server-side, so attribution stays intact.
+    if (!isInternalPreviewContext()) {
+      try {
+        supabase.from("clicks").insert({
           click_id: resolved.click_id,
           influencer_id: resolved.influencer_id,
           landing_page_id: resolved.landing_page_id,
@@ -684,22 +690,14 @@ export default function InfluencerLanding() {
           referrer: document.referrer || null,
           route: window.location.pathname + window.location.search,
           source: "cta_click",
-        } as any);
+        } as any).then(() => {}, () => {});
+      } catch {
+        // ignore — redirect must never wait on tracking
       }
-    } catch {
-      // Don't block redirect
     }
 
-
-    // Inject click_id (sub1) into affiliate link, and forward sub2/sub3 from
-    // the LP's incoming URL so attribution survives the redirect.
-    let finalUrl = injectClickId(resolved.affiliate_link, resolved.click_id_param, resolved.click_id);
-    const fwd2 = searchParams.get("sub2") || resolved.influencer_id;
-    const fwd3 = searchParams.get("sub3") || resolved.campanha_id;
-    if (fwd2) finalUrl = injectClickId(finalUrl, "sub2", fwd2);
-    if (fwd3) finalUrl = injectClickId(finalUrl, "sub3", fwd3);
     window.location.href = finalUrl;
-  }, [resolved, clicking, slug, searchParams]);
+  }, [resolved, clicking, searchParams]);
 
   // ── Loading ──
   if (state === "loading") {
