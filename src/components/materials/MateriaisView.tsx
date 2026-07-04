@@ -127,10 +127,9 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
           }));
         }
 
-        // Odds lookup — enriquece links de aposta compartilhada
-        const oddsIds = rowsData
-          .filter(r => (r.link_category ?? "").toLowerCase() === "odds_share")
-          .map(r => r.id);
+        // Odds lookup — enriquece por tracking_link_odds, mesmo para links legados
+        // que foram criados antes de link_category = odds_share existir.
+        const oddsIds = rowsData.map(r => r.id);
         if (oddsIds.length) {
           const { data: oddsRows } = await (supabase as any)
             .from("tracking_link_odds")
@@ -196,7 +195,7 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
     });
   }, [rows, q, platformFilter]);
 
-  const isOdds = (r: Row) => (r.link_category ?? "").toLowerCase() === "odds_share";
+  const isOdds = (r: Row) => (r.link_category ?? "").toLowerCase() === "odds_share" || !!r.odds;
   const oddsRows = filtered.filter(isOdds);
   const withArt = filtered.filter(r => !isOdds(r) && r.game_icon_url);
   const brandKits = filtered.filter(r => !isOdds(r) && !r.game_icon_url);
@@ -289,7 +288,7 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                     {oddsRows.map(r => (
                       <OddsCard key={r.id} row={r} showInfluencer={showInfluencer}
-                        onOpen={() => { setActive(toStudioLink(r)); setOpen(true); }}
+                        onOpen={() => { setActive(toStudioLink(r, "odds_share")); setOpen(true); }}
                         onEdit={() => { setEditorLinkId(r.id); setEditorOpen(true); }} />
                     ))}
                   </div>
@@ -329,16 +328,17 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
   );
 }
 
-function toStudioLink(r: Row): CreativeStudioLink {
+function toStudioLink(r: Row, categoryOverride?: string): CreativeStudioLink {
+  const oddsMode = (categoryOverride ?? r.link_category) === "odds_share";
   return {
     id: r.id,
     influencerId: r.influencer_id,
-    gameName: r.game_name,
-    gameIconUrl: r.game_icon_url,
+    gameName: oddsMode ? (r.odds?.event_label ?? null) : r.game_name,
+    gameIconUrl: oddsMode ? null : r.game_icon_url,
     platformName: r.platform_name,
     hypeReason: r.hype_reason,
     shortUrl: r.short_url,
-    linkCategory: r.link_category,
+    linkCategory: categoryOverride ?? r.link_category,
   };
 }
 

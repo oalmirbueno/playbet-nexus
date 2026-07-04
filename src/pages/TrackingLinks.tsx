@@ -195,6 +195,7 @@ export default function TrackingLinks() {
             stake_suggested: __odds.stake_suggested,
             selections: __odds.selections ?? [],
             bookmaker_share_url: __odds.bookmaker_share_url || null,
+            screenshot_url: __odds.screenshot_url || null,
             event_label: __odds.event_label || null,
             event_starts_at: __odds.event_starts_at ? new Date(__odds.event_starts_at).toISOString() : null,
             notes: __odds.notes || null,

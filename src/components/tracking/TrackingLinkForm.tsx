@@ -11,7 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { syncLinkAssetsBatch } from "@/lib/linkAssets";
-import { detectFromUrl, CATEGORY_LABELS, inferAttributionParam, type LinkCategory } from "@/lib/linkIntelligence";
+import { detectFromUrl, CATEGORY_LABELS, extractOddsDraftFromInput, inferAttributionParam, splitAffiliateAndOddsUrls, type LinkCategory } from "@/lib/linkIntelligence";
 import GameArtwork from "@/components/tracking/GameArtwork";
 import { detectLpMode, defaultLayoutConfig, LP_MODE_LABELS, LP_MODE_HINTS, type LpMode } from "@/lib/lpMode";
 import OddsSharePanel, { emptyOddsValue, type OddsPanelValue } from "@/components/tracking/OddsSharePanel";
@@ -149,6 +149,29 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
   const [odds, setOdds] = useState<OddsPanelValue>(emptyOddsValue);
   const isOddsShare = form.link_category === "odds_share";
 
+  const handleAffiliateInput = (value: string) => {
+    const split = splitAffiliateAndOddsUrls(value);
+    const draft = extractOddsDraftFromInput(value);
+    setForm(p => ({
+      ...p,
+      base_url: split.affiliateUrl || value,
+      ...(draft.isSharedOdds ? {
+        link_category: "odds_share",
+        game_slug: "",
+        game_name: "",
+        game_icon_url: "",
+      } : {}),
+    }));
+    if (draft.isSharedOdds) {
+      setOdds(prev => ({
+        ...prev,
+        bookmaker_share_url: draft.bookmaker_share_url || prev.bookmaker_share_url,
+        total_odd: draft.total_odd ?? prev.total_odd,
+        event_label: draft.event_label || prev.event_label,
+      }));
+    }
+  };
+
   // Load existing odds when editing a link that already has them
   useEffect(() => {
     let cancelled = false;
@@ -163,6 +186,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
           stake_suggested: row.stake_suggested,
           selections: (row.selections && row.selections.length ? row.selections : emptyOddsValue.selections),
           bookmaker_share_url: row.bookmaker_share_url ?? "",
+          screenshot_url: row.screenshot_url ?? "",
           event_label: row.event_label ?? "",
           event_starts_at: row.event_starts_at ? row.event_starts_at.slice(0, 16) : "",
           notes: row.notes ?? "",
@@ -209,12 +233,36 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
     setForm(p => {
       const next = { ...p };
       let changed = false;
+      if (detection.isSharedOdds || detection.category === "odds_share") {
+        if (p.link_category !== "odds_share") { next.link_category = "odds_share"; changed = true; }
+        if (p.game_slug || p.game_name || p.game_icon_url) {
+          next.game_slug = "";
+          next.game_name = "";
+          next.game_icon_url = "";
+          changed = true;
+        }
+        return changed ? next : p;
+      }
       if (!p.link_category && detection.category) { next.link_category = detection.category; changed = true; }
-      if (!p.game_slug && detection.gameSlug) { next.game_slug = detection.gameSlug; changed = true; }
-      if (!p.game_name && detection.gameName) { next.game_name = detection.gameName; changed = true; }
+      if (!["odds", "sports"].includes(detection.category || "")) {
+        if (!p.game_slug && detection.gameSlug) { next.game_slug = detection.gameSlug; changed = true; }
+        if (!p.game_name && detection.gameName) { next.game_name = detection.gameName; changed = true; }
+      }
       return changed ? next : p;
     });
-  }, [detection.category, detection.gameSlug, detection.gameName]);
+  }, [detection.category, detection.gameSlug, detection.gameName, detection.isSharedOdds]);
+
+  useEffect(() => {
+    if (!form.base_url) return;
+    const draft = extractOddsDraftFromInput([form.base_url, odds.bookmaker_share_url].filter(Boolean).join(" "));
+    if (!draft.isSharedOdds && form.link_category !== "odds_share") return;
+    setOdds(prev => ({
+      ...prev,
+      bookmaker_share_url: prev.bookmaker_share_url || draft.bookmaker_share_url || "",
+      total_odd: prev.total_odd ?? draft.total_odd,
+      event_label: prev.event_label || draft.event_label || "",
+    }));
+  }, [form.base_url, form.link_category]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Resolve the "current" platform id (detected or from selected account)
   const currentAccount = (accounts as any[]).find((a: any) => a.id === form.platform_account_id);
@@ -271,7 +319,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
       game_slug: g.game_slug,
       game_name: g.game_name,
       game_icon_url: g.icon_url || "",
-      link_category: g.category || p.link_category,
+      link_category: g.category || (p.link_category === "odds_share" ? "slots" : p.link_category),
       hype_reason: g.hype_reason || p.hype_reason,
     }));
     toast({ title: `Aplicado: ${g.game_name}`, description: g.hype_reason || "Jogo em alta selecionado." });
@@ -527,9 +575,12 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
     }
 
     // Sem LP: drop instance/LP refs so the saved tracking_link reflects mode.
+    const cleanForm = isOddsShare
+      ? { ...form, game_slug: "", game_name: "", game_icon_url: "", link_category: "odds_share" }
+      : form;
     const payload = useLp
-      ? form
-      : { ...form, landing_page_id: "", landing_page_instance_id: "" };
+      ? cleanForm
+      : { ...cleanForm, landing_page_id: "", landing_page_instance_id: "" };
     // Anexa os dados de odds em __odds para o handleSave da página persistir na tabela.
     onSave({ ...payload, final_url: finalUrl, __odds: isOddsShare ? { ...odds, platform_id: currentPlatformId } : null } as any);
   };
@@ -701,8 +752,8 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
               <Input
                 className="h-9 text-xs font-mono"
                 value={form.base_url}
-                onChange={e => set("base_url", e.target.value)}
-                placeholder="Cole o link bruto da plataforma"
+                onChange={e => handleAffiliateInput(e.target.value)}
+                placeholder="Cole link afiliado ou afiliado + bilhete de odds"
               />
 
               {/* Detecção inteligente */}
@@ -729,6 +780,21 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
+                    <div className="col-span-2">
+                      <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Engine do material</Label>
+                      <div className="grid grid-cols-2 gap-1 mt-1 rounded-md border border-border/70 bg-background/50 p-1">
+                        <button
+                          type="button"
+                          onClick={() => setForm(p => ({ ...p, link_category: "odds_share", game_slug: "", game_name: "", game_icon_url: "" }))}
+                          className={`h-8 rounded text-xs font-medium transition ${isOddsShare ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                        >Odds / aposta esportiva</button>
+                        <button
+                          type="button"
+                          onClick={() => setForm(p => ({ ...p, link_category: p.link_category === "odds_share" ? "slots" : p.link_category }))}
+                          className={`h-8 rounded text-xs font-medium transition ${!isOddsShare ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                        >Jogos / cassino</button>
+                      </div>
+                    </div>
                     <div>
                       <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Tipo</Label>
                       <Select value={form.link_category || "none"} onValueChange={v => set("link_category", v === "none" ? "" : v)}>
@@ -742,12 +808,14 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                       </Select>
                     </div>
                     <div>
-                      <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Jogo / evento</Label>
+                      <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">{isOddsShare ? "Evento da aposta" : "Jogo"}</Label>
                       <Input
                         className="h-8 text-xs"
-                        value={form.game_name}
-                        onChange={e => setForm(p => ({ ...p, game_name: e.target.value, game_slug: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-") }))}
-                        placeholder="Fortune Tiger, Aviator…"
+                        value={isOddsShare ? odds.event_label : form.game_name}
+                        onChange={e => isOddsShare
+                          ? setOdds(p => ({ ...p, event_label: e.target.value }))
+                          : setForm(p => ({ ...p, game_name: e.target.value, game_slug: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-") }))}
+                        placeholder={isOddsShare ? "Ex: Flamengo x Palmeiras" : "Fortune Tiger, Aviator…"}
                       />
                     </div>
                   </div>
@@ -758,7 +826,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                       className="h-8 text-xs"
                       value={form.hype_reason}
                       onChange={e => set("hype_reason", e.target.value)}
-                      placeholder="Ex: Fortune Tiger está pagando muito essa semana"
+                      placeholder={isOddsShare ? "Ex: Múltipla de futebol com odd alta" : "Ex: Fortune Tiger está pagando muito essa semana"}
                     />
                   </div>
                 </div>
@@ -769,7 +837,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
               )}
 
 
-              {currentPlatformId && (
+              {currentPlatformId && !isOddsShare && (
                 <div className="rounded-md border border-orange-500/25 bg-orange-500/5 p-2.5 space-y-2">
                   <div className="flex items-center gap-1.5 text-[10px] flex-wrap">
                     <Flame size={11} className="text-orange-400" />

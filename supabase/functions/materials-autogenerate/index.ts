@@ -63,18 +63,17 @@ Deno.serve(async (req) => {
       platformId = pa?.platform_id ?? null;
     }
 
-    const isOddsShare = String(link.link_category || "").toLowerCase() === "odds_share";
-
-    // Enriquece meta com contexto da aposta quando for odds_share.
+    // Enriquece meta com contexto da aposta. A presença em tracking_link_odds é
+    // sinal canônico da engine Odds, mesmo para links legados sem link_category.
     let oddsMeta: any = null;
-    if (isOddsShare) {
-      const { data: odds } = await supa
-        .from("tracking_link_odds")
-        .select("bet_type,total_odd,event_label,bookmaker_share_url,screenshot_url,selections")
-        .eq("tracking_link_id", trackingLinkId)
-        .maybeSingle();
-      if (odds) oddsMeta = odds;
-    }
+    const { data: odds } = await supa
+      .from("tracking_link_odds")
+      .select("bet_type,total_odd,event_label,bookmaker_share_url,screenshot_url,selections")
+      .eq("tracking_link_id", trackingLinkId)
+      .maybeSingle();
+    if (odds) oddsMeta = odds;
+
+    const isOddsShare = String(link.link_category || "").toLowerCase() === "odds_share" || !!oddsMeta;
 
     // Carrega regras da plataforma; se nenhuma, aplica preset conforme o modo do link.
     let rules: Array<{ format: string; style: string }> = [];
@@ -110,8 +109,8 @@ Deno.serve(async (req) => {
         tracking_link_id: trackingLinkId,
         influencer_id: link.influencer_id,
         platform_id: platformId,
-        game_slug: link.game_slug,
-        game_name: link.game_name,
+        game_slug: isOddsShare ? null : link.game_slug,
+        game_name: isOddsShare ? (oddsMeta?.event_label ?? null) : link.game_name,
         format: r.format,
         style: r.style,
         status: isOddsShare ? "ready" : "queued",

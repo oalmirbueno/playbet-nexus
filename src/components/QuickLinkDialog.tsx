@@ -8,16 +8,19 @@ import { useInfluencers, useLandingPages, useLandingPageInstances, usePlatforms,
 import { usePlatformAccounts, useTrackingLinks } from "@/hooks/useTrackingData";
 import { landingPageInstanceService } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
-import { Link2, CheckCircle2, Plus, Sparkles, Copy, Flame, Wand2, RefreshCw, Loader2 } from "lucide-react";
+import { Link2, CheckCircle2, Plus, Sparkles, Copy, Flame, Wand2, RefreshCw, Loader2, Sigma } from "lucide-react";
 import { buildPublicLpUrl, buildTrackedAffiliateUrl } from "@/lib/trackingUrl";
-import { detectFromUrl, CATEGORY_LABELS, inferAttributionParam, type LinkCategory } from "@/lib/linkIntelligence";
+import { detectFromUrl, CATEGORY_LABELS, extractOddsDraftFromInput, inferAttributionParam, splitAffiliateAndOddsUrls, type LinkCategory } from "@/lib/linkIntelligence";
 import GameArtwork from "@/components/tracking/GameArtwork";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { syncLinkAssets } from "@/lib/linkAssets";
+import OddsSharePanel, { emptyOddsValue, type OddsPanelValue } from "@/components/tracking/OddsSharePanel";
+import { upsertOdds } from "@/services/trackingLinkOddsService";
 
 const LINK_CONTEXT_GAME = "game";
 const LINK_CONTEXT_NO_GAME = "no_game";
+const LINK_CONTEXT_ODDS = "odds";
 
 interface Props {
   open: boolean;
@@ -51,11 +54,12 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   const [gameSlug, setGameSlug] = useState("");
   const [gameName, setGameName] = useState("");
   const [gameIconUrl, setGameIconUrl] = useState("");
-  const [linkContext, setLinkContext] = useState<typeof LINK_CONTEXT_GAME | typeof LINK_CONTEXT_NO_GAME>(LINK_CONTEXT_NO_GAME);
+  const [linkContext, setLinkContext] = useState<typeof LINK_CONTEXT_GAME | typeof LINK_CONTEXT_NO_GAME | typeof LINK_CONTEXT_ODDS>(LINK_CONTEXT_NO_GAME);
   const [linkCategory, setLinkCategory] = useState("");
   const [hypeReason, setHypeReason] = useState("");
   const [campanhaId, setCampanhaId] = useState("");
   const [extraGameSlugs, setExtraGameSlugs] = useState<string[]>([]);
+  const [odds, setOdds] = useState<OddsPanelValue>(emptyOddsValue);
   const [saving, setSaving] = useState(false);
 
   // Inline-create modal states
@@ -80,6 +84,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       setHypeReason("");
       setCampanhaId("");
       setExtraGameSlugs([]);
+      setOdds(emptyOddsValue);
     }
   }, [open, defaultInfluencerId, defaultLandingPageId]);
 
@@ -132,13 +137,41 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
     setClickIdParam(inferAttributionParam(rawLink, currentPlatform?.name || detectedPlatform?.name));
   }, [rawLink, currentPlatform?.name, detectedPlatform?.name]);
 
+  const handleRawLink = (value: string) => {
+    const split = splitAffiliateAndOddsUrls(value);
+    const draft = extractOddsDraftFromInput(value);
+    setRawLink(split.affiliateUrl || value);
+    if (draft.isSharedOdds) {
+      setLinkContext(LINK_CONTEXT_ODDS);
+      setLinkCategory("odds_share");
+      setGameSlug("");
+      setGameName("");
+      setGameIconUrl("");
+      setExtraGameSlugs([]);
+      setOdds(prev => ({
+        ...prev,
+        bookmaker_share_url: draft.bookmaker_share_url || prev.bookmaker_share_url,
+        total_odd: draft.total_odd ?? prev.total_odd,
+        event_label: draft.event_label || prev.event_label,
+      }));
+    }
+  };
+
   useEffect(() => {
+    if (detection.isSharedOdds || detection.category === "odds_share") {
+      setLinkContext(LINK_CONTEXT_ODDS);
+      setLinkCategory("odds_share");
+      setGameSlug("");
+      setGameName("");
+      setGameIconUrl("");
+      return;
+    }
     if (linkContext === LINK_CONTEXT_GAME) {
       if (detection.category) setLinkCategory(detection.category);
       if (detection.gameSlug) setGameSlug(detection.gameSlug);
       if (detection.gameName) setGameName(detection.gameName);
     }
-  }, [detection.category, detection.gameSlug, detection.gameName, linkContext]);
+  }, [detection.category, detection.gameSlug, detection.gameName, detection.isSharedOdds, linkContext]);
 
   const clearGameContext = () => {
     setLinkContext(LINK_CONTEXT_NO_GAME);
@@ -148,6 +181,15 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
     setExtraGameSlugs([]);
     setHypeReason("");
     setLinkCategory("");
+  };
+
+  const setOddsContext = () => {
+    setLinkContext(LINK_CONTEXT_ODDS);
+    setLinkCategory("odds_share");
+    setGameSlug("");
+    setGameName("");
+    setGameIconUrl("");
+    setExtraGameSlugs([]);
   };
 
   const qc = useQueryClient();
@@ -191,7 +233,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
     setGameSlug(g.game_slug || "");
     setGameName(g.game_name || "");
     setGameIconUrl(g.icon_url || "");
-    setLinkCategory(g.category || linkCategory);
+    setLinkCategory(g.category || (linkCategory === "odds_share" ? "slots" : linkCategory));
     setHypeReason(g.hype_reason || hypeReason);
   };
 
@@ -305,7 +347,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
         game_slug: linkContext === LINK_CONTEXT_GAME ? gameSlug || null : null,
         game_name: linkContext === LINK_CONTEXT_GAME ? gameName || null : null,
         game_icon_url: linkContext === LINK_CONTEXT_GAME ? gameIconUrl || null : null,
-        link_category: linkContext === LINK_CONTEXT_GAME ? linkCategory || null : null,
+        link_category: linkContext === LINK_CONTEXT_ODDS ? "odds_share" : linkContext === LINK_CONTEXT_GAME ? linkCategory || null : null,
         hype_reason: hypeReason || null,
         commission_percent: (selectedInfluencer as any)?.commission_percent ?? null,
         status: "active",
@@ -321,6 +363,21 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       //  • invalidamos as queries React Query para refletir o novo estado.
       const linkId = createdLink?.id;
       if (linkId) {
+        if (linkContext === LINK_CONTEXT_ODDS) {
+          await upsertOdds({
+            tracking_link_id: linkId,
+            platform_id: currentPlatformId || null,
+            bet_type: odds.bet_type,
+            total_odd: odds.total_odd,
+            stake_suggested: odds.stake_suggested,
+            selections: odds.selections ?? [],
+            bookmaker_share_url: odds.bookmaker_share_url || null,
+            screenshot_url: odds.screenshot_url || null,
+            event_label: odds.event_label || null,
+            event_starts_at: odds.event_starts_at ? new Date(odds.event_starts_at).toISOString() : null,
+            notes: odds.notes || null,
+          });
+        }
         if (instanceId) {
           await supabase
             .from("landing_page_instances")
@@ -341,6 +398,9 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
           },
           qc,
         );
+        if (linkContext === LINK_CONTEXT_ODDS) {
+          supabase.functions.invoke("materials-autogenerate", { body: { tracking_link_id: linkId } }).catch(() => {});
+        }
       }
 
 
@@ -456,8 +516,8 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
               <Input
                 className="h-9 text-xs font-mono mt-1"
                 value={rawLink}
-                onChange={(e) => setRawLink(e.target.value)}
-                placeholder="https://qualquer-casa.com/?p=xxxx"
+                onChange={(e) => handleRawLink(e.target.value)}
+                placeholder="Cole link afiliado ou afiliado + bilhete de odds"
               />
               {rawLink && (
                 <div className="mt-1.5 flex items-center justify-between gap-2">
@@ -473,20 +533,27 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
 
             <div>
               <Label className="text-xs font-medium">Tipo de link *</Label>
-              <div className="grid grid-cols-2 gap-2 mt-1">
+              <div className="grid grid-cols-3 gap-2 mt-1">
                 <button
                   type="button"
                   onClick={clearGameContext}
                   className={`h-10 rounded-md border text-xs font-medium transition ${linkContext === LINK_CONTEXT_NO_GAME ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:text-foreground"}`}
                 >
-                  Sem jogo · LP limpa
+                  Sem jogo
                 </button>
                 <button
                   type="button"
-                  onClick={() => setLinkContext(LINK_CONTEXT_GAME)}
+                  onClick={() => setOddsContext()}
+                  className={`h-10 rounded-md border text-xs font-medium transition ${linkContext === LINK_CONTEXT_ODDS ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:text-foreground"}`}
+                >
+                  <Sigma size={12} className="inline mr-1" /> Odds
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setLinkContext(LINK_CONTEXT_GAME); if (linkCategory === "odds_share") setLinkCategory("slots"); }}
                   className={`h-10 rounded-md border text-xs font-medium transition ${linkContext === LINK_CONTEXT_GAME ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:text-foreground"}`}
                 >
-                  Com jogo
+                  Jogos/cassino
                 </button>
               </div>
             </div>
@@ -524,6 +591,10 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
                 </Select>
               </div>
             </div>
+
+            {(rawLink || currentPlatformId) && linkContext === LINK_CONTEXT_ODDS && (
+              <OddsSharePanel value={odds} onChange={setOdds} />
+            )}
 
             {(rawLink || currentPlatformId) && linkContext === LINK_CONTEXT_GAME && (
               <div className="rounded-md border border-primary/20 bg-primary/5 p-2.5 space-y-2">
@@ -615,7 +686,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
                     </Select>
                   </div>
                   <div>
-                    <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Jogo / odds / estratégia</Label>
+                    <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Jogo / estratégia</Label>
                     <Input
                       className="h-8 text-xs"
                       value={gameName}
@@ -624,7 +695,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
                         setGameName(name);
                         setGameSlug(name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
                       }}
-                      placeholder="Fortune Tiger, odds do dia…"
+                      placeholder="Fortune Tiger, Aviator…"
                     />
                   </div>
                 </div>
@@ -683,7 +754,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
                   </div>
                   <div>
                     <p className="text-[9px] font-semibold text-primary uppercase tracking-wider">Contexto</p>
-                    <code className="block text-[10px] font-mono text-foreground truncate">{gameName || CATEGORY_LABELS[linkCategory as LinkCategory] || "auto"}</code>
+                    <code className="block text-[10px] font-mono text-foreground truncate">{linkContext === LINK_CONTEXT_ODDS ? (odds.event_label || "odds") : gameName || CATEGORY_LABELS[linkCategory as LinkCategory] || "auto"}</code>
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
