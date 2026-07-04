@@ -341,6 +341,54 @@ function drawEditorBackdrop(ctx: CanvasRenderingContext2D, size: CreativeSize, a
   ctx.fillStyle = shade; ctx.fillRect(0, h * 0.55, w, h * 0.45);
 }
 
+function drawOddsBackdrop(ctx: CanvasRenderingContext2D, size: CreativeSize, accent: string) {
+  const { w, h } = size;
+  const g = ctx.createLinearGradient(0, 0, w, h);
+  g.addColorStop(0, "#07110D");
+  g.addColorStop(0.46, "#0B1E17");
+  g.addColorStop(1, "#050B1E");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, w, h);
+
+  const pitch = ctx.createLinearGradient(0, h * 0.18, w, h * 0.86);
+  pitch.addColorStop(0, hexToRgba(accent, 0.22));
+  pitch.addColorStop(0.52, "rgba(34,197,94,0.12)");
+  pitch.addColorStop(1, "rgba(255,199,44,0.12)");
+  ctx.fillStyle = pitch;
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,255,255,0.055)";
+  ctx.lineWidth = Math.max(2, Math.round(w * 0.002));
+  const pad = Math.round(Math.min(w, h) * 0.08);
+  roundRect(ctx, pad, Math.round(h * 0.18), w - pad * 2, Math.round(h * 0.62), Math.round(w * 0.025));
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(w / 2, Math.round(h * 0.18));
+  ctx.lineTo(w / 2, Math.round(h * 0.8));
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(w / 2, Math.round(h * 0.49), Math.min(w, h) * 0.12, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalAlpha = 0.16;
+  ctx.fillStyle = "#FFFFFF";
+  const step = Math.round(Math.min(w, h) * 0.045);
+  for (let y = -step; y < h + step; y += step) {
+    ctx.fillRect(0, y, w, 1);
+  }
+  ctx.restore();
+
+  const shade = ctx.createLinearGradient(0, h * 0.38, 0, h);
+  shade.addColorStop(0, "rgba(0,0,0,0)");
+  shade.addColorStop(0.72, "rgba(0,0,0,0.62)");
+  shade.addColorStop(1, "rgba(0,0,0,0.92)");
+  ctx.fillStyle = shade;
+  ctx.fillRect(0, 0, w, h);
+}
+
 /* ────────────────────────── text layers ────────────────────────── */
 
 const FAMILY_STACK: Record<TextLayer["family"], string> = {
