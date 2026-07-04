@@ -217,9 +217,9 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard icon={<Layers className="w-4 h-4" />} label="Links elegíveis" value={rows.length} />
-        <StatCard icon={<ImageIcon className="w-4 h-4" />} label="Com arte" value={withArt.length} accent />
+        <StatCard icon={<ImageIcon className="w-4 h-4" />} label="Arte de jogo" value={withArt.length} accent />
+        <StatCard icon={<Sigma className="w-4 h-4" />} label="Apostas / Odds" value={oddsRows.length} />
         <StatCard icon={<Sparkles className="w-4 h-4" />} label="Em alta" value={rows.filter(r => r.hype_reason).length} />
-        <StatCard icon={<Download className="w-4 h-4" />} label="Formatos por link" value={4} />
       </div>
 
       {/* Top view selector — Artes | Kits da marca */}
