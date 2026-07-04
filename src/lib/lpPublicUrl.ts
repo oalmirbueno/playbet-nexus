@@ -6,6 +6,14 @@ export function normalizeLpDomain(domain: string | null | undefined): string {
   const raw = (domain && domain.trim()) || DEFAULT_LP_DOMAIN;
   let base = raw.replace(/\/+$/, "");
   if (!/^https?:\/\//i.test(base)) base = `https://${base}`;
+  try {
+    const u = new URL(base);
+    if (u.hostname.toLowerCase() === "oportunidades.playbet.app.br") {
+      return "https://painelcentral.playbet.app.br";
+    }
+  } catch {
+    /* keep normalized string */
+  }
   return base;
 }
 

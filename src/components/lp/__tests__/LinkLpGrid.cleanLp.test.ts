@@ -66,7 +66,7 @@ describe("LP gerada · link no botão correto por instância", () => {
         r.tracking_code,
       );
       const u = new URL(url);
-      expect(u.origin).toBe(r.lp_domain);
+      expect(u.origin).toBe("https://painelcentral.playbet.app.br");
       expect(u.pathname).toBe(`/i/${r.lp_slug}`);
       expect(u.searchParams.get("sub1")).toBe(r.tracking_code);
       expect(u.searchParams.get("sub2")).toBe(r.influencer_id);
