@@ -456,7 +456,7 @@ function BrandLogoImage({ src, name }: { src?: string | null; name: string }) {
     <img
       src={src}
       alt={name}
-      className="h-11 object-contain"
+      className="h-7 w-auto object-contain"
       loading="eager"
       decoding="async"
       onError={() => setFailed(true)}
