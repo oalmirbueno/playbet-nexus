@@ -559,31 +559,48 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
             </div>
 
             <div>
-              <Label className="text-xs font-medium">Tipo de link *</Label>
-              <div className="grid grid-cols-3 gap-2 mt-1">
+              <div className="flex items-center justify-between mb-1">
+                <Label className="text-xs font-medium">Tipo de link *</Label>
+                <span className="text-[10px] text-muted-foreground">
+                  {linkContext === LINK_CONTEXT_ODDS
+                    ? "Painel ativo: bilhete de odds"
+                    : linkContext === LINK_CONTEXT_GAME
+                      ? "Painel ativo: jogo/cassino"
+                      : "Painel ativo: link direto"}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={clearGameContext}
-                  className={`h-10 rounded-md border text-xs font-medium transition ${linkContext === LINK_CONTEXT_NO_GAME ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:text-foreground"}`}
+                  onClick={() => chooseContext(LINK_CONTEXT_NO_GAME)}
+                  className={`h-10 rounded-md border text-xs font-medium transition ${linkContext === LINK_CONTEXT_NO_GAME ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/40" : "border-border/60 text-muted-foreground hover:text-foreground"}`}
                 >
                   Sem jogo
                 </button>
                 <button
                   type="button"
-                  onClick={() => setOddsContext()}
-                  className={`h-10 rounded-md border text-xs font-medium transition ${linkContext === LINK_CONTEXT_ODDS ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:text-foreground"}`}
+                  onClick={() => chooseContext(LINK_CONTEXT_ODDS)}
+                  className={`h-10 rounded-md border text-xs font-medium transition ${linkContext === LINK_CONTEXT_ODDS ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/40" : "border-border/60 text-muted-foreground hover:text-foreground"}`}
                 >
                   <Sigma size={12} className="inline mr-1" /> Odds
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setLinkContext(LINK_CONTEXT_GAME); if (linkCategory === "odds_share") setLinkCategory("slots"); }}
-                  className={`h-10 rounded-md border text-xs font-medium transition ${linkContext === LINK_CONTEXT_GAME ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:text-foreground"}`}
+                  onClick={() => chooseContext(LINK_CONTEXT_GAME)}
+                  className={`h-10 rounded-md border text-xs font-medium transition ${linkContext === LINK_CONTEXT_GAME ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/40" : "border-border/60 text-muted-foreground hover:text-foreground"}`}
                 >
                   Jogos/cassino
                 </button>
               </div>
+              <p className="text-[10px] text-muted-foreground mt-1.5">
+                {linkContext === LINK_CONTEXT_ODDS
+                  ? "Salvaremos apenas o bilhete (odd total, seleções, screenshot). Jogo/categoria não são gravados."
+                  : linkContext === LINK_CONTEXT_GAME
+                    ? "Salvaremos jogo, categoria e hype. Bilhete de odds é ignorado."
+                    : "Salvaremos só o link afiliado — sem jogo e sem bilhete."}
+              </p>
             </div>
+
 
             {/* 4. PLATFORM (auto-detected) + ACCOUNT */}
             <div className="grid grid-cols-2 gap-2">
