@@ -172,8 +172,14 @@ function norm(s: string | null | undefined): string {
 export function resolveBrand(platformNameOrSlug: string | null | undefined): BrandKit | null {
   const n = norm(platformNameOrSlug);
   if (!n) return null;
+  // 1) match exato por alias ou nome
   for (const kit of Object.values(REGISTRY)) {
     if (kit.slugAliases.some(a => norm(a) === n) || norm(kit.name) === n) return kit;
+  }
+  // 2) match tolerante: substring contra aliases/nome/key (ex: "Estrela Bet Brasil" → estrela-bet)
+  for (const kit of Object.values(REGISTRY)) {
+    const needles = [kit.key, kit.name, ...kit.slugAliases].map(norm);
+    if (needles.some(x => x && (n.includes(x) || x.includes(n)))) return kit;
   }
   return null;
 }
