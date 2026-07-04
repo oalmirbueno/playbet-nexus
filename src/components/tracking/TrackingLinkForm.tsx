@@ -575,9 +575,12 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
     }
 
     // Sem LP: drop instance/LP refs so the saved tracking_link reflects mode.
+    const cleanForm = isOddsShare
+      ? { ...form, game_slug: "", game_name: "", game_icon_url: "", link_category: "odds_share" }
+      : form;
     const payload = useLp
-      ? form
-      : { ...form, landing_page_id: "", landing_page_instance_id: "" };
+      ? cleanForm
+      : { ...cleanForm, landing_page_id: "", landing_page_instance_id: "" };
     // Anexa os dados de odds em __odds para o handleSave da página persistir na tabela.
     onSave({ ...payload, final_url: finalUrl, __odds: isOddsShare ? { ...odds, platform_id: currentPlatformId } : null } as any);
   };
