@@ -124,15 +124,6 @@ Deno.serve(async (req) => {
           ...(isOddsShare ? {
             odds: oddsMeta,
             engine: "odds_share",
-            studioLayout: {
-              version: 3,
-              engine: "odds",
-              format: r.format,
-              style: "odds_hype",
-              layers: [],
-              updatedAt: Date.now(),
-              autoSeed: true,
-            },
           } : {}),
         },
       }));
