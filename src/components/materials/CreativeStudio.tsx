@@ -189,9 +189,10 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     }, { includeImages: withImages, brand: brandOverride });
   }, [link, brandCtx?.brand?.key, brandCtx?.brand?.logos.lockup, brandCtx?.brand?.logos.wordmark, brandCtx?.brand?.logos.mark, brandCtx?.brand?.seal?.horizontal.light, brandCtx?.brand?.seal?.horizontal.dark, isOddsShare, oddsCtx]);
 
-  // Puxa odds do link quando é aposta compartilhada.
+  // Puxa odds do link — sempre que a modal abre, mesmo quando o operador começou em 'games'
+  // e depois alternou para 'odds'. Assim o toggle é instantâneo, sem espera.
   useEffect(() => {
-    if (!open || !link?.id || !isOddsShare) { setOddsCtx(null); return; }
+    if (!open || !link?.id) { setOddsCtx(null); setOddsFetched(false); return; }
     let cancelled = false;
     (async () => {
       const { data } = await (supabase as any)
@@ -208,9 +209,10 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
         screenshot_url: data.screenshot_url,
         selections: Array.isArray(data.selections) ? data.selections : [],
       } : null);
+      setOddsFetched(true);
     })();
     return () => { cancelled = true; };
-  }, [open, link?.id, isOddsShare]);
+  }, [open, link?.id]);
 
 
 
