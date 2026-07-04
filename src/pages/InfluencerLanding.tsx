@@ -493,8 +493,8 @@ function GameImage({
 
 function LogoSlot({ src, name, className = "", size = "sm" }: { src?: string | null; name: string; className?: string; size?: "sm" | "md" }) {
   const [failed, setFailed] = useState(false);
-  const box = size === "md" ? "h-10 w-[132px]" : "h-7 w-[92px]";
-  const img = size === "md" ? "max-h-9 max-w-full object-contain" : "max-h-5 max-w-full object-contain";
+  const box = size === "md" ? "h-10 max-w-[160px]" : "h-7 max-w-[110px]";
+  const img = size === "md" ? "h-9 w-auto max-w-full object-contain" : "h-5 w-auto max-w-full object-contain";
   if (!src || failed) {
     return (
       <span className={`inline-flex ${box} shrink-0 items-center justify-center text-center text-xs font-extrabold tracking-wide text-white ${className}`}>
@@ -1109,8 +1109,8 @@ export default function InfluencerLanding() {
           <div className="max-w-md mx-auto relative z-10 text-center">
             {isPlatformDirect && brandCtx?.brand ? (
               <div className="mb-8 flex items-center justify-center gap-3">
-                <LogoSlot src={logo} name="PlayBet" className="opacity-95" />
-                <span className="text-white/30 text-lg font-light select-none">×</span>
+                <LogoSlot src={logo} name="PlayBet" className="opacity-95 justify-end" />
+                <span className="text-white/30 text-lg font-light select-none leading-none">×</span>
                 <BrandLogoImage
                   src={brandCtx.brand.logos.wordmark || brandCtx.brand.logos.lockup || brandCtx.brand.logos.mark}
                   name={brandCtx.brand.name}
