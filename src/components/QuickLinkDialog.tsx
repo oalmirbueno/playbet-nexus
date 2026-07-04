@@ -89,8 +89,10 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       setCampanhaId("");
       setExtraGameSlugs([]);
       setOdds(emptyOddsValue);
+      setContextTouched(false);
     }
   }, [open, defaultInfluencerId, defaultLandingPageId]);
+
 
   const selectedInfluencer = useMemo(
     () => influencers.find((i: any) => i.id === influencerId),
