@@ -524,15 +524,19 @@ export default function InfluencerLanding() {
 
   // Brand travada pela plataforma do link. Para LP pública, resolve de forma síncrona
   // pelo tracking_link quando disponível ou pelo hint denormalizado no hype_copy.
+  // Um override manual salvo em layout_config.brand_override_key sempre vence.
   const platformHint =
     (instanceCtx?.hype_copy?.platform_slug as string | null | undefined) ||
     (instanceCtx?.hype_copy?.platform_name as string | null | undefined) ||
     null;
+  const overrideKey = (instanceCtx?.layout_config?.brand_override_key as string | null | undefined) || null;
+  const overrideBrand = overrideKey ? resolveBrand(overrideKey) : null;
   const hintedBrand = resolveBrand(platformHint);
+  const effectiveBrand = overrideBrand || resolved?.brand || hintedBrand;
   const brandCtx = buildBrandContext(
-    resolved?.brand || hintedBrand,
-    resolved?.platform_name || (hintedBrand?.name ?? (platformHint ? String(platformHint) : null)),
-    resolved?.platform_slug || (hintedBrand?.key ?? null),
+    effectiveBrand,
+    overrideBrand?.name || resolved?.platform_name || (hintedBrand?.name ?? (platformHint ? String(platformHint) : null)),
+    overrideBrand?.key || resolved?.platform_slug || (hintedBrand?.key ?? null),
     resolved?.platform_account_id ?? null,
     resolved?.tracking_code ?? null,
   );
