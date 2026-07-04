@@ -323,7 +323,7 @@ async function buildAttribution(
     const { data: links } = await run.supabase
       .from("tracking_links")
       .select(
-        "tracking_code, influencer_id, campanha_id, platform_account_id",
+        "id, tracking_code, influencer_id, campanha_id, platform_account_id, landing_page_id, landing_page_instance_id",
       )
       .in("tracking_code", codes);
     (links ?? []).forEach((l: any) => byCode.set(l.tracking_code, l));
@@ -367,11 +367,58 @@ async function buildAttribution(
   return { byCode, brandToPlatformId, brandToAccountId };
 }
 
+function dayEndExclusive(day: string): string {
+  const d = new Date(`${day}T00:00:00.000Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+async function resolveTrafficLink(
+  run: RunHandle,
+  platformAccountId: string | null,
+  dateStart: string,
+  dateEnd: string,
+): Promise<any | null> {
+  if (!platformAccountId) return null;
+
+  const { data: events } = await run.supabase
+    .from("tracking_events")
+    .select("tracking_link_id,status")
+    .eq("platform_account_id", platformAccountId)
+    .eq("is_demo", false)
+    .eq("is_duplicate", false)
+    .not("tracking_link_id", "is", null)
+    .gte("event_timestamp", `${dateStart}T00:00:00.000Z`)
+    .lt("event_timestamp", `${dayEndExclusive(dateEnd)}T00:00:00.000Z`)
+    .limit(10000);
+
+  const counts = new Map<string, number>();
+  for (const e of events ?? []) {
+    if (["invalid_legacy", "invalid_internal_preview", "duplicate_technical"].includes(String((e as any).status ?? ""))) continue;
+    const id = (e as any).tracking_link_id as string | null;
+    if (!id) continue;
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+  const ranked = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+  if (!ranked.length || (ranked[1] && ranked[1][1] === ranked[0][1])) return null;
+
+  const { data: link } = await run.supabase
+    .from("tracking_links")
+    .select("id, tracking_code, influencer_id, campanha_id, platform_account_id, landing_page_id, landing_page_instance_id")
+    .eq("id", ranked[0][0])
+    .eq("is_demo", false)
+    .maybeSingle();
+
+  if (link) log(run, "attribution/traffic_link", { platformAccountId, tracking_code: link.tracking_code, events: ranked[0][1] });
+  return link ?? null;
+}
+
 async function persist(
   run: RunHandle,
   brand: Brand,
   items: PerfItem[],
   ctx: AttributionCtx,
+  dateStart: string,
   fallbackDate: string,
 ): Promise<number> {
   let inserted = 0;
@@ -379,7 +426,7 @@ async function persist(
   const brandAccountId = ctx.brandToAccountId.get(brand.brand_slug) ?? null;
 
   for (const it of items) {
-    const link = it.campaign_name ? ctx.byCode.get(it.campaign_name) : null;
+    let link = it.campaign_name ? ctx.byCode.get(it.campaign_name) : null;
     // Brand mapping ALWAYS wins for platform_id — never let a VUPI row end
     // up under Estrela Bet. Use link.platform_account_id only if it belongs
     // to the same brand platform.
@@ -399,6 +446,11 @@ async function persist(
     const dateRef = normalizePeriod(rawPeriod, fallbackDate);
     if (!dateRef) continue;
     const externalDateKey = isRollingAggregatePeriod(rawPeriod) ? "_rolling" : dateRef;
+    if (!link) {
+      const trafficStart = isRollingAggregatePeriod(rawPeriod) ? dateStart : dateRef;
+      const trafficEnd = isRollingAggregatePeriod(rawPeriod) ? fallbackDate : dateRef;
+      link = await resolveTrafficLink(run, platformAccountId, trafficStart, trafficEnd);
+    }
     const accountFinancial = platformAccountId
       ? (await run.supabase
         .from("platform_accounts")
@@ -427,8 +479,11 @@ async function persist(
       // pivot on platform_account_id.
       platform_id: brandPlatformId,
       platform_account_id: platformAccountId,
+      tracking_link_id: link?.id ?? null,
       influencer_id: link?.influencer_id ?? null,
       campanha_id: link?.campanha_id ?? null,
+      landing_page_id: link?.landing_page_id ?? null,
+      landing_page_instance_id: link?.landing_page_instance_id ?? null,
       registros: it.registrations ?? 0,
       ftd: it.ftds ?? 0,
       deposits_count: it.deposits ?? 0,
@@ -447,7 +502,7 @@ async function persist(
       // snapshot for the requested window, not that calendar day. Keep a stable
       // external_ref so each sync updates the snapshot instead of creating a new
       // daily copy that inflates dashboard totals.
-      external_ref: `${brand.brand_slug}:${externalDateKey}:${it.campaign_name || "_aggregate"}`,
+      external_ref: `${brand.brand_slug}:${externalDateKey}:${it.campaign_name || link?.tracking_code || "_aggregate"}`,
     };
 
     const { error } = await run.supabase
@@ -542,7 +597,7 @@ Deno.serve(async (req) => {
     let total = 0;
     const perBrand: Record<string, number> = {};
     for (const { brand, items } of allItems) {
-      const n = await persist(run, brand, items, ctx, dateEnd);
+      const n = await persist(run, brand, items, ctx, dateStart, dateEnd);
       perBrand[brand.brand_slug] = n;
       total += n;
     }

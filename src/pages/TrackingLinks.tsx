@@ -263,7 +263,7 @@ export default function TrackingLinks() {
     });
   };
 
-  const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+  const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -394,13 +394,22 @@ export default function TrackingLinks() {
             const isOpen = expanded.has(infId);
             const missing = links.filter(isIncomplete).length;
             const dupCount = links.filter(isDuplicate).length;
+            const allSocioLinks = links.length > 0 && links.every(l => ((l as any).tracking_role || "influencer") === "socio");
 
             return (
               <Card key={infId} className={missing ? "border-destructive/30" : ""}>
                 <CardContent className="p-0">
                   {/* Group header */}
-                  <button
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => toggleExpanded(infId)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        toggleExpanded(infId);
+                      }
+                    }}
                     className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary/40 transition-colors"
                   >
                     {isOpen ? <ChevronDown size={14} className="text-muted-foreground" /> : <ChevronRight size={14} className="text-muted-foreground" />}
@@ -411,7 +420,10 @@ export default function TrackingLinks() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-[13px] font-semibold truncate">{inf?.name ?? "Sem influencer"}</p>
                         {inf?.slug && <span className="text-[10px] font-mono text-muted-foreground">@{inf.slug}</span>}
-                        {inf?.commission_percent && (
+                        {allSocioLinks && (
+                          <Badge variant="outline" className="text-[9px] h-4 border-primary/30 text-primary">Sócio(a)</Badge>
+                        )}
+                        {!allSocioLinks && inf?.commission_percent && (
                           <Badge variant="outline" className="text-[9px] h-4">{inf.commission_percent}%</Badge>
                         )}
                         {!inf?.manager_id && infId !== "__unassigned__" && (
@@ -440,7 +452,7 @@ export default function TrackingLinks() {
                     >
                       <Plus size={11} /> Novo link
                     </Button>
-                  </button>
+                  </div>
 
                   {/* Links */}
                   {isOpen && (

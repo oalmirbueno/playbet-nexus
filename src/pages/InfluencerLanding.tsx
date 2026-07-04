@@ -912,8 +912,14 @@ export default function InfluencerLanding() {
     if (!resolved?.affiliate_link || clickingRef.current) return;
     clickingRef.current = true;
 
-    // Build final URL first so redirect is instantaneous.
-    let finalUrl = injectClickId(resolved.affiliate_link, resolved.click_id_param, resolved.click_id);
+    // Build final URL first so redirect is instantaneous. The platform-facing
+    // attribution must be the stable tracking code, otherwise panel reports
+    // cannot group conversions back into the individual link.
+    let finalUrl = injectClickId(
+      resolved.affiliate_link,
+      resolved.click_id_param,
+      resolved.tracking_code || resolved.click_id,
+    );
     const fwd2 = searchParams.get("sub2") || resolved.influencer_id;
     const fwd3 = searchParams.get("sub3") || resolved.campanha_id;
     if (fwd2) finalUrl = injectClickId(finalUrl, "sub2", fwd2);
