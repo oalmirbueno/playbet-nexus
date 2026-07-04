@@ -749,8 +749,8 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
               <Input
                 className="h-9 text-xs font-mono"
                 value={form.base_url}
-                onChange={e => set("base_url", e.target.value)}
-                placeholder="Cole o link bruto da plataforma"
+                onChange={e => handleAffiliateInput(e.target.value)}
+                placeholder="Cole link afiliado ou afiliado + bilhete de odds"
               />
 
               {/* Detecção inteligente */}
@@ -777,6 +777,21 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
+                    <div className="col-span-2">
+                      <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Engine do material</Label>
+                      <div className="grid grid-cols-2 gap-1 mt-1 rounded-md border border-border/70 bg-background/50 p-1">
+                        <button
+                          type="button"
+                          onClick={() => setForm(p => ({ ...p, link_category: "odds_share", game_slug: "", game_name: "", game_icon_url: "" }))}
+                          className={`h-8 rounded text-xs font-medium transition ${isOddsShare ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                        >Odds / aposta esportiva</button>
+                        <button
+                          type="button"
+                          onClick={() => setForm(p => ({ ...p, link_category: p.link_category === "odds_share" ? "slots" : p.link_category }))}
+                          className={`h-8 rounded text-xs font-medium transition ${!isOddsShare ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                        >Jogos / cassino</button>
+                      </div>
+                    </div>
                     <div>
                       <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Tipo</Label>
                       <Select value={form.link_category || "none"} onValueChange={v => set("link_category", v === "none" ? "" : v)}>
@@ -790,12 +805,14 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                       </Select>
                     </div>
                     <div>
-                      <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Jogo / evento</Label>
+                      <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">{isOddsShare ? "Evento da aposta" : "Jogo"}</Label>
                       <Input
                         className="h-8 text-xs"
-                        value={form.game_name}
-                        onChange={e => setForm(p => ({ ...p, game_name: e.target.value, game_slug: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-") }))}
-                        placeholder="Fortune Tiger, Aviator…"
+                        value={isOddsShare ? odds.event_label : form.game_name}
+                        onChange={e => isOddsShare
+                          ? setOdds(p => ({ ...p, event_label: e.target.value }))
+                          : setForm(p => ({ ...p, game_name: e.target.value, game_slug: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-") }))}
+                        placeholder={isOddsShare ? "Ex: Flamengo x Palmeiras" : "Fortune Tiger, Aviator…"}
                       />
                     </div>
                   </div>
@@ -806,7 +823,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                       className="h-8 text-xs"
                       value={form.hype_reason}
                       onChange={e => set("hype_reason", e.target.value)}
-                      placeholder="Ex: Fortune Tiger está pagando muito essa semana"
+                      placeholder={isOddsShare ? "Ex: Múltipla de futebol com odd alta" : "Ex: Fortune Tiger está pagando muito essa semana"}
                     />
                   </div>
                 </div>
@@ -817,7 +834,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
               )}
 
 
-              {currentPlatformId && (
+              {currentPlatformId && !isOddsShare && (
                 <div className="rounded-md border border-orange-500/25 bg-orange-500/5 p-2.5 space-y-2">
                   <div className="flex items-center gap-1.5 text-[10px] flex-wrap">
                     <Flame size={11} className="text-orange-400" />
