@@ -1005,6 +1005,7 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
                 },
                 odds: oddsCtx,
               }}
+              engine={engineMode}
               onApply={(newLayers) => {
                 setLayers(applyBrandChrome(newLayers));
                 setSelectedId(null);
@@ -1013,15 +1014,17 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
               }}
             />
 
-            <CaptureOddPanel
-              format={format}
-              suggestedUrl={oddsCtx?.bookmaker_share_url || link.shortUrl}
-              onCapture={(layer) => {
-                setLayers((ls) => [...ls, layer]);
-                setSelectedId(layer.id);
-                setDirty(true);
-              }}
-            />
+            {isOddsShare && (
+              <CaptureOddPanel
+                format={format}
+                suggestedUrl={oddsCtx?.bookmaker_share_url || link.shortUrl}
+                onCapture={(layer) => {
+                  setLayers((ls) => [...ls, layer]);
+                  setSelectedId(layer.id);
+                  setDirty(true);
+                }}
+              />
+            )}
             </div>
 
             <div className="space-y-2">
