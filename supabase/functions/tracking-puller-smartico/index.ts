@@ -71,24 +71,34 @@ async function fetchReport(apiKey: string, labelId: string | null, dateFrom: str
 
   const attempts: Array<{ label: string; url: URL; headers: Record<string, string> }> = [];
   const headerSets: Record<string, string>[] = [
+    { authorization: apiKey, Accept: "application/json" },
     { Authorization: apiKey, Accept: "application/json" },
     { "X-API-Key": apiKey, Accept: "application/json" },
     { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
   ];
-  const labels = [labelId, apiKey].filter(Boolean) as string[];
+  const labels = [labelId].filter(Boolean) as string[];
+  const endpoints = ["af2_media_report_af", "af2_media_report_op"];
 
-  for (const headers of headerSets) {
-    const u = new URL(`${SMARTICO_BASE}/api/af2_media_report_af`);
-    u.search = baseParams.toString();
-    attempts.push({ label: "plain", url: u, headers });
-    for (const lid of labels) {
-      for (const key of ["label_id", "labelId", "label"]) {
-        const x = new URL(`${SMARTICO_BASE}/api/af2_media_report_af`);
-        x.search = baseParams.toString();
-        x.searchParams.set(key, lid);
-        attempts.push({ label: key, url: x, headers });
+  for (const endpoint of endpoints) {
+    for (const headers of headerSets) {
+      const u = new URL(`${SMARTICO_BASE}/api/${endpoint}`);
+      u.search = baseParams.toString();
+      attempts.push({ label: `${endpoint}:plain`, url: u, headers });
+      for (const lid of labels) {
+        // TAP/Smartico white-label APIs commonly require the active label in a
+        // header named Active_label_id; keep query-param variants as fallback.
+        attempts.push({
+          label: `${endpoint}:Active_label_id`,
+          url: u,
+          headers: { ...headers, Active_label_id: lid, active_label_id: lid, "X-Label-Id": lid, "Label-Id": lid },
+        });
+        for (const key of ["label_id", "labelId", "label", "active_label_id"]) {
+          const x = new URL(`${SMARTICO_BASE}/api/${endpoint}`);
+          x.search = baseParams.toString();
+          x.searchParams.set(key, lid);
+          attempts.push({ label: `${endpoint}:${key}`, url: x, headers });
+        }
       }
-      attempts.push({ label: "label-header", url: u, headers: { ...headers, "X-Label-Id": lid, "Label-Id": lid } });
     }
   }
 
@@ -103,7 +113,7 @@ async function fetchReport(apiKey: string, labelId: string | null, dateFrom: str
     if (!labelId) {
       throw new Error("Smartico exige label_id: configure a variável SMARTICO_LABEL_ID (ou STELLAR_TAP_LABEL_ID) — a chave sozinha não autoriza o relatório.");
     }
-    throw new Error(`Smartico rejeitou o label_id enviado ("${labelId.slice(0, 6)}…"). Confirme no painel Smartico (Settings → API/Labels) o label_id correto da marca e atualize SMARTICO_LABEL_ID. Detalhes: ${errors.slice(0, 2).join(" | ")}`);
+    throw new Error(`Smartico não aceitou o label_id no relatório ("${labelId.slice(0, 6)}…"). O painel continua usando postbacks/scraper; valide o Active label id correto da marca. Detalhes: ${errors.slice(0, 4).join(" | ")}`);
   }
   throw new Error(`Smartico falhou: ${errors[0] ?? "sem resposta"}`);
 }
@@ -320,6 +330,9 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify(responsePayload), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return new Response(JSON.stringify({ ok: false, error: message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Never surface external Smartico/TAP failures as HTTP 500 to the app.
+    // The tracking stack still runs via postbacks and Stellar scraper, so the
+    // dashboard must remain usable instead of rendering a blank error state.
+    return new Response(JSON.stringify({ ok: false, fallback: true, mode: "postback_only", error: message, inserted: 0 }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
