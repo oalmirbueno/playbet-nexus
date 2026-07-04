@@ -111,7 +111,10 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [dirty, setDirty] = useState(false);
   const [savingLayout, setSavingLayout] = useState(false);
+  const [oddsCtx, setOddsCtx] = useState<OddsContext | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+
+  const isOddsShare = (link?.linkCategory ?? "").toLowerCase() === "odds_share";
 
   const selected = layers.find(l => l.id === selectedId) || null;
 
