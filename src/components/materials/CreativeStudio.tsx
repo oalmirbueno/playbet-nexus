@@ -289,6 +289,7 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
         const chromeChanged = JSON.stringify(hydrated) !== JSON.stringify(saved.layers);
         setLayers(hydrated);
         setStyle(engineMode === "odds" ? "odds_hype" : saved.style === "odds_hype" ? "hype" : saved.style);
+        if (engineMode === "odds" && saved.oddsPreset) setOddsPreset(saved.oddsPreset);
         setSavedAt(saved.updatedAt);
         setDirty(!saved.cloudSaved || chromeChanged);
       } else {
@@ -296,6 +297,7 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
         setSavedAt(null);
         setDirty(true);
       }
+
       setRenderKey(k => k + 1);
     })();
     return () => { cancelled = true; };
