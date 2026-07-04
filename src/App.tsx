@@ -18,11 +18,12 @@ function isPainelHost(host: string): boolean {
 
 export default function App() {
   const lpHost = typeof window !== "undefined" && !isPainelHost(window.location.hostname);
+  const publicLpRoute = typeof window !== "undefined" && window.location.pathname.startsWith("/i/");
 
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        {lpHost ? (
+        {publicLpRoute || lpHost ? (
           <Routes>
             <Route path="/:slug" element={<InfluencerLanding />} />
             <Route path="/i/:slug" element={<InfluencerLanding />} />

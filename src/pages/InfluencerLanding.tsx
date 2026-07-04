@@ -614,6 +614,7 @@ export default function InfluencerLanding() {
     (async () => {
       const hostname = window.location.hostname;
       const clickId = getOrCreatePageClickId(slug);
+      const isDirectInstanceRoute = window.location.pathname.startsWith("/i/");
 
       // Helper to finalize resolution
       const setFastResolved = (
@@ -725,6 +726,50 @@ export default function InfluencerLanding() {
 
       };
 
+      const resolveGenericInstance = async () => {
+        const { data: instance } = await supabase
+          .from("landing_page_instances")
+          .select("*")
+          .eq("slug", slug)
+          .eq("is_active", true)
+          .limit(1)
+          .maybeSingle();
+
+        if (!instance) return false;
+
+        const nextCtx = {
+          lp_mode: (instance as any).lp_mode,
+          game_slugs: (instance as any).game_slugs,
+          layout_config: (instance as any).layout_config,
+          hype_copy: (instance as any).hype_copy,
+        };
+        setInstanceCtx(nextCtx);
+        const fallbackArt = (instance as any).hype_copy?.game_slug
+          ? [{
+              slug: normalizeSlug((instance as any).hype_copy.game_slug),
+              name: (instance as any).hype_copy?.game_name || normalizeSlug((instance as any).hype_copy.game_slug),
+              icon_url: (instance as any).hype_copy?.game_icon_url || null,
+            }]
+          : [];
+        setGameArts(fallbackArt);
+        void hydrateGameArts(instance.landing_page_id, instance.id, (instance as any).game_slugs || [], {
+          game_slug: (instance as any).hype_copy?.game_slug,
+          game_name: (instance as any).hype_copy?.game_name,
+          game_icon_url: (instance as any).hype_copy?.game_icon_url,
+          source_tracking_link_id: (instance as any).source_tracking_link_id,
+        });
+        void finalize(instance.affiliate_link, instance.influencer_id, "", instance.id, instance.landing_page_id, nextCtx);
+        return true;
+      };
+
+      // Public /i links are generated instance links; resolve them directly and
+      // skip domain discovery so painelcentral links open without loading panel/auth.
+      if (isDirectInstanceRoute) {
+        const resolvedInstance = await resolveGenericInstance();
+        if (!resolvedInstance) setState("not_found");
+        return;
+      }
+
       // ── STRATEGY 1: Domain-aware ──
       const lpBase = await findLPBaseByHostname(hostname);
 
@@ -765,37 +810,7 @@ export default function InfluencerLanding() {
       }
 
       // ── STRATEGY 2: Generic instance ──
-      const { data: instance } = await supabase
-        .from("landing_page_instances")
-        .select("*")
-        .eq("slug", slug)
-        .eq("is_active", true)
-        .limit(1)
-        .maybeSingle();
-
-      if (instance) {
-        const nextCtx = {
-          lp_mode: (instance as any).lp_mode,
-          game_slugs: (instance as any).game_slugs,
-          layout_config: (instance as any).layout_config,
-          hype_copy: (instance as any).hype_copy,
-        };
-        setInstanceCtx(nextCtx);
-        const fallbackArt = (instance as any).hype_copy?.game_slug
-          ? [{
-              slug: normalizeSlug((instance as any).hype_copy.game_slug),
-              name: (instance as any).hype_copy?.game_name || normalizeSlug((instance as any).hype_copy.game_slug),
-              icon_url: (instance as any).hype_copy?.game_icon_url || null,
-            }]
-          : [];
-        setGameArts(fallbackArt);
-        void hydrateGameArts(instance.landing_page_id, instance.id, (instance as any).game_slugs || [], {
-          game_slug: (instance as any).hype_copy?.game_slug,
-          game_name: (instance as any).hype_copy?.game_name,
-          game_icon_url: (instance as any).hype_copy?.game_icon_url,
-          source_tracking_link_id: (instance as any).source_tracking_link_id,
-        });
-        void finalize(instance.affiliate_link, instance.influencer_id, "", instance.id, instance.landing_page_id, nextCtx);
+      if (await resolveGenericInstance()) {
         return;
       }
 
