@@ -16,6 +16,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { syncLinkAssets } from "@/lib/linkAssets";
 
+const LINK_CONTEXT_GAME = "game";
+const LINK_CONTEXT_NO_GAME = "no_game";
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -48,6 +51,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   const [gameSlug, setGameSlug] = useState("");
   const [gameName, setGameName] = useState("");
   const [gameIconUrl, setGameIconUrl] = useState("");
+  const [linkContext, setLinkContext] = useState<typeof LINK_CONTEXT_GAME | typeof LINK_CONTEXT_NO_GAME>(LINK_CONTEXT_NO_GAME);
   const [linkCategory, setLinkCategory] = useState("");
   const [hypeReason, setHypeReason] = useState("");
   const [campanhaId, setCampanhaId] = useState("");
@@ -71,6 +75,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       setGameSlug("");
       setGameName("");
       setGameIconUrl("");
+      setLinkContext(LINK_CONTEXT_NO_GAME);
       setLinkCategory("");
       setHypeReason("");
       setCampanhaId("");
