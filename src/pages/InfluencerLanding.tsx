@@ -864,7 +864,7 @@ export default function InfluencerLanding() {
           <div className="max-w-md mx-auto relative z-10 text-center">
             {isPlatformDirect && brandCtx?.brand ? (
               <div className="mb-8 flex items-center justify-center gap-4">
-                <img src={logo} alt="PlayBet" className="h-11 opacity-95" />
+                <img src={logo} alt="PlayBet" className="h-11 opacity-95" fetchPriority="high" decoding="async" width={140} height={44} />
                 <span className="text-white/30 text-xl font-light select-none">×</span>
                 <BrandLogoImage
                   src={brandCtx.brand.logos.wordmark || brandCtx.brand.logos.lockup || brandCtx.brand.logos.mark}
@@ -872,7 +872,7 @@ export default function InfluencerLanding() {
                 />
               </div>
             ) : (
-              <img src={logo} alt="PlayBet" className="h-11 mx-auto mb-8 opacity-95" />
+              <img src={logo} alt="PlayBet" className="h-11 mx-auto mb-8 opacity-95" fetchPriority="high" decoding="async" width={140} height={44} />
             )}
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] backdrop-blur border border-emerald-400/20 text-emerald-300 text-[10px] font-semibold uppercase tracking-[0.14em] mb-6">
               <Zap size={11} /> {mode === "odds" ? "Em destaque" : isCatalogMode ? "Oportunidades" : isPlatformDirect ? "Parceria oficial" : "Oferta oficial"}
