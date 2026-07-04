@@ -487,7 +487,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
       const safeSections = effectiveMode === "platform_direct"
         ? ensureCommunitySection(defaultLayoutConfig(effectiveMode).sections)
         : sections;
-      const layoutConfig = { mode: effectiveMode, sections: safeSections, updated_at: new Date().toISOString() };
+      const layoutConfig = { mode: effectiveMode, sections: safeSections, brand_override_key: brandOverrideKey, updated_at: new Date().toISOString() };
       const platformSlug = (link as any)?.platform_accounts?.platforms?.slug || instance?.hype_copy?.platform_slug || null;
       const hype_copy: any = {
         title: cleanTitle || null,
