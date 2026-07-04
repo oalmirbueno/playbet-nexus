@@ -829,13 +829,17 @@ export default function InfluencerLanding() {
       };
 
       const resolveGenericInstance = async () => {
-        const { data: instance } = await supabase
+        // Slug pode (legado) ter duplicatas entre landing_pages. Pega SEMPRE
+        // a instância mais recentemente atualizada para nunca cair em uma LP
+        // antiga esquecida quando o editor acaba de salvar/copiar link.
+        const { data: instances } = await supabase
           .from("landing_page_instances")
           .select(LP_INSTANCE_SELECT)
           .eq("slug", slug)
           .eq("is_active", true)
-          .limit(1)
-          .maybeSingle();
+          .order("updated_at", { ascending: false })
+          .limit(1);
+        const instance = instances && instances[0];
 
         if (!instance) return false;
 
