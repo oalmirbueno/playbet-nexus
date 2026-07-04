@@ -2877,6 +2877,7 @@ export type Database = {
           revshare_commission: number | null
           roi: number | null
           saque_disponivel: number | null
+          tracking_link_id: string | null
           updated_at: string | null
           utm_id: string | null
         }
@@ -2930,6 +2931,7 @@ export type Database = {
           revshare_commission?: number | null
           roi?: number | null
           saque_disponivel?: number | null
+          tracking_link_id?: string | null
           updated_at?: string | null
           utm_id?: string | null
         }
@@ -2983,6 +2985,7 @@ export type Database = {
           revshare_commission?: number | null
           roi?: number | null
           saque_disponivel?: number | null
+          tracking_link_id?: string | null
           updated_at?: string | null
           utm_id?: string | null
         }
@@ -3034,6 +3037,13 @@ export type Database = {
             columns: ["platform_id"]
             isOneToOne: false
             referencedRelation: "platforms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_metrics_tracking_link_id_fkey"
+            columns: ["tracking_link_id"]
+            isOneToOne: false
+            referencedRelation: "tracking_links"
             referencedColumns: ["id"]
           },
           {
