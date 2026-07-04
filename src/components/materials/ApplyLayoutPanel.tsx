@@ -77,20 +77,35 @@ interface Props {
   format: CreativeFormat;
   ctx: LayoutPanelCtx;
   onApply: (layers: Layer[]) => void;
+  engine?: "games" | "odds";
 }
 
-export function ApplyLayoutPanel({ format, ctx, onApply }: Props) {
-  const [cat, setCat] = useState<ReferenceCategory | "all">("all");
+export function ApplyLayoutPanel({ format, ctx, onApply, engine = "games" }: Props) {
+  const [cat, setCat] = useState<ReferenceCategory | "all">(engine === "odds" ? "aposta-compartilhada" : "all");
   const [openId, setOpenId] = useState<string | null>(null);
   const [fills, setFills] = useState<Record<string, Record<string, ReferenceSlotFill>>>({});
+
+  const cats = useMemo(() => {
+    if (engine === "odds") return CATS.filter((c) => c.id === "all" || c.id === "odds" || c.id === "aposta-compartilhada");
+    return CATS.filter((c) => c.id !== "odds" && c.id !== "aposta-compartilhada");
+  }, [engine]);
 
   const list = useMemo(() => {
     return CREATIVE_REFERENCES.filter((r) => {
       if (!r.formats.includes(format)) return false;
+      if (engine === "odds" && r.category !== "odds" && r.category !== "aposta-compartilhada") return false;
+      if (engine === "games" && (r.category === "odds" || r.category === "aposta-compartilhada")) return false;
       if (cat !== "all" && r.category !== cat) return false;
       return true;
     });
-  }, [cat, format]);
+  }, [cat, engine, format]);
+
+  useEffect(() => {
+    setCat((cur) => {
+      if (engine === "odds") return cur === "odds" || cur === "aposta-compartilhada" ? cur : "aposta-compartilhada";
+      return cur === "odds" || cur === "aposta-compartilhada" ? "all" : cur;
+    });
+  }, [engine]);
 
   useEffect(() => {
     setOpenId(list[0]?.id ?? null);
@@ -125,7 +140,7 @@ export function ApplyLayoutPanel({ format, ctx, onApply }: Props) {
       </div>
 
       <div className="flex flex-wrap gap-1">
-        {CATS.map((c) => (
+        {cats.map((c) => (
           <button
             key={c.id}
             onClick={() => setCat(c.id)}
