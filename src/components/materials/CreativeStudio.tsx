@@ -1305,7 +1305,138 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
   );
 }
 
+/* ─────────── brand assets picker ─────────── */
+
+function BrandAssetsPicker({
+  brand, overrideKey, onOverride, onAddAsset,
+}: {
+  brand: BrandKit | null;
+  overrideKey: BrandKey | null;
+  onOverride: (k: BrandKey | null) => void;
+  onAddAsset: (src: string, label: string) => void;
+}) {
+  const brands = listBrands();
+  const logoVariants: Array<{ key: string; label: string; src?: string }> = brand ? [
+    { key: "lockup",    label: "Lockup",       src: brand.logos.lockup },
+    { key: "wordmark",  label: "Wordmark",     src: brand.logos.wordmark },
+    { key: "mark",      label: "Símbolo",      src: brand.logos.mark },
+    { key: "lockupAlt", label: "Lockup alt",   src: brand.logos.lockupAlt },
+  ] : [];
+  const sealVariants: Array<{ key: string; label: string; src?: string }> = brand?.seal ? [
+    { key: "h-light", label: "Horizontal · claro", src: brand.seal.horizontal.light },
+    { key: "h-dark",  label: "Horizontal · escuro", src: brand.seal.horizontal.dark },
+    { key: "v-light", label: "Vertical · claro",   src: brand.seal.vertical.light },
+    { key: "v-dark",  label: "Vertical · escuro",  src: brand.seal.vertical.dark },
+  ] : [];
+
+  return (
+    <div className="pt-2 mt-1 border-t border-border/40 space-y-2">
+      <div className="flex items-center justify-between px-0.5">
+        <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Marca aplicada</Label>
+        {overrideKey && (
+          <button className="text-[10px] text-muted-foreground hover:text-foreground" onClick={() => onOverride(null)}>
+            usar detecção
+          </button>
+        )}
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {brands.filter(b => b.key !== "playbet").map(b => {
+          const active = (overrideKey ?? brand?.key) === b.key;
+          return (
+            <button
+              key={b.key}
+              onClick={() => onOverride(b.key)}
+              className={cn(
+                "flex items-center gap-1.5 px-2 h-7 rounded-md border text-[11px] transition",
+                active
+                  ? "border-primary bg-primary/10 text-foreground"
+                  : "border-border/60 text-muted-foreground hover:border-primary/60 hover:text-foreground",
+              )}
+              style={active ? { boxShadow: `inset 0 0 0 1px ${b.palette.primary}` } : undefined}
+              title={`Aplicar identidade ${b.name}`}
+            >
+              <span className="w-2.5 h-2.5 rounded-sm" style={{ background: b.palette.primary }} />
+              {b.name}
+            </button>
+          );
+        })}
+      </div>
+
+      {brand && (
+        <div className="grid grid-cols-2 gap-1.5">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 text-[11px] justify-start" disabled={!logoVariants.some(v => v.src)}>
+                <Package className="w-3.5 h-3.5 mr-1.5" /> Logo · variantes
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-56 p-2 space-y-1">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground px-1 pb-1">
+                {brand.name} — logos
+              </div>
+              {logoVariants.map(v => (
+                <button
+                  key={v.key}
+                  onClick={() => v.src && onAddAsset(v.src, `${brand.name} · ${v.label}`)}
+                  disabled={!v.src}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent text-left text-[11px] disabled:opacity-40"
+                >
+                  {v.src
+                    ? <img src={v.src} alt="" className="h-6 w-10 object-contain bg-background/60 rounded-sm border border-border/50" />
+                    : <span className="h-6 w-10 rounded-sm border border-dashed border-border/60" />}
+                  <span className="flex-1 truncate">{v.label}</span>
+                </button>
+              ))}
+            </PopoverContent>
+          </Popover>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8 text-[11px] justify-start" disabled={!sealVariants.some(v => v.src)}>
+                <BadgePlus className="w-3.5 h-3.5 mr-1.5" /> Selo · variantes
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-56 p-2 space-y-1">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground px-1 pb-1">
+                Selo legal — {brand.seal?.license}
+              </div>
+              {sealVariants.map(v => (
+                <button
+                  key={v.key}
+                  onClick={() => v.src && onAddAsset(v.src, `${brand.name} · selo ${v.label}`)}
+                  disabled={!v.src}
+                  className="w-full flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent text-left text-[11px] disabled:opacity-40"
+                >
+                  {v.src
+                    ? <img src={v.src} alt="" className={cn("h-6 w-10 object-contain rounded-sm border border-border/50", v.key.includes("light") ? "bg-slate-800" : "bg-slate-100")} />
+                    : <span className="h-6 w-10 rounded-sm border border-dashed border-border/60" />}
+                  <span className="flex-1 truncate">{v.label}</span>
+                </button>
+              ))}
+            </PopoverContent>
+          </Popover>
+        </div>
+      )}
+
+      {brand && (
+        <div className="flex items-center gap-1 px-0.5">
+          <span className="text-[9px] uppercase tracking-wider text-muted-foreground mr-1">Paleta</span>
+          {[brand.palette.primary, brand.palette.secondary, brand.palette.surface, brand.palette.ink].map((c, i) => (
+            <span
+              key={i}
+              className="w-4 h-4 rounded border border-border/60"
+              style={{ background: c }}
+              title={c}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ─────────── inspectors ─────────── */
+
 
 function TextInspector({ layer, brandAccent, onChange }: { layer: TextLayer; brandAccent: string; onChange: (p: Partial<TextLayer>) => void }) {
   return (
