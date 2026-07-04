@@ -69,6 +69,19 @@ interface BonusOffer {
   cta_label: string;
 }
 
+type LogoVariant = "lockup" | "wordmark" | "mark";
+type SealVariant = "h-light" | "h-dark" | "v-light" | "v-dark";
+type HeroAlign = "left" | "center" | "right";
+
+interface BrandAssetsConfig {
+  header_logo: LogoVariant;
+  hero_logo: LogoVariant;
+  hero_align: HeroAlign;
+  footer_seal: SealVariant;
+  show_wordmark: boolean;
+}
+
+
 function isBonusCategory(category: string | null | undefined): boolean {
   const cat = (category || "").toLowerCase();
   return ["bonus", "bônus", "promo", "oferta", "offer", "cupom", "codigo", "código"].includes(cat);
