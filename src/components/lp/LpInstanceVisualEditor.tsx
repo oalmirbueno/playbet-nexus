@@ -124,6 +124,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
   const [link, setLink] = useState<any>(null);
   const [platformName, setPlatformName] = useState<string | null>(null);
   const [mode, setMode] = useState<LpMode>("catalog");
+  const [brandOverrideKey, setBrandOverrideKey] = useState<BrandKey | null>(null);
   const [sections, setSections] = useState<SectionDef[]>([]);
   const [copy, setCopy] = useState<{ title: string; subtitle: string; cta_label: string }>({
     title: "",
