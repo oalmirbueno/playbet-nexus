@@ -105,7 +105,22 @@ function saveState(linkId: string, fmt: CreativeFormat, engine: StudioEngine, s:
 }
 
 export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = false }: Props) {
-  const { data: brandCtx, isLoading: brandLoading } = useLinkBrand(link?.id ?? null);
+  const { data: linkBrandCtx, isLoading: brandLoading } = useLinkBrand(link?.id ?? null);
+  const [brandOverrideKey, setBrandOverrideKey] = useState<BrandKey | null>(null);
+  // brandCtx efetivo = override (manual) > brand vinda do link > fallback resolvido pelo nome da plataforma.
+  const brandCtx = useMemo<LinkBrandContext | undefined>(() => {
+    if (!linkBrandCtx && !link) return undefined;
+    const override = brandOverrideKey ? getBrandKit(brandOverrideKey) : null;
+    const fallback = resolveBrand(link?.platformName ?? null);
+    const brand: BrandKit | null = override ?? linkBrandCtx?.brand ?? fallback ?? null;
+    const base = linkBrandCtx ?? {
+      brand: null, platformName: link?.platformName ?? null, platformSlug: null,
+      platformAccountId: null, linkSlug: null, isLegallyReady: false,
+      seo: { title: "PlayBet", description: "", ogTitle: "PlayBet", license: null },
+    } as LinkBrandContext;
+    return { ...base, brand, isLegallyReady: !!(brand && brand.logos.mark && brand.seal) };
+  }, [linkBrandCtx, brandOverrideKey, link?.platformName]);
+
 
   const [style, setStyle] = useState<CreativeStyle>("hype");
   const [format, setFormat] = useState<CreativeFormat>("feed");
