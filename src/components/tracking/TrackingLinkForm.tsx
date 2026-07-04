@@ -233,12 +233,36 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
     setForm(p => {
       const next = { ...p };
       let changed = false;
+      if (detection.isSharedOdds || detection.category === "odds_share") {
+        if (p.link_category !== "odds_share") { next.link_category = "odds_share"; changed = true; }
+        if (p.game_slug || p.game_name || p.game_icon_url) {
+          next.game_slug = "";
+          next.game_name = "";
+          next.game_icon_url = "";
+          changed = true;
+        }
+        return changed ? next : p;
+      }
       if (!p.link_category && detection.category) { next.link_category = detection.category; changed = true; }
-      if (!p.game_slug && detection.gameSlug) { next.game_slug = detection.gameSlug; changed = true; }
-      if (!p.game_name && detection.gameName) { next.game_name = detection.gameName; changed = true; }
+      if (!["odds", "sports"].includes(detection.category || "")) {
+        if (!p.game_slug && detection.gameSlug) { next.game_slug = detection.gameSlug; changed = true; }
+        if (!p.game_name && detection.gameName) { next.game_name = detection.gameName; changed = true; }
+      }
       return changed ? next : p;
     });
-  }, [detection.category, detection.gameSlug, detection.gameName]);
+  }, [detection.category, detection.gameSlug, detection.gameName, detection.isSharedOdds]);
+
+  useEffect(() => {
+    if (!form.base_url) return;
+    const draft = extractOddsDraftFromInput([form.base_url, odds.bookmaker_share_url].filter(Boolean).join(" "));
+    if (!draft.isSharedOdds && form.link_category !== "odds_share") return;
+    setOdds(prev => ({
+      ...prev,
+      bookmaker_share_url: prev.bookmaker_share_url || draft.bookmaker_share_url || "",
+      total_odd: prev.total_odd ?? draft.total_odd,
+      event_label: prev.event_label || draft.event_label || "",
+    }));
+  }, [form.base_url, form.link_category]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Resolve the "current" platform id (detected or from selected account)
   const currentAccount = (accounts as any[]).find((a: any) => a.id === form.platform_account_id);
