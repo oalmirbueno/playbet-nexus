@@ -1143,18 +1143,22 @@ export default function InfluencerLanding() {
             <div className="absolute top-24 right-[-80px] w-[280px] h-[280px] rounded-full bg-cyan-400/10 blur-[100px]" />
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-400/40 to-transparent" />
           </div>
-          <div className="max-w-md mx-auto relative z-10 text-center">
+          <div className={`max-w-md relative z-10 ${heroAlignClass}`}>
             {isPlatformDirect && brandCtx?.brand ? (
-              <div className="mb-8 flex items-center justify-center gap-3">
+              <div className={`mb-8 flex items-center gap-3 ${brandAssetsCfg.hero_align === "left" ? "justify-start" : brandAssetsCfg.hero_align === "right" ? "justify-end" : "justify-center"}`}>
                 <LogoSlot src={logo} name="PlayBet" className="opacity-95 justify-end" />
                 <span className="text-white/30 text-lg font-light select-none leading-none">×</span>
                 <BrandLogoImage
-                  src={brandCtx.brand.logos.wordmark || brandCtx.brand.logos.lockup || brandCtx.brand.logos.mark}
+                  src={heroLogoSrc || brandCtx.brand.logos.wordmark || brandCtx.brand.logos.lockup || brandCtx.brand.logos.mark}
                   name={brandCtx.brand.name}
                 />
               </div>
+            ) : heroLogoSrc && brandCtx?.brand ? (
+              <div className={`mb-8 flex ${brandAssetsCfg.hero_align === "left" ? "justify-start" : brandAssetsCfg.hero_align === "right" ? "justify-end" : "justify-center"}`}>
+                <BrandLogoImage src={heroLogoSrc} name={brandCtx.brand.name} />
+              </div>
             ) : (
-              <LogoSlot src={logo} name="PlayBet" className="mx-auto mb-8 opacity-95" />
+              <LogoSlot src={logo} name="PlayBet" className={`mb-8 opacity-95 ${brandAssetsCfg.hero_align === "left" ? "mr-auto" : brandAssetsCfg.hero_align === "right" ? "ml-auto" : "mx-auto"}`} />
             )}
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] backdrop-blur border border-emerald-400/20 text-emerald-300 text-[10px] font-semibold uppercase tracking-[0.14em] mb-6">
               <Zap size={11} /> {mode === "odds" ? "Em destaque" : isCatalogMode ? "Oportunidades" : isPlatformDirect ? "Parceria oficial" : "Oferta oficial"}
