@@ -449,6 +449,47 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
     toast.success("Layout restaurado");
   };
 
+  const changeOddsPreset = (next: OddsPreset) => {
+    setOddsPreset(next);
+    setSelectedId(null);
+    setEditingTextId(null);
+    setDirty(true);
+    // Re-seed usando o novo preset (mesmo brandOverride + oddsCtx atuais).
+    // Como `seedLayers` lê `oddsPreset` via closure, chamamos após o próximo tick.
+    setTimeout(() => {
+      setLayers((_prev) => applyBrandChrome(seedLayersWithPreset(format, next)));
+    }, 0);
+    toast.success(`Preset odds: ${ODDS_PRESET_LABEL[next]}`);
+  };
+
+  // Versão de seedLayers que aceita o preset diretamente (para evitar corrida de estado).
+  const seedLayersWithPreset = useCallback((fmt: CreativeFormat, preset: OddsPreset, withImages = true): Layer[] => {
+    if (!link || !isOddsShare) return seedLayers(fmt, withImages);
+    const brand = brandCtx?.brand ?? null;
+    const brandOverride = brand ? {
+      logoSrc: brand.logos.lockup || brand.logos.wordmark || brand.logos.mark,
+      badgeBg: brand.palette.primary,
+      sealSrc: brand.seal?.horizontal.light || brand.seal?.horizontal.dark,
+      sealLabel: brand.seal?.alt,
+    } : undefined;
+    const betLabel = oddsCtx?.bet_type === "multipla" ? "MÚLTIPLA"
+      : oddsCtx?.bet_type === "sistema" ? "SISTEMA"
+      : "SIMPLES";
+    return defaultOddsLayersFor({
+      format: fmt,
+      preset,
+      platformName: brand?.name || link.platformName,
+      eventLabel: oddsCtx?.event_label ?? link.gameName ?? null,
+      betTypeLabel: `APOSTA ${betLabel}`,
+      totalOdd: oddsCtx?.total_odd ?? null,
+      legs: (oddsCtx?.selections ?? []).map(s => ({ event: s.event, pick: s.pick, odd: Number(s.odd) || 0 })),
+      cta: "COPIA E COLA NA CASA →",
+      handle: link.handle || (link.shortUrl ? link.shortUrl.replace(/^https?:\/\//, "") : ""),
+      screenshotUrl: withImages ? (oddsCtx?.screenshot_url ?? null) : null,
+    }, { brand: brandOverride });
+  }, [link, brandCtx?.brand?.key, brandCtx?.brand?.logos.lockup, brandCtx?.brand?.logos.wordmark, brandCtx?.brand?.logos.mark, brandCtx?.brand?.seal?.horizontal.light, brandCtx?.brand?.seal?.horizontal.dark, isOddsShare, oddsCtx, seedLayers]);
+
+
   const applyTpl = (templateId: string) => {
     if (!link) return;
     const raw = applyTemplate(templateId, {
