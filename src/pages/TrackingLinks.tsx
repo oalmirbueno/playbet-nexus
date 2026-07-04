@@ -501,6 +501,11 @@ export default function TrackingLinks() {
                                     <Flame size={9} /> {(l as any).game_name}
                                   </Badge>
                                 )}
+                                {(l as any).link_category === "odds_share" && (
+                                  <Badge variant="outline" className="text-[9px] h-4 border-primary/40 text-primary gap-0.5">
+                                    Σ Aposta compartilhada
+                                  </Badge>
+                                )}
                                 <Badge variant={l.status === "active" || !l.status ? "default" : "secondary"} className="text-[9px] h-4">
                                   {l.status ?? "active"}
                                 </Badge>
