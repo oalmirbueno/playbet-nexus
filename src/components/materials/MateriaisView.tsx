@@ -51,6 +51,7 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
   const [editorLinkId, setEditorLinkId] = useState<string | null>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
+  const [view, setView] = useState<"artes" | "kits">("artes");
 
 
 
