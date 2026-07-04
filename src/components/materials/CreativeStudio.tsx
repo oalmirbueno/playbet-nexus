@@ -576,6 +576,7 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
           layers: layersArg,
           updatedAt: now,
           ...(presetToSave ? { oddsPreset: presetToSave } : {}),
+          brandOverrideKey: brandOverrideKey ?? null,
         },
       };
 
