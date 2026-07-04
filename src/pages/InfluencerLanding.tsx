@@ -883,7 +883,7 @@ export default function InfluencerLanding() {
   if (state === "not_found") {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center text-white px-6 text-center">
-        <img src={logo} alt="PlayBet" className="h-12 w-auto mb-8 opacity-80" width={360} height={55} />
+        <img src={logo} alt="PlayBet" className="h-8 w-auto mb-8 opacity-80" width={360} height={55} />
         <h1 className="text-2xl font-bold mb-2">Página não encontrada</h1>
         <p className="text-sm text-gray-400 max-w-sm">O link que você acessou não está disponível ou não existe. Verifique o endereço e tente novamente.</p>
       </div>
@@ -894,7 +894,7 @@ export default function InfluencerLanding() {
   if (state === "no_domain") {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center text-white px-6 text-center">
-        <img src={logo} alt="PlayBet" className="h-12 w-auto mb-8 opacity-80" width={360} height={55} />
+        <img src={logo} alt="PlayBet" className="h-8 w-auto mb-8 opacity-80" width={360} height={55} />
         <h1 className="text-2xl font-bold mb-2">Domínio não configurado</h1>
         <p className="text-sm text-gray-400 max-w-sm">Este domínio ainda não foi vinculado a uma Landing Page no painel central da PlayBet.</p>
       </div>
@@ -905,7 +905,7 @@ export default function InfluencerLanding() {
   if (state === "inactive") {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center text-white px-6 text-center">
-        <img src={logo} alt="PlayBet" className="h-12 w-auto mb-8 opacity-80" width={360} height={55} />
+        <img src={logo} alt="PlayBet" className="h-8 w-auto mb-8 opacity-80" width={360} height={55} />
         <h1 className="text-2xl font-bold mb-2">Página temporariamente indisponível</h1>
         <p className="text-sm text-gray-400 max-w-sm">Este link está temporariamente fora do ar. Tente novamente mais tarde.</p>
       </div>
