@@ -93,6 +93,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       setExtraGameSlugs([]);
       setOdds(emptyOddsValue);
       setContextTouched(false);
+      setLpGeneration("generated");
     }
   }, [open, defaultInfluencerId, defaultLandingPageId]);
 
