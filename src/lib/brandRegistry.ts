@@ -128,7 +128,7 @@ const REGISTRY: Record<BrandKey, BrandKit> = {
   vupi: {
     key: "vupi",
     name: "VUPI",
-    slugAliases: ["vupi", "vupibet", "vupi-bet"],
+    slugAliases: ["vupi", "vupibet", "vupi-bet", "vupi bet", "vupi.bet", "vupi_bet"],
     logos: {
       mark: vupiMarkViolet.url,          // "v" símbolo primário (violet)
       wordmark: vupiWordDark.url,        // wordmark "vupi" em midnight
@@ -168,18 +168,28 @@ function norm(s: string | null | undefined): string {
   return (s ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 }
 
+/** Versão compacta: remove qualquer separador para casar "Vupi Bet" com "vupibet". */
+function compact(s: string | null | undefined): string {
+  return norm(s).replace(/[^a-z0-9]+/g, "");
+}
+
 /** Resolve a marca por qualquer identificador vindo do banco (nome, slug). */
 export function resolveBrand(platformNameOrSlug: string | null | undefined): BrandKit | null {
   const n = norm(platformNameOrSlug);
+  const c = compact(platformNameOrSlug);
   if (!n) return null;
-  // 1) match exato por alias ou nome
+  // 1) match exato por alias ou nome (com e sem separadores)
   for (const kit of Object.values(REGISTRY)) {
-    if (kit.slugAliases.some(a => norm(a) === n) || norm(kit.name) === n) return kit;
+    if (kit.slugAliases.some(a => norm(a) === n || compact(a) === c)) return kit;
+    if (norm(kit.name) === n || compact(kit.name) === c || compact(kit.key) === c) return kit;
   }
   // 2) match tolerante: substring contra aliases/nome/key (ex: "Estrela Bet Brasil" → estrela-bet)
   for (const kit of Object.values(REGISTRY)) {
-    const needles = [kit.key, kit.name, ...kit.slugAliases].map(norm);
-    if (needles.some(x => x && (n.includes(x) || x.includes(n)))) return kit;
+    const needles = [kit.key, kit.name, ...kit.slugAliases];
+    const norms = needles.map(norm).filter(Boolean);
+    const compacts = needles.map(compact).filter(Boolean);
+    if (norms.some(x => n.includes(x) || x.includes(n))) return kit;
+    if (compacts.some(x => c.includes(x) || x.includes(c))) return kit;
   }
   return null;
 }

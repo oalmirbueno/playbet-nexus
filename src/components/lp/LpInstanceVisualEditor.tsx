@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { ArrowUp, ArrowDown, RefreshCw, ExternalLink, Loader2, Wand2, Users, Sparkles, TrendingUp, Gift } from "lucide-react";
+import { ArrowUp, ArrowDown, RefreshCw, ExternalLink, Loader2, Wand2, Users, Sparkles, TrendingUp, Gift, GripVertical, Check, ImageIcon, AlignLeft, AlignCenter, AlignRight } from "lucide-react";
 import { LP_MODE_LABELS, defaultLayoutConfig, type LpMode } from "@/lib/lpMode";
 import GameArtwork from "@/components/tracking/GameArtwork";
 import { suggestThreeOptions, computeOpportunityScore } from "@/lib/opportunityEngine";
@@ -68,6 +68,19 @@ interface BonusOffer {
   note: string;
   cta_label: string;
 }
+
+type LogoVariant = "lockup" | "wordmark" | "mark";
+type SealVariant = "h-light" | "h-dark" | "v-light" | "v-dark";
+type HeroAlign = "left" | "center" | "right";
+
+interface BrandAssetsConfig {
+  header_logo: LogoVariant;
+  hero_logo: LogoVariant;
+  hero_align: HeroAlign;
+  footer_seal: SealVariant;
+  show_wordmark: boolean;
+}
+
 
 function isBonusCategory(category: string | null | undefined): boolean {
   const cat = (category || "").toLowerCase();
@@ -152,6 +165,15 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
   const [previewKey, setPreviewKey] = useState(0);
   const [basePage, setBasePage] = useState<{ name: string | null; domain: string | null; route: string | null; slug: string | null } | null>(null);
   const [previewTab, setPreviewTab] = useState<"generated" | "catalog">("generated");
+  const [brandAssets, setBrandAssets] = useState<BrandAssetsConfig>({
+    header_logo: "lockup",
+    hero_logo: "lockup",
+    hero_align: "center",
+    footer_seal: "h-light",
+    show_wordmark: true,
+  });
+  const [dragSectionIdx, setDragSectionIdx] = useState<number | null>(null);
+
 
 
   useEffect(() => {
@@ -187,6 +209,14 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         const rawSections: SectionDef[] = Array.isArray(lc?.sections) && lc.sections.length > 0
           ? lc.sections : defaultLayoutConfig(storedMode).sections;
         setBrandOverrideKey((lc?.brand_override_key ?? null) as BrandKey | null);
+        const ba = (lc?.brand_assets ?? {}) as Partial<BrandAssetsConfig>;
+        setBrandAssets({
+          header_logo: (ba.header_logo as LogoVariant) || "lockup",
+          hero_logo: (ba.hero_logo as LogoVariant) || "lockup",
+          hero_align: (ba.hero_align as HeroAlign) || "center",
+          footer_seal: (ba.footer_seal as SealVariant) || "h-light",
+          show_wordmark: ba.show_wordmark ?? true,
+        });
 
         const hc = (inst as any).hype_copy || {};
         setCopy({
@@ -494,6 +524,112 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
       toast({ title: "Não foi possível aplicar a marca", description: e?.message, variant: "destructive" });
     }
   };
+
+  /** Patch helper — merges patch into instance columns, refreshes preview + queries. */
+  const patchInstance = async (
+    patch: { hype_copy?: any; layout_config?: any; game_slugs?: string[] },
+    successTitle: string,
+    successDesc?: string,
+  ) => {
+    if (!instanceId) return;
+    try {
+      const currentHc = (instance?.hype_copy as any) || {};
+      const currentLc = (instance?.layout_config as any) || {};
+      const nextHc = patch.hype_copy ? { ...currentHc, ...patch.hype_copy, auto: false } : currentHc;
+      const nextLc = patch.layout_config ? { ...currentLc, ...patch.layout_config, updated_at: new Date().toISOString() } : currentLc;
+      const payload: any = {};
+      if (patch.hype_copy) payload.hype_copy = nextHc;
+      if (patch.layout_config) payload.layout_config = nextLc;
+      if (patch.game_slugs) payload.game_slugs = patch.game_slugs;
+      const { error } = await supabase.from("landing_page_instances").update(payload).eq("id", instanceId);
+      if (error) throw new Error(error.message);
+      setInstance((prev: any) => prev ? { ...prev, ...payload } : prev);
+      setPreviewKey((k) => k + 1);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["landing_page_instances"] }),
+        queryClient.refetchQueries({ queryKey: ["landing_page_instances"], type: "active" }),
+      ]);
+      toast({ title: successTitle, description: successDesc });
+    } catch (e: any) {
+      toast({ title: "Erro ao aplicar", description: e?.message, variant: "destructive" });
+    }
+  };
+
+  const applyCopy = () => patchInstance(
+    { hype_copy: { title: copy.title || null, subtitle: copy.subtitle || null, cta_label: copy.cta_label || null } },
+    "Copy aplicada",
+    "Título, subtítulo e CTA atualizados na LP pública.",
+  );
+
+  const applyBonus = () => patchInstance(
+    { hype_copy: { bonus_offer: {
+      enabled: bonusOffer.enabled,
+      title: bonusOffer.title || null,
+      code: bonusOffer.code || null,
+      note: bonusOffer.note || null,
+      cta_label: bonusOffer.cta_label || null,
+    } } },
+    "Bônus aplicado",
+  );
+
+  const applyCommunity = () => patchInstance(
+    { hype_copy: { community_cta: {
+      enabled: community.enabled,
+      label: community.label || null,
+      url: community.url || null,
+      note: community.note || null,
+    } } },
+    "Comunidade aplicada",
+  );
+
+  const applyGames = () => patchInstance(
+    { game_slugs: gameSlugs },
+    "Jogos aplicados",
+    `${gameSlugs.length} jogo(s) exibido(s).`,
+  );
+
+  const applyOdds = () => patchInstance(
+    { hype_copy: { smart_odds: smartOdds } },
+    "Destaques aplicados",
+    `${smartOdds.length} opção(ões) selecionada(s).`,
+  );
+
+  const applySections = () => patchInstance(
+    { layout_config: { sections } },
+    "Seções aplicadas",
+    "Ordem e visibilidade das seções atualizadas.",
+  );
+
+  const applyBrandAssets = (next?: Partial<BrandAssetsConfig>) => {
+    const merged = { ...brandAssets, ...(next || {}) };
+    setBrandAssets(merged);
+    return patchInstance(
+      { layout_config: { brand_assets: merged } },
+      "Assets da marca aplicados",
+    );
+  };
+
+  /* ── drag reordering ── */
+  const onSectionDragStart = (idx: number) => (e: React.DragEvent) => {
+    setDragSectionIdx(idx);
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const onSectionDragOver = (idx: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+  const onSectionDrop = (targetIdx: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    if (dragSectionIdx === null || dragSectionIdx === targetIdx) { setDragSectionIdx(null); return; }
+    setSections((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(dragSectionIdx, 1);
+      next.splice(targetIdx, 0, moved);
+      return next;
+    });
+    setDragSectionIdx(null);
+  };
+
 
   const handleSave = async () => {
     if (!instanceId) return;
@@ -910,6 +1046,9 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                     value={copy.cta_label}
                     onChange={(e) => setCopy({ ...copy, cta_label: e.target.value })}
                   />
+                  <Button type="button" size="sm" variant="outline" className="h-7 w-full mt-2 text-[10px]" onClick={applyCopy}>
+                    <Check size={11} className="mr-1" /> Aplicar copy
+                  </Button>
                 </div>
 
                 {/* Bonus */}
@@ -951,6 +1090,9 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                     onChange={(e) => setBonusOffer({ ...bonusOffer, note: e.target.value })}
                     disabled={!bonusOffer.enabled}
                   />
+                  <Button type="button" size="sm" variant="outline" className="h-7 w-full mt-1 text-[10px]" onClick={applyBonus}>
+                    <Check size={11} className="mr-1" /> Aplicar bônus
+                  </Button>
                 </div>
 
                 {/* Community CTA */}
@@ -983,6 +1125,9 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                     onChange={(e) => setCommunity({ ...community, note: e.target.value })}
                     disabled={!community.enabled}
                   />
+                  <Button type="button" size="sm" variant="outline" className="h-7 w-full text-[10px]" onClick={applyCommunity}>
+                    <Check size={11} className="mr-1" /> Aplicar comunidade
+                  </Button>
                 </div>
 
                 {/* Destaques inteligentes */}
@@ -1047,14 +1192,140 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                         })
                       )}
                     </div>
+                    <Button type="button" size="sm" variant="outline" className="h-7 w-full text-[10px]" onClick={applyOdds}>
+                      <Check size={11} className="mr-1" /> Aplicar destaques ({smartOdds.length})
+                    </Button>
+                  </div>
+                )}
+
+                {/* Assets da marca */}
+                {brandKit && (
+                  <div className="rounded-md border border-border/60 bg-secondary/20 p-3 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <ImageIcon size={13} className="text-primary" />
+                      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground flex-1">
+                        Assets da marca · {brandKit.name}
+                      </Label>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <span className="text-[9px] uppercase tracking-wider text-muted-foreground/70">Logo no header</span>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {(["lockup", "wordmark", "mark"] as LogoVariant[]).map((v) => {
+                          const src = v === "mark" ? brandKit.logos.mark : v === "wordmark" ? (brandKit.logos.wordmark || brandKit.logos.lockup) : (brandKit.logos.lockup || brandKit.logos.wordmark || brandKit.logos.mark);
+                          const active = brandAssets.header_logo === v;
+                          return (
+                            <button
+                              key={v}
+                              type="button"
+                              onClick={() => setBrandAssets((prev) => ({ ...prev, header_logo: v }))}
+                              className={`rounded border p-1.5 flex flex-col items-center gap-1 transition ${active ? "border-primary bg-primary/10" : "border-border/50 bg-background/40 hover:border-primary/40"}`}
+                              title={`Header: ${v}`}
+                            >
+                              <img src={src} alt="" className="h-7 max-w-full object-contain" />
+                              <span className="text-[9px] text-muted-foreground capitalize">{v}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <span className="text-[9px] uppercase tracking-wider text-muted-foreground/70">Logo no hero</span>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {(["lockup", "wordmark", "mark"] as LogoVariant[]).map((v) => {
+                          const src = v === "mark" ? brandKit.logos.mark : v === "wordmark" ? (brandKit.logos.wordmark || brandKit.logos.lockup) : (brandKit.logos.lockup || brandKit.logos.wordmark || brandKit.logos.mark);
+                          const active = brandAssets.hero_logo === v;
+                          return (
+                            <button
+                              key={v}
+                              type="button"
+                              onClick={() => setBrandAssets((prev) => ({ ...prev, hero_logo: v }))}
+                              className={`rounded border p-1.5 flex flex-col items-center gap-1 transition ${active ? "border-primary bg-primary/10" : "border-border/50 bg-background/40 hover:border-primary/40"}`}
+                              title={`Hero: ${v}`}
+                            >
+                              <img src={src} alt="" className="h-9 max-w-full object-contain" />
+                              <span className="text-[9px] text-muted-foreground capitalize">{v}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <span className="text-[9px] uppercase tracking-wider text-muted-foreground/70">Alinhamento do hero</span>
+                      <div className="inline-flex rounded-md border border-border/60 bg-background/40 p-0.5 w-full">
+                        {([
+                          { v: "left" as HeroAlign, icon: AlignLeft },
+                          { v: "center" as HeroAlign, icon: AlignCenter },
+                          { v: "right" as HeroAlign, icon: AlignRight },
+                        ]).map(({ v, icon: Icon }) => (
+                          <button
+                            key={v}
+                            type="button"
+                            onClick={() => setBrandAssets((prev) => ({ ...prev, hero_align: v }))}
+                            className={`flex-1 h-6 flex items-center justify-center rounded transition ${brandAssets.hero_align === v ? "bg-primary/15 text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                          >
+                            <Icon size={12} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {brandKit.seal && (
+                      <div className="space-y-1.5">
+                        <span className="text-[9px] uppercase tracking-wider text-muted-foreground/70">Selo legal (rodapé)</span>
+                        <div className="grid grid-cols-4 gap-1.5">
+                          {([
+                            { v: "h-light" as SealVariant, label: "H claro", src: brandKit.seal.horizontal.light },
+                            { v: "h-dark" as SealVariant, label: "H escuro", src: brandKit.seal.horizontal.dark },
+                            { v: "v-light" as SealVariant, label: "V claro", src: brandKit.seal.vertical.light },
+                            { v: "v-dark" as SealVariant, label: "V escuro", src: brandKit.seal.vertical.dark },
+                          ]).map(({ v, label, src }) => {
+                            const active = brandAssets.footer_seal === v;
+                            return (
+                              <button
+                                key={v}
+                                type="button"
+                                onClick={() => setBrandAssets((prev) => ({ ...prev, footer_seal: v }))}
+                                className={`rounded border p-1 flex flex-col items-center gap-0.5 transition ${active ? "border-primary bg-primary/10" : "border-border/50 bg-background/40 hover:border-primary/40"}`}
+                                title={label}
+                              >
+                                <img src={src} alt="" className="h-6 max-w-full object-contain" />
+                                <span className="text-[8px] text-muted-foreground">{label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    <Button type="button" size="sm" variant="outline" className="h-7 w-full text-[10px]" onClick={() => applyBrandAssets()}>
+                      <Check size={11} className="mr-1" /> Aplicar assets
+                    </Button>
                   </div>
                 )}
 
                 <div>
-                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Seções</Label>
+                  <div className="flex items-center justify-between mb-1">
+                    <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Seções · arraste para reordenar</Label>
+                  </div>
                   <div className="space-y-1 mt-1">
                     {sections.map((s, i) => (
-                      <div key={s.id} className="flex items-center gap-2 rounded border border-border/60 bg-background/40 px-2 py-1.5">
+                      <div
+                        key={s.id}
+                        draggable
+                        onDragStart={onSectionDragStart(i)}
+                        onDragOver={onSectionDragOver(i)}
+                        onDrop={onSectionDrop(i)}
+                        onDragEnd={() => setDragSectionIdx(null)}
+                        className={`flex items-center gap-2 rounded border px-2 py-1.5 transition ${
+                          dragSectionIdx === i
+                            ? "border-primary bg-primary/10 opacity-60"
+                            : "border-border/60 bg-background/40 hover:border-primary/40"
+                        }`}
+                      >
+                        <GripVertical size={12} className="text-muted-foreground cursor-grab active:cursor-grabbing" />
                         <span className="text-xs flex-1">{s.label || SECTION_LABELS[s.id] || s.id}</span>
                         <button type="button" onClick={() => move(i, -1)} disabled={i === 0} className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30" title="Subir"><ArrowUp size={11} /></button>
                         <button type="button" onClick={() => move(i, 1)} disabled={i === sections.length - 1} className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30" title="Descer"><ArrowDown size={11} /></button>
@@ -1062,6 +1333,9 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                       </div>
                     ))}
                   </div>
+                  <Button type="button" size="sm" variant="outline" className="h-7 w-full mt-2 text-[10px]" onClick={applySections}>
+                    <Check size={11} className="mr-1" /> Aplicar seções
+                  </Button>
                 </div>
 
                 {availableGames.length > 0 && (
@@ -1088,6 +1362,9 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                         );
                       })}
                     </div>
+                    <Button type="button" size="sm" variant="outline" className="h-7 w-full mt-2 text-[10px]" onClick={applyGames}>
+                      <Check size={11} className="mr-1" /> Aplicar jogos
+                    </Button>
                   </div>
                 )}
               </>
