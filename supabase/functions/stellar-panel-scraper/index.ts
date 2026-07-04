@@ -297,6 +297,11 @@ function normalizePeriod(period: string, fallback: string): string {
   return fallback;
 }
 
+function isRollingAggregatePeriod(period: string): boolean {
+  const p = String(period ?? "").trim();
+  return !p || /^01\/01\/0001/.test(p);
+}
+
 
 // ------------------------------------------------------------------
 // Persistence
@@ -390,8 +395,10 @@ async function persist(
       }
     }
 
-    const dateRef = normalizePeriod(it.period ?? "", fallbackDate);
+    const rawPeriod = it.period ?? "";
+    const dateRef = normalizePeriod(rawPeriod, fallbackDate);
     if (!dateRef) continue;
+    const externalDateKey = isRollingAggregatePeriod(rawPeriod) ? "_rolling" : dateRef;
     const accountFinancial = platformAccountId
       ? (await run.supabase
         .from("platform_accounts")
@@ -436,7 +443,11 @@ async function persist(
       original_currency: "BRL",
       origem_importacao: "panel_scraper_stellar",
       is_demo: false,
-      external_ref: `${brand.brand_slug}:${dateRef}:${it.campaign_name || "_aggregate"}`,
+      // When Stellar returns the sentinel 01/01/0001, the row is a rolling
+      // snapshot for the requested window, not that calendar day. Keep a stable
+      // external_ref so each sync updates the snapshot instead of creating a new
+      // daily copy that inflates dashboard totals.
+      external_ref: `${brand.brand_slug}:${externalDateKey}:${it.campaign_name || "_aggregate"}`,
     };
 
     const { error } = await run.supabase
