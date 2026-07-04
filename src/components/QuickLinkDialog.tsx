@@ -304,14 +304,13 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       const linkId = createdLink?.id;
       if (linkId) {
         if (instanceId) {
-          supabase
+          await supabase
             .from("landing_page_instances")
             .update({
               source_tracking_link_id: linkId,
               affiliate_link: trackedAffiliateUrl,
             } as any)
-            .eq("id", instanceId)
-            .then(() => {});
+            .eq("id", instanceId);
         }
 
         const needsLpExtras = useLp && (extraGameSlugs.length > 0 || !!hypeReason);
@@ -327,7 +326,17 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       }
 
 
-      try { await navigator.clipboard.writeText(finalUrl); } catch {}
+      let copiedUrl = finalUrl;
+      if (createdLink?.id) {
+        const { data: syncedLink } = await supabase
+          .from("tracking_links")
+          .select("final_url")
+          .eq("id", createdLink.id)
+          .maybeSingle();
+        copiedUrl = (syncedLink as any)?.final_url || finalUrl;
+      }
+
+      try { await navigator.clipboard.writeText(copiedUrl); } catch {}
 
       toast({
         title: "Link cadastrado",

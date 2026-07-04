@@ -177,16 +177,14 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         } else {
           setBasePage(null);
         }
-        const m: LpMode = ((inst as any).lp_mode as LpMode) || "catalog";
-        setMode(m);
-        setPreviewTab(m === "catalog" ? "catalog" : "generated");
+        const storedMode: LpMode = ((inst as any).lp_mode as LpMode) || "catalog";
+        let resolvedMode: LpMode = storedMode;
 
 
         setGameSlugs(((inst as any).game_slugs as string[]) || []);
         const lc = (inst as any).layout_config;
         const rawSections: SectionDef[] = Array.isArray(lc?.sections) && lc.sections.length > 0
-          ? lc.sections : defaultLayoutConfig(m).sections;
-        setSections(ensureCommunitySection(rawSections));
+          ? lc.sections : defaultLayoutConfig(storedMode).sections;
 
         const hc = (inst as any).hype_copy || {};
         setCopy({
@@ -231,6 +229,11 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         const platformId = (tl as any)?.platform_accounts?.platform_id;
         const pName = (tl as any)?.platform_accounts?.platforms?.name || null;
         setPlatformName(pName);
+        const hasAnyGame = Boolean((tl as any)?.game_slug || ((inst as any).game_slugs as string[] | undefined)?.length);
+        if (!hasAnyGame) resolvedMode = "platform_direct";
+        setMode(resolvedMode);
+        setPreviewTab(resolvedMode === "catalog" ? "catalog" : "generated");
+        setSections(ensureCommunitySection(!hasAnyGame ? defaultLayoutConfig("platform_direct").sections : rawSections));
 
         // Adaptive auto-fill for empty copy fields
         const autoFlag = hc.auto !== false;
@@ -239,9 +242,9 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
           const hype = (tl as any).hype_reason;
           const cat = (tl as any).link_category;
           setCopy(prev => ({
-            title: prev.title || titleForMode(m, gname, pName),
-            subtitle: prev.subtitle || hype || adaptiveSubtitle(m, gname, pName),
-            cta_label: prev.cta_label || ctaForMode(m, cat, gname),
+            title: prev.title || titleForMode(resolvedMode, gname, pName),
+            subtitle: prev.subtitle || hype || adaptiveSubtitle(resolvedMode, gname, pName),
+            cta_label: prev.cta_label || ctaForMode(resolvedMode, cat, gname),
           }));
           setCommunity(prev => ({
             enabled: prev.enabled,
@@ -254,7 +257,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
             title: prev.title || (isBonusCategory(cat) ? `Bônus ${gname || "exclusivo"}` : "Oferta oficial"),
             code: prev.code,
             note: prev.note || "Use no cadastro.",
-            cta_label: prev.cta_label || ctaForMode(m, cat, gname),
+            cta_label: prev.cta_label || ctaForMode(resolvedMode, cat, gname),
           }));
         }
 
@@ -304,7 +307,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
 
 
         // Load odds candidates when mode = odds
-        if (m === "odds") {
+        if (resolvedMode === "odds") {
           await loadOddsCandidates(platformId);
         }
       } finally {
@@ -465,7 +468,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
     if (!instanceId) return;
     const requestedMode: LpMode = previewTab === "generated" && mode === "catalog" ? "single_game" : mode;
     const hasSelectedGame = Boolean(link?.game_slug || gameSlugs[0]);
-    const effectiveMode: LpMode = (requestedMode === "single_game" || requestedMode === "multi_game") && !hasSelectedGame
+    const effectiveMode: LpMode = !hasSelectedGame
       ? "platform_direct"
       : requestedMode;
     setSaving(true);

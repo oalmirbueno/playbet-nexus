@@ -162,7 +162,7 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
   }, [rows, q, platformFilter]);
 
   const withArt = filtered.filter(r => r.game_icon_url);
-  const withoutArt = filtered.filter(r => !r.game_icon_url);
+  const brandKits = filtered.filter(r => !r.game_icon_url);
 
   return (
     <div className="space-y-6">
@@ -173,7 +173,7 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
           <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
         </div>
         <p className="text-sm text-muted-foreground">
-          Cada link novo já vira criativo pronto — arte do jogo + logo Playbet, 4 formatos, exportação em PNG.
+          Cada link novo já vira material pronto — com jogo vira criativo; sem jogo vira kit da marca separado por plataforma.
         </p>
       </div>
 
@@ -226,15 +226,15 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
               ))}
             </div>
           )}
-          {withoutArt.length > 0 && (
+          {brandKits.length > 0 && (
             <div>
               <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">
-                Sem arte do jogo ({withoutArt.length})
+                Kit da marca · links sem jogo ({brandKits.length})
               </p>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                {withoutArt.map(r => (
+                {brandKits.map(r => (
                   <CreativeCard key={r.id} row={r} showInfluencer={showInfluencer}
-                    onOpen={() => { setActive(toStudioLink(r)); setOpen(true); }}
+                    onOpen={() => { setEditorLinkId(r.id); setEditorOpen(true); }}
                     onEdit={() => { setEditorLinkId(r.id); setEditorOpen(true); }} muted />
                 ))}
               </div>
@@ -321,7 +321,7 @@ function CreativeCard({
         </div>
         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-primary/20 backdrop-blur-[2px] flex items-center justify-center pointer-events-none">
           <div className="bg-primary text-primary-foreground text-xs font-semibold px-3 py-2 rounded-md shadow-lg flex items-center gap-1.5">
-            <Wand2 className="w-3.5 h-3.5" /> Abrir estúdio
+            <Wand2 className="w-3.5 h-3.5" /> {row.game_icon_url ? "Abrir estúdio" : "Abrir kit"}
           </div>
         </div>
       </div>
