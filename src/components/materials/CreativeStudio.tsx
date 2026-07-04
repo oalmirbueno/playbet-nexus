@@ -835,6 +835,27 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
                 </button>
               </div>
             )}
+            {isOddsShare && (
+              <div className="inline-flex items-center gap-1 rounded-md border border-border/60 bg-secondary/40 p-0.5">
+                {ODDS_PRESETS.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => changeOddsPreset(p)}
+                    title={`Preset odds: ${ODDS_PRESET_LABEL[p]}`}
+                    className={cn(
+                      "px-2 py-1 rounded-sm text-[11px] font-medium transition-all whitespace-nowrap",
+                      oddsPreset === p
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {ODDS_PRESET_LABEL[p]}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <button className="text-xs px-3 py-1.5 rounded-md border border-primary bg-primary/10 text-foreground transition-all flex items-center gap-1.5">
               <MousePointer2 className="w-3.5 h-3.5" />
               Editor ativo
