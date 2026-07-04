@@ -147,7 +147,9 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
     const split = splitAffiliateAndOddsUrls(value);
     const draft = extractOddsDraftFromInput(value);
     setRawLink(split.affiliateUrl || value);
-    if (draft.isSharedOdds) {
+    // Só auto-migra para Odds se o operador ainda não fixou um contexto.
+    // Uma vez que ele clicou em "Sem jogo" ou "Jogos/cassino", respeitamos a escolha.
+    if (draft.isSharedOdds && !contextTouched) {
       setLinkContext(LINK_CONTEXT_ODDS);
       setLinkCategory("odds_share");
       setGameSlug("");
@@ -160,10 +162,27 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
         total_odd: draft.total_odd ?? prev.total_odd,
         event_label: draft.event_label || prev.event_label,
       }));
+    } else if (draft.isSharedOdds && linkContext === LINK_CONTEXT_ODDS) {
+      // Já está em odds → só enriquece o bilhete com dados detectados.
+      setOdds(prev => ({
+        ...prev,
+        bookmaker_share_url: draft.bookmaker_share_url || prev.bookmaker_share_url,
+        total_odd: draft.total_odd ?? prev.total_odd,
+        event_label: draft.event_label || prev.event_label,
+      }));
     }
   };
 
   useEffect(() => {
+    // Detecção não pode sobrescrever contexto manual.
+    if (contextTouched) {
+      if (linkContext === LINK_CONTEXT_GAME) {
+        if (detection.category && detection.category !== "odds_share") setLinkCategory(detection.category);
+        if (detection.gameSlug) setGameSlug(detection.gameSlug);
+        if (detection.gameName) setGameName(detection.gameName);
+      }
+      return;
+    }
     if (detection.isSharedOdds || detection.category === "odds_share") {
       setLinkContext(LINK_CONTEXT_ODDS);
       setLinkCategory("odds_share");
@@ -177,26 +196,28 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       if (detection.gameSlug) setGameSlug(detection.gameSlug);
       if (detection.gameName) setGameName(detection.gameName);
     }
-  }, [detection.category, detection.gameSlug, detection.gameName, detection.isSharedOdds, linkContext]);
+  }, [detection.category, detection.gameSlug, detection.gameName, detection.isSharedOdds, linkContext, contextTouched]);
 
-  const clearGameContext = () => {
-    setLinkContext(LINK_CONTEXT_NO_GAME);
-    setGameSlug("");
-    setGameName("");
-    setGameIconUrl("");
-    setExtraGameSlugs([]);
-    setHypeReason("");
-    setLinkCategory("");
+  // Handler único: garante reset do outro contexto ao trocar, evitando
+  // que odds "vazem" para jogos ou vice-versa.
+  const chooseContext = (ctx: typeof LINK_CONTEXT_GAME | typeof LINK_CONTEXT_NO_GAME | typeof LINK_CONTEXT_ODDS) => {
+    setContextTouched(true);
+    setLinkContext(ctx);
+    if (ctx === LINK_CONTEXT_NO_GAME) {
+      setGameSlug(""); setGameName(""); setGameIconUrl("");
+      setExtraGameSlugs([]); setHypeReason(""); setLinkCategory("");
+      setOdds(emptyOddsValue);
+    } else if (ctx === LINK_CONTEXT_ODDS) {
+      setGameSlug(""); setGameName(""); setGameIconUrl("");
+      setExtraGameSlugs([]); setHypeReason("");
+      setLinkCategory("odds_share");
+    } else {
+      // GAME → limpa bilhete, mantém jogo detectado.
+      setOdds(emptyOddsValue);
+      if (linkCategory === "odds_share") setLinkCategory("slots");
+    }
   };
 
-  const setOddsContext = () => {
-    setLinkContext(LINK_CONTEXT_ODDS);
-    setLinkCategory("odds_share");
-    setGameSlug("");
-    setGameName("");
-    setGameIconUrl("");
-    setExtraGameSlugs([]);
-  };
 
   const qc = useQueryClient();
   const [refreshingHype, setRefreshingHype] = useState(false);
