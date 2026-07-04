@@ -841,7 +841,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                     <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="sub1">sub1 (padrão universal)</SelectItem>
-                      <SelectItem value="afp">AFP (EstrelaBet, Vooopi)</SelectItem>
+                      <SelectItem value="afp">AFP (EstrelaBet, VUPI)</SelectItem>
                       <SelectItem value="click_id">click_id (1win, Alanbase)</SelectItem>
                       <SelectItem value="clickid">clickid (Betano)</SelectItem>
                       <SelectItem value="aff_sub">aff_sub (Stake)</SelectItem>
