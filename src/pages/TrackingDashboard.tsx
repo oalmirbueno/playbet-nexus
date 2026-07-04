@@ -197,20 +197,90 @@ export default function TrackingDashboard() {
       }));
   }, [metrics]);
 
+  // Top Influenciadores — atribuição REAL.
+  // Estratégia: (1) somamos receita/cadastros diretos das linhas de tracking_metrics
+  // que já vêm com influencer_id. (2) Para linhas de painel (Estrela Bet, etc.)
+  // que chegam SEM influencer_id, distribuímos a receita da casa proporcionalmente
+  // ao peso rastreado de cada influenciadora naquele mesmo período+plataforma
+  // (peso = ftd·10 + registros·3 + clicks). Assim a receita da casa "encontra"
+  // a influenciadora que efetivamente gerou o tráfego.
   const topInfluencers = useMemo(() => {
-    const map = new Map<string, { id: string; nome: string; visitas: number; receita: number; cadastros: number }>();
-    metrics.forEach((m) => {
-      const id = m.influencer_id;
-      if (!id) return;
-      const inf = (influencers as any[]).find((i: any) => i.id === id);
-      const entry = map.get(id) ?? { id, nome: inf?.name || "Sem nome", visitas: 0, receita: 0, cadastros: 0 };
-      entry.visitas += m.cliques || 0;
-      entry.cadastros += m.registros || 0;
-      entry.receita += getMetricMoneyParts(m).total;
-      map.set(id, entry);
+    const infList = influencers as any[];
+    const nameOf = (id: string) => infList.find((i) => i.id === id)?.name || "Sem nome";
+
+    // Pesos por (platform_id → influencer_id → peso) a partir de tracking_events
+    const weightsByPlatform = new Map<string, Map<string, number>>();
+    const visitasByInfluencer = new Map<string, number>();
+    periodEvents.forEach((ev: any) => {
+      const infId = ev.influencer_id;
+      if (!infId) return;
+      const pid = ev.platform_id || "__none__";
+      const w = weightsByPlatform.get(pid) ?? new Map<string, number>();
+      const name = ev.canonical_event_name;
+      const inc = name === "ftd" ? 10 : name === "registration" ? 3 : name === "click" ? 1 : name === "lp_view" ? 0.5 : 1;
+      w.set(infId, (w.get(infId) ?? 0) + inc);
+      weightsByPlatform.set(pid, w);
+      if (name === "lp_view" || name === "click") {
+        visitasByInfluencer.set(infId, (visitasByInfluencer.get(infId) ?? 0) + 1);
+      }
     });
-    return Array.from(map.values()).sort((a, b) => b.receita - a.receita).slice(0, 5);
-  }, [metrics, influencers]);
+
+    const acc = new Map<string, { id: string; nome: string; visitas: number; receita: number; cadastros: number }>();
+    const ensure = (id: string) =>
+      acc.get(id) ?? { id, nome: nameOf(id), visitas: 0, receita: 0, cadastros: 0 };
+
+    // Agrupa métricas por plataforma para saber quanto ainda sobra pra atribuir
+    const byPlatform = new Map<string, { direct: Map<string, { rev: number; regs: number; cliques: number }>; unattrib: number; totalRev: number }>();
+    metrics.forEach((m: any) => {
+      const pid = m.platform_id || "__none__";
+      const rev = getMetricMoneyParts(m).total;
+      const bucket = byPlatform.get(pid) ?? { direct: new Map(), unattrib: 0, totalRev: 0 };
+      bucket.totalRev += rev;
+      if (m.influencer_id) {
+        const cur = bucket.direct.get(m.influencer_id) ?? { rev: 0, regs: 0, cliques: 0 };
+        cur.rev += rev;
+        cur.regs += m.registros || 0;
+        cur.cliques += m.cliques || 0;
+        bucket.direct.set(m.influencer_id, cur);
+      } else {
+        bucket.unattrib += rev;
+      }
+      byPlatform.set(pid, bucket);
+    });
+
+    byPlatform.forEach((bucket, pid) => {
+      // 1) atribuição direta
+      bucket.direct.forEach((v, infId) => {
+        const e = ensure(infId);
+        e.receita += v.rev;
+        e.cadastros += v.regs;
+        e.visitas += v.cliques;
+        acc.set(infId, e);
+      });
+      // 2) rateio da receita não atribuída pelos pesos rastreados
+      if (bucket.unattrib > 0) {
+        const w = weightsByPlatform.get(pid) ?? new Map();
+        const totalW = Array.from(w.values()).reduce((s, x) => s + x, 0);
+        if (totalW > 0) {
+          w.forEach((peso, infId) => {
+            const share = peso / totalW;
+            const e = ensure(infId);
+            e.receita += bucket.unattrib * share;
+            acc.set(infId, e);
+          });
+        }
+      }
+    });
+
+    // Preenche visitas a partir de eventos (fonte real do funil)
+    visitasByInfluencer.forEach((v, infId) => {
+      const e = ensure(infId);
+      if (e.visitas < v) e.visitas = v;
+      acc.set(infId, e);
+    });
+
+    return Array.from(acc.values()).sort((a, b) => b.receita - a.receita).slice(0, 5);
+  }, [metrics, periodEvents, influencers]);
 
   const topCasas = useMemo(() => {
     const map = new Map<string, { id: string; nome: string; visitas: number; receita: number; cadastros: number }>();
