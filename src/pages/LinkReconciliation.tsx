@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Loader2, RefreshCw, AlertTriangle, CheckCircle2, Link2Off, ArrowRight } from "lucide-react";
+import { Loader2, RefreshCw, AlertTriangle, CheckCircle2, Link2Off, ArrowRight, Sigma, ImageOff, LinkIcon, Camera, Clock } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 type Sev = "ok" | "minor" | "major" | "critical";
