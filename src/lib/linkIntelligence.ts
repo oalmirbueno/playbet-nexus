@@ -1,6 +1,6 @@
 /**
- * Link intelligence — detecta plataforma, categoria e jogo a partir de uma URL de afiliado.
- * Roda no cliente, sem side effects. Retorna candidatos ranqueados.
+ * Link intelligence — detecta plataforma, categoria, jogo e bilhete de odds.
+ * Aceita texto colado com 1+ URLs (afiliado + aposta compartilhada) sem misturar casino/jogos.
  */
 
 export type LinkCategory =
@@ -22,18 +22,23 @@ export interface DetectionResult {
   category: LinkCategory | null;
   gameSlug: string | null;
   gameName: string | null;
+  isSharedOdds: boolean;
+  urls: string[];
 }
 
 export interface PlatformLike {
   id: string;
   name: string;
+  slug?: string | null;
   domain_patterns?: string[] | null;
   domains?: string[] | null;
   website_url?: string | null;
 }
 
+const SHARED_ODDS_RE = /(aposta\s+compartilhada|bilhete|bet[-_\s]?slip|betslip|share[-_\s]?(bet|aposta|ticket)|bet[-_\s]?share|booking[-_\s]?code|c[oó]digo\s+(da\s+)?aposta|codigo\s+(da\s+)?aposta|palpite\s+pronto|cupom\s+de\s+aposta|coupon|ticket\s+de\s+aposta|sele[cç][oõ]es?|odd\s*total|total\s*odd)/i;
+
 const CATEGORY_PATTERNS: Array<{ cat: LinkCategory; re: RegExp }> = [
-  { cat: "odds_share", re: /(?:ticket|bilhete|p/|share-?bet|bet-?share|compartilhad|coupon|ticket-?id)/i },
+  { cat: "odds_share", re: SHARED_ODDS_RE },
   { cat: "odds", re: /(odds?|super-?odd|boost|super-?boost|odd-?boost|acumulad|bet-?builder)/i },
   { cat: "crash", re: /(aviator|spaceman|crash|jetx|space-?xy)/i },
   { cat: "slots", re: /(slot|slots|pgsoft|pg-soft|pragmatic|fortune-?tiger|sweet-?bonanza|gates-?of-?olympus|fruit|tigrinho)/i },
@@ -98,9 +103,61 @@ function titleize(slug: string) {
     .join(" ");
 }
 
-export function parseUrl(url: string): Pick<DetectionResult, "hostname" | "path" | "query"> | null {
+function safeDecode(value: string) {
+  try { return decodeURIComponent(value); } catch { return value; }
+}
+
+export function extractUrls(input: string): string[] {
+  const raw = input.trim();
+  if (!raw) return [];
+  const matches = raw.match(/https?:\/\/[^\s,;|]+|(?:[\w-]+\.)+[a-z]{2,}(?:\/[^\s,;|]*)?/gi) ?? [];
+  const urls = matches
+    .map((u) => ensureUrl(u.replace(/[)\]}>'"]+$/g, "")))
+    .filter(Boolean);
+  if (!urls.length && ensureUrl(raw).startsWith("http")) return [ensureUrl(raw)];
+  return Array.from(new Set(urls));
+}
+
+function textForUrl(url: string) {
   try {
     const u = new URL(ensureUrl(url));
+    const parts = [u.hostname, u.pathname, u.search];
+    u.searchParams.forEach((v) => parts.push(safeDecode(v)));
+    return parts.join(" ");
+  } catch {
+    return url;
+  }
+}
+
+export function isSharedOddsUrl(urlOrText: string) {
+  const text = textForUrl(urlOrText);
+  return SHARED_ODDS_RE.test(text) || (/(share|shared|slip|ticket|booking|coupon|bilhete|palpite)/i.test(text) && /(odd|bet|aposta|sport|esporte|sele[cç][aã]o)/i.test(text));
+}
+
+function isAffiliateLikeUrl(url: string) {
+  const text = textForUrl(url);
+  return /(partner|partners|affiliate|affiliates|afiliad|ref=|sub1=|sub=|afp=|click[_-]?id=|aff[_-]?sub=|utm_|campaign|campanha|promo|bonus|btag|click|go\/|\/r\/|\/ref\/)/i.test(text);
+}
+
+export function splitAffiliateAndOddsUrls(input: string) {
+  const urls = extractUrls(input);
+  const bookmakerShareUrl = urls.find(isSharedOddsUrl) ?? (isSharedOddsUrl(input) ? urls[0] ?? "" : "");
+  const affiliateUrl = urls.find((u) => u !== bookmakerShareUrl && isAffiliateLikeUrl(u))
+    ?? urls.find((u) => u !== bookmakerShareUrl)
+    ?? urls[0]
+    ?? input.trim();
+  return {
+    urls,
+    affiliateUrl,
+    bookmakerShareUrl,
+    isSharedOdds: Boolean(bookmakerShareUrl || isSharedOddsUrl(input)),
+  };
+}
+
+export function parseUrl(url: string): Pick<DetectionResult, "hostname" | "path" | "query"> | null {
+  try {
+    const first = extractUrls(url)[0] ?? url;
+    const u = new URL(ensureUrl(first));
     const query: Record<string, string> = {};
     u.searchParams.forEach((v, k) => (query[k] = v));
     return { hostname: u.hostname.toLowerCase(), path: u.pathname.toLowerCase(), query };
@@ -129,7 +186,6 @@ export function scorePlatforms(hostname: string, platforms: PlatformLike[]) {
     let best = 0;
     let matched = "";
 
-    // domain_patterns + domains are the primary signals (explicit admin lists)
     const patterns = [
       ...(p.domain_patterns ?? []),
       ...(p.domains ?? []),
@@ -143,26 +199,17 @@ export function scorePlatforms(hostname: string, platforms: PlatformLike[]) {
       }
     }
 
-    // Known affiliate shorteners that do not expose the bookmaker name in the host.
-    const platformToken = normalizeText(`${p.name} ${(p as any).slug ?? ""}`).replace(/[^a-z0-9]/g, "");
-    if (best === 0 && platformToken.includes("estrelabet") && /(^|\.)lkrh\.pro$/.test(host)) {
-      best = 75;
-      matched = "lkrh.pro";
-    }
-
-    // Fallback: match against platform website_url host
     if (best === 0 && p.website_url) {
       try {
-        const wh = normalizeHost(new URL(p.website_url).hostname);
-        const wbase = wh.split(".").slice(-2).join("."); // e.g. estrelabet.bet.br → bet.br (weak); keep for near matches
+        const wh = normalizeHost(new URL(ensureUrl(p.website_url)).hostname);
+        const wbase = wh.split(".").slice(-2).join(".");
         if (host === wh) { best = 60; matched = wh; }
         else if (host.includes(wbase) && wbase.length > 4) { best = 30; matched = wbase; }
       } catch { /* ignore */ }
     }
 
-    // Fallback: name token in hostname
     if (best === 0) {
-      const token = normalizeText(p.name).replace(/[^a-z0-9]/g, "");
+      const token = normalizeText(`${p.name} ${p.slug ?? ""}`).replace(/[^a-z0-9]/g, "");
       if (token.length >= 4 && host.replace(/[^a-z0-9]/g, "").includes(token)) {
         best = 25; matched = token;
       }
@@ -173,6 +220,33 @@ export function scorePlatforms(hostname: string, platforms: PlatformLike[]) {
 
   results.sort((a, b) => b.score - a.score);
   return results;
+}
+
+function scorePlatformsForUrls(urls: string[], platforms: PlatformLike[]) {
+  const byPlatform = new Map<string, { platformId: string; score: number; matchedOn: string }>();
+  for (const url of urls) {
+    const parsed = parseUrl(url);
+    if (parsed?.hostname) {
+      for (const hit of scorePlatforms(parsed.hostname, platforms)) {
+        const existing = byPlatform.get(hit.platformId);
+        if (!existing || hit.score > existing.score) byPlatform.set(hit.platformId, hit);
+      }
+    }
+
+    const decoded = normalizeText(textForUrl(url)).replace(/[^a-z0-9]/g, "");
+    for (const p of platforms) {
+      const tokens = [p.name, p.slug, ...(p.domain_patterns ?? []), ...(p.domains ?? [])]
+        .filter(Boolean)
+        .map((v) => normalizeText(String(v)).replace(/[^a-z0-9]/g, ""))
+        .filter((v) => v.length >= 4);
+      const token = tokens.find((t) => decoded.includes(t));
+      if (!token) continue;
+      const existing = byPlatform.get(p.id);
+      const candidate = { platformId: p.id, score: 78, matchedOn: token };
+      if (!existing || candidate.score > existing.score) byPlatform.set(p.id, candidate);
+    }
+  }
+  return Array.from(byPlatform.values()).sort((a, b) => b.score - a.score);
 }
 
 export function detectCategory(input: string): LinkCategory | null {
@@ -186,6 +260,7 @@ export function detectGame(input: string): { slug: string; name: string } | null
 }
 
 function deriveGame(parsed: Pick<DetectionResult, "path" | "query">, category: LinkCategory | null) {
+  if (["odds_share", "odds", "sports"].includes(category || "")) return null;
   for (const [key, value] of Object.entries(parsed.query)) {
     if (!GAME_PARAM_KEYS.some((k) => k.toLowerCase() === key.toLowerCase())) continue;
     const slug = slugify(value);
@@ -202,30 +277,66 @@ function deriveGame(parsed: Pick<DetectionResult, "path" | "query">, category: L
   if (last && ["casino", "slots", "crash", "live", "poker"].includes(category || "")) {
     return { slug: last, name: titleize(last) };
   }
-  if (category === "odds_share") return { slug: "aposta-compartilhada", name: "Aposta compartilhada" };
-
-  if (category === "odds") return { slug: "odds-especiais", name: "Odds especiais" };
-  if (category === "sports") return { slug: "oferta-esportiva", name: "Oferta esportiva" };
   return null;
 }
 
+function extractNumber(value: string | null | undefined) {
+  if (!value) return null;
+  const m = String(value).replace(/,/g, ".").match(/\d+(?:\.\d+)?/);
+  if (!m) return null;
+  const n = Number(m[0]);
+  return Number.isFinite(n) && n > 1 ? n : null;
+}
+
+export function extractOddsDraftFromInput(input: string) {
+  const split = splitAffiliateAndOddsUrls(input);
+  const texts = [input, ...split.urls.map(textForUrl)].join(" ");
+  let totalOdd: number | null = null;
+  let eventLabel = "";
+
+  for (const url of split.urls) {
+    try {
+      const u = new URL(ensureUrl(url));
+      for (const key of ["total_odd", "totalOdd", "odd_total", "odd", "odds", "price", "coef", "cotacao"]) {
+        totalOdd = totalOdd ?? extractNumber(u.searchParams.get(key));
+      }
+      for (const key of ["event", "evento", "match", "jogo", "fixture", "title"]) {
+        const v = u.searchParams.get(key);
+        if (!eventLabel && v) eventLabel = safeDecode(v).replace(/[+_-]+/g, " ").trim();
+      }
+    } catch { /* ignore */ }
+  }
+
+  totalOdd = totalOdd ?? extractNumber((texts.match(/(?:odd\s*total|total\s*odd|odds?)\s*[:=]?\s*(\d+[,.]\d+)/i) ?? [])[1]);
+
+  return {
+    isSharedOdds: split.isSharedOdds,
+    affiliate_url: split.affiliateUrl,
+    bookmaker_share_url: split.bookmakerShareUrl,
+    total_odd: totalOdd,
+    event_label: eventLabel,
+  };
+}
+
 export function detectFromUrl(url: string, platforms: PlatformLike[]): DetectionResult {
-  const parsed = parseUrl(url);
+  const split = splitAffiliateAndOddsUrls(url);
+  const primary = split.affiliateUrl || split.bookmakerShareUrl || url;
+  const parsed = parseUrl(primary);
   const base: DetectionResult = {
     hostname: null, path: "", query: {},
     platformCandidates: [], category: null, gameSlug: null, gameName: null,
+    isSharedOdds: false, urls: [],
   };
   if (!parsed) return base;
 
-  const platformCandidates = scorePlatforms(parsed.hostname!, platforms);
-
-  const haystack = [
-    parsed.path,
-    ...Object.entries(parsed.query).map(([k, v]) => `${k}=${v}`),
-  ].join(" ");
-
-  const category = detectCategory(haystack) ?? detectCategory(parsed.hostname!);
-  const game = detectGame(haystack) ?? detectGame(parsed.path) ?? deriveGame(parsed, category);
+  const urls = split.urls.length ? split.urls : [primary].filter(Boolean);
+  const platformCandidates = scorePlatformsForUrls(urls, platforms);
+  const haystack = [url, ...urls.map(textForUrl), parsed.path, ...Object.entries(parsed.query).map(([k, v]) => `${k}=${v}`)].join(" ");
+  const isSharedOdds = split.isSharedOdds || SHARED_ODDS_RE.test(haystack);
+  const category = isSharedOdds ? "odds_share" : (detectCategory(haystack) ?? detectCategory(parsed.hostname!));
+  const game = ["odds_share", "odds", "sports"].includes(category || "")
+    ? null
+    : (detectGame(haystack) ?? detectGame(parsed.path) ?? deriveGame(parsed, category));
 
   return {
     ...parsed,
@@ -233,6 +344,8 @@ export function detectFromUrl(url: string, platforms: PlatformLike[]): Detection
     category,
     gameSlug: game?.slug ?? null,
     gameName: game?.name ?? null,
+    isSharedOdds,
+    urls,
   };
 }
 
@@ -249,7 +362,7 @@ export const CATEGORY_LABELS: Record<LinkCategory, string> = {
 };
 
 export function inferAttributionParam(url: string, platformName?: string | null) {
-  const parsed = parseUrl(url);
+  const parsed = parseUrl(splitAffiliateAndOddsUrls(url).affiliateUrl || url);
   const hostAndName = normalizeText(`${parsed?.hostname ?? ""} ${platformName ?? ""}`);
   if (hostAndName.includes("estrela") || hostAndName.includes("vupi")) return "afp";
   if (hostAndName.includes("betano")) return "clickid";
