@@ -199,6 +199,12 @@ export default function TrackingLinks() {
             event_starts_at: __odds.event_starts_at ? new Date(__odds.event_starts_at).toISOString() : null,
             notes: __odds.notes || null,
           });
+          // Dispara autogeração de materiais com engine de odds
+          // (fire-and-forget — a edge é idempotente e enriquece meta.odds).
+          const { supabase } = await import("@/integrations/supabase/client");
+          supabase.functions.invoke("materials-autogenerate", {
+            body: { tracking_link_id: linkId },
+          }).catch(() => {});
         } catch (e: any) {
           toast({ title: "Odds salvas parcialmente", description: e?.message || "Verifique os dados da aposta.", variant: "destructive" });
         }

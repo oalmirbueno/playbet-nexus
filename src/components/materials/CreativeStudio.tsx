@@ -112,9 +112,15 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
   const [dirty, setDirty] = useState(false);
   const [savingLayout, setSavingLayout] = useState(false);
   const [oddsCtx, setOddsCtx] = useState<OddsContext | null>(null);
+  const [oddsFetched, setOddsFetched] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
 
-  const isOddsShare = (link?.linkCategory ?? "").toLowerCase() === "odds_share";
+  const autoOddsShare = (link?.linkCategory ?? "").toLowerCase() === "odds_share";
+  // Modo do estúdio: 'games' (arte tradicional de jogo) vs 'odds' (aposta compartilhada).
+  // Auto-seleciona 'odds' quando o link tem link_category = odds_share, mas o operador pode alternar.
+  const [engineMode, setEngineMode] = useState<"games" | "odds">(autoOddsShare ? "odds" : "games");
+  useEffect(() => { setEngineMode(autoOddsShare ? "odds" : "games"); }, [autoOddsShare, link?.id]);
+  const isOddsShare = engineMode === "odds";
 
   const selected = layers.find(l => l.id === selectedId) || null;
 
@@ -183,9 +189,10 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     }, { includeImages: withImages, brand: brandOverride });
   }, [link, brandCtx?.brand?.key, brandCtx?.brand?.logos.lockup, brandCtx?.brand?.logos.wordmark, brandCtx?.brand?.logos.mark, brandCtx?.brand?.seal?.horizontal.light, brandCtx?.brand?.seal?.horizontal.dark, isOddsShare, oddsCtx]);
 
-  // Puxa odds do link quando é aposta compartilhada.
+  // Puxa odds do link — sempre que a modal abre, mesmo quando o operador começou em 'games'
+  // e depois alternou para 'odds'. Assim o toggle é instantâneo, sem espera.
   useEffect(() => {
-    if (!open || !link?.id || !isOddsShare) { setOddsCtx(null); return; }
+    if (!open || !link?.id) { setOddsCtx(null); setOddsFetched(false); return; }
     let cancelled = false;
     (async () => {
       const { data } = await (supabase as any)
@@ -202,9 +209,10 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
         screenshot_url: data.screenshot_url,
         selections: Array.isArray(data.selections) ? data.selections : [],
       } : null);
+      setOddsFetched(true);
     })();
     return () => { cancelled = true; };
-  }, [open, link?.id, isOddsShare]);
+  }, [open, link?.id]);
 
 
 
@@ -237,8 +245,8 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
   useEffect(() => {
     if (!link || !open) return;
     if (brandLoading) return; // aguarda marca resolver
-    // Aguarda odds resolver quando é aposta compartilhada (evita seed sem contexto).
-    if (isOddsShare && oddsCtx === null) return;
+    // Aguarda o fetch inicial de odds concluir (evita seed sem contexto quando é odds_share).
+    if (isOddsShare && !oddsFetched) return;
     let cancelled = false;
     setHandle(link.handle || (link.shortUrl ? link.shortUrl.replace(/^https?:\/\//, "") : ""));
     setSelectedId(null);
@@ -266,7 +274,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       setRenderKey(k => k + 1);
     })();
     return () => { cancelled = true; };
-  }, [link?.id, format, open, loadDatabaseState, brandLoading, brandCtx?.brand?.key, applyBrandChrome, isOddsShare, oddsCtx?.total_odd, oddsCtx?.event_label]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [link?.id, format, open, loadDatabaseState, brandLoading, brandCtx?.brand?.key, applyBrandChrome, engineMode, oddsFetched, oddsCtx?.total_odd, oddsCtx?.event_label]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
   // Auto-save (debounced)
@@ -719,6 +727,32 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                   <Save className="w-3 h-3" /> {dirty ? "alterações pendentes" : savedAt ? "salvo" : "rascunho"}
                 </span>
               </DialogDescription>
+            </div>
+            {/* Seletor de engine: Jogos ⇄ Odds. Auto-seleciona 'odds' se link_category=odds_share. */}
+            <div className="inline-flex items-center rounded-md border border-border/60 bg-secondary/40 p-0.5 text-[11px] font-medium">
+              <button
+                type="button"
+                onClick={() => setEngineMode("games")}
+                className={cn(
+                  "px-2.5 py-1 rounded-sm transition-all",
+                  engineMode === "games" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                )}
+                title="Arte tradicional de jogo"
+              >
+                🎮 Jogos
+              </button>
+              <button
+                type="button"
+                onClick={() => setEngineMode("odds")}
+                className={cn(
+                  "px-2.5 py-1 rounded-sm transition-all flex items-center gap-1",
+                  engineMode === "odds" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                )}
+                title="Engine dedicada de aposta compartilhada"
+              >
+                Σ Odds
+                {autoOddsShare && engineMode === "odds" && <span className="text-[9px] opacity-80">auto</span>}
+              </button>
             </div>
             <button className="text-xs px-3 py-1.5 rounded-md border border-primary bg-primary/10 text-foreground transition-all flex items-center gap-1.5">
               <MousePointer2 className="w-3.5 h-3.5" />
