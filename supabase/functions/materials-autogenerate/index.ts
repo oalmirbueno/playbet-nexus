@@ -63,9 +63,22 @@ Deno.serve(async (req) => {
       platformId = pa?.platform_id ?? null;
     }
 
+    const isOddsShare = String(link.link_category || "").toLowerCase() === "odds_share";
+
+    // Enriquece meta com contexto da aposta quando for odds_share.
+    let oddsMeta: any = null;
+    if (isOddsShare) {
+      const { data: odds } = await supa
+        .from("tracking_link_odds")
+        .select("bet_type,total_odd,event_label,bookmaker_share_url,screenshot_url,selections")
+        .eq("tracking_link_id", trackingLinkId)
+        .maybeSingle();
+      if (odds) oddsMeta = odds;
+    }
+
     // Carrega regras da plataforma; se nenhuma, aplica preset conforme o modo do link.
     let rules: Array<{ format: string; style: string }> = [];
-    if (platformId) {
+    if (platformId && !isOddsShare) {
       const { data } = await supa
         .from("platform_material_rules")
         .select("format, style, enabled, auto_on_new_link")
@@ -75,10 +88,10 @@ Deno.serve(async (req) => {
         .map((r: any) => ({ format: r.format, style: r.style }));
     }
     if (rules.length === 0) {
-      const isPlatformDirect = !link.game_slug && !link.game_name;
-      rules = isPlatformDirect
-        ? DEFAULT_RULES_BY_MODE.platform_direct
-        : DEFAULT_RULES_BY_MODE.default;
+      const mode = isOddsShare ? "odds_share"
+        : (!link.game_slug && !link.game_name) ? "platform_direct"
+        : "default";
+      rules = DEFAULT_RULES_BY_MODE[mode];
     }
 
     // Idempotência: só insere combinações (format, style) ainda ausentes.
