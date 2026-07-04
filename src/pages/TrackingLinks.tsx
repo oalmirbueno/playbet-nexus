@@ -53,6 +53,7 @@ export default function TrackingLinks() {
   const { data: landingPages } = useLandingPages();
   const { data: lpInstances } = useLandingPageInstances();
   const { data: platforms } = usePlatforms();
+  const { data: managers } = useManagers();
   const { data: mappings, create: createMapping } = usePlatformEventMappings();
   const { data: metrics } = useTrackingMetrics();
   const { create: createMetric } = useTrackingMetrics();
