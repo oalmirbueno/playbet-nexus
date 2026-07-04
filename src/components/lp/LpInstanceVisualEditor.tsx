@@ -209,6 +209,14 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         const rawSections: SectionDef[] = Array.isArray(lc?.sections) && lc.sections.length > 0
           ? lc.sections : defaultLayoutConfig(storedMode).sections;
         setBrandOverrideKey((lc?.brand_override_key ?? null) as BrandKey | null);
+        const ba = (lc?.brand_assets ?? {}) as Partial<BrandAssetsConfig>;
+        setBrandAssets({
+          header_logo: (ba.header_logo as LogoVariant) || "lockup",
+          hero_logo: (ba.hero_logo as LogoVariant) || "lockup",
+          hero_align: (ba.hero_align as HeroAlign) || "center",
+          footer_seal: (ba.footer_seal as SealVariant) || "h-light",
+          show_wordmark: ba.show_wordmark ?? true,
+        });
 
         const hc = (inst as any).hype_copy || {};
         setCopy({
