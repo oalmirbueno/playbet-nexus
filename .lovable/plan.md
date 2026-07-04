@@ -1,82 +1,75 @@
-# Engine de Odds — Roadmap em 3 Fases
+# Editor de LP no padrão do Estúdio de Materiais
 
-Cada fase é entregável e validável antes da próxima. Nenhuma fase quebra o que já existe.
+Foco: eliminar as limitações relatadas — não dá pra mover/organizar, copy não salva por bloco, marca VUPI não é puxada. Sem trocar o motor de renderização da LP (continua estruturado por seções, não canvas livre — o canvas livre é do Estúdio de Materiais e não faz sentido para uma LP pública com SEO).
 
----
+## O que muda no editor (LpInstanceVisualEditor)
 
-## Fase 1 — Tracking de Odds nos Links
+### 1. Reordenação real (drag) e alinhamento das seções
+- Substituir as setas ↑/↓ por drag-and-drop nativo (HTML5 `draggable`) na lista de seções, mesmo padrão visual do Estúdio (handle à esquerda, hover, ghost).
+- Manter os toggles on/off por seção.
+- Ordem persiste em `layout_config.sections` (já suportado no schema; hoje só as setas mexem).
 
-**Problema:** Links do tipo "odds / aposta compartilhada" não são reconhecidos como categoria própria, não guardam o payload da odd (evento, mercado, seleções, odd total) e por isso não aparecem no relatório do link nem na Central.
+### 2. Save por bloco (não só o "Salvar LP" do rodapé)
+Cada painel do sidebar ganha o próprio botão "Aplicar" com persistência parcial e refresh do preview — mesmo padrão do "Aplicar marca" que já implementamos:
+- Copy (título, subtítulo, CTA) → grava `hype_copy.{title,subtitle,cta_label}` e marca `auto=false`.
+- Bônus/código → grava `hype_copy.bonus_offer`.
+- Comunidade → grava `hype_copy.community_cta`.
+- Jogos exibidos → grava `game_slugs` + `game_ids`.
+- Destaques inteligentes (odds) → grava `hype_copy.smart_odds`.
+- Seções (ordem/toggles) → grava `layout_config.sections`.
 
-**Entregas:**
-1. Novo campo `link_category = 'odds_share'` reconhecido pelo `TrackingLinkForm` com sub-tipo (`single`, `multipla`, `sistema`).
-2. Nova tabela `tracking_link_odds` (1:1 com `tracking_links`) guardando:
-   - `bet_type` (single/múltipla/sistema)
-   - `total_odd` (numeric)
-   - `selections jsonb` (evento, mercado, seleção, odd unitária por perna)
-   - `screenshot_url` (opcional, se já veio da Fase 2)
-   - `platform_id` resolvido do link
-   - `bookmaker_share_url` original (quando existir)
-3. Detector automático (`src/lib/oddsDetect.ts`) que, ao colar a URL da casa, identifica a plataforma pelo domínio usando `platforms.tracking_domains` e pré-seleciona o `platform_account`.
-4. `LinkReportDrawer` ganha aba "Odd" mostrando as pernas, odd total, status (live/liquidada) e mesma tabela de métricas já existente (cliques, LP view, FTDs, comissão) — **tudo puxando por `tracking_link_id`**, exatamente como os outros tipos.
-5. Central de Links: badge "Odd Compartilhada" + coluna "Odd" (valor total).
+O "Salvar LP" do rodapé permanece como save geral + copia link (comportamento atual), mas cada bloco já persiste sozinho — resolve o "ele não deixa salvar" que o usuário relatou.
 
-**Regra:** se a URL colada não bater com nenhuma casa cadastrada, bloqueia com toast "Casa não cadastrada — cadastre em Plataformas antes de gerar o link" (conforme sua escolha).
+### 3. Detecção da marca VUPI (e outras)
+- Hoje `resolveBrand` já usa substring normalizada, mas a plataforma pode chegar como "Vupi Bet Brasil" e o alias registrado é `["vupi","vupibet","vupi-bet"]`. Vou adicionar "vupi bet" e reforçar a normalização (remover espaços) para bater com qualquer variação.
+- Confirmar que o override manual (chip da VUPI no editor) já força a marca — o botão "Aplicar agora" recém-adicionado grava `layout_config.brand_override_key` e a LP pública já respeita.
 
----
+### 4. Bloco "Assets da marca" com organização/alinhamento
+Novo painel dedicado no sidebar (mesma pegada do Estúdio):
+- Preview em grid dos assets da marca ativa (logos: mark / wordmark / lockup, selos: horizontal / vertical light+dark).
+- Chips para escolher qual logo aparece no header/hero da LP (`layout_config.brand_assets.header_logo` e `hero_logo` — `lockup` | `wordmark` | `mark`).
+- Chip para o selo do rodapé (`layout_config.brand_assets.footer_seal` — `h` | `v-light` | `v-dark`).
+- Alinhamento do logo no hero (`layout_config.brand_assets.hero_align` — `left` | `center`).
+- Toggle "Mostrar wordmark abaixo da mark" para lockups compostos.
 
-## Fase 2 — Gerador de Material de Odd
+Renderização pública (`InfluencerLanding`) passa a ler `layout_config.brand_assets` e aplica no hero/footer respeitando a escolha do editor.
 
-**Problema:** Não existe fluxo para transformar um print (ou URL) de odd em criativo com selo/identidade da casa.
+### 5. Preview sempre fresco
+Já corrigido no turno anterior — `_preview` bypassa cache. Fica valendo aqui também.
 
-**Entregas:**
-1. Nova aba **"Odd"** no `CreativeStudio` (`src/components/materials/CaptureOddPanel.tsx` já existe como esqueleto — expandir).
-2. Duas fontes de entrada:
-   - **Upload manual** (drag-and-drop / colar imagem do clipboard).
-   - **Captura automática por URL** via edge function `capture-odd-screenshot` (já existe) usando Playwright headless nas casas suportadas. Fallback silencioso → upload manual se falhar.
-3. Formulário lateral pré-preenchido a partir do link vinculado (se veio da Fase 1):
-   - Evento, mercado, seleções, odd total, casa detectada, brand kit.
-4. Composição do material (canvas HTML → PNG via html2canvas):
-   - Print da odd em card com cantos arredondados.
-   - Selo da casa (do brand registry, com bloqueio de posicionamento oficial).
-   - Cabeçalho com identidade da casa (cores, fonte, logotipo).
-   - CTA + slug do influenciador (opcional).
-   - Rodapé legal automático (18+ / jogue com responsabilidade).
-5. Bloqueio: se o link não tiver `platform_id` resolvido ou casa não estiver cadastrada, exibe estado vazio com CTA "Cadastrar casa".
-6. Persistência em `link_materials` com `material_type = 'odd_share'` (aparece no portal do influenciador imediatamente).
+## Detalhes técnicos
 
----
+Arquivos:
+- `src/components/lp/LpInstanceVisualEditor.tsx` — drag-and-drop de seções, botões "Aplicar" por bloco (`applyCopy`, `applyBonus`, `applyCommunity`, `applyGames`, `applyOdds`, `applySections`), novo painel BrandAssets.
+- `src/lib/brandRegistry.ts` — expandir `slugAliases` de VUPI e normalizar espaços em `resolveBrand`.
+- `src/pages/InfluencerLanding.tsx` — ler `instanceCtx.layout_config.brand_assets` e aplicar no header/hero/footer (com fallback pro comportamento atual).
 
-## Fase 3 — LP Automática de Odds
-
-**Problema:** LPs geradas de link de odds ficam genéricas, sem as odds em destaque, sem identidade da casa e sem referências reais.
-
-**Entregas:**
-1. Novo `lp_mode = 'odds_share'` no `lp-autoconfigure` (já suporta `odds`, adicionar variante):
-   - Seção Hero com o evento (times/logos reais buscados de `clubCrests`).
-   - Card grande da odd (as mesmas pernas da Fase 1) com botão "Copiar aposta na {Casa}".
-   - Seção de outras odds relacionadas ao mesmo campeonato (via `lp_events` + `lp_opportunities` já indexados).
-   - Seção de identidade da casa (cores, wordmark, selo — puxado do brand registry travado).
-   - CTA final destino = link afiliado da própria casa.
-2. Detecção de identidade **real** (não placeholder):
-   - Se a casa tem brand kit registrado → usa tokens travados (cores, fontes Articulat CF, selos oficiais).
-   - Referências de crest dos times via `clubCrests` (já existe) — sem placeholder cinza.
-3. Performance: LP continua com o mesmo pipeline de SSR-hydrate e edge cache já em uso (abertura < 1s).
-4. Autogeração dispara no `POST` do link (Fase 1) → `lp-autoconfigure` recebe `lp_mode='odds_share'` + payload das seleções → cria `landing_page_instance` pronta.
-5. Editor visual (`LpInstanceVisualEditor`) ganha preset "Odds Share" com blocos travados na ordem correta mas com copy editável.
-
----
-
-## Ordem de execução
-
-```text
-Fase 1 (tracking)  ──► valida no Link Report + Central
-       │
-       ▼
-Fase 2 (material)  ──► valida no Creative Studio + Portal
-       │
-       ▼
-Fase 3 (LP auto)   ──► valida abrindo a LP pública gerada
+Persistência parcial (padrão que já usamos em `applyBrandOverride`):
+```ts
+const applyCopy = async () => {
+  const nextHype = { ...(instance?.hype_copy || {}), title, subtitle, cta_label, auto: false };
+  await supabase.from("landing_page_instances").update({ hype_copy: nextHype }).eq("id", instanceId);
+  setInstance(prev => prev ? { ...prev, hype_copy: nextHype } : prev);
+  setPreviewKey(k => k + 1);
+  toast({ title: "Copy aplicada" });
+};
 ```
 
-Após cada fase peço para você validar antes de seguir. Aprovado?
+Shape novo em `layout_config`:
+```json
+{
+  "brand_assets": {
+    "header_logo": "lockup",
+    "hero_logo": "mark",
+    "hero_align": "center",
+    "footer_seal": "h",
+    "show_wordmark": true
+  }
+}
+```
+
+## Fora do escopo
+
+- Canvas livre (posição absoluta por px, redimensionar) — a LP pública é HTML semântico com SEO; canvas livre quebra responsividade e crawlers. O Estúdio de Materiais mantém canvas porque renderiza imagem final. Se quiser mesmo canvas na LP, é outro projeto.
+- Novos modos de LP.
+- Alterar o motor de tracking/URLs.
