@@ -12,6 +12,7 @@ export interface OddsPanelValue {
   stake_suggested: number | null;
   selections: OddsSelection[];
   bookmaker_share_url: string;
+  screenshot_url: string;
   event_label: string;
   event_starts_at: string;
   notes: string;
@@ -23,6 +24,7 @@ export const emptyOddsValue: OddsPanelValue = {
   stake_suggested: null,
   selections: [{ event: "", market: "", pick: "", odd: 0 }],
   bookmaker_share_url: "",
+  screenshot_url: "",
   event_label: "",
   event_starts_at: "",
   notes: "",
@@ -107,6 +109,17 @@ export default function OddsSharePanel({ value, onChange, disabled }: Props) {
           onChange={e => setField("bookmaker_share_url", e.target.value)}
           disabled={disabled}
           placeholder="https://…/bet-share/…"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-[9px] uppercase tracking-wider text-muted-foreground">Print do bilhete (URL da imagem)</Label>
+        <Input
+          className="h-8 text-xs font-mono"
+          value={local.screenshot_url}
+          onChange={e => setField("screenshot_url", e.target.value)}
+          disabled={disabled}
+          placeholder="https://…/print-bilhete.png"
         />
       </div>
 
