@@ -1153,6 +1153,102 @@ export type Database = {
           },
         ]
       }
+      link_reconciliations: {
+        Row: {
+          created_at: string
+          dash_clicks: number
+          dash_commission: number
+          dash_deposits_total: number
+          dash_ftd: number
+          dash_registrations: number
+          dash_revenue: number
+          diff_clicks: number
+          diff_commission: number
+          diff_deposits_total: number
+          diff_ftd: number
+          diff_registrations: number
+          diff_revenue: number
+          divergent: boolean
+          id: string
+          links_clicks: number
+          links_commission: number
+          links_deposits_total: number
+          links_ftd: number
+          links_registrations: number
+          links_revenue: number
+          notes: string | null
+          period_end: string
+          period_label: string
+          period_start: string | null
+          platform_id: string | null
+          run_at: string
+          severity: string
+          unattributed_link_count: number
+        }
+        Insert: {
+          created_at?: string
+          dash_clicks?: number
+          dash_commission?: number
+          dash_deposits_total?: number
+          dash_ftd?: number
+          dash_registrations?: number
+          dash_revenue?: number
+          diff_clicks?: number
+          diff_commission?: number
+          diff_deposits_total?: number
+          diff_ftd?: number
+          diff_registrations?: number
+          diff_revenue?: number
+          divergent?: boolean
+          id?: string
+          links_clicks?: number
+          links_commission?: number
+          links_deposits_total?: number
+          links_ftd?: number
+          links_registrations?: number
+          links_revenue?: number
+          notes?: string | null
+          period_end: string
+          period_label: string
+          period_start?: string | null
+          platform_id?: string | null
+          run_at?: string
+          severity?: string
+          unattributed_link_count?: number
+        }
+        Update: {
+          created_at?: string
+          dash_clicks?: number
+          dash_commission?: number
+          dash_deposits_total?: number
+          dash_ftd?: number
+          dash_registrations?: number
+          dash_revenue?: number
+          diff_clicks?: number
+          diff_commission?: number
+          diff_deposits_total?: number
+          diff_ftd?: number
+          diff_registrations?: number
+          diff_revenue?: number
+          divergent?: boolean
+          id?: string
+          links_clicks?: number
+          links_commission?: number
+          links_deposits_total?: number
+          links_ftd?: number
+          links_registrations?: number
+          links_revenue?: number
+          notes?: string | null
+          period_end?: string
+          period_label?: string
+          period_start?: string | null
+          platform_id?: string | null
+          run_at?: string
+          severity?: string
+          unattributed_link_count?: number
+        }
+        Relationships: []
+      }
       lp_events: {
         Row: {
           away_team: string
