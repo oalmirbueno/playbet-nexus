@@ -764,7 +764,11 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                 </div>
               )}
 
-              {/* Jogos hypados da casa */}
+              {isOddsShare && (
+                <OddsSharePanel value={odds} onChange={setOdds} />
+              )}
+
+
               {currentPlatformId && (
                 <div className="rounded-md border border-orange-500/25 bg-orange-500/5 p-2.5 space-y-2">
                   <div className="flex items-center gap-1.5 text-[10px] flex-wrap">
