@@ -33,12 +33,13 @@ export interface PlatformLike {
 }
 
 const CATEGORY_PATTERNS: Array<{ cat: LinkCategory; re: RegExp }> = [
+  { cat: "odds_share", re: /(?:ticket|bilhete|p/|share-?bet|bet-?share|compartilhad|coupon|ticket-?id)/i },
+  { cat: "odds", re: /(odds?|super-?odd|boost|super-?boost|odd-?boost|acumulad|bet-?builder)/i },
   { cat: "crash", re: /(aviator|spaceman|crash|jetx|space-?xy)/i },
   { cat: "slots", re: /(slot|slots|pgsoft|pg-soft|pragmatic|fortune-?tiger|sweet-?bonanza|gates-?of-?olympus|fruit|tigrinho)/i },
   { cat: "casino", re: /(casino|cassino|mines|plinko|dragon-?tiger|roleta|roulette|baccarat|blackjack)/i },
   { cat: "live", re: /(live-?casino|ao-?vivo|live-?dealer|evolution|stream)/i },
   { cat: "poker", re: /(poker|texas|holdem)/i },
-  { cat: "odds", re: /(odds?|super-?odd|boost|super-?boost|odd-?boost|acumulad|bet-?builder)/i },
   { cat: "sports", re: /(sports?|sportbook|sportsbook|esporte|futebol|football|soccer|nba|nfl|tenis|tennis|brasileirao|copa|evento|match)/i },
 ];
 
@@ -201,6 +202,7 @@ function deriveGame(parsed: Pick<DetectionResult, "path" | "query">, category: L
   if (last && ["casino", "slots", "crash", "live", "poker"].includes(category || "")) {
     return { slug: last, name: titleize(last) };
   }
+  if (category === "odds_share") return { slug: "aposta-compartilhada", name: "Aposta compartilhada" };
 
   if (category === "odds") return { slug: "odds-especiais", name: "Odds especiais" };
   if (category === "sports") return { slug: "oferta-esportiva", name: "Oferta esportiva" };

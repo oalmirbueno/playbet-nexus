@@ -55,7 +55,7 @@ export function syncLinkAssets(
     useLp = false,
     extraGameSlugs = [],
     hypeCopy = null,
-    skipMaterialsEdge = true,
+    skipMaterialsEdge = false,
   } = opts;
 
   const tasks: Promise<unknown>[] = [];
