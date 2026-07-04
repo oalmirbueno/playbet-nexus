@@ -16,6 +16,17 @@ import {
 import type { Layer, CreativeFormat } from "@/lib/creativeStudio";
 import { CrestSearchPopover } from "@/components/materials/CrestSearchPopover";
 
+interface OddsAutoContext {
+  bet_type?: string | null;
+  total_odd?: number | null;
+  event_label?: string | null;
+  bookmaker_share_url?: string | null;
+  screenshot_url?: string | null;
+  selections?: Array<{ event?: string; market?: string; pick?: string; odd?: number }>;
+}
+
+type LayoutPanelCtx = Omit<ApplyReferenceCtx, "format" | "fills"> & { odds?: OddsAutoContext | null };
+
 const CATS: { id: ReferenceCategory | "all"; label: string }[] = [
   { id: "all", label: "Todos" },
   { id: "odds", label: "Odds" },
@@ -45,16 +56,18 @@ const IMAGE_ROLES = new Set(["hero-art", "game-logo", "team-crest-home", "team-c
 const CREST_ROLES = new Set(["team-crest-home", "team-crest-away"]);
 const LEAGUE_ROLES = new Set(["league-badge"]);
 
-function autoFillFor(role: ReferenceSlotFill["role"], ctx: Omit<ApplyReferenceCtx, "format" | "fills">): ReferenceSlotFill | undefined {
+function autoFillFor(role: ReferenceSlotFill["role"], ctx: LayoutPanelCtx): ReferenceSlotFill | undefined {
+  const first = ctx.odds?.selections?.[0];
+  if (role === "hero-art" && ctx.odds?.screenshot_url) return { role, imageUrl: ctx.odds.screenshot_url };
   if ((role === "hero-art" || role === "game-logo") && ctx.link?.gameIconUrl) {
     return { role, imageUrl: ctx.link.gameIconUrl };
   }
-  if (role === "headline") return { role, text: ctx.link?.gameName || ctx.link?.hypeReason || ctx.brand.platformName || "Oportunidade em destaque" };
-  if (role === "subhead") return { role, text: ctx.link?.hypeReason || ctx.brand.platformName || "Oferta ativa" };
+  if (role === "headline") return { role, text: ctx.odds?.event_label || ctx.link?.gameName || ctx.link?.hypeReason || ctx.brand.platformName || "Oportunidade em destaque" };
+  if (role === "subhead") return { role, text: first ? `${first.event || ctx.odds?.event_label || "Evento"} · ${first.pick || first.market || "Seleção"}` : (ctx.link?.hypeReason || ctx.brand.platformName || "Oferta ativa") };
   if (role === "cta") return { role, text: "APOSTAR AGORA →" };
-  if (role === "odd-value") return { role, text: "2.15" };
-  if (role === "odd-label") return { role, text: "Odd em destaque" };
-  if (role === "match-info") return { role, text: "Hoje · 18:30" };
+  if (role === "odd-value") return { role, text: ctx.odds?.total_odd ? `${ctx.odds.total_odd.toFixed(2).replace(".", ",")}x` : (first?.odd ? `${Number(first.odd).toFixed(2).replace(".", ",")}x` : "2.15x") };
+  if (role === "odd-label") return { role, text: ctx.odds?.bet_type ? `Aposta ${ctx.odds.bet_type}` : (first?.pick || "Odd em destaque") };
+  if (role === "match-info") return { role, text: ctx.odds?.event_label || first?.event || "Hoje · 18:30" };
   if (role === "vs-divider") return { role, text: "VS" };
   return undefined;
 }
@@ -62,7 +75,7 @@ function autoFillFor(role: ReferenceSlotFill["role"], ctx: Omit<ApplyReferenceCt
 
 interface Props {
   format: CreativeFormat;
-  ctx: Omit<ApplyReferenceCtx, "format" | "fills">;
+  ctx: LayoutPanelCtx;
   onApply: (layers: Layer[]) => void;
 }
 
