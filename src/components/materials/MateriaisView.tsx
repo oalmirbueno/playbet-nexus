@@ -336,7 +336,74 @@ function toStudioLink(r: Row): CreativeStudioLink {
     platformName: r.platform_name,
     hypeReason: r.hype_reason,
     shortUrl: r.short_url,
+    linkCategory: r.link_category,
   };
+}
+
+function OddsCard({
+  row, onOpen, onEdit, showInfluencer,
+}: { row: Row; onOpen: () => void; onEdit: () => void; showInfluencer?: boolean }) {
+  const o = row.odds;
+  const legs = o?.legs_count ?? 0;
+  const type = o?.bet_type === "multipla" ? "Múltipla" : o?.bet_type === "sistema" ? "Sistema" : "Simples";
+  const odd = o?.total_odd ? `${o.total_odd.toFixed(2).replace(".", ",")}x` : "—";
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } }}
+      className="group relative overflow-hidden rounded-lg border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card hover:border-primary/70 hover:shadow-lg transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/60"
+    >
+      <div className="aspect-square relative">
+        {o?.screenshot_url ? (
+          <img src={o.screenshot_url} alt="Screenshot da odd" className="absolute inset-0 w-full h-full object-cover opacity-70" loading="lazy" />
+        ) : (
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,199,44,0.15),transparent_60%)]" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
+
+        <Badge className="absolute top-2 left-2 bg-primary text-primary-foreground border-0 text-[10px] font-semibold">
+          <Sigma className="w-2.5 h-2.5 mr-1" /> Aposta {type}
+        </Badge>
+        {row.hype_reason && (
+          <Badge variant="outline" className="absolute top-2 right-10 bg-background/70 backdrop-blur text-[10px]">
+            <Sparkles className="w-2.5 h-2.5 mr-1" /> Em alta
+          </Badge>
+        )}
+
+        <div className="absolute inset-x-0 bottom-0 p-3 pr-12 space-y-1 pointer-events-none">
+          <div className="flex items-end gap-2">
+            <div className="text-primary font-black text-3xl tracking-tight leading-none drop-shadow">{odd}</div>
+            <div className="text-white/60 text-[10px] uppercase tracking-wider pb-1">odd total</div>
+          </div>
+          <div className="text-white font-semibold text-sm truncate drop-shadow">
+            {o?.event_label || row.game_name || "Aposta compartilhada"}
+          </div>
+          <div className="text-white/70 text-[10px] uppercase tracking-wider truncate flex items-center gap-1.5">
+            <TrendingUp className="w-2.5 h-2.5" />
+            {legs} {legs === 1 ? "seleção" : "seleções"} · {row.platform_name || "Plataforma"}
+            {showInfluencer && row.influencer_name ? ` · ${row.influencer_name}` : ""}
+          </div>
+        </div>
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-primary/20 backdrop-blur-[2px] flex items-center justify-center pointer-events-none">
+          <div className="bg-primary text-primary-foreground text-xs font-semibold px-3 py-2 rounded-md shadow-lg flex items-center gap-1.5">
+            <Wand2 className="w-3.5 h-3.5" /> Gerar material da odd
+          </div>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); e.preventDefault(); onEdit(); }}
+        onPointerDown={(e) => e.stopPropagation()}
+        title="Editar odd, textos e LP"
+        aria-label="Editar odd"
+        className="absolute top-2 right-2 z-20 w-8 h-8 rounded-md bg-background/90 hover:bg-background border border-border/60 backdrop-blur-sm flex items-center justify-center text-foreground hover:text-primary transition-colors shadow-md"
+      >
+        <Pencil className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
 }
 
 function StatCard({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: number | string; accent?: boolean }) {
