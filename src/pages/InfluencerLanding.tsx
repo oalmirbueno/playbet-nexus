@@ -622,9 +622,12 @@ export default function InfluencerLanding() {
         influencerName: string,
         instanceId: string | null,
         landingPageId: string | null,
+        quickCtx?: InstanceContext | null,
       ) => {
         const preferredTrackingCode = searchParams.get("sub1") || searchParams.get("afp") || searchParams.get("tracking_code") || extractTrackingCodeFromUrl(affiliateLink);
         const quickAffiliate = isPublicLpLoop(affiliateLink, hostname, slug) ? "" : affiliateLink;
+        const quickPlatformSlug = quickCtx?.hype_copy?.platform_slug as string | null | undefined;
+        const quickPlatformName = quickCtx?.hype_copy?.platform_name as string | null | undefined;
         setResolved({
           affiliate_link: quickAffiliate,
           influencer_id: influencerId,
@@ -637,9 +640,9 @@ export default function InfluencerLanding() {
           platform_id: null,
           click_id: clickId,
           click_id_param: inferClickParamName(affiliateLink, preferredTrackingCode ? (affiliateLink.includes("afp=") ? "afp" : "sub1") : null),
-          brand: resolveBrand((instanceCtx?.hype_copy?.platform_slug as string | null | undefined) || (instanceCtx?.hype_copy?.platform_name as string | null | undefined)),
-          platform_name: (instanceCtx?.hype_copy?.platform_name as string | null | undefined) || null,
-          platform_slug: (instanceCtx?.hype_copy?.platform_slug as string | null | undefined) || null,
+          brand: resolveBrand(quickPlatformSlug) || resolveBrand(quickPlatformName),
+          platform_name: quickPlatformName || null,
+          platform_slug: quickPlatformSlug || null,
           tracking_code: preferredTrackingCode,
         });
         setState("ready");
@@ -652,8 +655,9 @@ export default function InfluencerLanding() {
         influencerName: string,
         instanceId: string | null,
         landingPageId: string | null,
+        quickCtx?: InstanceContext | null,
       ) => {
-        const preferredTrackingCode = setFastResolved(affiliateLink, influencerId, influencerName, instanceId, landingPageId);
+        const preferredTrackingCode = setFastResolved(affiliateLink, influencerId, influencerName, instanceId, landingPageId, quickCtx);
         const tl = await findTrackingLink(instanceId, influencerId, preferredTrackingCode, affiliateLink);
         const paramName = tl?.click_id_param_name || "sub1";
         const fallbackOpportunity = await findOpportunityDestination(instanceId, landingPageId, tl?.id || null);
@@ -668,7 +672,7 @@ export default function InfluencerLanding() {
         const platformId = (tl as any)?.platform_accounts?.platform_id || null;
         const platformName = (tl as any)?.platform_accounts?.platforms?.name || null;
         const platformSlug = (tl as any)?.platform_accounts?.platforms?.slug || null;
-        const brand = resolveBrand(platformSlug) || resolveBrand(platformName) || resolveBrand((instanceCtx?.hype_copy?.platform_slug as string | null | undefined) || null);
+        const brand = resolveBrand(platformSlug) || resolveBrand(platformName) || resolveBrand((quickCtx?.hype_copy?.platform_slug as string | null | undefined) || null);
 
         setResolved({
           affiliate_link: outboundAffiliate,
@@ -735,12 +739,13 @@ export default function InfluencerLanding() {
         if (!instance) { setState("not_found"); return; }
         if (!instance.is_active) { setState("inactive"); return; }
 
-        setInstanceCtx({
+        const nextCtx = {
           lp_mode: (instance as any).lp_mode,
           game_slugs: (instance as any).game_slugs,
           layout_config: (instance as any).layout_config,
           hype_copy: (instance as any).hype_copy,
-        });
+        };
+        setInstanceCtx(nextCtx);
         const fallbackArt = (instance as any).hype_copy?.game_slug
           ? [{
               slug: normalizeSlug((instance as any).hype_copy.game_slug),
@@ -755,7 +760,7 @@ export default function InfluencerLanding() {
           game_icon_url: (instance as any).hype_copy?.game_icon_url,
           source_tracking_link_id: (instance as any).source_tracking_link_id,
         });
-        void finalize(instance.affiliate_link, instance.influencer_id, "", instance.id, instance.landing_page_id);
+        void finalize(instance.affiliate_link, instance.influencer_id, "", instance.id, instance.landing_page_id, nextCtx);
         return;
       }
 
@@ -769,12 +774,13 @@ export default function InfluencerLanding() {
         .maybeSingle();
 
       if (instance) {
-        setInstanceCtx({
+        const nextCtx = {
           lp_mode: (instance as any).lp_mode,
           game_slugs: (instance as any).game_slugs,
           layout_config: (instance as any).layout_config,
           hype_copy: (instance as any).hype_copy,
-        });
+        };
+        setInstanceCtx(nextCtx);
         const fallbackArt = (instance as any).hype_copy?.game_slug
           ? [{
               slug: normalizeSlug((instance as any).hype_copy.game_slug),
@@ -789,7 +795,7 @@ export default function InfluencerLanding() {
           game_icon_url: (instance as any).hype_copy?.game_icon_url,
           source_tracking_link_id: (instance as any).source_tracking_link_id,
         });
-        void finalize(instance.affiliate_link, instance.influencer_id, "", instance.id, instance.landing_page_id);
+        void finalize(instance.affiliate_link, instance.influencer_id, "", instance.id, instance.landing_page_id, nextCtx);
         return;
       }
 
