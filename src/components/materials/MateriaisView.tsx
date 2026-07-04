@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Sparkles, Search, ImageIcon, Wand2, Layers, Download, Pencil } from "lucide-react";
 import { CreativeStudio, type CreativeStudioLink } from "@/components/materials/CreativeStudio";
 import { LinkMaterialEditor } from "@/components/materials/LinkMaterialEditor";
+import { BrandKitInlineCard } from "@/components/materials/BrandKitInlineCard";
 import { toast } from "sonner";
 
 interface Row {
@@ -184,6 +185,9 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
         <StatCard icon={<Sparkles className="w-4 h-4" />} label="Em alta" value={rows.filter(r => r.hype_reason).length} />
         <StatCard icon={<Download className="w-4 h-4" />} label="Formatos por link" value={4} />
       </div>
+
+      {/* Kit da marca inline — baixar sem abrir editor */}
+      <BrandKitInlineCard platformHints={rows.map(r => r.platform_name)} />
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-2">
