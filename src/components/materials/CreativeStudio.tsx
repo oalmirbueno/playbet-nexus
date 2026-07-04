@@ -728,6 +728,32 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                 </span>
               </DialogDescription>
             </div>
+            {/* Seletor de engine: Jogos ⇄ Odds. Auto-seleciona 'odds' se link_category=odds_share. */}
+            <div className="inline-flex items-center rounded-md border border-border/60 bg-secondary/40 p-0.5 text-[11px] font-medium">
+              <button
+                type="button"
+                onClick={() => setEngineMode("games")}
+                className={cn(
+                  "px-2.5 py-1 rounded-sm transition-all",
+                  engineMode === "games" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                )}
+                title="Arte tradicional de jogo"
+              >
+                🎮 Jogos
+              </button>
+              <button
+                type="button"
+                onClick={() => setEngineMode("odds")}
+                className={cn(
+                  "px-2.5 py-1 rounded-sm transition-all flex items-center gap-1",
+                  engineMode === "odds" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                )}
+                title="Engine dedicada de aposta compartilhada"
+              >
+                Σ Odds
+                {autoOddsShare && engineMode === "odds" && <span className="text-[9px] opacity-80">auto</span>}
+              </button>
+            </div>
             <button className="text-xs px-3 py-1.5 rounded-md border border-primary bg-primary/10 text-foreground transition-all flex items-center gap-1.5">
               <MousePointer2 className="w-3.5 h-3.5" />
               Editor ativo
