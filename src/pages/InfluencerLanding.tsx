@@ -358,6 +358,7 @@ function BrandLogoImage({ src, name }: { src?: string | null; name: string }) {
       className="h-11 object-contain"
       loading="eager"
       decoding="async"
+      fetchPriority="high"
       onError={() => setFailed(true)}
     />
   );
