@@ -45,12 +45,14 @@ export function buildPublicLpUrl(
   sub3: string,
   lpRoute?: string | null | undefined,
   sub1?: string | null | undefined,
+  instanceId?: string | null | undefined,
 ): string {
   if (!instanceSlug) return "";
   let url = buildInstanceLpBaseUrl(lpDomain, instanceSlug) || buildLpBaseUrl(lpDomain, lpRoute);
   if (sub1) url = appendParam(url, "sub1", sub1);
   if (sub2) url = appendParam(url, "sub2", sub2);
   if (sub3) url = appendParam(url, "sub3", sub3);
+  if (instanceId) url = appendParam(url, "lpi", instanceId);
   return url;
 }
 
@@ -62,6 +64,7 @@ export function resolveShareUrl(args: {
   lpDomain?: string | null;
   lpRoute?: string | null;
   lpMode?: string | null;
+  instanceId?: string | null;
   instanceSlug?: string | null;
   affiliateBaseUrl?: string | null;
   clickIdParamName?: string | null;
@@ -71,7 +74,7 @@ export function resolveShareUrl(args: {
 }): string {
   const hasLpContext = Boolean(args.lpMode || args.lpDomain);
   const publicLp = hasLpContext
-    ? buildPublicLpUrl(args.lpDomain, args.instanceSlug, args.sub2 || "", args.sub3 || "", args.lpRoute, args.sub1)
+    ? buildPublicLpUrl(args.lpDomain, args.instanceSlug, args.sub2 || "", args.sub3 || "", args.lpRoute, args.sub1, args.instanceId)
     : "";
   if (publicLp) return publicLp;
   return buildTrackedAffiliateUrl(
@@ -91,6 +94,7 @@ export function resolveShareUrl(args: {
  */
 export interface ExpectedShareUrl {
   instanceSlug?: string | null;
+  instanceId?: string | null;
   trackingCode?: string | null;
   influencerId?: string | null;
   campanhaId?: string | null;
@@ -126,6 +130,9 @@ export function validateSharedLpUrl(
     if (refSlug !== expectSlug && routeSlug !== expectSlug) {
       return { ok: false, url: safeUrl, reason: `LP esperada "${expectSlug}", encontrada "${refSlug || routeSlug}"` };
     }
+  }
+  if (expected.instanceId && q.get("lpi") !== expected.instanceId) {
+    return { ok: false, url: safeUrl, reason: `Instância esperada divergente` };
   }
   if (expectCode && q.get("sub1") !== expectCode) {
     return { ok: false, url: safeUrl, reason: `sub1 esperado "${expectCode}", encontrado "${q.get("sub1") ?? ""}"` };

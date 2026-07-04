@@ -313,7 +313,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   const finalUrl = useMemo(() => {
     if (landingPageId) {
       const slug = plannedInstanceSlug || (selectedInfluencer as any)?.slug || "";
-      const lp = buildPublicLpUrl(selectedLP?.domain, slug, influencerId || "", campanhaId || "", selectedLP?.route, trackingCode);
+      const lp = buildPublicLpUrl(selectedLP?.domain, slug, influencerId || "", campanhaId || "", selectedLP?.route, trackingCode, resolvedInstance?.id || undefined);
       if (lp) return lp;
     }
     return trackedAffiliateUrl;
@@ -375,6 +375,18 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
 
       const useLp = !!effectiveLandingPageId && lpGeneration !== "none";
 
+      const shareUrl = useLp
+        ? buildPublicLpUrl(
+            selectedLP?.domain,
+            plannedInstanceSlug || `${(selectedInfluencer as any)?.slug || "ref"}-${trackingCode}`,
+            influencerId || "",
+            campanhaId || "",
+            selectedLP?.route,
+            trackingCode,
+            instanceId || undefined,
+          )
+        : trackedAffiliateUrl;
+
 
       const createdLink: any = await createLink({
         influencer_id: influencerId,
@@ -383,7 +395,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
         landing_page_instance_id: instanceId,
         campanha_id: campanhaId || null,
         base_url: rawLink.trim(),
-        final_url: finalUrl,
+        final_url: shareUrl,
         tracking_code: trackingCode,
         click_id_param_name: clickIdParam,
         use_lp: useLp,
@@ -406,6 +418,16 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       //  • invalidamos as queries React Query para refletir o novo estado.
       const linkId = createdLink?.id;
       if (linkId) {
+        if (useLp && instanceId) {
+          await supabase
+            .from("tracking_links")
+            .update({
+              final_url: shareUrl,
+              use_lp: true,
+            } as any)
+            .eq("id", linkId);
+        }
+
         if (linkContext === LINK_CONTEXT_ODDS) {
           await upsertOdds({
             tracking_link_id: linkId,
@@ -454,14 +476,17 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       }
 
 
-      let copiedUrl = finalUrl;
+      let copiedUrl = shareUrl;
       if (createdLink?.id) {
         const { data: syncedLink } = await supabase
           .from("tracking_links")
           .select("final_url")
           .eq("id", createdLink.id)
           .maybeSingle();
-        copiedUrl = (syncedLink as any)?.final_url || finalUrl;
+        const syncedFinalUrl = (syncedLink as any)?.final_url || "";
+        copiedUrl = useLp && instanceId && !syncedFinalUrl.includes(`lpi=${instanceId}`)
+          ? shareUrl
+          : syncedFinalUrl || shareUrl;
       }
 
       try { await navigator.clipboard.writeText(copiedUrl); } catch {}

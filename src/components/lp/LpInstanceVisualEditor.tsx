@@ -737,6 +737,8 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         instance?.influencer_id || "",
         "",
         basePage?.route,
+        null,
+        instanceId,
       );
       const shareUrls = linksToSync
         .map((tl) => buildPublicLpUrl(
@@ -746,6 +748,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
               tl.campanha_id || "",
               basePage?.route,
               tl.tracking_code || "",
+              instanceId,
             ))
         .filter(Boolean);
 
@@ -768,7 +771,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
       const publicShareUrl = shareUrls[0]
         || (effectiveMode === "catalog"
           ? catalogShareUrl
-          : buildPublicLpUrl(lpDomain, instance?.slug, instance?.influencer_id || "", "", basePage?.route))
+          : buildPublicLpUrl(lpDomain, instance?.slug, instance?.influencer_id || "", "", basePage?.route, null, instanceId))
         || publicUrl
         || "";
       let copiedShareUrl = "";
@@ -829,10 +832,12 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
   const generatedPreviewSrc = useMemo(() => {
     // Same-origin preview of the generated instance so latest code + thin scrollbars apply.
     let localSlug: string | null = null;
+    let localInstanceId: string | null = instanceId;
     if (publicUrl) {
       try {
         const u = new URL(publicUrl, window.location.origin);
         localSlug = u.searchParams.get("ref");
+        localInstanceId = u.searchParams.get("lpi") || localInstanceId;
         if (!localSlug) {
           const m = u.pathname.match(/\/i\/([^/?#]+)/);
           if (m) localSlug = m[1];
@@ -843,11 +848,11 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
       }
     }
     if (!localSlug && instance?.slug) localSlug = instance.slug;
-    if (localSlug) return `${window.location.origin}/i/${localSlug}?_preview=${previewKey}`;
+    if (localSlug) return `${window.location.origin}/i/${localSlug}?_preview=${previewKey}${localInstanceId ? `&lpi=${encodeURIComponent(localInstanceId)}` : ""}`;
     if (!publicUrl) return null;
     const sep = publicUrl.includes("?") ? "&" : "?";
     return `${publicUrl}${sep}_preview=${previewKey}`;
-  }, [publicUrl, previewKey, instance?.slug]);
+  }, [publicUrl, previewKey, instance?.slug, instanceId]);
 
   const catalogPreviewSrc = useMemo(() => {
     if (!basePage) return null;
@@ -858,6 +863,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
       link?.campanha_id || "",
       basePage.route,
       link?.tracking_code || "",
+      instanceId,
     );
     if (!url) {
       const base = buildLpBaseUrl(basePage.domain, basePage.route);
@@ -866,7 +872,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
     }
     const sep = url.includes("?") ? "&" : "?";
     return `${url}${sep}_preview=${previewKey}`;
-  }, [basePage, instance?.slug, instance?.influencer_id, link?.influencer_id, link?.campanha_id, link?.tracking_code, previewKey]);
+  }, [basePage, instance?.slug, instance?.influencer_id, link?.influencer_id, link?.campanha_id, link?.tracking_code, previewKey, instanceId]);
 
   const generatedPublicUrl = useMemo(() => {
     if (!instance?.slug) return publicUrl || null;
@@ -876,9 +882,10 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
       link?.influencer_id || instance?.influencer_id || "",
       link?.campanha_id || "",
       basePage?.route,
-        link?.tracking_code || "",
+      link?.tracking_code || "",
+      instanceId,
     );
-  }, [basePage?.domain, basePage?.route, instance?.slug, instance?.influencer_id, link?.influencer_id, link?.campanha_id, link?.tracking_code, publicUrl]);
+  }, [basePage?.domain, basePage?.route, instance?.slug, instance?.influencer_id, link?.influencer_id, link?.campanha_id, link?.tracking_code, publicUrl, instanceId]);
 
   const catalogPublicUrl = useMemo(() => {
     if (!basePage) return null;
@@ -889,8 +896,9 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
       link?.campanha_id || "",
       basePage.route,
       link?.tracking_code || "",
+      instanceId,
     );
-  }, [basePage, instance?.slug, instance?.influencer_id, link?.influencer_id, link?.campanha_id, link?.tracking_code]);
+  }, [basePage, instance?.slug, instance?.influencer_id, link?.influencer_id, link?.campanha_id, link?.tracking_code, instanceId]);
 
   const activePreviewSrc = previewTab === "catalog" ? catalogPreviewSrc : generatedPreviewSrc;
   const activeExternalUrl = previewTab === "catalog"

@@ -515,10 +515,11 @@ export default function InfluencerLanding() {
   const { slug: pathSlug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
   const slug = searchParams.get("ref") || pathSlug;
+  const hasPinnedInstance = searchParams.has("lpi") || searchParams.has("instance_id");
   // Editors/admin previews carry `_preview` — never use the cached snapshot so
   // edits (brand override, copy, seções, jogos) aparecem imediatamente ao recarregar.
   const isPreview = searchParams.has("_preview");
-  const cachedSnapshot = isPreview ? null : readCachedLpSnapshot(slug);
+  const cachedSnapshot = isPreview || hasPinnedInstance ? null : readCachedLpSnapshot(slug);
   const [state, setState] = useState<LoadState>(() => cachedSnapshot ? "ready" : "loading");
   const [resolved, setResolved] = useState<ResolvedLanding | null>(() => cachedSnapshot?.resolved ?? null);
   const [instanceCtx, setInstanceCtx] = useState<InstanceContext | null>(() => cachedSnapshot?.instanceCtx ?? null);
@@ -603,7 +604,7 @@ export default function InfluencerLanding() {
   useEffect(() => {
     if (!slug) { setState("not_found"); return; }
 
-    const cached = isPreview ? null : readCachedLpSnapshot(slug);
+    const cached = isPreview || hasPinnedInstance ? null : readCachedLpSnapshot(slug);
     if (cached) {
       setResolved(cached.resolved);
       setInstanceCtx(cached.instanceCtx);
@@ -738,7 +739,7 @@ export default function InfluencerLanding() {
         };
         setResolved(quickResolved);
         setState("ready");
-        writeCachedLpSnapshot(slug, { resolved: quickResolved, instanceCtx: quickCtx ?? null, gameArts: [] });
+        if (!hasPinnedInstance) writeCachedLpSnapshot(slug, { resolved: quickResolved, instanceCtx: quickCtx ?? null, gameArts: [] });
         return preferredTrackingCode;
       };
 
@@ -791,7 +792,7 @@ export default function InfluencerLanding() {
           tracking_code: tl?.tracking_code || preferredTrackingCode,
         };
         setResolved(finalResolved);
-        writeCachedLpSnapshot(slug, { resolved: finalResolved, instanceCtx: quickCtx ?? null, gameArts: snapshotGameArts });
+        if (!hasPinnedInstance) writeCachedLpSnapshot(slug, { resolved: finalResolved, instanceCtx: quickCtx ?? null, gameArts: snapshotGameArts });
 
         // Register real public LP views only. Admin/editor previews must never
         // inflate production tracking.
@@ -829,6 +830,20 @@ export default function InfluencerLanding() {
       };
 
       const resolveGenericInstance = async () => {
+        const instanceIdFromUrl = searchParams.get("lpi") || searchParams.get("instance_id");
+
+        if (instanceIdFromUrl) {
+          const { data: exactInstance } = await supabase
+            .from("landing_page_instances")
+            .select(LP_INSTANCE_SELECT)
+            .eq("id", instanceIdFromUrl)
+            .eq("is_active", true)
+            .maybeSingle();
+
+          if (exactInstance && (exactInstance as any).slug === slug) return exactInstance;
+          return null;
+        }
+
         // Slug pode (legado) ter duplicatas entre landing_pages. Pega SEMPRE
         // a instância mais recentemente atualizada para nunca cair em uma LP
         // antiga esquecida quando o editor acaba de salvar/copiar link.
@@ -839,7 +854,11 @@ export default function InfluencerLanding() {
           .eq("is_active", true)
           .order("updated_at", { ascending: false })
           .limit(1);
-        const instance = instances && instances[0];
+        return instances && instances[0] ? instances[0] : null;
+      };
+
+      const renderGenericInstance = async () => {
+        const instance = await resolveGenericInstance();
 
         if (!instance) return false;
 
@@ -873,7 +892,7 @@ export default function InfluencerLanding() {
       // Public /i links are generated instance links; resolve them directly and
       // skip domain discovery so painelcentral links open without loading panel/auth.
       if (isDirectInstanceRoute) {
-        const resolvedInstance = await resolveGenericInstance();
+        const resolvedInstance = await renderGenericInstance();
         if (!resolvedInstance) setState("not_found");
         return;
       }
@@ -920,7 +939,7 @@ export default function InfluencerLanding() {
       }
 
       // ── STRATEGY 2: Generic instance ──
-      if (await resolveGenericInstance()) {
+      if (await renderGenericInstance()) {
         return;
       }
 
@@ -936,7 +955,7 @@ export default function InfluencerLanding() {
 
       void finalize(influencer.affiliate_link || "", influencer.id, influencer.name, null, null);
     })();
-  }, [slug]);
+  }, [slug, hasPinnedInstance]);
 
   const handleCTA = useCallback(() => {
     if (!resolved?.affiliate_link || clickingRef.current) return;
