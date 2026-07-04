@@ -525,6 +525,112 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
     }
   };
 
+  /** Patch helper — merges patch into instance columns, refreshes preview + queries. */
+  const patchInstance = async (
+    patch: { hype_copy?: any; layout_config?: any; game_slugs?: string[] },
+    successTitle: string,
+    successDesc?: string,
+  ) => {
+    if (!instanceId) return;
+    try {
+      const currentHc = (instance?.hype_copy as any) || {};
+      const currentLc = (instance?.layout_config as any) || {};
+      const nextHc = patch.hype_copy ? { ...currentHc, ...patch.hype_copy, auto: false } : currentHc;
+      const nextLc = patch.layout_config ? { ...currentLc, ...patch.layout_config, updated_at: new Date().toISOString() } : currentLc;
+      const payload: any = {};
+      if (patch.hype_copy) payload.hype_copy = nextHc;
+      if (patch.layout_config) payload.layout_config = nextLc;
+      if (patch.game_slugs) payload.game_slugs = patch.game_slugs;
+      const { error } = await supabase.from("landing_page_instances").update(payload).eq("id", instanceId);
+      if (error) throw new Error(error.message);
+      setInstance((prev: any) => prev ? { ...prev, ...payload } : prev);
+      setPreviewKey((k) => k + 1);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["landing_page_instances"] }),
+        queryClient.refetchQueries({ queryKey: ["landing_page_instances"], type: "active" }),
+      ]);
+      toast({ title: successTitle, description: successDesc });
+    } catch (e: any) {
+      toast({ title: "Erro ao aplicar", description: e?.message, variant: "destructive" });
+    }
+  };
+
+  const applyCopy = () => patchInstance(
+    { hype_copy: { title: copy.title || null, subtitle: copy.subtitle || null, cta_label: copy.cta_label || null } },
+    "Copy aplicada",
+    "Título, subtítulo e CTA atualizados na LP pública.",
+  );
+
+  const applyBonus = () => patchInstance(
+    { hype_copy: { bonus_offer: {
+      enabled: bonusOffer.enabled,
+      title: bonusOffer.title || null,
+      code: bonusOffer.code || null,
+      note: bonusOffer.note || null,
+      cta_label: bonusOffer.cta_label || null,
+    } } },
+    "Bônus aplicado",
+  );
+
+  const applyCommunity = () => patchInstance(
+    { hype_copy: { community_cta: {
+      enabled: community.enabled,
+      label: community.label || null,
+      url: community.url || null,
+      note: community.note || null,
+    } } },
+    "Comunidade aplicada",
+  );
+
+  const applyGames = () => patchInstance(
+    { game_slugs: gameSlugs },
+    "Jogos aplicados",
+    `${gameSlugs.length} jogo(s) exibido(s).`,
+  );
+
+  const applyOdds = () => patchInstance(
+    { hype_copy: { smart_odds: smartOdds } },
+    "Destaques aplicados",
+    `${smartOdds.length} opção(ões) selecionada(s).`,
+  );
+
+  const applySections = () => patchInstance(
+    { layout_config: { sections } },
+    "Seções aplicadas",
+    "Ordem e visibilidade das seções atualizadas.",
+  );
+
+  const applyBrandAssets = (next?: Partial<BrandAssetsConfig>) => {
+    const merged = { ...brandAssets, ...(next || {}) };
+    setBrandAssets(merged);
+    return patchInstance(
+      { layout_config: { brand_assets: merged } },
+      "Assets da marca aplicados",
+    );
+  };
+
+  /* ── drag reordering ── */
+  const onSectionDragStart = (idx: number) => (e: React.DragEvent) => {
+    setDragSectionIdx(idx);
+    e.dataTransfer.effectAllowed = "move";
+  };
+  const onSectionDragOver = (idx: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+  const onSectionDrop = (targetIdx: number) => (e: React.DragEvent) => {
+    e.preventDefault();
+    if (dragSectionIdx === null || dragSectionIdx === targetIdx) { setDragSectionIdx(null); return; }
+    setSections((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(dragSectionIdx, 1);
+      next.splice(targetIdx, 0, moved);
+      return next;
+    });
+    setDragSectionIdx(null);
+  };
+
+
   const handleSave = async () => {
     if (!instanceId) return;
     const requestedMode: LpMode = previewTab === "generated" && mode === "catalog" ? "single_game" : mode;
