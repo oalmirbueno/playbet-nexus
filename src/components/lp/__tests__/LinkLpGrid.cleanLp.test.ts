@@ -66,8 +66,8 @@ describe("LP gerada · link no botão correto por instância", () => {
         r.tracking_code,
       );
       const u = new URL(url);
-      expect(u.origin + u.pathname.replace(/\/$/, "")).toBe(r.lp_domain);
-      expect(u.searchParams.get("ref")).toBe(r.lp_slug);
+      expect(u.origin).toBe(r.lp_domain);
+      expect(u.pathname).toBe(`/i/${r.lp_slug}`);
       expect(u.searchParams.get("sub1")).toBe(r.tracking_code);
       expect(u.searchParams.get("sub2")).toBe(r.influencer_id);
       if (r.campanha_id) {
@@ -92,7 +92,7 @@ describe("LP gerada · link no botão correto por instância", () => {
     urls.forEach((url, i) => {
       ROWS.forEach((other, j) => {
         if (i === j) return;
-        expect(url).not.toContain(`ref=${other.lp_slug}`);
+        expect(new URL(url).pathname).not.toBe(`/i/${other.lp_slug}`);
         expect(url).not.toContain(`sub1=${other.tracking_code}`);
       });
     });

@@ -118,8 +118,14 @@ export function validateSharedLpUrl(
   const q = parsed.searchParams;
   const expectSlug = (expected.instanceSlug || "").trim();
   const expectCode = (expected.trackingCode || "").trim();
-  if (expectSlug && q.get("ref") !== expectSlug) {
-    return { ok: false, url: safeUrl, reason: `ref esperado "${expectSlug}", encontrado "${q.get("ref") ?? ""}"` };
+  if (expectSlug) {
+    const refSlug = q.get("ref") || "";
+    const routeSlug = parsed.pathname.startsWith("/i/")
+      ? decodeURIComponent(parsed.pathname.replace(/^\/i\//, "").split("/")[0] || "")
+      : "";
+    if (refSlug !== expectSlug && routeSlug !== expectSlug) {
+      return { ok: false, url: safeUrl, reason: `LP esperada "${expectSlug}", encontrada "${refSlug || routeSlug}"` };
+    }
   }
   if (expectCode && q.get("sub1") !== expectCode) {
     return { ok: false, url: safeUrl, reason: `sub1 esperado "${expectCode}", encontrado "${q.get("sub1") ?? ""}"` };
