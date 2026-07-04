@@ -347,7 +347,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
         game_slug: linkContext === LINK_CONTEXT_GAME ? gameSlug || null : null,
         game_name: linkContext === LINK_CONTEXT_GAME ? gameName || null : null,
         game_icon_url: linkContext === LINK_CONTEXT_GAME ? gameIconUrl || null : null,
-        link_category: linkContext === LINK_CONTEXT_GAME ? linkCategory || null : null,
+        link_category: linkContext === LINK_CONTEXT_ODDS ? "odds_share" : linkContext === LINK_CONTEXT_GAME ? linkCategory || null : null,
         hype_reason: hypeReason || null,
         commission_percent: (selectedInfluencer as any)?.commission_percent ?? null,
         status: "active",
@@ -363,6 +363,21 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       //  • invalidamos as queries React Query para refletir o novo estado.
       const linkId = createdLink?.id;
       if (linkId) {
+        if (linkContext === LINK_CONTEXT_ODDS) {
+          await upsertOdds({
+            tracking_link_id: linkId,
+            platform_id: currentPlatformId || null,
+            bet_type: odds.bet_type,
+            total_odd: odds.total_odd,
+            stake_suggested: odds.stake_suggested,
+            selections: odds.selections ?? [],
+            bookmaker_share_url: odds.bookmaker_share_url || null,
+            screenshot_url: odds.screenshot_url || null,
+            event_label: odds.event_label || null,
+            event_starts_at: odds.event_starts_at ? new Date(odds.event_starts_at).toISOString() : null,
+            notes: odds.notes || null,
+          });
+        }
         if (instanceId) {
           await supabase
             .from("landing_page_instances")
@@ -383,6 +398,9 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
           },
           qc,
         );
+        if (linkContext === LINK_CONTEXT_ODDS) {
+          supabase.functions.invoke("materials-autogenerate", { body: { tracking_link_id: linkId } }).catch(() => {});
+        }
       }
 
 
