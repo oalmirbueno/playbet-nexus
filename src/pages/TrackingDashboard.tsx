@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTrackingMetrics, usePlatformAccounts, useTrackingEvents } from "@/hooks/useTrackingData";
 import { useInfluencers, useCampanhas, usePlatforms } from "@/hooks/useSupabaseQuery";
+import { useTrackingMetricsSummary } from "@/hooks/useTrackingMetricsSummary";
+import { useRealtimeMetrics } from "@/hooks/useRealtimeMetrics";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
