@@ -293,6 +293,19 @@ function StatCard({ icon, label, value, accent }: { icon: React.ReactNode; label
   );
 }
 
+function ViewChip({ active, children, onClick }: { active: boolean; children: React.ReactNode; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center text-xs px-3 h-8 rounded-md transition-all ${
+        active ? "bg-background text-foreground shadow-sm border border-border/60" : "text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
 function FilterChip({ active, children, onClick }: { active: boolean; children: React.ReactNode; onClick: () => void }) {
   return (
     <button
