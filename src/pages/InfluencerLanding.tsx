@@ -287,34 +287,25 @@ function isPublicLpLoop(url: string | null | undefined, hostname: string, slug?:
   }
 }
 
-/** Fallback: get the tracked affiliate destination from the bound opportunity. */
-async function findOpportunityDestination(instanceId: string | null, landingPageId: string | null, trackingLinkId?: string | null) {
-  if (trackingLinkId) {
-    const { data } = await supabase
-      .from("lp_opportunities")
-      .select("destination_url")
-      .eq("tracking_link_id", trackingLinkId)
-      .eq("is_active", true)
-      .not("destination_url", "is", null)
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (data?.destination_url) return data.destination_url;
-  }
-  if (instanceId) return null;
-  if (!landingPageId && !instanceId) return null;
-  const query = supabase
+/** Fallback: get the tracked affiliate destination from the bound opportunity.
+ *  IMPORTANTE: só retornamos uma opportunity que esteja explicitamente amarrada
+ *  a este tracking_link_id. Nunca caímos numa opportunity "LP-wide" — isso levaria
+ *  o CTA de um influenciador para a oferta de outro (quebra de atribuição e de casa).
+ */
+async function findOpportunityDestination(_instanceId: string | null, _landingPageId: string | null, trackingLinkId?: string | null) {
+  if (!trackingLinkId) return null;
+  const { data } = await supabase
     .from("lp_opportunities")
     .select("destination_url")
+    .eq("tracking_link_id", trackingLinkId)
     .eq("is_active", true)
     .not("destination_url", "is", null)
-    .order("sort_order", { ascending: false })
-    .limit(1);
-  const { data } = landingPageId
-    ? await query.eq("landing_page_id", landingPageId).maybeSingle()
-    : await query.maybeSingle();
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
   return data?.destination_url || null;
 }
+
 
 interface InstanceContext {
   lp_mode?: string | null;
