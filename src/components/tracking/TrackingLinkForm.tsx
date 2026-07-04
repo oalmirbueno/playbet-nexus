@@ -14,6 +14,8 @@ import { syncLinkAssetsBatch } from "@/lib/linkAssets";
 import { detectFromUrl, CATEGORY_LABELS, inferAttributionParam, type LinkCategory } from "@/lib/linkIntelligence";
 import GameArtwork from "@/components/tracking/GameArtwork";
 import { detectLpMode, defaultLayoutConfig, LP_MODE_LABELS, LP_MODE_HINTS, type LpMode } from "@/lib/lpMode";
+import OddsSharePanel, { emptyOddsValue, type OddsPanelValue } from "@/components/tracking/OddsSharePanel";
+import { getOddsByLink, upsertOdds } from "@/services/trackingLinkOddsService";
 
 interface Props {
   open: boolean;
