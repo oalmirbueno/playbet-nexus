@@ -515,7 +515,10 @@ export default function InfluencerLanding() {
   const { slug: pathSlug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
   const slug = searchParams.get("ref") || pathSlug;
-  const cachedSnapshot = readCachedLpSnapshot(slug);
+  // Editors/admin previews carry `_preview` — never use the cached snapshot so
+  // edits (brand override, copy, seções, jogos) aparecem imediatamente ao recarregar.
+  const isPreview = searchParams.has("_preview");
+  const cachedSnapshot = isPreview ? null : readCachedLpSnapshot(slug);
   const [state, setState] = useState<LoadState>(() => cachedSnapshot ? "ready" : "loading");
   const [resolved, setResolved] = useState<ResolvedLanding | null>(() => cachedSnapshot?.resolved ?? null);
   const [instanceCtx, setInstanceCtx] = useState<InstanceContext | null>(() => cachedSnapshot?.instanceCtx ?? null);
@@ -576,7 +579,7 @@ export default function InfluencerLanding() {
   useEffect(() => {
     if (!slug) { setState("not_found"); return; }
 
-    const cached = readCachedLpSnapshot(slug);
+    const cached = isPreview ? null : readCachedLpSnapshot(slug);
     if (cached) {
       setResolved(cached.resolved);
       setInstanceCtx(cached.instanceCtx);
