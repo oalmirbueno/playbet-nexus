@@ -1218,6 +1218,23 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
                 <Sparkles className="w-4 h-4 mr-2" /> Kit completo (4 formatos)
               </Button>
 
+              {/* Brand override + variantes (logos/selos) */}
+              <BrandAssetsPicker
+                brand={brandCtx?.brand ?? null}
+                overrideKey={brandOverrideKey}
+                onOverride={(k) => { setBrandOverrideKey(k); setDirty(true); toast.success(k ? `Marca: ${getBrandKit(k).name}` : "Marca detectada automaticamente"); }}
+                onAddAsset={(src, label) => {
+                  const nl: ImageLayer = {
+                    kind: "image", id: crypto.randomUUID(), src, label,
+                    xPct: 30, yPct: 40, widthPct: 40, heightPct: 20,
+                    radiusPct: 0, opacity: 1, fit: "contain", glow: null,
+                  };
+                  setLayers(ls => [...ls, nl]);
+                  setSelectedId(nl.id);
+                  setDirty(true);
+                }}
+              />
+
               <div className="pt-2 mt-1 border-t border-border/40 space-y-1.5">
                 <div className="flex items-center justify-between px-0.5">
                   <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">
