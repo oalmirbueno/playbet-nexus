@@ -179,6 +179,7 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
         : "SIMPLES";
       return defaultOddsLayersFor({
         format: fmt,
+        preset: oddsPreset,
         platformName: brand?.name || link.platformName,
         eventLabel: oddsCtx?.event_label ?? link.gameName ?? null,
         betTypeLabel: `APOSTA ${betLabel}`,
@@ -201,7 +202,8 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
       platformName: brand?.name || link.platformName,
       gameImageUrl: link.gameIconUrl,
     }, { includeImages: withImages, brand: brandOverride });
-  }, [link, brandCtx?.brand?.key, brandCtx?.brand?.logos.lockup, brandCtx?.brand?.logos.wordmark, brandCtx?.brand?.logos.mark, brandCtx?.brand?.seal?.horizontal.light, brandCtx?.brand?.seal?.horizontal.dark, isOddsShare, oddsCtx]);
+  }, [link, brandCtx?.brand?.key, brandCtx?.brand?.logos.lockup, brandCtx?.brand?.logos.wordmark, brandCtx?.brand?.logos.mark, brandCtx?.brand?.seal?.horizontal.light, brandCtx?.brand?.seal?.horizontal.dark, isOddsShare, oddsCtx, oddsPreset]);
+
 
   // Puxa odds do link — sempre que a modal abre, mesmo quando o operador começou em 'games'
   // e depois alternou para 'odds'. Assim o toggle é instantâneo, sem espera.
