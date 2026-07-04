@@ -41,6 +41,16 @@ export interface CreativeStudioLink {
   hypeReason?: string | null;
   shortUrl?: string | null;
   handle?: string | null;
+  linkCategory?: string | null;
+}
+
+interface OddsContext {
+  bet_type: "single" | "multipla" | "sistema";
+  total_odd: number | null;
+  event_label: string | null;
+  bookmaker_share_url: string | null;
+  screenshot_url: string | null;
+  selections: Array<{ event: string; market: string; pick: string; odd: number }>;
 }
 
 interface Props {
