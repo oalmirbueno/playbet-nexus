@@ -544,6 +544,30 @@ export default function InfluencerLanding() {
     resolved?.tracking_code ?? null,
   );
 
+  // Preferências de assets da marca salvas pelo editor (layout_config.brand_assets).
+  const brandAssetsCfg = (instanceCtx?.layout_config?.brand_assets ?? {}) as {
+    header_logo?: "lockup" | "wordmark" | "mark";
+    hero_logo?: "lockup" | "wordmark" | "mark";
+    hero_align?: "left" | "center" | "right";
+    footer_seal?: "h-light" | "h-dark" | "v-light" | "v-dark";
+    show_wordmark?: boolean;
+  };
+  const pickLogo = (variant: "lockup" | "wordmark" | "mark" | undefined) => {
+    const logos = brandCtx?.brand?.logos;
+    if (!logos) return null;
+    if (variant === "mark") return logos.mark || logos.wordmark || logos.lockup || null;
+    if (variant === "wordmark") return logos.wordmark || logos.lockup || logos.mark || null;
+    return logos.lockup || logos.wordmark || logos.mark || null;
+  };
+  const heroLogoSrc = pickLogo(brandAssetsCfg.hero_logo || "lockup");
+  const heroAlignClass = brandAssetsCfg.hero_align === "left"
+    ? "text-left mx-0"
+    : brandAssetsCfg.hero_align === "right"
+      ? "text-right ml-auto mr-0"
+      : "text-center mx-auto";
+  const footerSealVariant: "horizontal" | "vertical" = brandAssetsCfg.footer_seal?.startsWith("v") ? "vertical" : "horizontal";
+  const footerSealTone: "light" | "dark" = brandAssetsCfg.footer_seal?.endsWith("dark") ? "dark" : "light";
+
   // SEO dinâmico por marca resolvida
   useEffect(() => {
     if (!brandCtx?.brand) return;
