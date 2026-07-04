@@ -14,6 +14,8 @@ import { syncLinkAssetsBatch } from "@/lib/linkAssets";
 import { detectFromUrl, CATEGORY_LABELS, inferAttributionParam, type LinkCategory } from "@/lib/linkIntelligence";
 import GameArtwork from "@/components/tracking/GameArtwork";
 import { detectLpMode, defaultLayoutConfig, LP_MODE_LABELS, LP_MODE_HINTS, type LpMode } from "@/lib/lpMode";
+import OddsSharePanel, { emptyOddsValue, type OddsPanelValue } from "@/components/tracking/OddsSharePanel";
+import { getOddsByLink, upsertOdds } from "@/services/trackingLinkOddsService";
 
 interface Props {
   open: boolean;
@@ -144,6 +146,31 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
   const [creatingInstance, setCreatingInstance] = useState(false);
   const [batchApplying, setBatchApplying] = useState(false);
   const [refreshingHype, setRefreshingHype] = useState(false);
+  const [odds, setOdds] = useState<OddsPanelValue>(emptyOddsValue);
+  const isOddsShare = form.link_category === "odds_share";
+
+  // Load existing odds when editing a link that already has them
+  useEffect(() => {
+    let cancelled = false;
+    if (!form.id) { setOdds(emptyOddsValue); return; }
+    (async () => {
+      try {
+        const row = await getOddsByLink(form.id!);
+        if (cancelled || !row) return;
+        setOdds({
+          bet_type: row.bet_type,
+          total_odd: row.total_odd,
+          stake_suggested: row.stake_suggested,
+          selections: (row.selections && row.selections.length ? row.selections : emptyOddsValue.selections),
+          bookmaker_share_url: row.bookmaker_share_url ?? "",
+          event_label: row.event_label ?? "",
+          event_starts_at: row.event_starts_at ? row.event_starts_at.slice(0, 16) : "",
+          notes: row.notes ?? "",
+        });
+      } catch { /* silent */ }
+    })();
+    return () => { cancelled = true; };
+  }, [form.id]);
 
   // ── Link intelligence: auto-detect platform/category/game from pasted URL ──
   const detection = useMemo(
@@ -493,11 +520,18 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
         }
       }
     }
+    // Bloqueio Odds Compartilhada: exige casa cadastrada (platform_id resolvido)
+    if (isOddsShare && !currentPlatformId) {
+      toast({ title: "Casa não cadastrada", description: "Cadastre a plataforma em Plataformas antes de criar o link de aposta compartilhada.", variant: "destructive" });
+      return;
+    }
+
     // Sem LP: drop instance/LP refs so the saved tracking_link reflects mode.
     const payload = useLp
       ? form
       : { ...form, landing_page_id: "", landing_page_instance_id: "" };
-    onSave({ ...payload, final_url: finalUrl });
+    // Anexa os dados de odds em __odds para o handleSave da página persistir na tabela.
+    onSave({ ...payload, final_url: finalUrl, __odds: isOddsShare ? { ...odds, platform_id: currentPlatformId } : null } as any);
   };
 
   return (
@@ -730,7 +764,11 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
                 </div>
               )}
 
-              {/* Jogos hypados da casa */}
+              {isOddsShare && (
+                <OddsSharePanel value={odds} onChange={setOdds} />
+              )}
+
+
               {currentPlatformId && (
                 <div className="rounded-md border border-orange-500/25 bg-orange-500/5 p-2.5 space-y-2">
                   <div className="flex items-center gap-1.5 text-[10px] flex-wrap">
