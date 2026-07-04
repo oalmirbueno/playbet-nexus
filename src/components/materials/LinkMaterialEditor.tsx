@@ -406,16 +406,7 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId, readOnl
                         Baixar tudo
                       </button>
                     </div>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      <Button
-                        onClick={downloadPlaybetLogo}
-                        variant="outline"
-                        size="sm"
-                        className="h-8 text-[11px] px-2"
-                        title="Logo PlayBet"
-                      >
-                        <Package className="w-3.5 h-3.5 mr-1.5" /> PlayBet
-                      </Button>
+                    <div className="grid grid-cols-2 gap-1.5">
                       <Button
                         onClick={downloadPlatformLogo}
                         disabled={!platformLogoSrc}
@@ -433,9 +424,19 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId, readOnl
                         variant="outline"
                         size="sm"
                         className="h-8 text-[11px] px-2"
-                        title={`Selo oficial ${brand?.name || "da plataforma"}`}
+                        title={`Selo oficial ${brand?.name || "da plataforma"} (com fundo original)`}
                       >
-                        <Sparkles className="w-3.5 h-3.5 mr-1.5 shrink-0" /> Selo
+                        <Sparkles className="w-3.5 h-3.5 mr-1.5 shrink-0" /> Selo original
+                      </Button>
+                      <Button
+                        onClick={downloadPlatformSealTransparent}
+                        disabled={!platformSealSrc}
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-[11px] px-2 col-span-2"
+                        title={`Selo oficial ${brand?.name || "da plataforma"} em PNG sem fundo (transparente)`}
+                      >
+                        <Sparkles className="w-3.5 h-3.5 mr-1.5 shrink-0" /> Selo · PNG sem fundo
                       </Button>
                     </div>
                     {!link?.game_slug && !link?.game_name && (
