@@ -100,7 +100,10 @@ async function fetchReport(apiKey: string, labelId: string | null, dateFrom: str
   }
   const missingLabel = errors.some((e) => /missing label|errcode.?:?\s*3|label.?id/i.test(e));
   if (missingLabel) {
-    throw new Error("Smartico exige label_id: configure a variável SMARTICO_LABEL_ID (ou STELLAR_TAP_LABEL_ID) — a chave sozinha não autoriza o relatório. Sem isso o pull volta zerado.");
+    if (!labelId) {
+      throw new Error("Smartico exige label_id: configure a variável SMARTICO_LABEL_ID (ou STELLAR_TAP_LABEL_ID) — a chave sozinha não autoriza o relatório.");
+    }
+    throw new Error(`Smartico rejeitou o label_id enviado ("${labelId.slice(0, 6)}…"). Confirme no painel Smartico (Settings → API/Labels) o label_id correto da marca e atualize SMARTICO_LABEL_ID. Detalhes: ${errors.slice(0, 2).join(" | ")}`);
   }
   throw new Error(`Smartico falhou: ${errors[0] ?? "sem resposta"}`);
 }
