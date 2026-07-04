@@ -11,18 +11,21 @@ function isPanelHost(host: string): boolean {
 }
 
 if (typeof window !== "undefined" && isPanelHost(window.location.hostname)) {
-  void Promise.all([
-    import("@fontsource/sora/400.css"),
-    import("@fontsource/sora/500.css"),
-    import("@fontsource/sora/600.css"),
-    import("@fontsource/sora/700.css"),
-    import("@fontsource/manrope/300.css"),
-    import("@fontsource/manrope/400.css"),
-    import("@fontsource/manrope/500.css"),
-    import("@fontsource/manrope/600.css"),
-    import("@fontsource/manrope/700.css"),
-  ]);
-  void import("./lib/brandFonts").then(({ installBrandFonts }) => installBrandFonts());
+  const isPublicLpRoute = window.location.pathname.startsWith("/i/");
+  if (!isPublicLpRoute) {
+    void Promise.all([
+      import("@fontsource/sora/400.css"),
+      import("@fontsource/sora/500.css"),
+      import("@fontsource/sora/600.css"),
+      import("@fontsource/sora/700.css"),
+      import("@fontsource/manrope/300.css"),
+      import("@fontsource/manrope/400.css"),
+      import("@fontsource/manrope/500.css"),
+      import("@fontsource/manrope/600.css"),
+      import("@fontsource/manrope/700.css"),
+    ]);
+    void import("./lib/brandFonts").then(({ installBrandFonts }) => installBrandFonts());
+  }
 }
 
 
