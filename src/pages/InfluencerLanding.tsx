@@ -724,14 +724,18 @@ export default function InfluencerLanding() {
         const preferredTrackingCode = setFastResolved(affiliateLink, influencerId, influencerName, instanceId, landingPageId, quickCtx);
         const tl = sourceTrackingLink || await findTrackingLink(instanceId, influencerId, preferredTrackingCode, affiliateLink);
         const paramName = tl?.click_id_param_name || "sub1";
+        // A URL do próprio tracking_link deste influenciador SEMPRE vence — só caímos
+        // para uma opportunity explicitamente amarrada a este tracking_link_id como
+        // último recurso, e nunca para uma opportunity "LP-wide" (outro influenciador).
         const fallbackOpportunity = sourceTrackingLink ? null : await findOpportunityDestination(instanceId, landingPageId, tl?.id || null);
         const outboundAffiliate = [
-          fallbackOpportunity,
           (tl as any)?.base_url,
           (tl as any)?.short_url,
           affiliateLink,
+          fallbackOpportunity,
           (tl as any)?.final_url,
         ].find((url) => url && !isPublicLpLoop(url, hostname, slug)) || "";
+
         const platformAccountId = (tl as any)?.platform_account_id || null;
         const platformId = (tl as any)?.platform_accounts?.platform_id || null;
         const platformName = (tl as any)?.platform_accounts?.platforms?.name || null;
