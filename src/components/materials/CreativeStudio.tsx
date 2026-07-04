@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  renderCreative, downloadCreative, downloadRawAsset, slugify, defaultLayersFor,
+  renderCreative, downloadCreative, downloadRawAsset, slugify, defaultLayersFor, defaultOddsLayersFor,
   FORMAT_SIZES, CREATIVE_TEMPLATES, applyTemplate, ensureBrandChrome,
   type CreativeFormat, type CreativeStyle, type CreativeInput, type RenderedCreative,
   type Layer, type TextLayer, type ImageLayer, type BrandChromeSpec,
