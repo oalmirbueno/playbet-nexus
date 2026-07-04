@@ -186,6 +186,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         const lc = (inst as any).layout_config;
         const rawSections: SectionDef[] = Array.isArray(lc?.sections) && lc.sections.length > 0
           ? lc.sections : defaultLayoutConfig(storedMode).sections;
+        setBrandOverrideKey((lc?.brand_override_key ?? null) as BrandKey | null);
 
         const hc = (inst as any).hype_copy || {};
         setCopy({
