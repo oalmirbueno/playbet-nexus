@@ -46,6 +46,7 @@ const money = (value: unknown) => {
 export default function LinkReportDrawer({ link, onClose, influencer, manager }: Props) {
   const [loading, setLoading] = useState(false);
   const [agg, setAgg] = useState<Aggregates | null>(null);
+  const [odds, setOdds] = useState<TrackingLinkOddsRow | null>(null);
 
   useEffect(() => {
     if (!link) { setAgg(null); return; }
