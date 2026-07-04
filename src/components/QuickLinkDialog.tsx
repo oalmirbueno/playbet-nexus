@@ -134,9 +134,21 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
 
   useEffect(() => {
     if (detection.category) setLinkCategory(detection.category);
-    if (detection.gameSlug) setGameSlug(detection.gameSlug);
-    if (detection.gameName) setGameName(detection.gameName);
-  }, [detection.category, detection.gameSlug, detection.gameName]);
+    if (linkContext === LINK_CONTEXT_GAME) {
+      if (detection.gameSlug) setGameSlug(detection.gameSlug);
+      if (detection.gameName) setGameName(detection.gameName);
+    }
+  }, [detection.category, detection.gameSlug, detection.gameName, linkContext]);
+
+  const clearGameContext = () => {
+    setLinkContext(LINK_CONTEXT_NO_GAME);
+    setGameSlug("");
+    setGameName("");
+    setGameIconUrl("");
+    setExtraGameSlugs([]);
+    setHypeReason("");
+    setLinkCategory("");
+  };
 
   const qc = useQueryClient();
   const [refreshingHype, setRefreshingHype] = useState(false);
@@ -175,6 +187,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   };
 
   const applyHypedGame = (g: any) => {
+    setLinkContext(LINK_CONTEXT_GAME);
     setGameSlug(g.game_slug || "");
     setGameName(g.game_name || "");
     setGameIconUrl(g.icon_url || "");
