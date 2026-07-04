@@ -16,6 +16,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { syncLinkAssets } from "@/lib/linkAssets";
 
+const LINK_CONTEXT_GAME = "game";
+const LINK_CONTEXT_NO_GAME = "no_game";
+
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -48,6 +51,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   const [gameSlug, setGameSlug] = useState("");
   const [gameName, setGameName] = useState("");
   const [gameIconUrl, setGameIconUrl] = useState("");
+  const [linkContext, setLinkContext] = useState<typeof LINK_CONTEXT_GAME | typeof LINK_CONTEXT_NO_GAME>(LINK_CONTEXT_NO_GAME);
   const [linkCategory, setLinkCategory] = useState("");
   const [hypeReason, setHypeReason] = useState("");
   const [campanhaId, setCampanhaId] = useState("");
@@ -71,6 +75,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       setGameSlug("");
       setGameName("");
       setGameIconUrl("");
+      setLinkContext(LINK_CONTEXT_NO_GAME);
       setLinkCategory("");
       setHypeReason("");
       setCampanhaId("");
@@ -128,10 +133,22 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   }, [rawLink, currentPlatform?.name, detectedPlatform?.name]);
 
   useEffect(() => {
-    if (detection.category) setLinkCategory(detection.category);
-    if (detection.gameSlug) setGameSlug(detection.gameSlug);
-    if (detection.gameName) setGameName(detection.gameName);
-  }, [detection.category, detection.gameSlug, detection.gameName]);
+    if (linkContext === LINK_CONTEXT_GAME) {
+      if (detection.category) setLinkCategory(detection.category);
+      if (detection.gameSlug) setGameSlug(detection.gameSlug);
+      if (detection.gameName) setGameName(detection.gameName);
+    }
+  }, [detection.category, detection.gameSlug, detection.gameName, linkContext]);
+
+  const clearGameContext = () => {
+    setLinkContext(LINK_CONTEXT_NO_GAME);
+    setGameSlug("");
+    setGameName("");
+    setGameIconUrl("");
+    setExtraGameSlugs([]);
+    setHypeReason("");
+    setLinkCategory("");
+  };
 
   const qc = useQueryClient();
   const [refreshingHype, setRefreshingHype] = useState(false);
@@ -170,6 +187,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   };
 
   const applyHypedGame = (g: any) => {
+    setLinkContext(LINK_CONTEXT_GAME);
     setGameSlug(g.game_slug || "");
     setGameName(g.game_name || "");
     setGameIconUrl(g.icon_url || "");
@@ -284,10 +302,10 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
         tracking_code: trackingCode,
         click_id_param_name: clickIdParam,
         use_lp: useLp,
-        game_slug: gameSlug || null,
-        game_name: gameName || null,
-        game_icon_url: gameIconUrl || null,
-        link_category: linkCategory || null,
+        game_slug: linkContext === LINK_CONTEXT_GAME ? gameSlug || null : null,
+        game_name: linkContext === LINK_CONTEXT_GAME ? gameName || null : null,
+        game_icon_url: linkContext === LINK_CONTEXT_GAME ? gameIconUrl || null : null,
+        link_category: linkContext === LINK_CONTEXT_GAME ? linkCategory || null : null,
         hype_reason: hypeReason || null,
         commission_percent: (selectedInfluencer as any)?.commission_percent ?? null,
         status: "active",
@@ -313,7 +331,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
             .eq("id", instanceId);
         }
 
-        const needsLpExtras = useLp && (extraGameSlugs.length > 0 || !!hypeReason);
+        const needsLpExtras = useLp && linkContext === LINK_CONTEXT_GAME && (extraGameSlugs.length > 0 || !!hypeReason);
         syncLinkAssets(
           linkId,
           {
@@ -453,6 +471,26 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
               )}
             </div>
 
+            <div>
+              <Label className="text-xs font-medium">Tipo de link *</Label>
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                <button
+                  type="button"
+                  onClick={clearGameContext}
+                  className={`h-10 rounded-md border text-xs font-medium transition ${linkContext === LINK_CONTEXT_NO_GAME ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:text-foreground"}`}
+                >
+                  Sem jogo · LP limpa
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLinkContext(LINK_CONTEXT_GAME)}
+                  className={`h-10 rounded-md border text-xs font-medium transition ${linkContext === LINK_CONTEXT_GAME ? "border-primary bg-primary/10 text-foreground" : "border-border/60 text-muted-foreground hover:text-foreground"}`}
+                >
+                  Com jogo
+                </button>
+              </div>
+            </div>
+
             {/* 4. PLATFORM (auto-detected) + ACCOUNT */}
             <div className="grid grid-cols-2 gap-2">
               <div>
@@ -487,7 +525,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
               </div>
             </div>
 
-            {(rawLink || currentPlatformId) && (
+            {(rawLink || currentPlatformId) && linkContext === LINK_CONTEXT_GAME && (
               <div className="rounded-md border border-primary/20 bg-primary/5 p-2.5 space-y-2">
                 <div className="flex items-center gap-1.5 text-[10px] flex-wrap">
                   <Wand2 size={11} className="text-primary" />

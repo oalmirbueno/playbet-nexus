@@ -19,7 +19,7 @@ describe("validateSharedLpUrl — guard do fluxo copiar link", () => {
       campanhaId: "camp-456",
     });
     expect(res.ok).toBe(true);
-    expect(res.url).toContain("ref=camilly-9");
+    expect(new URL(res.url).pathname).toBe("/i/camilly-9");
     expect(res.url).toContain("sub1=camilly-mr5j872w");
   });
 
@@ -47,7 +47,7 @@ describe("validateSharedLpUrl — guard do fluxo copiar link", () => {
       trackingCode: "camilly-mr5j872w",
     });
     expect(res.ok).toBe(false);
-    expect(res.reason).toMatch(/ref esperado/);
+    expect(res.reason).toMatch(/LP esperada/);
   });
 
   it("rejeita URL vazia ou malformada", () => {

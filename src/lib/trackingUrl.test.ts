@@ -9,16 +9,16 @@ describe("trackingUrl - Com LP", () => {
       "inf-uuid",
       "camp-uuid",
     );
-    expect(url).toBe("https://oportunidades.playbet.app.br/?ref=camilly&sub2=inf-uuid&sub3=camp-uuid");
+    expect(url).toBe("https://painelcentral.playbet.app.br/i/camilly?sub2=inf-uuid&sub3=camp-uuid");
   });
 
   it("buildPublicLpUrl strips trailing slashes from domain", () => {
     const url = buildPublicLpUrl("https://oportunidades.playbet.app.br/", "camilly", "x", "y");
-    expect(url.startsWith("https://oportunidades.playbet.app.br/?ref=camilly")).toBe(true);
+    expect(url.startsWith("https://painelcentral.playbet.app.br/i/camilly")).toBe(true);
   });
 
   it("buildPublicLpUrl uses the default LP domain and returns empty only when slug is missing", () => {
-    expect(buildPublicLpUrl(null, "camilly", "x", "y")).toBe("https://oportunidades.playbet.app.br/?ref=camilly&sub2=x&sub3=y");
+    expect(buildPublicLpUrl(null, "camilly", "x", "y")).toBe("https://painelcentral.playbet.app.br/i/camilly?sub2=x&sub3=y");
     expect(buildPublicLpUrl("https://x.com", null, "x", "y")).toBe("");
   });
 
@@ -32,7 +32,7 @@ describe("trackingUrl - Com LP", () => {
       sub2: "inf-uuid",
       sub3: "camp-uuid",
     });
-    expect(url).toBe("https://oportunidades.playbet.app.br/?ref=camilly&sub1=camilly&sub2=inf-uuid&sub3=camp-uuid");
+    expect(url).toBe("https://painelcentral.playbet.app.br/i/camilly?sub1=camilly&sub2=inf-uuid&sub3=camp-uuid");
     expect(url.includes("lkrh.pro")).toBe(false);
   });
 

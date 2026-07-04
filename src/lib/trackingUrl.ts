@@ -10,7 +10,7 @@
  *  - Otherwise, the shared URL is the affiliate URL itself with sub1/2/3.
  */
 
-import { buildLpBaseUrl } from "@/lib/lpPublicUrl";
+import { buildInstanceLpBaseUrl, buildLpBaseUrl } from "@/lib/lpPublicUrl";
 
 export function appendParam(url: string, name: string, value: string): string {
   if (!url || !value) return url;
@@ -47,8 +47,7 @@ export function buildPublicLpUrl(
   sub1?: string | null | undefined,
 ): string {
   if (!instanceSlug) return "";
-  let url = buildLpBaseUrl(lpDomain, lpRoute);
-  url = appendParam(url, "ref", instanceSlug);
+  let url = buildInstanceLpBaseUrl(lpDomain, instanceSlug) || buildLpBaseUrl(lpDomain, lpRoute);
   if (sub1) url = appendParam(url, "sub1", sub1);
   if (sub2) url = appendParam(url, "sub2", sub2);
   if (sub3) url = appendParam(url, "sub3", sub3);
@@ -119,8 +118,14 @@ export function validateSharedLpUrl(
   const q = parsed.searchParams;
   const expectSlug = (expected.instanceSlug || "").trim();
   const expectCode = (expected.trackingCode || "").trim();
-  if (expectSlug && q.get("ref") !== expectSlug) {
-    return { ok: false, url: safeUrl, reason: `ref esperado "${expectSlug}", encontrado "${q.get("ref") ?? ""}"` };
+  if (expectSlug) {
+    const refSlug = q.get("ref") || "";
+    const routeSlug = parsed.pathname.startsWith("/i/")
+      ? decodeURIComponent(parsed.pathname.replace(/^\/i\//, "").split("/")[0] || "")
+      : "";
+    if (refSlug !== expectSlug && routeSlug !== expectSlug) {
+      return { ok: false, url: safeUrl, reason: `LP esperada "${expectSlug}", encontrada "${refSlug || routeSlug}"` };
+    }
   }
   if (expectCode && q.get("sub1") !== expectCode) {
     return { ok: false, url: safeUrl, reason: `sub1 esperado "${expectCode}", encontrado "${q.get("sub1") ?? ""}"` };
