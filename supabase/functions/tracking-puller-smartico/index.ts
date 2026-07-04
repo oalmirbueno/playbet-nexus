@@ -278,8 +278,8 @@ Deno.serve(async (req) => {
 
       const influencerId = attr?.influencer_id || (isUuid(pick(row, ["afp1", "sub2", "sub_id2"])) ? str(pick(row, ["afp1", "sub2", "sub_id2"])) : null);
       const campanhaId = attr?.campanha_id || (isUuid(pick(row, ["afp2", "sub3", "sub_id3"])) ? str(pick(row, ["afp2", "sub3", "sub_id3"])) : null);
-      const key = `${dataRef}|${account.platform_id}|${account.id}|${influencerId ?? "_"}|${campanhaId ?? "_"}`;
-      const b = buckets.get(key) ?? { data_ref: dataRef, platform_id: account.platform_id, platform_account_id: account.id, influencer_id: influencerId, campanha_id: campanhaId, cliques: 0, registros: 0, ftd: 0, deposits_count: 0, depositos_total: 0, revenue: 0, api_commission: 0, cpa_unit: num(account.cpa_value), revshare_pct: num(account.revshare_percent), sample_brand: str(pick(row, ["brand_name", "brandName", "brand_id"])) };
+      const key = `${dataRef}|${account.platform_id}|${account.id}|${attr?.tracking_link_id ?? "_"}|${influencerId ?? "_"}|${campanhaId ?? "_"}`;
+      const b = buckets.get(key) ?? { data_ref: dataRef, platform_id: account.platform_id, platform_account_id: account.id, tracking_link_id: attr?.tracking_link_id ?? null, influencer_id: influencerId, campanha_id: campanhaId, cliques: 0, registros: 0, ftd: 0, deposits_count: 0, depositos_total: 0, revenue: 0, api_commission: 0, cpa_unit: num(account.cpa_value), revshare_pct: num(account.revshare_percent), sample_brand: str(pick(row, ["brand_name", "brandName", "brand_id"])) };
       b.cliques += num(pick(row, ["visit_count", "click_count", "clicks", "visits"]));
       b.registros += num(pick(row, ["registration_count", "registrations", "reg_count", "leads"]));
       b.ftd += num(pick(row, ["ftd_count", "qftd_count", "first_deposit_count"]));
@@ -310,6 +310,7 @@ Deno.serve(async (req) => {
       delete (payload as any).api_commission; delete (payload as any).api_cpa_commission; delete (payload as any).api_revshare_commission; delete (payload as any).cpa_unit; delete (payload as any).revshare_pct; delete (payload as any).sample_brand;
 
       let q = admin.from("tracking_metrics").select("id").eq("data_ref", b.data_ref).eq("platform_id", b.platform_id).eq("platform_account_id", b.platform_account_id).eq("origem_importacao", "smartico_api_pull");
+      q = b.tracking_link_id ? q.eq("tracking_link_id", b.tracking_link_id) : q.is("tracking_link_id", null);
       q = b.influencer_id ? q.eq("influencer_id", b.influencer_id) : q.is("influencer_id", null);
       q = b.campanha_id ? q.eq("campanha_id", b.campanha_id) : q.is("campanha_id", null);
       const { data: existing, error: selErr } = await q.maybeSingle();
