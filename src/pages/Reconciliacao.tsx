@@ -126,6 +126,9 @@ export default function Reconciliacao() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button asChild variant="outline" size="sm">
+            <a href="/tracking/reconciliacao/links">Auditar Dashboard × Links</a>
+          </Button>
           <Select value={String(days)} onValueChange={(v) => setDays(Number(v))}>
             <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
             <SelectContent>

@@ -56,6 +56,7 @@ import TrackingSnapshots from "./pages/TrackingSnapshots";
 import TrackingLinks from "./pages/TrackingLinks";
 import TrackingStatus from "./pages/TrackingStatus";
 import Reconciliacao from "./pages/Reconciliacao";
+import LinkReconciliation from "./pages/LinkReconciliation";
 import NotFound from "./pages/NotFound";
 import InfluencerLanding from "./pages/InfluencerLanding";
 import ComercialPipeline from "./pages/ComercialPipeline";
@@ -133,6 +134,7 @@ function AdminRoutes() {
         <Route path="/materiais" element={<Materiais />} />
         <Route path="/materiais/kits" element={<MateriaisKits />} />
         <Route path="/tracking/reconciliacao" element={<Reconciliacao />} />
+        <Route path="/tracking/reconciliacao/links" element={<LinkReconciliation />} />
         <Route path="/comercial" element={<ComercialPipeline />} />
         <Route path="/comercial/squads" element={<ComercialSquads />} />
         <Route path="/comercial/qualificacao" element={<ComercialQualificacao />} />
