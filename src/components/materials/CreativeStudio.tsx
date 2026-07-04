@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  renderCreative, downloadCreative, downloadRawAsset, slugify, defaultLayersFor,
+  renderCreative, downloadCreative, downloadRawAsset, slugify, defaultLayersFor, defaultOddsLayersFor,
   FORMAT_SIZES, CREATIVE_TEMPLATES, applyTemplate, ensureBrandChrome,
   type CreativeFormat, type CreativeStyle, type CreativeInput, type RenderedCreative,
   type Layer, type TextLayer, type ImageLayer, type BrandChromeSpec,
@@ -41,6 +41,16 @@ export interface CreativeStudioLink {
   hypeReason?: string | null;
   shortUrl?: string | null;
   handle?: string | null;
+  linkCategory?: string | null;
+}
+
+interface OddsContext {
+  bet_type: "single" | "multipla" | "sistema";
+  total_odd: number | null;
+  event_label: string | null;
+  bookmaker_share_url: string | null;
+  screenshot_url: string | null;
+  selections: Array<{ event: string; market: string; pick: string; odd: number }>;
 }
 
 interface Props {
@@ -101,7 +111,10 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [dirty, setDirty] = useState(false);
   const [savingLayout, setSavingLayout] = useState(false);
+  const [oddsCtx, setOddsCtx] = useState<OddsContext | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+
+  const isOddsShare = (link?.linkCategory ?? "").toLowerCase() === "odds_share";
 
   const selected = layers.find(l => l.id === selectedId) || null;
 
@@ -132,6 +145,33 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
   const seedLayers = useCallback((fmt: CreativeFormat, withImages = true): Layer[] => {
     if (!link) return [];
     const brand = brandCtx?.brand ?? null;
+    const brandOverride = brand ? {
+      logoSrc: brand.logos.lockup || brand.logos.wordmark || brand.logos.mark,
+      badgeBg: brand.palette.primary,
+      sealSrc: brand.seal?.horizontal.light || brand.seal?.horizontal.dark,
+      sealLabel: brand.seal?.alt,
+    } : undefined;
+
+    // Odds share → engine dedicada de aposta compartilhada.
+    if (isOddsShare) {
+      const betLabel = oddsCtx?.bet_type === "multipla" ? "MÚLTIPLA"
+        : oddsCtx?.bet_type === "sistema" ? "SISTEMA"
+        : "SIMPLES";
+      return defaultOddsLayersFor({
+        format: fmt,
+        platformName: brand?.name || link.platformName,
+        eventLabel: oddsCtx?.event_label ?? link.gameName ?? null,
+        betTypeLabel: `APOSTA ${betLabel}`,
+        totalOdd: oddsCtx?.total_odd ?? null,
+        legs: (oddsCtx?.selections ?? []).map(s => ({
+          event: s.event, pick: s.pick, odd: Number(s.odd) || 0,
+        })),
+        cta: "COPIA E COLA NA CASA →",
+        handle: link.handle || (link.shortUrl ? link.shortUrl.replace(/^https?:\/\//, "") : ""),
+        screenshotUrl: withImages ? (oddsCtx?.screenshot_url ?? null) : null,
+      }, { brand: brandOverride });
+    }
+
     return defaultLayersFor({
       gameName: link.gameName,
       hypeReason: link.hypeReason,
@@ -140,16 +180,32 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       format: fmt,
       platformName: brand?.name || link.platformName,
       gameImageUrl: link.gameIconUrl,
-    }, {
-      includeImages: withImages,
-      brand: brand ? {
-        logoSrc: brand.logos.lockup || brand.logos.wordmark || brand.logos.mark,
-        badgeBg: brand.palette.primary,
-        sealSrc: brand.seal?.horizontal.light || brand.seal?.horizontal.dark,
-        sealLabel: brand.seal?.alt,
-      } : undefined,
-    });
-  }, [link, brandCtx?.brand?.key, brandCtx?.brand?.logos.lockup, brandCtx?.brand?.logos.wordmark, brandCtx?.brand?.logos.mark, brandCtx?.brand?.seal?.horizontal.light, brandCtx?.brand?.seal?.horizontal.dark]);
+    }, { includeImages: withImages, brand: brandOverride });
+  }, [link, brandCtx?.brand?.key, brandCtx?.brand?.logos.lockup, brandCtx?.brand?.logos.wordmark, brandCtx?.brand?.logos.mark, brandCtx?.brand?.seal?.horizontal.light, brandCtx?.brand?.seal?.horizontal.dark, isOddsShare, oddsCtx]);
+
+  // Puxa odds do link quando é aposta compartilhada.
+  useEffect(() => {
+    if (!open || !link?.id || !isOddsShare) { setOddsCtx(null); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("tracking_link_odds")
+        .select("bet_type,total_odd,event_label,bookmaker_share_url,screenshot_url,selections")
+        .eq("tracking_link_id", link.id)
+        .maybeSingle();
+      if (cancelled) return;
+      setOddsCtx(data ? {
+        bet_type: data.bet_type,
+        total_odd: data.total_odd,
+        event_label: data.event_label,
+        bookmaker_share_url: data.bookmaker_share_url,
+        screenshot_url: data.screenshot_url,
+        selections: Array.isArray(data.selections) ? data.selections : [],
+      } : null);
+    })();
+    return () => { cancelled = true; };
+  }, [open, link?.id, isOddsShare]);
+
 
 
   const loadDatabaseState = useCallback(async (linkId: string, fmt: CreativeFormat): Promise<SavedState | null> => {
@@ -181,6 +237,8 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
   useEffect(() => {
     if (!link || !open) return;
     if (brandLoading) return; // aguarda marca resolver
+    // Aguarda odds resolver quando é aposta compartilhada (evita seed sem contexto).
+    if (isOddsShare && oddsCtx === null) return;
     let cancelled = false;
     setHandle(link.handle || (link.shortUrl ? link.shortUrl.replace(/^https?:\/\//, "") : ""));
     setSelectedId(null);
@@ -194,8 +252,6 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
         ? (localSaved.updatedAt > databaseSaved.updatedAt ? localSaved : databaseSaved)
         : (databaseSaved ?? localSaved);
       if (saved) {
-        // Re-injeta chrome de marca caso o estado salvo seja anterior à resolução
-        // do brandKit ou tenha sido salvo sem logo/selo reais.
         const hydrated = applyBrandChrome(saved.layers);
         const chromeChanged = JSON.stringify(hydrated) !== JSON.stringify(saved.layers);
         setLayers(hydrated);
@@ -210,7 +266,8 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       setRenderKey(k => k + 1);
     })();
     return () => { cancelled = true; };
-  }, [link?.id, format, open, loadDatabaseState, brandLoading, brandCtx?.brand?.key, applyBrandChrome]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [link?.id, format, open, loadDatabaseState, brandLoading, brandCtx?.brand?.key, applyBrandChrome, isOddsShare, oddsCtx?.total_odd, oddsCtx?.event_label]); // eslint-disable-line react-hooks/exhaustive-deps
+
 
   // Auto-save (debounced)
   useEffect(() => {
@@ -643,8 +700,16 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
             )}
             <div className="flex-1 min-w-0">
               <DialogTitle className="text-base flex items-center gap-2 truncate">
-                Estúdio · {link.gameName || "Sem título"}
-                {link.hypeReason && <Badge variant="secondary" className="text-[10px] font-normal"><Sparkles className="w-3 h-3 mr-1" />{link.hypeReason}</Badge>}
+                {isOddsShare ? "Estúdio · Aposta compartilhada" : `Estúdio · ${link.gameName || "Sem título"}`}
+                {isOddsShare && (
+                  <Badge className="text-[10px] font-semibold bg-primary text-primary-foreground border-0">
+                    Engine Odds
+                    {oddsCtx?.total_odd ? ` · ${oddsCtx.total_odd.toFixed(2).replace(".", ",")}x` : ""}
+                  </Badge>
+                )}
+                {!isOddsShare && link.hypeReason && (
+                  <Badge variant="secondary" className="text-[10px] font-normal"><Sparkles className="w-3 h-3 mr-1" />{link.hypeReason}</Badge>
+                )}
               </DialogTitle>
               <DialogDescription className="text-xs flex items-center gap-2 flex-wrap">
                 {link.platformName || "Plataforma"} · {size.label} · {size.w}×{size.h}px
@@ -880,7 +945,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
 
             <CaptureOddPanel
               format={format}
-              suggestedUrl={link.shortUrl}
+              suggestedUrl={oddsCtx?.bookmaker_share_url || link.shortUrl}
               onCapture={(layer) => {
                 setLayers((ls) => [...ls, layer]);
                 setSelectedId(layer.id);

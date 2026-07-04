@@ -249,7 +249,7 @@ export const CATEGORY_LABELS: Record<LinkCategory, string> = {
 export function inferAttributionParam(url: string, platformName?: string | null) {
   const parsed = parseUrl(url);
   const hostAndName = normalizeText(`${parsed?.hostname ?? ""} ${platformName ?? ""}`);
-  if (hostAndName.includes("estrela") || hostAndName.includes("vupi") || hostAndName.includes("vooopi")) return "afp";
+  if (hostAndName.includes("estrela") || hostAndName.includes("vupi")) return "afp";
   if (hostAndName.includes("betano")) return "clickid";
   if (hostAndName.includes("stake")) return "aff_sub";
   if (hostAndName.includes("1win") || hostAndName.includes("alanbase")) return "click_id";

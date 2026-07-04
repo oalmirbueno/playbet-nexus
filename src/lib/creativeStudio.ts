@@ -479,6 +479,167 @@ export function defaultLayersFor(
   return layers;
 }
 
+/* ────────────────────────── odds preset ──────────────────────────
+ * Preset dedicado para links de "Aposta Compartilhada" / Odds.
+ * Substitui a arte de jogo por um bloco de odd + legs + odd total.
+ * Se um screenshot da odd for capturado, ele entra como hero via
+ * addImageLayer/CaptureOddPanel — este preset já deixa o hero-slot livre.
+ */
+export interface OddsPresetInput {
+  format: CreativeFormat;
+  platformName?: string | null;
+  eventLabel?: string | null;        // "Palmeiras x Corinthians"
+  betTypeLabel?: string | null;      // "Simples" | "Múltipla" | "Sistema"
+  totalOdd?: number | null;          // 12.5
+  legs?: Array<{ event: string; pick: string; odd: number }>;
+  cta?: string | null;
+  handle?: string | null;
+  screenshotUrl?: string | null;     // opcional: hero pré-carregado
+}
+
+export function defaultOddsLayersFor(
+  input: OddsPresetInput,
+  opts: { brand?: BrandOverride } = {},
+): Layer[] {
+  const size = FORMAT_SIZES[input.format];
+  const vertical = size.h >= size.w * 1.2;
+  const landscape = size.w > size.h * 1.3;
+  const layers: Layer[] = [];
+  const platformLogo = opts.brand?.logoSrc || null;
+  const badgeBg = opts.brand?.badgeBg || "#1E5FD9";
+  const sealSrc = opts.brand?.sealSrc;
+  const accent = opts.brand?.badgeBg || "#FFC72C";
+
+  // Logo casa + assinatura PlayBet (co-branding)
+  layers.push({
+    kind: "image", id: crypto.randomUUID(),
+    src: platformLogo || PLAYBET_LOGO_SRC,
+    label: platformLogo ? `Logo ${input.platformName || "plataforma"}` : "Logo Playbet",
+    xPct: 6, yPct: vertical ? 4 : 6,
+    widthPct: vertical ? 28 : 24, heightPct: vertical ? 6 : 8,
+    radiusPct: 0, opacity: 1, fit: "contain", glow: null,
+    chrome: "platform-logo",
+  });
+  if (platformLogo) {
+    layers.push({
+      kind: "image", id: crypto.randomUUID(),
+      src: PLAYBET_LOGO_SRC, label: "Assinatura PlayBet",
+      xPct: vertical ? 74 : 78, yPct: vertical ? 4 : 6,
+      widthPct: vertical ? 20 : 16, heightPct: vertical ? 4 : 5,
+      radiusPct: 0, opacity: 0.85, fit: "contain", glow: null,
+      chrome: "playbet-signature",
+    });
+  }
+
+  // Badge "APOSTA COMPARTILHADA" (identidade visual distinta de jogos)
+  layers.push({
+    kind: "text", id: crypto.randomUUID(),
+    text: (input.betTypeLabel || "APOSTA COMPARTILHADA").toUpperCase(),
+    xPct: 6, yPct: vertical ? 12 : 16, widthPct: vertical ? 52 : 40,
+    fontSizePct: vertical ? 2.4 : 1.9,
+    color: "#0B0F1E", weight: 800, align: "left",
+    family: "grotesk", uppercase: true, shadow: false, lineHeight: 1,
+    bgColor: accent, bgPadPct: 55, bgRadiusPct: 50,
+  });
+
+  // Hero screenshot (opcional): grande, central
+  if (input.screenshotUrl) {
+    layers.push({
+      kind: "image", id: crypto.randomUUID(), src: input.screenshotUrl,
+      label: "Screenshot da odd",
+      xPct: vertical ? 10 : landscape ? 34 : 22,
+      yPct: vertical ? 18 : 16,
+      widthPct: vertical ? 80 : landscape ? 40 : 56,
+      heightPct: vertical ? 50 : landscape ? 70 : 62,
+      radiusPct: 4, opacity: 1, fit: "contain", glow: accent,
+    });
+  }
+
+  // Evento
+  if (input.eventLabel) {
+    layers.push({
+      kind: "text", id: crypto.randomUUID(),
+      text: input.eventLabel,
+      xPct: 6, yPct: vertical ? 18 : 24,
+      widthPct: vertical ? 88 : 55,
+      fontSizePct: vertical ? 4.4 : 3.8,
+      color: "#FFFFFF", weight: 900, align: "left",
+      family: "display", uppercase: false, shadow: true, lineHeight: 1.05,
+    });
+  }
+
+  // Odd total — destaque
+  if (input.totalOdd && input.totalOdd > 0) {
+    layers.push({
+      kind: "text", id: crypto.randomUUID(),
+      text: `${input.totalOdd.toFixed(2).replace(".", ",")}x`,
+      xPct: vertical ? 6 : 60,
+      yPct: vertical ? 73 : 62,
+      widthPct: vertical ? 60 : 36,
+      fontSizePct: vertical ? 14 : 12,
+      color: accent, weight: 900, align: "left",
+      family: "display", uppercase: false, shadow: true, lineHeight: 1,
+    });
+    layers.push({
+      kind: "text", id: crypto.randomUUID(),
+      text: "ODD TOTAL",
+      xPct: vertical ? 6 : 60,
+      yPct: vertical ? 71 : 60,
+      widthPct: 40, fontSizePct: vertical ? 2.2 : 1.8,
+      color: "#FFFFFFB0", weight: 700, align: "left",
+      family: "grotesk", uppercase: true, shadow: false, lineHeight: 1,
+    });
+  }
+
+  // Legs (até 3 primeiras na arte — resto fica na LP/legenda)
+  if (input.legs?.length) {
+    const shown = input.legs.slice(0, 3);
+    const legsText = shown
+      .map((l, i) => `${i + 1}. ${l.event} · ${l.pick}  ${l.odd.toFixed(2)}x`)
+      .join("\n");
+    layers.push({
+      kind: "text", id: crypto.randomUUID(),
+      text: legsText,
+      xPct: 6, yPct: vertical ? 55 : 45,
+      widthPct: vertical ? 88 : 50,
+      fontSizePct: vertical ? 2.4 : 2.2,
+      color: "#FFFFFFD0", weight: 600, align: "left",
+      family: "grotesk", uppercase: false, shadow: false, lineHeight: 1.4,
+    });
+  }
+
+  layers.push({
+    kind: "text", id: crypto.randomUUID(),
+    text: input.cta || "COPIA E COLA NA CASA →",
+    xPct: 6, yPct: vertical ? 87 : 84,
+    widthPct: vertical ? 74 : 58, fontSizePct: vertical ? 3.6 : 3.2,
+    color: "#0B0F1E", weight: 800, align: "left",
+    family: "sans", uppercase: true, shadow: false, lineHeight: 1.1,
+    bgColor: accent, bgPadPct: 60, bgRadiusPct: 50,
+  });
+  if (input.handle) {
+    layers.push({
+      kind: "text", id: crypto.randomUUID(),
+      text: input.handle,
+      xPct: 6, yPct: vertical ? 94 : 93,
+      widthPct: 60, fontSizePct: 2.2,
+      color: "#FFFFFFCC", weight: 600, align: "left",
+      family: "grotesk", uppercase: false, shadow: false, lineHeight: 1,
+    });
+  }
+  if (sealSrc) {
+    layers.push({
+      kind: "image", id: crypto.randomUUID(), src: sealSrc,
+      label: opts.brand?.sealLabel || "Selo legal 18+",
+      xPct: vertical ? 4 : 6, yPct: vertical ? 96.5 : 96,
+      widthPct: vertical ? 46 : 34, heightPct: vertical ? 3 : 3.2,
+      radiusPct: 0, opacity: 0.95, fit: "contain", glow: null,
+      chrome: "legal-seal",
+    });
+  }
+  return layers;
+}
+
 /* ────────────────────────── brand chrome guard ────────────────────────── */
 
 export interface BrandChromeSpec {
