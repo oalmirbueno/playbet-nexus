@@ -196,8 +196,10 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
     });
   }, [rows, q, platformFilter]);
 
-  const withArt = filtered.filter(r => r.game_icon_url);
-  const brandKits = filtered.filter(r => !r.game_icon_url);
+  const isOdds = (r: Row) => (r.link_category ?? "").toLowerCase() === "odds_share";
+  const oddsRows = filtered.filter(isOdds);
+  const withArt = filtered.filter(r => !isOdds(r) && r.game_icon_url);
+  const brandKits = filtered.filter(r => !isOdds(r) && !r.game_icon_url);
 
   return (
     <div className="space-y-6">
