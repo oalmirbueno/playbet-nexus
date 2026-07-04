@@ -520,11 +520,18 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
         }
       }
     }
+    // Bloqueio Odds Compartilhada: exige casa cadastrada (platform_id resolvido)
+    if (isOddsShare && !currentPlatformId) {
+      toast({ title: "Casa não cadastrada", description: "Cadastre a plataforma em Plataformas antes de criar o link de aposta compartilhada.", variant: "destructive" });
+      return;
+    }
+
     // Sem LP: drop instance/LP refs so the saved tracking_link reflects mode.
     const payload = useLp
       ? form
       : { ...form, landing_page_id: "", landing_page_instance_id: "" };
-    onSave({ ...payload, final_url: finalUrl });
+    // Anexa os dados de odds em __odds para o handleSave da página persistir na tabela.
+    onSave({ ...payload, final_url: finalUrl, __odds: isOddsShare ? { ...odds, platform_id: currentPlatformId } : null } as any);
   };
 
   return (
