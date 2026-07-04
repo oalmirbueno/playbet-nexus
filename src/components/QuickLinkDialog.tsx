@@ -8,16 +8,19 @@ import { useInfluencers, useLandingPages, useLandingPageInstances, usePlatforms,
 import { usePlatformAccounts, useTrackingLinks } from "@/hooks/useTrackingData";
 import { landingPageInstanceService } from "@/services/supabaseService";
 import { toast } from "@/hooks/use-toast";
-import { Link2, CheckCircle2, Plus, Sparkles, Copy, Flame, Wand2, RefreshCw, Loader2 } from "lucide-react";
+import { Link2, CheckCircle2, Plus, Sparkles, Copy, Flame, Wand2, RefreshCw, Loader2, Sigma } from "lucide-react";
 import { buildPublicLpUrl, buildTrackedAffiliateUrl } from "@/lib/trackingUrl";
-import { detectFromUrl, CATEGORY_LABELS, inferAttributionParam, type LinkCategory } from "@/lib/linkIntelligence";
+import { detectFromUrl, CATEGORY_LABELS, extractOddsDraftFromInput, inferAttributionParam, splitAffiliateAndOddsUrls, type LinkCategory } from "@/lib/linkIntelligence";
 import GameArtwork from "@/components/tracking/GameArtwork";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { syncLinkAssets } from "@/lib/linkAssets";
+import OddsSharePanel, { emptyOddsValue, type OddsPanelValue } from "@/components/tracking/OddsSharePanel";
+import { upsertOdds } from "@/services/trackingLinkOddsService";
 
 const LINK_CONTEXT_GAME = "game";
 const LINK_CONTEXT_NO_GAME = "no_game";
+const LINK_CONTEXT_ODDS = "odds";
 
 interface Props {
   open: boolean;
@@ -51,11 +54,12 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   const [gameSlug, setGameSlug] = useState("");
   const [gameName, setGameName] = useState("");
   const [gameIconUrl, setGameIconUrl] = useState("");
-  const [linkContext, setLinkContext] = useState<typeof LINK_CONTEXT_GAME | typeof LINK_CONTEXT_NO_GAME>(LINK_CONTEXT_NO_GAME);
+  const [linkContext, setLinkContext] = useState<typeof LINK_CONTEXT_GAME | typeof LINK_CONTEXT_NO_GAME | typeof LINK_CONTEXT_ODDS>(LINK_CONTEXT_NO_GAME);
   const [linkCategory, setLinkCategory] = useState("");
   const [hypeReason, setHypeReason] = useState("");
   const [campanhaId, setCampanhaId] = useState("");
   const [extraGameSlugs, setExtraGameSlugs] = useState<string[]>([]);
+  const [odds, setOdds] = useState<OddsPanelValue>(emptyOddsValue);
   const [saving, setSaving] = useState(false);
 
   // Inline-create modal states
@@ -80,6 +84,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       setHypeReason("");
       setCampanhaId("");
       setExtraGameSlugs([]);
+      setOdds(emptyOddsValue);
     }
   }, [open, defaultInfluencerId, defaultLandingPageId]);
 
@@ -132,13 +137,41 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
     setClickIdParam(inferAttributionParam(rawLink, currentPlatform?.name || detectedPlatform?.name));
   }, [rawLink, currentPlatform?.name, detectedPlatform?.name]);
 
+  const handleRawLink = (value: string) => {
+    const split = splitAffiliateAndOddsUrls(value);
+    const draft = extractOddsDraftFromInput(value);
+    setRawLink(split.affiliateUrl || value);
+    if (draft.isSharedOdds) {
+      setLinkContext(LINK_CONTEXT_ODDS);
+      setLinkCategory("odds_share");
+      setGameSlug("");
+      setGameName("");
+      setGameIconUrl("");
+      setExtraGameSlugs([]);
+      setOdds(prev => ({
+        ...prev,
+        bookmaker_share_url: draft.bookmaker_share_url || prev.bookmaker_share_url,
+        total_odd: draft.total_odd ?? prev.total_odd,
+        event_label: draft.event_label || prev.event_label,
+      }));
+    }
+  };
+
   useEffect(() => {
+    if (detection.isSharedOdds || detection.category === "odds_share") {
+      setLinkContext(LINK_CONTEXT_ODDS);
+      setLinkCategory("odds_share");
+      setGameSlug("");
+      setGameName("");
+      setGameIconUrl("");
+      return;
+    }
     if (linkContext === LINK_CONTEXT_GAME) {
       if (detection.category) setLinkCategory(detection.category);
       if (detection.gameSlug) setGameSlug(detection.gameSlug);
       if (detection.gameName) setGameName(detection.gameName);
     }
-  }, [detection.category, detection.gameSlug, detection.gameName, linkContext]);
+  }, [detection.category, detection.gameSlug, detection.gameName, detection.isSharedOdds, linkContext]);
 
   const clearGameContext = () => {
     setLinkContext(LINK_CONTEXT_NO_GAME);
@@ -148,6 +181,15 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
     setExtraGameSlugs([]);
     setHypeReason("");
     setLinkCategory("");
+  };
+
+  const setOddsContext = () => {
+    setLinkContext(LINK_CONTEXT_ODDS);
+    setLinkCategory("odds_share");
+    setGameSlug("");
+    setGameName("");
+    setGameIconUrl("");
+    setExtraGameSlugs([]);
   };
 
   const qc = useQueryClient();
@@ -191,7 +233,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
     setGameSlug(g.game_slug || "");
     setGameName(g.game_name || "");
     setGameIconUrl(g.icon_url || "");
-    setLinkCategory(g.category || linkCategory);
+    setLinkCategory(g.category || (linkCategory === "odds_share" ? "slots" : linkCategory));
     setHypeReason(g.hype_reason || hypeReason);
   };
 
