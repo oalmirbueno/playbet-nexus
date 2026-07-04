@@ -535,8 +535,26 @@ export function defaultLayersFor(
  * Se um screenshot da odd for capturado, ele entra como hero via
  * addImageLayer/CaptureOddPanel — este preset já deixa o hero-slot livre.
  */
+export type OddsPreset =
+  | "bilhete"        // bilhete pronto (padrão) — hero screenshot + odd total + legs
+  | "scoreboard"     // placar tipo TV: mandante x visitante + odd sobre o placar
+  | "highlights"     // grade de highlights: cada leg vira um card com odd
+  | "story_hype"     // 9:16 focado em odd gigante + swipe up
+  | "odd_quote";     // minimal editorial: única odd em destaque + tagline
+
+export const ODDS_PRESET_LABEL: Record<OddsPreset, string> = {
+  bilhete: "Bilhete Pronto",
+  scoreboard: "Placar TV",
+  highlights: "Highlights Grid",
+  story_hype: "Story Hype",
+  odd_quote: "Odd Editorial",
+};
+
+export const ODDS_PRESETS: OddsPreset[] = ["bilhete", "scoreboard", "highlights", "story_hype", "odd_quote"];
+
 export interface OddsPresetInput {
   format: CreativeFormat;
+  preset?: OddsPreset;               // default 'bilhete'
   platformName?: string | null;
   eventLabel?: string | null;        // "Palmeiras x Corinthians"
   betTypeLabel?: string | null;      // "Simples" | "Múltipla" | "Sistema"
@@ -551,6 +569,19 @@ export function defaultOddsLayersFor(
   input: OddsPresetInput,
   opts: { brand?: BrandOverride } = {},
 ): Layer[] {
+  const preset = input.preset ?? "bilhete";
+  if (preset === "scoreboard") return buildScoreboardOdds(input, opts);
+  if (preset === "highlights") return buildHighlightsOdds(input, opts);
+  if (preset === "story_hype") return buildStoryHypeOdds(input, opts);
+  if (preset === "odd_quote")  return buildOddQuoteOdds(input, opts);
+  return buildBilheteOdds(input, opts);
+}
+
+function buildBilheteOdds(
+  input: OddsPresetInput,
+  opts: { brand?: BrandOverride } = {},
+): Layer[] {
+
   const size = FORMAT_SIZES[input.format];
   const vertical = size.h >= size.w * 1.2;
   const landscape = size.w > size.h * 1.3;
