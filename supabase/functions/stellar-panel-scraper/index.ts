@@ -438,6 +438,76 @@ async function resolveTrafficLink(
   return link ?? null;
 }
 
+// Distribution weights for aggregate splitting. Uses click activity per
+// tracking_link_id in the window to divide panel totals across the specific
+// links that generated the traffic.
+async function getLinkDistribution(
+  run: RunHandle,
+  platformAccountId: string,
+  dateStart: string,
+  dateEnd: string,
+): Promise<{ link: any; weight: number }[]> {
+  const { data: events } = await run.supabase
+    .from("tracking_events")
+    .select("tracking_link_id,status,canonical_event_name")
+    .eq("platform_account_id", platformAccountId)
+    .eq("is_demo", false)
+    .eq("is_duplicate", false)
+    .in("canonical_event_name", ["click", "lp_view"])
+    .not("tracking_link_id", "is", null)
+    .gte("event_timestamp", `${dateStart}T00:00:00.000Z`)
+    .lt("event_timestamp", `${dayEndExclusive(dateEnd)}T00:00:00.000Z`)
+    .limit(20000);
+
+  const counts = new Map<string, number>();
+  for (const e of events ?? []) {
+    if (["invalid_legacy", "invalid_internal_preview", "duplicate_technical"].includes(String((e as any).status ?? ""))) continue;
+    const id = (e as any).tracking_link_id as string | null;
+    if (!id) continue;
+    counts.set(id, (counts.get(id) ?? 0) + 1);
+  }
+  if (!counts.size) return [];
+
+  const ids = Array.from(counts.keys());
+  const { data: links } = await run.supabase
+    .from("tracking_links")
+    .select("id, tracking_code, influencer_id, campanha_id, platform_account_id, landing_page_id, landing_page_instance_id")
+    .in("id", ids)
+    .eq("is_demo", false);
+
+  return (links ?? [])
+    .map((l: any) => ({ link: l, weight: counts.get(l.id) ?? 0 }))
+    .filter((x) => x.weight > 0);
+}
+
+// Largest-remainder allocation for integer counters, keeps sum exact.
+function splitInteger(total: number, weights: number[]): number[] {
+  const T = Math.max(0, Math.floor(total));
+  const W = weights.reduce((a, b) => a + b, 0) || 1;
+  const raw = weights.map((w) => (T * w) / W);
+  const base = raw.map((v) => Math.floor(v));
+  let remainder = T - base.reduce((a, b) => a + b, 0);
+  const order = raw
+    .map((v, i) => ({ i, frac: v - Math.floor(v) }))
+    .sort((a, b) => b.frac - a.frac);
+  for (let k = 0; k < order.length && remainder > 0; k++, remainder--) base[order[k].i] += 1;
+  return base;
+}
+
+// Proportional split for decimals, absorbs rounding drift in the largest slice.
+function splitMoney(total: number, weights: number[]): number[] {
+  const T = Number(total) || 0;
+  const W = weights.reduce((a, b) => a + b, 0) || 1;
+  const out = weights.map((w) => Math.round(((T * w) / W) * 100) / 100);
+  const drift = Math.round((T - out.reduce((a, b) => a + b, 0)) * 100) / 100;
+  if (drift !== 0 && out.length) {
+    let bigIdx = 0;
+    for (let i = 1; i < weights.length; i++) if (weights[i] > weights[bigIdx]) bigIdx = i;
+    out[bigIdx] = Math.round((out[bigIdx] + drift) * 100) / 100;
+  }
+  return out;
+}
+
 async function persist(
   run: RunHandle,
   brand: Brand,
@@ -471,11 +541,7 @@ async function persist(
     const dateRef = normalizePeriod(rawPeriod, fallbackDate);
     if (!dateRef) continue;
     const externalDateKey = isRollingAggregatePeriod(rawPeriod) ? "_rolling" : dateRef;
-    if (!link) {
-      const trafficStart = isRollingAggregatePeriod(rawPeriod) ? dateStart : dateRef;
-      const trafficEnd = isRollingAggregatePeriod(rawPeriod) ? fallbackDate : dateRef;
-      link = await resolveTrafficLink(run, platformAccountId, trafficStart, trafficEnd, Number(it.visits ?? 0) || 0);
-    }
+
     const accountFinancial = platformAccountId
       ? (await run.supabase
         .from("platform_accounts")
@@ -497,11 +563,86 @@ async function persist(
       : (meetsBaseline ? ftdCount * cpaUnit : 0);
     const revShareCommission = (Number(it.rev_share ?? 0) || 0) || (grossRevenue * (revPct / 100));
 
+    // ---- Per-link split when the panel returns an aggregate row ----
+    // Panel doesn't break down by campaign for this affiliate, so distribute
+    // proportionally by each link's click share in the same window. This makes
+    // registrations/FTDs/revenue attributable to individual links instead of
+    // living as an orphan NULL row.
+    if (!link && platformAccountId) {
+      const trafficStart = isRollingAggregatePeriod(rawPeriod) ? dateStart : dateRef;
+      const trafficEnd = isRollingAggregatePeriod(rawPeriod) ? fallbackDate : dateRef;
+      const dist = await getLinkDistribution(run, platformAccountId, trafficStart, trafficEnd);
+
+      if (dist.length >= 1) {
+        const weights = dist.map((d) => d.weight);
+        const regsArr = splitInteger(Number(it.registrations ?? 0) || 0, weights);
+        const ftdsArr = splitInteger(ftdCount, weights);
+        const depCountArr = splitInteger(Number(it.deposits ?? 0) || 0, weights);
+        const depTotalArr = splitMoney(depositTotal, weights);
+        const revArr = splitMoney(grossRevenue, weights);
+        const cpaArr = splitMoney(cpaCommission, weights);
+        const revShareArr = splitMoney(revShareCommission, weights);
+
+        log(run, "attribution/split", {
+          platformAccountId,
+          externalDateKey,
+          brand: brand.brand_slug,
+          slices: dist.map((d, i) => ({
+            tracking_code: d.link.tracking_code,
+            weight: d.weight,
+            registros: regsArr[i],
+            ftd: ftdsArr[i],
+          })),
+        });
+
+        // Drop the previous NULL aggregate row for this key, if any, so totals
+        // don't double count after we insert per-link slices.
+        await run.supabase
+          .from("tracking_metrics")
+          .delete()
+          .eq("external_ref", `${brand.brand_slug}:${externalDateKey}:_aggregate`);
+
+        for (let i = 0; i < dist.length; i++) {
+          const l = dist[i].link;
+          const cpa_i = cpaArr[i];
+          const rev_i = revShareArr[i];
+          const record: Record<string, any> = {
+            data_ref: dateRef,
+            platform_id: brandPlatformId,
+            platform_account_id: platformAccountId,
+            tracking_link_id: l.id,
+            influencer_id: l.influencer_id ?? null,
+            campanha_id: l.campanha_id ?? null,
+            landing_page_id: l.landing_page_id ?? null,
+            landing_page_instance_id: l.landing_page_instance_id ?? null,
+            registros: regsArr[i],
+            ftd: ftdsArr[i],
+            deposits_count: depCountArr[i],
+            depositos_total: depTotalArr[i],
+            revenue: revArr[i],
+            cpa_commission: cpa_i,
+            revshare_commission: rev_i,
+            commission_total: Math.round((cpa_i + rev_i) * 100) / 100,
+            converted_amount: depTotalArr[i],
+            converted_currency: "BRL",
+            original_amount: depTotalArr[i],
+            original_currency: "BRL",
+            origem_importacao: "panel_scraper_stellar",
+            is_demo: false,
+            external_ref: `${brand.brand_slug}:${externalDateKey}:__split__:${l.tracking_code}`,
+          };
+          const { error } = await run.supabase
+            .from("tracking_metrics")
+            .upsert(record, { onConflict: "external_ref" });
+          if (!error) inserted++;
+          else log(run, "persist_error", { error: error.message, external_ref: record.external_ref });
+        }
+        continue;
+      }
+    }
 
     const record: Record<string, any> = {
       data_ref: dateRef,
-      // Always fill both — dashboards group by platform_id and detail views
-      // pivot on platform_account_id.
       platform_id: brandPlatformId,
       platform_account_id: platformAccountId,
       tracking_link_id: link?.id ?? null,
@@ -523,10 +664,6 @@ async function persist(
       original_currency: "BRL",
       origem_importacao: "panel_scraper_stellar",
       is_demo: false,
-      // When Stellar returns the sentinel 01/01/0001, the row is a rolling
-      // snapshot for the requested window, not that calendar day. Keep a stable
-      // external_ref so each sync updates the snapshot instead of creating a new
-      // daily copy that inflates dashboard totals.
       external_ref: `${brand.brand_slug}:${externalDateKey}:${it.campaign_name || link?.tracking_code || "_aggregate"}`,
     };
 
