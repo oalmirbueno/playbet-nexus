@@ -1035,15 +1035,15 @@ export default function InfluencerLanding() {
           <div className="max-w-md mx-auto relative z-10 text-center">
             {isPlatformDirect && brandCtx?.brand ? (
               <div className="mb-8 flex items-center justify-center gap-4">
-              <img src={logo} alt="PlayBet" className="h-10 w-auto opacity-95" loading="eager" decoding="async" width={360} height={55} />
-                <span className="text-white/30 text-xl font-light select-none">×</span>
+              <img src={logo} alt="PlayBet" className="h-7 w-auto opacity-95" loading="eager" decoding="async" width={360} height={55} />
+                <span className="text-white/30 text-lg font-light select-none">×</span>
                 <BrandLogoImage
                   src={brandCtx.brand.logos.wordmark || brandCtx.brand.logos.lockup || brandCtx.brand.logos.mark}
                   name={brandCtx.brand.name}
                 />
               </div>
             ) : (
-              <img src={logo} alt="PlayBet" className="h-10 w-auto mx-auto mb-8 opacity-95" loading="eager" decoding="async" width={360} height={55} />
+              <img src={logo} alt="PlayBet" className="h-7 w-auto mx-auto mb-8 opacity-95" loading="eager" decoding="async" width={360} height={55} />
             )}
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] backdrop-blur border border-emerald-400/20 text-emerald-300 text-[10px] font-semibold uppercase tracking-[0.14em] mb-6">
               <Zap size={11} /> {mode === "odds" ? "Em destaque" : isCatalogMode ? "Oportunidades" : isPlatformDirect ? "Parceria oficial" : "Oferta oficial"}
