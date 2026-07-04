@@ -26,7 +26,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { useLinkBrand } from "@/lib/useLinkBrand";
+import { useLinkBrand, type LinkBrandContext } from "@/lib/useLinkBrand";
+import { getBrandKit, listBrands, resolveBrand, type BrandKey, type BrandKit } from "@/lib/brandRegistry";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { BrandLockBadge } from "@/components/brand/BrandLockBadge";
 import { buildMaterialFilename } from "@/lib/exportMaterial";
 import { ApplyLayoutPanel } from "@/components/materials/ApplyLayoutPanel";
