@@ -267,13 +267,37 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
             <EmptyState />
           ) : (
             <>
+              {oddsRows.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-md bg-primary/15 flex items-center justify-center">
+                      <Sigma className="w-3.5 h-3.5 text-primary" />
+                    </div>
+                    <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                      Apostas compartilhadas · engine de odds ({oddsRows.length})
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {oddsRows.map(r => (
+                      <OddsCard key={r.id} row={r} showInfluencer={showInfluencer}
+                        onOpen={() => { setActive(toStudioLink(r)); setOpen(true); }}
+                        onEdit={() => { setEditorLinkId(r.id); setEditorOpen(true); }} />
+                    ))}
+                  </div>
+                </div>
+              )}
               {withArt.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                  {withArt.map(r => (
-                    <CreativeCard key={r.id} row={r} showInfluencer={showInfluencer}
-                      onOpen={() => { setActive(toStudioLink(r)); setOpen(true); }}
-                      onEdit={() => { setEditorLinkId(r.id); setEditorOpen(true); }} />
-                  ))}
+                <div className="space-y-2">
+                  <p className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                    Arte de jogo ({withArt.length})
+                  </p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {withArt.map(r => (
+                      <CreativeCard key={r.id} row={r} showInfluencer={showInfluencer}
+                        onOpen={() => { setActive(toStudioLink(r)); setOpen(true); }}
+                        onEdit={() => { setEditorLinkId(r.id); setEditorOpen(true); }} />
+                    ))}
+                  </div>
                 </div>
               )}
               {brandKits.length > 0 && (
