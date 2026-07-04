@@ -121,6 +121,7 @@ Deno.serve(async (req) => {
           link_category: link.link_category,
           auto: true,
           source: "materials-autogenerate",
+          ...(oddsMeta ? { odds: oddsMeta, engine: "odds_share" } : {}),
         },
       }));
 
