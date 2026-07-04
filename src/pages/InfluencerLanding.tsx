@@ -579,7 +579,7 @@ export default function InfluencerLanding() {
   useEffect(() => {
     if (!slug) { setState("not_found"); return; }
 
-    const cached = readCachedLpSnapshot(slug);
+    const cached = isPreview ? null : readCachedLpSnapshot(slug);
     if (cached) {
       setResolved(cached.resolved);
       setInstanceCtx(cached.instanceCtx);
