@@ -19,7 +19,7 @@ import {
   useTrackingMetrics, useTrackingSnapshots,
 } from "@/hooks/useTrackingData";
 import {
-  useInfluencers, useCampanhas, useLandingPages, useLandingPageInstances, usePlatforms,
+  useInfluencers, useCampanhas, useLandingPages, useLandingPageInstances, usePlatforms, useManagers,
 } from "@/hooks/useSupabaseQuery";
 import {
   Plus, Pencil, Trash2, Link2, Copy, Check, ExternalLink, AlertTriangle,
