@@ -16,6 +16,12 @@ const DEFAULT_RULES_BY_MODE: Record<string, Array<{ format: string; style: strin
     { format: "story", style: "platform_lockup" },
     { format: "square_wa", style: "platform_lockup" },
   ],
+  odds_share: [
+    { format: "feed", style: "odds_hype" },
+    { format: "story", style: "odds_hype" },
+    { format: "square_wa", style: "odds_hype" },
+    { format: "landscape", style: "odds_hype" },
+  ],
   default: [
     { format: "feed", style: "hype_neon" },
     { format: "story", style: "hype_neon" },
