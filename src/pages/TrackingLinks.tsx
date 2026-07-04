@@ -24,7 +24,7 @@ import {
 import {
   Plus, Pencil, Trash2, Link2, Copy, Check, ExternalLink, AlertTriangle,
   Sparkles, Upload, Users, ChevronDown, ChevronRight, Search, Flame,
-  LayoutGrid, Rows3, ShieldCheck, ShieldAlert, ArrowUpRight, Filter,
+  LayoutGrid, Rows3, ShieldCheck, ShieldAlert, ArrowUpRight, Filter, BarChart3,
 } from "lucide-react";
 import { findPresetByName, type PlatformPreset } from "@/config/platformPresets";
 import type { TrackingLinkRow } from "@/services/trackingService";
