@@ -145,6 +145,33 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
   const seedLayers = useCallback((fmt: CreativeFormat, withImages = true): Layer[] => {
     if (!link) return [];
     const brand = brandCtx?.brand ?? null;
+    const brandOverride = brand ? {
+      logoSrc: brand.logos.lockup || brand.logos.wordmark || brand.logos.mark,
+      badgeBg: brand.palette.primary,
+      sealSrc: brand.seal?.horizontal.light || brand.seal?.horizontal.dark,
+      sealLabel: brand.seal?.alt,
+    } : undefined;
+
+    // Odds share → engine dedicada de aposta compartilhada.
+    if (isOddsShare) {
+      const betLabel = oddsCtx?.bet_type === "multipla" ? "MÚLTIPLA"
+        : oddsCtx?.bet_type === "sistema" ? "SISTEMA"
+        : "SIMPLES";
+      return defaultOddsLayersFor({
+        format: fmt,
+        platformName: brand?.name || link.platformName,
+        eventLabel: oddsCtx?.event_label ?? link.gameName ?? null,
+        betTypeLabel: `APOSTA ${betLabel}`,
+        totalOdd: oddsCtx?.total_odd ?? null,
+        legs: (oddsCtx?.selections ?? []).map(s => ({
+          event: s.event, pick: s.pick, odd: Number(s.odd) || 0,
+        })),
+        cta: "COPIA E COLA NA CASA →",
+        handle: link.handle || (link.shortUrl ? link.shortUrl.replace(/^https?:\/\//, "") : ""),
+        screenshotUrl: withImages ? (oddsCtx?.screenshot_url ?? null) : null,
+      }, { brand: brandOverride });
+    }
+
     return defaultLayersFor({
       gameName: link.gameName,
       hypeReason: link.hypeReason,
@@ -153,16 +180,32 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       format: fmt,
       platformName: brand?.name || link.platformName,
       gameImageUrl: link.gameIconUrl,
-    }, {
-      includeImages: withImages,
-      brand: brand ? {
-        logoSrc: brand.logos.lockup || brand.logos.wordmark || brand.logos.mark,
-        badgeBg: brand.palette.primary,
-        sealSrc: brand.seal?.horizontal.light || brand.seal?.horizontal.dark,
-        sealLabel: brand.seal?.alt,
-      } : undefined,
-    });
-  }, [link, brandCtx?.brand?.key, brandCtx?.brand?.logos.lockup, brandCtx?.brand?.logos.wordmark, brandCtx?.brand?.logos.mark, brandCtx?.brand?.seal?.horizontal.light, brandCtx?.brand?.seal?.horizontal.dark]);
+    }, { includeImages: withImages, brand: brandOverride });
+  }, [link, brandCtx?.brand?.key, brandCtx?.brand?.logos.lockup, brandCtx?.brand?.logos.wordmark, brandCtx?.brand?.logos.mark, brandCtx?.brand?.seal?.horizontal.light, brandCtx?.brand?.seal?.horizontal.dark, isOddsShare, oddsCtx]);
+
+  // Puxa odds do link quando é aposta compartilhada.
+  useEffect(() => {
+    if (!open || !link?.id || !isOddsShare) { setOddsCtx(null); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from("tracking_link_odds")
+        .select("bet_type,total_odd,event_label,bookmaker_share_url,screenshot_url,selections")
+        .eq("tracking_link_id", link.id)
+        .maybeSingle();
+      if (cancelled) return;
+      setOddsCtx(data ? {
+        bet_type: data.bet_type,
+        total_odd: data.total_odd,
+        event_label: data.event_label,
+        bookmaker_share_url: data.bookmaker_share_url,
+        screenshot_url: data.screenshot_url,
+        selections: Array.isArray(data.selections) ? data.selections : [],
+      } : null);
+    })();
+    return () => { cancelled = true; };
+  }, [open, link?.id, isOddsShare]);
+
 
 
   const loadDatabaseState = useCallback(async (linkId: string, fmt: CreativeFormat): Promise<SavedState | null> => {
