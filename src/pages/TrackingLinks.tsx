@@ -266,6 +266,7 @@ export default function TrackingLinks() {
       lpDomain: lp?.domain,
       lpRoute: lp?.route,
       lpMode: inst?.lp_mode,
+      instanceId: inst?.id,
       instanceSlug: inst?.slug,
       affiliateBaseUrl: l.base_url || "",
       clickIdParamName: l.click_id_param_name || "sub1",

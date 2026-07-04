@@ -100,6 +100,7 @@ export default function PortalLinks() {
           lpDomain: lp?.domain ?? null,
           lpRoute: lp?.route ?? null,
           lpMode: inst?.lp_mode ?? null,
+          instanceId: inst?.id ?? null,
           instanceSlug: inst?.slug ?? null,
           affiliateBaseUrl: l.final_url || l.base_url,
           clickIdParamName: l.click_id_param_name,

@@ -68,4 +68,19 @@ describe("validateSharedLpUrl — guard do fluxo copiar link", () => {
     expect(res.ok).toBe(false);
     expect(res.reason).toMatch(/sub2/);
   });
+
+  it("amarra a URL à instância individual quando lpi é esperado", () => {
+    const withInstance = buildPublicLpUrl(
+      "oportunidades.playbet.app.br",
+      "camilly-9",
+      "inf-123",
+      "camp-456",
+      "/",
+      "camilly-mr5j872w",
+      "lp-instance-123",
+    );
+
+    expect(validateSharedLpUrl(withInstance, { instanceSlug: "camilly-9", instanceId: "lp-instance-123" }).ok).toBe(true);
+    expect(validateSharedLpUrl(withInstance, { instanceSlug: "camilly-9", instanceId: "outra-instancia" }).ok).toBe(false);
+  });
 });
