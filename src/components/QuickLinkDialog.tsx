@@ -341,11 +341,21 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
 
       // ── Resolve or create the LP instance so the link routes through the LP ──
       let instanceId: string | null = resolvedInstance?.id || null;
-      if (landingPageId && !instanceId) {
-        const slug = plannedInstanceSlug;
+      // Se o operador escolheu "LP gerada"/"LP padrão" mas não apontou uma LP,
+      // usamos como matriz a primeira LP ativa disponível. A LP-instance vai
+      // ser especializada por link via lp-autoconfigure (modo odds/game).
+      let effectiveLandingPageId = landingPageId;
+      if (!effectiveLandingPageId && lpGeneration !== "none") {
+        const fallbackLp = (landingPages as any[]).find((l: any) => l.is_active !== false) || (landingPages as any[])[0];
+        if (fallbackLp?.id) {
+          effectiveLandingPageId = fallbackLp.id;
+        }
+      }
+      if (effectiveLandingPageId && !instanceId) {
+        const slug = plannedInstanceSlug || `${(selectedInfluencer as any)?.slug || "ref"}-${trackingCode}`;
         try {
           const created: any = await landingPageInstanceService.create({
-            landing_page_id: landingPageId,
+            landing_page_id: effectiveLandingPageId,
             influencer_id: influencerId,
             slug,
             affiliate_link: trackedAffiliateUrl,
@@ -362,7 +372,8 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       // different house. Distinct affiliate URLs always get distinct instances.
 
 
-      const useLp = !!landingPageId;
+      const useLp = !!effectiveLandingPageId && lpGeneration !== "none";
+
 
       const createdLink: any = await createLink({
         influencer_id: influencerId,
