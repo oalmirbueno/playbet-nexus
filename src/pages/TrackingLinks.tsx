@@ -162,17 +162,18 @@ export default function TrackingLinks() {
     }
   };
 
-  const handleSave = async (form: FormState) => {
-    const { id, ...payload } = form;
+  const handleSave = async (form: FormState & { __odds?: any }) => {
+    const { id, __odds, ...payload } = form as any;
     const cleaned: any = { ...payload };
     Object.keys(cleaned).forEach(k => { if (cleaned[k] === "") cleaned[k] = null; });
     try {
+      let linkId: string | undefined = id;
       if (id) {
         await update(id, cleaned);
         toast({ title: "Link atualizado" });
       } else {
         const created: any = await create(cleaned);
-        const linkId = created?.id;
+        linkId = created?.id;
         if (linkId) {
           syncLinkAssets(linkId, { useLp: !!cleaned.landing_page_instance_id }, qc);
         }
@@ -180,6 +181,27 @@ export default function TrackingLinks() {
           title: "Link criado",
           description: "Materiais e LP sincronizando em segundo plano.",
         });
+      }
+
+      // Persist odds compartilhada, se for esse o tipo de link
+      if (linkId && __odds) {
+        try {
+          const { upsertOdds } = await import("@/services/trackingLinkOddsService");
+          await upsertOdds({
+            tracking_link_id: linkId,
+            platform_id: __odds.platform_id ?? null,
+            bet_type: __odds.bet_type,
+            total_odd: __odds.total_odd,
+            stake_suggested: __odds.stake_suggested,
+            selections: __odds.selections ?? [],
+            bookmaker_share_url: __odds.bookmaker_share_url || null,
+            event_label: __odds.event_label || null,
+            event_starts_at: __odds.event_starts_at ? new Date(__odds.event_starts_at).toISOString() : null,
+            notes: __odds.notes || null,
+          });
+        } catch (e: any) {
+          toast({ title: "Odds salvas parcialmente", description: e?.message || "Verifique os dados da aposta.", variant: "destructive" });
+        }
       }
       setModalOpen(false);
     } catch (e: any) {
