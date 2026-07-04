@@ -495,6 +495,9 @@ export default function TrackingLinks() {
                               <Button variant="ghost" size="icon" className="h-7 w-7" title="Copiar link" onClick={() => copyLink(l)}>
                                 {copiedId === l.id ? <Check size={13} className="text-success" /> : <Copy size={13} />}
                               </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" title="Relatório do link" onClick={() => setReportLink(l)}>
+                                <BarChart3 size={13} />
+                              </Button>
                               <Button variant="ghost" size="icon" className="h-7 w-7" title="Detalhes" onClick={() => setDetailLink(l)}>
                                 <ExternalLink size={13} />
                               </Button>
