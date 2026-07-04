@@ -525,7 +525,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
               </div>
             </div>
 
-            {(rawLink || currentPlatformId) && (
+            {(rawLink || currentPlatformId) && linkContext === LINK_CONTEXT_GAME && (
               <div className="rounded-md border border-primary/20 bg-primary/5 p-2.5 space-y-2">
                 <div className="flex items-center gap-1.5 text-[10px] flex-wrap">
                   <Wand2 size={11} className="text-primary" />
