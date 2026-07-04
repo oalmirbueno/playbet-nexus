@@ -3,9 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   renderCreative, downloadCreative, downloadRawAsset, slugify, defaultLayersFor, defaultOddsLayersFor,
   FORMAT_SIZES, CREATIVE_TEMPLATES, applyTemplate, ensureBrandChrome,
+  ODDS_PRESETS, ODDS_PRESET_LABEL,
   type CreativeFormat, type CreativeStyle, type CreativeInput, type RenderedCreative,
-  type Layer, type TextLayer, type ImageLayer, type BrandChromeSpec,
+  type Layer, type TextLayer, type ImageLayer, type BrandChromeSpec, type OddsPreset,
 } from "@/lib/creativeStudio";
+
 
 import playbetLogo from "@/assets/logo-mark.png";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -81,7 +83,9 @@ interface SavedState {
   updatedAt: number;
   cloudSaved?: boolean;
   engine?: StudioEngine;
+  oddsPreset?: OddsPreset;
 }
+
 
 function loadState(linkId: string, fmt: CreativeFormat, engine: StudioEngine): SavedState | null {
   try {
@@ -118,7 +122,9 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
   const [savingLayout, setSavingLayout] = useState(false);
   const [oddsCtx, setOddsCtx] = useState<OddsContext | null>(null);
   const [oddsFetched, setOddsFetched] = useState(false);
+  const [oddsPreset, setOddsPreset] = useState<OddsPreset>("bilhete");
   const stageRef = useRef<HTMLDivElement>(null);
+
 
   const autoOddsShare = (link?.linkCategory ?? "").toLowerCase() === "odds_share";
   // Modo do estúdio: 'games' (arte tradicional de jogo) vs 'odds' (aposta compartilhada).
@@ -175,6 +181,7 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
         : "SIMPLES";
       return defaultOddsLayersFor({
         format: fmt,
+        preset: oddsPreset,
         platformName: brand?.name || link.platformName,
         eventLabel: oddsCtx?.event_label ?? link.gameName ?? null,
         betTypeLabel: `APOSTA ${betLabel}`,
@@ -197,7 +204,8 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
       platformName: brand?.name || link.platformName,
       gameImageUrl: link.gameIconUrl,
     }, { includeImages: withImages, brand: brandOverride });
-  }, [link, brandCtx?.brand?.key, brandCtx?.brand?.logos.lockup, brandCtx?.brand?.logos.wordmark, brandCtx?.brand?.logos.mark, brandCtx?.brand?.seal?.horizontal.light, brandCtx?.brand?.seal?.horizontal.dark, isOddsShare, oddsCtx]);
+  }, [link, brandCtx?.brand?.key, brandCtx?.brand?.logos.lockup, brandCtx?.brand?.logos.wordmark, brandCtx?.brand?.logos.mark, brandCtx?.brand?.seal?.horizontal.light, brandCtx?.brand?.seal?.horizontal.dark, isOddsShare, oddsCtx, oddsPreset]);
+
 
   // Puxa odds do link — sempre que a modal abre, mesmo quando o operador começou em 'games'
   // e depois alternou para 'odds'. Assim o toggle é instantâneo, sem espera.
@@ -251,8 +259,10 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
       updatedAt: Date.parse(row?.updated_at ?? "") || layout.updatedAt || Date.now(),
       cloudSaved: true,
       engine,
+      oddsPreset: (layout.oddsPreset ?? undefined) as OddsPreset | undefined,
     };
   }, []);
+
 
   // Load persisted state on open / link change / format change.
   // IMPORTANTE: aguardar brandCtx resolver antes de semear — senão o estúdio abre
@@ -279,6 +289,7 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
         const chromeChanged = JSON.stringify(hydrated) !== JSON.stringify(saved.layers);
         setLayers(hydrated);
         setStyle(engineMode === "odds" ? "odds_hype" : saved.style === "odds_hype" ? "hype" : saved.style);
+        if (engineMode === "odds" && saved.oddsPreset) setOddsPreset(saved.oddsPreset);
         setSavedAt(saved.updatedAt);
         setDirty(!saved.cloudSaved || chromeChanged);
       } else {
@@ -286,6 +297,7 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
         setSavedAt(null);
         setDirty(true);
       }
+
       setRenderKey(k => k + 1);
     })();
     return () => { cancelled = true; };
@@ -296,10 +308,11 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
   useEffect(() => {
     if (!link || !open || !dirty) return;
     const t = setTimeout(() => {
-      saveState(link.id, format, engineMode, { layers, style: engineMode === "odds" ? "odds_hype" : style, editorMode, updatedAt: Date.now(), cloudSaved: false, engine: engineMode });
+      saveState(link.id, format, engineMode, { layers, style: engineMode === "odds" ? "odds_hype" : style, editorMode, updatedAt: Date.now(), cloudSaved: false, engine: engineMode, oddsPreset: engineMode === "odds" ? oddsPreset : undefined });
     }, 300);
     return () => clearTimeout(t);
-  }, [layers, style, editorMode, link?.id, format, open, dirty, engineMode]);
+  }, [layers, style, editorMode, link?.id, format, open, dirty, engineMode, oddsPreset]);
+
 
   const baseInput = useMemo<CreativeInput | null>(() => {
     if (!link) return null;
@@ -436,6 +449,47 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
     toast.success("Layout restaurado");
   };
 
+  const changeOddsPreset = (next: OddsPreset) => {
+    setOddsPreset(next);
+    setSelectedId(null);
+    setEditingTextId(null);
+    setDirty(true);
+    // Re-seed usando o novo preset (mesmo brandOverride + oddsCtx atuais).
+    // Como `seedLayers` lê `oddsPreset` via closure, chamamos após o próximo tick.
+    setTimeout(() => {
+      setLayers((_prev) => applyBrandChrome(seedLayersWithPreset(format, next)));
+    }, 0);
+    toast.success(`Preset odds: ${ODDS_PRESET_LABEL[next]}`);
+  };
+
+  // Versão de seedLayers que aceita o preset diretamente (para evitar corrida de estado).
+  const seedLayersWithPreset = useCallback((fmt: CreativeFormat, preset: OddsPreset, withImages = true): Layer[] => {
+    if (!link || !isOddsShare) return seedLayers(fmt, withImages);
+    const brand = brandCtx?.brand ?? null;
+    const brandOverride = brand ? {
+      logoSrc: brand.logos.lockup || brand.logos.wordmark || brand.logos.mark,
+      badgeBg: brand.palette.primary,
+      sealSrc: brand.seal?.horizontal.light || brand.seal?.horizontal.dark,
+      sealLabel: brand.seal?.alt,
+    } : undefined;
+    const betLabel = oddsCtx?.bet_type === "multipla" ? "MÚLTIPLA"
+      : oddsCtx?.bet_type === "sistema" ? "SISTEMA"
+      : "SIMPLES";
+    return defaultOddsLayersFor({
+      format: fmt,
+      preset,
+      platformName: brand?.name || link.platformName,
+      eventLabel: oddsCtx?.event_label ?? link.gameName ?? null,
+      betTypeLabel: `APOSTA ${betLabel}`,
+      totalOdd: oddsCtx?.total_odd ?? null,
+      legs: (oddsCtx?.selections ?? []).map(s => ({ event: s.event, pick: s.pick, odd: Number(s.odd) || 0 })),
+      cta: "COPIA E COLA NA CASA →",
+      handle: link.handle || (link.shortUrl ? link.shortUrl.replace(/^https?:\/\//, "") : ""),
+      screenshotUrl: withImages ? (oddsCtx?.screenshot_url ?? null) : null,
+    }, { brand: brandOverride });
+  }, [link, brandCtx?.brand?.key, brandCtx?.brand?.logos.lockup, brandCtx?.brand?.logos.wordmark, brandCtx?.brand?.logos.mark, brandCtx?.brand?.seal?.horizontal.light, brandCtx?.brand?.seal?.horizontal.dark, isOddsShare, oddsCtx, seedLayers]);
+
+
   const applyTpl = (templateId: string) => {
     if (!link) return;
     const raw = applyTemplate(templateId, {
@@ -465,8 +519,9 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
     setSavingLayout(true);
     const now = Date.now();
     const effectiveStyle = engineMode === "odds" ? "odds_hype" : style === "odds_hype" ? "hype" : style;
-    const snapshot: SavedState = { layers, style: effectiveStyle, editorMode: true, updatedAt: now, cloudSaved: false, engine: engineMode };
+    const snapshot: SavedState = { layers, style: effectiveStyle, editorMode: true, updatedAt: now, cloudSaved: false, engine: engineMode, oddsPreset: engineMode === "odds" ? oddsPreset : undefined };
     saveState(link.id, format, engineMode, snapshot);
+
 
     try {
       const { data: existing, error: readError } = await supabase
@@ -494,8 +549,10 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
           style: effectiveStyle,
           layers,
           updatedAt: now,
+          ...(engineMode === "odds" ? { oddsPreset } : {}),
         },
       };
+
 
       if (existingRow?.id) {
         const { error } = await supabase
@@ -778,6 +835,27 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
                 </button>
               </div>
             )}
+            {isOddsShare && (
+              <div className="inline-flex items-center gap-1 rounded-md border border-border/60 bg-secondary/40 p-0.5">
+                {ODDS_PRESETS.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => changeOddsPreset(p)}
+                    title={`Preset odds: ${ODDS_PRESET_LABEL[p]}`}
+                    className={cn(
+                      "px-2 py-1 rounded-sm text-[11px] font-medium transition-all whitespace-nowrap",
+                      oddsPreset === p
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {ODDS_PRESET_LABEL[p]}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <button className="text-xs px-3 py-1.5 rounded-md border border-primary bg-primary/10 text-foreground transition-all flex items-center gap-1.5">
               <MousePointer2 className="w-3.5 h-3.5" />
               Editor ativo

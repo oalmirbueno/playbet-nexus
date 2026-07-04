@@ -535,8 +535,26 @@ export function defaultLayersFor(
  * Se um screenshot da odd for capturado, ele entra como hero via
  * addImageLayer/CaptureOddPanel — este preset já deixa o hero-slot livre.
  */
+export type OddsPreset =
+  | "bilhete"        // bilhete pronto (padrão) — hero screenshot + odd total + legs
+  | "scoreboard"     // placar tipo TV: mandante x visitante + odd sobre o placar
+  | "highlights"     // grade de highlights: cada leg vira um card com odd
+  | "story_hype"     // 9:16 focado em odd gigante + swipe up
+  | "odd_quote";     // minimal editorial: única odd em destaque + tagline
+
+export const ODDS_PRESET_LABEL: Record<OddsPreset, string> = {
+  bilhete: "Bilhete Pronto",
+  scoreboard: "Placar TV",
+  highlights: "Highlights Grid",
+  story_hype: "Story Hype",
+  odd_quote: "Odd Editorial",
+};
+
+export const ODDS_PRESETS: OddsPreset[] = ["bilhete", "scoreboard", "highlights", "story_hype", "odd_quote"];
+
 export interface OddsPresetInput {
   format: CreativeFormat;
+  preset?: OddsPreset;               // default 'bilhete'
   platformName?: string | null;
   eventLabel?: string | null;        // "Palmeiras x Corinthians"
   betTypeLabel?: string | null;      // "Simples" | "Múltipla" | "Sistema"
@@ -551,6 +569,19 @@ export function defaultOddsLayersFor(
   input: OddsPresetInput,
   opts: { brand?: BrandOverride } = {},
 ): Layer[] {
+  const preset = input.preset ?? "bilhete";
+  if (preset === "scoreboard") return buildScoreboardOdds(input, opts);
+  if (preset === "highlights") return buildHighlightsOdds(input, opts);
+  if (preset === "story_hype") return buildStoryHypeOdds(input, opts);
+  if (preset === "odd_quote")  return buildOddQuoteOdds(input, opts);
+  return buildBilheteOdds(input, opts);
+}
+
+function buildBilheteOdds(
+  input: OddsPresetInput,
+  opts: { brand?: BrandOverride } = {},
+): Layer[] {
+
   const size = FORMAT_SIZES[input.format];
   const vertical = size.h >= size.w * 1.2;
   const landscape = size.w > size.h * 1.3;
@@ -733,7 +764,383 @@ export function defaultOddsLayersFor(
   return layers;
 }
 
-/* ────────────────────────── brand chrome guard ────────────────────────── */
+/* ────────────────────────── odds preset helpers ────────────────────────── */
+
+/** Header chrome shared by every odds preset: logo casa + assinatura PlayBet. */
+function pushOddsHeader(
+  layers: Layer[],
+  input: OddsPresetInput,
+  opts: { brand?: BrandOverride },
+  vertical: boolean,
+) {
+  const platformLogo = opts.brand?.logoSrc || null;
+  layers.push({
+    kind: "image", id: crypto.randomUUID(),
+    src: platformLogo || PLAYBET_LOGO_SRC,
+    label: platformLogo ? `Logo ${input.platformName || "plataforma"}` : "Logo Playbet",
+    xPct: 6, yPct: vertical ? 4 : 6,
+    widthPct: vertical ? 28 : 24, heightPct: vertical ? 6 : 8,
+    radiusPct: 0, opacity: 1, fit: "contain", glow: null,
+    chrome: "platform-logo",
+  });
+  if (platformLogo) {
+    layers.push({
+      kind: "image", id: crypto.randomUUID(),
+      src: PLAYBET_LOGO_SRC, label: "Assinatura PlayBet",
+      xPct: vertical ? 74 : 78, yPct: vertical ? 4 : 6,
+      widthPct: vertical ? 20 : 16, heightPct: vertical ? 4 : 5,
+      radiusPct: 0, opacity: 0.85, fit: "contain", glow: null,
+      chrome: "playbet-signature",
+    });
+  }
+}
+
+function pushOddsFooter(
+  layers: Layer[],
+  input: OddsPresetInput,
+  opts: { brand?: BrandOverride },
+  vertical: boolean,
+  ctaColor: string,
+) {
+  const sealSrc = opts.brand?.sealSrc;
+  layers.push({
+    kind: "text", id: crypto.randomUUID(),
+    text: input.cta || "COPIA E COLA NA CASA →",
+    xPct: 6, yPct: vertical ? 88 : 84,
+    widthPct: vertical ? 74 : 58, fontSizePct: vertical ? 3.4 : 3.1,
+    color: "#0B0F1E", weight: 800, align: "left",
+    family: "sans", uppercase: true, shadow: false, lineHeight: 1.1,
+    bgColor: ctaColor, bgPadPct: 60, bgRadiusPct: 50,
+  });
+  if (input.handle) {
+    layers.push({
+      kind: "text", id: crypto.randomUUID(),
+      text: input.handle,
+      xPct: 6, yPct: vertical ? 94 : 93,
+      widthPct: 60, fontSizePct: 2.2,
+      color: "#FFFFFFCC", weight: 600, align: "left",
+      family: "grotesk", uppercase: false, shadow: false, lineHeight: 1,
+    });
+  }
+  if (sealSrc) {
+    layers.push({
+      kind: "image", id: crypto.randomUUID(), src: sealSrc,
+      label: opts.brand?.sealLabel || "Selo legal 18+",
+      xPct: vertical ? 4 : 6, yPct: vertical ? 96.5 : 96,
+      widthPct: vertical ? 46 : 34, heightPct: vertical ? 3 : 3.2,
+      radiusPct: 0, opacity: 0.95, fit: "contain", glow: null,
+      chrome: "legal-seal",
+    });
+  }
+}
+
+function parseScoreboardTeams(eventLabel?: string | null): { home: string; away: string } {
+  if (!eventLabel) return { home: "MANDANTE", away: "VISITANTE" };
+  const m = eventLabel.split(/\s+(?:x|X|vs\.?|VS\.?|×)\s+/);
+  if (m.length >= 2) return { home: m[0].trim().toUpperCase(), away: m.slice(1).join(" ").trim().toUpperCase() };
+  return { home: eventLabel.toUpperCase(), away: "" };
+}
+
+/** Preset "Placar TV": mandante x visitante centralizado + odd total pairada. */
+function buildScoreboardOdds(
+  input: OddsPresetInput,
+  opts: { brand?: BrandOverride } = {},
+): Layer[] {
+  const size = FORMAT_SIZES[input.format];
+  const vertical = size.h >= size.w * 1.2;
+  const layers: Layer[] = [];
+  const accent = opts.brand?.badgeBg || "#FFC72C";
+  const { home, away } = parseScoreboardTeams(input.eventLabel);
+  const oddText = input.totalOdd && input.totalOdd > 0
+    ? `${input.totalOdd.toFixed(2).replace(".", ",")}x`
+    : "ODD";
+
+  pushOddsHeader(layers, input, opts, vertical);
+
+  layers.push({
+    kind: "text", id: crypto.randomUUID(),
+    text: "AO VIVO · PLACAR ODDS",
+    xPct: 6, yPct: vertical ? 14 : 18, widthPct: vertical ? 50 : 42,
+    fontSizePct: vertical ? 2.2 : 1.75,
+    color: "#0B0F1E", weight: 800, align: "left",
+    family: "grotesk", uppercase: true, shadow: false, lineHeight: 1,
+    bgColor: accent, bgPadPct: 55, bgRadiusPct: 50,
+  });
+
+  // Placar 3 colunas: HOME | ODD | AWAY
+  const bandY = vertical ? 34 : 34;
+  const bandH = vertical ? 22 : 40;
+  layers.push({
+    kind: "text", id: crypto.randomUUID(),
+    text: home, xPct: 4, yPct: bandY, widthPct: 32,
+    fontSizePct: vertical ? 5.6 : 5.2,
+    color: "#FFFFFF", weight: 900, align: "right",
+    family: "display", uppercase: true, shadow: true, lineHeight: 1,
+  });
+  layers.push({
+    kind: "text", id: crypto.randomUUID(),
+    text: oddText,
+    xPct: 36, yPct: bandY - 2, widthPct: 28,
+    fontSizePct: vertical ? 11 : 10,
+    color: accent, weight: 900, align: "center",
+    family: "display", uppercase: false, shadow: true, lineHeight: 1,
+  });
+  layers.push({
+    kind: "text", id: crypto.randomUUID(),
+    text: away, xPct: 64, yPct: bandY, widthPct: 32,
+    fontSizePct: vertical ? 5.6 : 5.2,
+    color: "#FFFFFF", weight: 900, align: "left",
+    family: "display", uppercase: true, shadow: true, lineHeight: 1,
+  });
+
+  layers.push({
+    kind: "text", id: crypto.randomUUID(),
+    text: "ODD TOTAL DA APOSTA",
+    xPct: 36, yPct: bandY + bandH - 4, widthPct: 28,
+    fontSizePct: vertical ? 1.9 : 1.5,
+    color: "#FFFFFFB0", weight: 700, align: "center",
+    family: "grotesk", uppercase: true, shadow: false, lineHeight: 1,
+  });
+
+  if (input.legs && input.legs.length) {
+    const shown = input.legs.slice(0, 3);
+    const legsText = shown
+      .map((l) => `• ${l.pick || "Seleção"}  ${(Number(l.odd) || 0).toFixed(2)}x`)
+      .join("\n");
+    layers.push({
+      kind: "text", id: crypto.randomUUID(),
+      text: legsText,
+      xPct: 6, yPct: vertical ? 68 : 68, widthPct: 88,
+      fontSizePct: vertical ? 2.4 : 1.9,
+      color: "#FFFFFFD0", weight: 600, align: "center",
+      family: "grotesk", uppercase: false, shadow: false, lineHeight: 1.4,
+    });
+  }
+
+  pushOddsFooter(layers, input, opts, vertical, accent);
+  return layers;
+}
+
+/** Preset "Highlights Grid": cada leg vira um card com pick + odd. */
+function buildHighlightsOdds(
+  input: OddsPresetInput,
+  opts: { brand?: BrandOverride } = {},
+): Layer[] {
+  const size = FORMAT_SIZES[input.format];
+  const vertical = size.h >= size.w * 1.2;
+  const layers: Layer[] = [];
+  const accent = opts.brand?.badgeBg || "#FFC72C";
+  const oddText = input.totalOdd && input.totalOdd > 0
+    ? `${input.totalOdd.toFixed(2).replace(".", ",")}x`
+    : "ODD";
+
+  pushOddsHeader(layers, input, opts, vertical);
+
+  layers.push({
+    kind: "text", id: crypto.randomUUID(),
+    text: "HIGHLIGHTS DA APOSTA",
+    xPct: 6, yPct: vertical ? 13 : 17, widthPct: vertical ? 60 : 46,
+    fontSizePct: vertical ? 2.4 : 1.9,
+    color: "#0B0F1E", weight: 800, align: "left",
+    family: "grotesk", uppercase: true, shadow: false, lineHeight: 1,
+    bgColor: accent, bgPadPct: 55, bgRadiusPct: 50,
+  });
+
+  if (input.eventLabel) {
+    layers.push({
+      kind: "text", id: crypto.randomUUID(),
+      text: input.eventLabel,
+      xPct: 6, yPct: vertical ? 20 : 25, widthPct: vertical ? 88 : 60,
+      fontSizePct: vertical ? 4.4 : 3.6,
+      color: "#FFFFFF", weight: 900, align: "left",
+      family: "display", uppercase: false, shadow: true, lineHeight: 1.05,
+    });
+  }
+
+  const legs = (input.legs || []).slice(0, vertical ? 4 : 3);
+  const cardTop = vertical ? 30 : 40;
+  const cardH = vertical ? 12 : 22;
+  const cardGap = vertical ? 2 : 3;
+  legs.forEach((leg, i) => {
+    const y = cardTop + i * (cardH + cardGap);
+    const oddValue = (Number(leg.odd) || 0).toFixed(2).replace(".", ",") + "x";
+    // card background pill via text bg
+    layers.push({
+      kind: "text", id: crypto.randomUUID(),
+      text: `${i + 1}. ${leg.event || "Evento"}\n${leg.pick || "Seleção"}`,
+      xPct: 6, yPct: y,
+      widthPct: vertical ? 66 : 60,
+      fontSizePct: vertical ? 2.4 : 2,
+      color: "#FFFFFF", weight: 700, align: "left",
+      family: "grotesk", uppercase: false, shadow: false, lineHeight: 1.25,
+      bgColor: "#0B1E17CC", bgPadPct: 50, bgRadiusPct: 24,
+    });
+    layers.push({
+      kind: "text", id: crypto.randomUUID(),
+      text: oddValue,
+      xPct: vertical ? 74 : 68, yPct: y + (vertical ? 1 : 2),
+      widthPct: vertical ? 22 : 26,
+      fontSizePct: vertical ? 4.4 : 3.8,
+      color: accent, weight: 900, align: "center",
+      family: "display", uppercase: false, shadow: true, lineHeight: 1,
+      bgColor: "#0B1E17E6", bgPadPct: 40, bgRadiusPct: 24,
+    });
+  });
+
+  // Rodapé com odd total
+  layers.push({
+    kind: "text", id: crypto.randomUUID(),
+    text: "ODD TOTAL",
+    xPct: 6, yPct: vertical ? 80 : 76, widthPct: 40,
+    fontSizePct: vertical ? 2.2 : 1.8,
+    color: "#FFFFFFB0", weight: 700, align: "left",
+    family: "grotesk", uppercase: true, shadow: false, lineHeight: 1,
+  });
+  layers.push({
+    kind: "text", id: crypto.randomUUID(),
+    text: oddText,
+    xPct: 6, yPct: vertical ? 82 : 77, widthPct: 40,
+    fontSizePct: vertical ? 8.8 : 6.6,
+    color: accent, weight: 900, align: "left",
+    family: "display", uppercase: false, shadow: true, lineHeight: 1,
+  });
+
+  pushOddsFooter(layers, input, opts, vertical, accent);
+  return layers;
+}
+
+/** Preset "Story Hype": vertical 9:16 focado em odd gigante + swipe. */
+function buildStoryHypeOdds(
+  input: OddsPresetInput,
+  opts: { brand?: BrandOverride } = {},
+): Layer[] {
+  const size = FORMAT_SIZES[input.format];
+  const vertical = size.h >= size.w * 1.2;
+  const layers: Layer[] = [];
+  const accent = opts.brand?.badgeBg || "#FFC72C";
+  const oddText = input.totalOdd && input.totalOdd > 0
+    ? `${input.totalOdd.toFixed(2).replace(".", ",")}x`
+    : "ODD";
+
+  pushOddsHeader(layers, input, opts, vertical);
+
+  layers.push({
+    kind: "text", id: crypto.randomUUID(),
+    text: "BILHETE HYPE",
+    xPct: 6, yPct: vertical ? 13 : 17, widthPct: vertical ? 42 : 30,
+    fontSizePct: vertical ? 2.4 : 1.9,
+    color: "#0B0F1E", weight: 800, align: "left",
+    family: "grotesk", uppercase: true, shadow: false, lineHeight: 1,
+    bgColor: accent, bgPadPct: 55, bgRadiusPct: 50,
+  });
+
+  if (input.screenshotUrl) {
+    layers.push({
+      kind: "image", id: crypto.randomUUID(), src: input.screenshotUrl,
+      label: "Screenshot da odd",
+      xPct: 12, yPct: vertical ? 22 : 22,
+      widthPct: vertical ? 76 : 40,
+      heightPct: vertical ? 34 : 58,
+      radiusPct: 4, opacity: 1, fit: "contain", glow: accent,
+    });
+  }
+
+  // Odd gigante — centralizada
+  layers.push({
+    kind: "text", id: crypto.randomUUID(),
+    text: oddText,
+    xPct: 6, yPct: vertical ? 58 : 30, widthPct: 88,
+    fontSizePct: vertical ? 22 : 16,
+    color: accent, weight: 900, align: "center",
+    family: "display", uppercase: false, shadow: true, lineHeight: 1,
+  });
+  layers.push({
+    kind: "text", id: crypto.randomUUID(),
+    text: input.eventLabel ? input.eventLabel.toUpperCase() : "APOSTA COMPARTILHADA",
+    xPct: 6, yPct: vertical ? 72 : 58, widthPct: 88,
+    fontSizePct: vertical ? 3 : 2.4,
+    color: "#FFFFFF", weight: 700, align: "center",
+    family: "grotesk", uppercase: true, shadow: false, lineHeight: 1.2,
+  });
+
+  // Swipe up / arrasta pra cima
+  layers.push({
+    kind: "text", id: crypto.randomUUID(),
+    text: vertical ? "↑ ARRASTA PRA COPIAR ↑" : "→ COPIA E COLA →",
+    xPct: 6, yPct: vertical ? 82 : 68, widthPct: 88,
+    fontSizePct: vertical ? 2.6 : 2.2,
+    color: "#FFFFFFB8", weight: 700, align: "center",
+    family: "grotesk", uppercase: true, shadow: false, lineHeight: 1,
+  });
+
+  pushOddsFooter(layers, input, opts, vertical, accent);
+  return layers;
+}
+
+/** Preset "Odd Editorial": minimalista, uma odd em destaque + tagline. */
+function buildOddQuoteOdds(
+  input: OddsPresetInput,
+  opts: { brand?: BrandOverride } = {},
+): Layer[] {
+  const size = FORMAT_SIZES[input.format];
+  const vertical = size.h >= size.w * 1.2;
+  const layers: Layer[] = [];
+  const accent = opts.brand?.badgeBg || "#FFC72C";
+  const oddText = input.totalOdd && input.totalOdd > 0
+    ? `${input.totalOdd.toFixed(2).replace(".", ",")}x`
+    : "ODD";
+
+  pushOddsHeader(layers, input, opts, vertical);
+
+  layers.push({
+    kind: "text", id: crypto.randomUUID(),
+    text: "APOSTA DA SEMANA",
+    xPct: 6, yPct: vertical ? 22 : 26, widthPct: 88,
+    fontSizePct: vertical ? 2.4 : 2,
+    color: accent, weight: 700, align: "left",
+    family: "grotesk", uppercase: true, shadow: false, lineHeight: 1,
+  });
+
+  layers.push({
+    kind: "text", id: crypto.randomUUID(),
+    text: oddText,
+    xPct: 6, yPct: vertical ? 28 : 32, widthPct: 88,
+    fontSizePct: vertical ? 30 : 22,
+    color: "#FFFFFF", weight: 900, align: "left",
+    family: "display", uppercase: false, shadow: true, lineHeight: 0.9,
+  });
+
+  layers.push({
+    kind: "text", id: crypto.randomUUID(),
+    text: input.eventLabel
+      ? `Em ${input.eventLabel}`
+      : "Bilhete compartilhado, pronto pra copiar.",
+    xPct: 6, yPct: vertical ? 62 : 62, widthPct: 88,
+    fontSizePct: vertical ? 3.2 : 2.6,
+    color: "#FFFFFFCC", weight: 500, align: "left",
+    family: "grotesk", uppercase: false, shadow: false, lineHeight: 1.2,
+  });
+
+  if (input.legs && input.legs.length) {
+    const shown = input.legs.slice(0, vertical ? 3 : 2);
+    const legsText = shown
+      .map((l) => `${l.pick || "Seleção"} · ${(Number(l.odd) || 0).toFixed(2)}x`)
+      .join("   |   ");
+    layers.push({
+      kind: "text", id: crypto.randomUUID(),
+      text: legsText,
+      xPct: 6, yPct: vertical ? 72 : 72, widthPct: 88,
+      fontSizePct: vertical ? 2 : 1.6,
+      color: "#FFFFFF90", weight: 600, align: "left",
+      family: "grotesk", uppercase: true, shadow: false, lineHeight: 1.3,
+    });
+  }
+
+  pushOddsFooter(layers, input, opts, vertical, accent);
+  return layers;
+}
+
+
 
 export interface BrandChromeSpec {
   format: CreativeFormat;
