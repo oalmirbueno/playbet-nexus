@@ -67,6 +67,7 @@ export default function TrackingLinks() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [detailLink, setDetailLink] = useState<TrackingLinkRow | null>(null);
+  const [reportLink, setReportLink] = useState<TrackingLinkRow | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
 
