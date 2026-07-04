@@ -49,10 +49,12 @@ export default function LinkReportDrawer({ link, onClose, influencer, manager }:
   const [odds, setOdds] = useState<TrackingLinkOddsRow | null>(null);
 
   useEffect(() => {
-    if (!link) { setAgg(null); return; }
+    if (!link) { setAgg(null); setOdds(null); return; }
     let cancelled = false;
     (async () => {
       setLoading(true);
+      // Fetch odds compartilhada em paralelo (não bloqueia UI se falhar)
+      getOddsByLink(link.id).then(r => { if (!cancelled) setOdds(r); }).catch(() => {});
       try {
         const metricsByLinkPromise = (supabase as any).from("tracking_metrics")
           .select("*, platform_accounts(revshare_percent,cpa_value,cpa_baseline_deposit)")
