@@ -311,9 +311,11 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
         setLayers(hydrated);
         setStyle(engineMode === "odds" ? "odds_hype" : saved.style === "odds_hype" ? "hype" : saved.style);
         if (engineMode === "odds" && saved.oddsPreset) setOddsPreset(saved.oddsPreset);
+        setBrandOverrideKey(saved.brandOverrideKey ?? null);
         setSavedAt(saved.updatedAt);
         setDirty(!saved.cloudSaved || chromeChanged);
       } else {
+        setBrandOverrideKey(null);
         setLayers(applyBrandChrome(seedLayers(format)));
         setSavedAt(null);
         setDirty(true);
