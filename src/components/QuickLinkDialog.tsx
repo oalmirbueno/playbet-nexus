@@ -430,18 +430,25 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
             .eq("id", instanceId);
         }
 
+        // Sempre roda o autoconfigure quando existir uma instância — assim a LP
+        // vira 'odds' com o bilhete embutido (odds) ou 'single_game/multi_game/
+        // platform_direct' com hype/jogos conforme o tipo escolhido pelo operador.
         const needsLpExtras = useLp && linkContext === LINK_CONTEXT_GAME && (extraGameSlugs.length > 0 || !!hypeReason);
         syncLinkAssets(
           linkId,
           {
-            useLp: needsLpExtras,
+            useLp: !!instanceId && lpGeneration !== "none",
             extraGameSlugs,
             hypeCopy: needsLpExtras ? { subtitle: hypeReason || null } : null,
           },
           qc,
         );
         if (linkContext === LINK_CONTEXT_ODDS) {
+          // fire-and-forget: materiais + LP puxam do bilhete em paralelo.
           supabase.functions.invoke("materials-autogenerate", { body: { tracking_link_id: linkId } }).catch(() => {});
+          if (instanceId && lpGeneration !== "none") {
+            supabase.functions.invoke("lp-autoconfigure", { body: { tracking_link_id: linkId } }).catch(() => {});
+          }
         }
       }
 
