@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { BrandScope, BrandChip } from "@/components/brand/BrandScope";
-import { resolveBrand } from "@/lib/brandRegistry";
+import { resolveBrand, listBrands, getBrandKit, type BrandKey } from "@/lib/brandRegistry";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -124,6 +124,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
   const [link, setLink] = useState<any>(null);
   const [platformName, setPlatformName] = useState<string | null>(null);
   const [mode, setMode] = useState<LpMode>("catalog");
+  const [brandOverrideKey, setBrandOverrideKey] = useState<BrandKey | null>(null);
   const [sections, setSections] = useState<SectionDef[]>([]);
   const [copy, setCopy] = useState<{ title: string; subtitle: string; cta_label: string }>({
     title: "",
@@ -185,6 +186,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         const lc = (inst as any).layout_config;
         const rawSections: SectionDef[] = Array.isArray(lc?.sections) && lc.sections.length > 0
           ? lc.sections : defaultLayoutConfig(storedMode).sections;
+        setBrandOverrideKey((lc?.brand_override_key ?? null) as BrandKey | null);
 
         const hc = (inst as any).hype_copy || {};
         setCopy({
@@ -485,7 +487,7 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
       const safeSections = effectiveMode === "platform_direct"
         ? ensureCommunitySection(defaultLayoutConfig(effectiveMode).sections)
         : sections;
-      const layoutConfig = { mode: effectiveMode, sections: safeSections, updated_at: new Date().toISOString() };
+      const layoutConfig = { mode: effectiveMode, sections: safeSections, brand_override_key: brandOverrideKey, updated_at: new Date().toISOString() };
       const platformSlug = (link as any)?.platform_accounts?.platforms?.slug || instance?.hype_copy?.platform_slug || null;
       const hype_copy: any = {
         title: cleanTitle || null,
@@ -732,7 +734,9 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
 
 
 
-  const brandKit = resolveBrand(platformName);
+  const detectedBrand = resolveBrand(platformName);
+  const brandKit = brandOverrideKey ? getBrandKit(brandOverrideKey) : detectedBrand;
+  const brandOptions = listBrands().filter(b => b.key !== "playbet");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -787,6 +791,49 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">Marca aplicada</Label>
+                    {brandOverrideKey && (
+                      <button
+                        type="button"
+                        className="text-[10px] text-muted-foreground hover:text-foreground"
+                        onClick={() => setBrandOverrideKey(null)}
+                      >
+                        usar detecção
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {brandOptions.map((b) => {
+                      const active = (brandOverrideKey ?? brandKit?.key) === b.key;
+                      return (
+                        <button
+                          key={b.key}
+                          type="button"
+                          onClick={() => setBrandOverrideKey(b.key)}
+                          className={`flex items-center gap-1.5 px-2 h-7 rounded-md border text-[11px] transition ${
+                            active
+                              ? "border-primary bg-primary/10 text-foreground"
+                              : "border-border/60 text-muted-foreground hover:border-primary/60 hover:text-foreground"
+                          }`}
+                          title={`Aplicar identidade ${b.name}`}
+                        >
+                          <span className="w-2.5 h-2.5 rounded-sm" style={{ background: b.palette.primary }} />
+                          {b.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground mt-1 leading-snug">
+                    {brandOverrideKey
+                      ? `Override manual: logo, selo, paleta e tipografia da ${getBrandKit(brandOverrideKey).name}.`
+                      : brandKit
+                        ? `Detectada pela plataforma: ${brandKit.name}. Selo e paleta são aplicados automaticamente.`
+                        : "Sem marca detectada — escolha uma casa acima para aplicar logo, selo e cores."}
+                  </p>
                 </div>
 
                 <div>

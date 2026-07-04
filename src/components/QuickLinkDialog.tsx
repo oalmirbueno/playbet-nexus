@@ -63,6 +63,9 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   // Marca que o operador escolheu manualmente o contexto — a detecção automática
   // não deve mais sobrescrever a escolha (evita "misturar" odds com jogos).
   const [contextTouched, setContextTouched] = useState(false);
+  // Modo de LP escolhido pelo operador. 'generated' = LP gerada pelo link (pull automático
+  // de bilhete/jogo/marca). 'catalog' = LP padrão da casa. 'none' = link direto sem LP.
+  const [lpGeneration, setLpGeneration] = useState<"none" | "catalog" | "generated">("generated");
   const [saving, setSaving] = useState(false);
 
 
@@ -90,6 +93,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       setExtraGameSlugs([]);
       setOdds(emptyOddsValue);
       setContextTouched(false);
+      setLpGeneration("generated");
     }
   }, [open, defaultInfluencerId, defaultLandingPageId]);
 
@@ -337,11 +341,21 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
 
       // ── Resolve or create the LP instance so the link routes through the LP ──
       let instanceId: string | null = resolvedInstance?.id || null;
-      if (landingPageId && !instanceId) {
-        const slug = plannedInstanceSlug;
+      // Se o operador escolheu "LP gerada"/"LP padrão" mas não apontou uma LP,
+      // usamos como matriz a primeira LP ativa disponível. A LP-instance vai
+      // ser especializada por link via lp-autoconfigure (modo odds/game).
+      let effectiveLandingPageId = landingPageId;
+      if (!effectiveLandingPageId && lpGeneration !== "none") {
+        const fallbackLp = (landingPages as any[]).find((l: any) => l.is_active !== false) || (landingPages as any[])[0];
+        if (fallbackLp?.id) {
+          effectiveLandingPageId = fallbackLp.id;
+        }
+      }
+      if (effectiveLandingPageId && !instanceId) {
+        const slug = plannedInstanceSlug || `${(selectedInfluencer as any)?.slug || "ref"}-${trackingCode}`;
         try {
           const created: any = await landingPageInstanceService.create({
-            landing_page_id: landingPageId,
+            landing_page_id: effectiveLandingPageId,
             influencer_id: influencerId,
             slug,
             affiliate_link: trackedAffiliateUrl,
@@ -358,12 +372,13 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       // different house. Distinct affiliate URLs always get distinct instances.
 
 
-      const useLp = !!landingPageId;
+      const useLp = !!effectiveLandingPageId && lpGeneration !== "none";
+
 
       const createdLink: any = await createLink({
         influencer_id: influencerId,
         platform_account_id: finalAccountId,
-        landing_page_id: landingPageId || null,
+        landing_page_id: effectiveLandingPageId || null,
         landing_page_instance_id: instanceId,
         campanha_id: campanhaId || null,
         base_url: rawLink.trim(),
@@ -415,18 +430,25 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
             .eq("id", instanceId);
         }
 
+        // Sempre roda o autoconfigure quando existir uma instância — assim a LP
+        // vira 'odds' com o bilhete embutido (odds) ou 'single_game/multi_game/
+        // platform_direct' com hype/jogos conforme o tipo escolhido pelo operador.
         const needsLpExtras = useLp && linkContext === LINK_CONTEXT_GAME && (extraGameSlugs.length > 0 || !!hypeReason);
         syncLinkAssets(
           linkId,
           {
-            useLp: needsLpExtras,
+            useLp: !!instanceId && lpGeneration !== "none",
             extraGameSlugs,
             hypeCopy: needsLpExtras ? { subtitle: hypeReason || null } : null,
           },
           qc,
         );
         if (linkContext === LINK_CONTEXT_ODDS) {
+          // fire-and-forget: materiais + LP puxam do bilhete em paralelo.
           supabase.functions.invoke("materials-autogenerate", { body: { tracking_link_id: linkId } }).catch(() => {});
+          if (instanceId && lpGeneration !== "none") {
+            supabase.functions.invoke("lp-autoconfigure", { body: { tracking_link_id: linkId } }).catch(() => {});
+          }
         }
       }
 
@@ -535,7 +557,45 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
                   {landingPages.map((lp: any) => <SelectItem key={lp.id} value={lp.id}>{lp.name}</SelectItem>)}
                 </SelectContent>
               </Select>
+              {/* LP mode: escolha entre padrão (catalog) x gerada (single_game / odds) x sem LP */}
+              <div className="grid grid-cols-3 gap-1.5 mt-2">
+                {([
+                  { v: "generated", label: "LP gerada", hint: "auto por link" },
+                  { v: "catalog", label: "LP padrão", hint: "vitrine da casa" },
+                  { v: "none", label: "Sem LP", hint: "afiliado direto" },
+                ] as const).map(opt => {
+                  const active = lpGeneration === opt.v;
+                  return (
+                    <button
+                      key={opt.v}
+                      type="button"
+                      onClick={() => setLpGeneration(opt.v)}
+                      className={`h-11 rounded-md border text-[11px] font-medium transition flex flex-col items-center justify-center leading-tight ${
+                        active
+                          ? "border-primary bg-primary/10 text-foreground ring-1 ring-primary/40"
+                          : "border-border/60 text-muted-foreground hover:text-foreground"
+                      }`}
+                      title={opt.hint}
+                    >
+                      <span>{opt.label}</span>
+                      <span className="text-[9px] opacity-70">{opt.hint}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1 leading-snug">
+                {lpGeneration === "generated"
+                  ? (linkContext === LINK_CONTEXT_ODDS
+                      ? "Vamos gerar uma LP em modo Odds com o bilhete embutido, marca da casa e CTA copy-and-paste."
+                      : linkContext === LINK_CONTEXT_GAME
+                        ? "LP focada no jogo selecionado, hero co-brand, hype e CTA de conversão."
+                        : "LP hero co-brand PlayBet + casa + CTA único, sem jogos.")
+                  : lpGeneration === "catalog"
+                    ? "Usa a vitrine padrão registrada. O CTA aponta para este link, mas as seções ficam da LP mãe."
+                    : "Sem LP: o afiliado abre direto na casa (sem página intermediária)."}
+              </p>
             </div>
+
 
             {/* 3. RAW LINK + auto detect */}
             <div>
