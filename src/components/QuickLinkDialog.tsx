@@ -378,7 +378,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
       const createdLink: any = await createLink({
         influencer_id: influencerId,
         platform_account_id: finalAccountId,
-        landing_page_id: landingPageId || null,
+        landing_page_id: effectiveLandingPageId || null,
         landing_page_instance_id: instanceId,
         campanha_id: campanhaId || null,
         base_url: rawLink.trim(),
