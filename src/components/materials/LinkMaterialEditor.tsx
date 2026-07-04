@@ -16,6 +16,7 @@ import {
   FORMAT_SIZES, STYLE_LABEL,
   type CreativeFormat, type CreativeStyle, type CreativeInput, type RenderedCreative,
 } from "@/lib/creativeStudio";
+import { downloadSealTransparent } from "@/lib/removeSealBackground";
 import playbetLogo from "@/assets/logo-mark.png";
 import {
   Loader2, Save, RefreshCw, Download, Sparkles, ExternalLink, Wand2, Layout, Package,
