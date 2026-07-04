@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { BrandScope, BrandChip } from "@/components/brand/BrandScope";
-import { resolveBrand } from "@/lib/brandRegistry";
+import { resolveBrand, listBrands, getBrandKit, type BrandKey } from "@/lib/brandRegistry";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
