@@ -16,6 +16,7 @@ import {
   FORMAT_SIZES, STYLE_LABEL,
   type CreativeFormat, type CreativeStyle, type CreativeInput, type RenderedCreative,
 } from "@/lib/creativeStudio";
+import { downloadSealTransparent } from "@/lib/removeSealBackground";
 import playbetLogo from "@/assets/logo-mark.png";
 import {
   Loader2, Save, RefreshCw, Download, Sparkles, ExternalLink, Wand2, Layout, Package,
@@ -305,11 +306,22 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId, readOnl
       toast.success(`Selo ${brand?.name || "plataforma"} baixado`);
     } catch (e) { toast.error("Falha ao baixar selo", { description: (e as Error).message }); }
   };
+  const downloadPlatformSealTransparent = async () => {
+    if (!platformSealSrc) return toast.error("Selo da plataforma indisponível");
+    try {
+      await downloadSealTransparent(platformSealSrc, `${platformSlugForFile}-selo-oficial-sem-fundo.png`);
+      toast.success(`Selo ${brand?.name || "plataforma"} sem fundo baixado`);
+    } catch (e) { toast.error("Falha ao baixar selo sem fundo", { description: (e as Error).message }); }
+  };
   const downloadBrandKit = async () => {
     await downloadPlaybetLogo().catch(() => {});
     await new Promise((r) => setTimeout(r, 120));
     if (platformLogoSrc) { await downloadPlatformLogo().catch(() => {}); await new Promise((r) => setTimeout(r, 120)); }
-    if (platformSealSrc) { await downloadPlatformSeal().catch(() => {}); }
+    if (platformSealSrc) {
+      await downloadPlatformSeal().catch(() => {});
+      await new Promise((r) => setTimeout(r, 120));
+      await downloadPlatformSealTransparent().catch(() => {});
+    }
   };
 
 
@@ -394,15 +406,15 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId, readOnl
                         Baixar tudo
                       </button>
                     </div>
-                    <div className="grid grid-cols-3 gap-1.5">
+                    <div className="grid grid-cols-2 gap-1.5">
                       <Button
                         onClick={downloadPlaybetLogo}
                         variant="outline"
                         size="sm"
-                        className="h-8 text-[11px] px-2"
+                        className="h-8 text-[11px] px-2 col-span-2"
                         title="Logo PlayBet"
                       >
-                        <Package className="w-3.5 h-3.5 mr-1.5" /> PlayBet
+                        <Package className="w-3.5 h-3.5 mr-1.5" /> Logo PlayBet
                       </Button>
                       <Button
                         onClick={downloadPlatformLogo}
@@ -421,9 +433,19 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId, readOnl
                         variant="outline"
                         size="sm"
                         className="h-8 text-[11px] px-2"
-                        title={`Selo oficial ${brand?.name || "da plataforma"}`}
+                        title={`Selo oficial ${brand?.name || "da plataforma"} (com fundo original)`}
                       >
-                        <Sparkles className="w-3.5 h-3.5 mr-1.5 shrink-0" /> Selo
+                        <Sparkles className="w-3.5 h-3.5 mr-1.5 shrink-0" /> Selo original
+                      </Button>
+                      <Button
+                        onClick={downloadPlatformSealTransparent}
+                        disabled={!platformSealSrc}
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-[11px] px-2 col-span-2"
+                        title={`Selo oficial ${brand?.name || "da plataforma"} em PNG sem fundo (transparente)`}
+                      >
+                        <Sparkles className="w-3.5 h-3.5 mr-1.5 shrink-0" /> Selo · PNG sem fundo
                       </Button>
                     </div>
                     {!link?.game_slug && !link?.game_name && (
