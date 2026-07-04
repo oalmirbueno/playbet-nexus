@@ -450,16 +450,17 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
   };
 
   const changeOddsPreset = (next: OddsPreset) => {
+    if (engineMode !== "odds") return; // guard: só re-seed odds, nunca jogos/cassino
     setOddsPreset(next);
     setSelectedId(null);
     setEditingTextId(null);
     setDirty(true);
-    // Re-seed usando o novo preset (mesmo brandOverride + oddsCtx atuais).
-    // Como `seedLayers` lê `oddsPreset` via closure, chamamos após o próximo tick.
-    setTimeout(() => {
-      setLayers((_prev) => applyBrandChrome(seedLayersWithPreset(format, next)));
-    }, 0);
+    // Re-seed usando o novo preset (apenas camadas de odds; brandOverride + oddsCtx atuais).
+    const nextLayers = applyBrandChrome(seedLayersWithPreset(format, next));
+    setLayers(nextLayers);
     toast.success(`Preset odds: ${ODDS_PRESET_LABEL[next]}`);
+    // Auto-gera / persiste material da engine de odds sem tocar em jogos/cassino.
+    void saveLayoutWith(nextLayers, next);
   };
 
   // Versão de seedLayers que aceita o preset diretamente (para evitar corrida de estado).
