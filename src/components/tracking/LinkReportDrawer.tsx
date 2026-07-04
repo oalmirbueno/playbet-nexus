@@ -7,7 +7,7 @@ import { getMetricMoneyParts } from "@/lib/trackingMetrics";
 import type { TrackingLinkRow, TrackingMetricRow } from "@/services/trackingService";
 import {
   MousePointerClick, Eye, ArrowUpRight, UserPlus, Wallet, Coins,
-  TrendingUp, Percent, DollarSign, Users, Briefcase,
+  TrendingUp, Percent, DollarSign, Users, Briefcase, Award,
 } from "lucide-react";
 
 interface Props {
@@ -36,6 +36,11 @@ interface Aggregates {
 const fmtBRL = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 2 });
 const fmtNum = (n: number) => n.toLocaleString("pt-BR");
 const fmtPct = (n: number) => `${(n * 100).toFixed(1)}%`;
+const VALID_EVENT_STATUS_FILTER = "status.is.null,status.not.in.(invalid_legacy,invalid_internal_preview,duplicate_technical)";
+const money = (value: unknown) => {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
+};
 
 export default function LinkReportDrawer({ link, onClose, influencer, manager }: Props) {
   const [loading, setLoading] = useState(false);
@@ -47,33 +52,33 @@ export default function LinkReportDrawer({ link, onClose, influencer, manager }:
     (async () => {
       setLoading(true);
       try {
-        // Panel-scraper rows são frequentemente órfãs (sem influencer/campaign/LP),
-        // mas carregam platform_account_id. Unimos todas as linhas que casam com
-        // qualquer chave do link para que cadastros, FTDs, depósitos e financeiro
-        // apareçam mesmo quando a atribuição fina falta.
-        const orParts: string[] = [];
-        if (link.platform_account_id) orParts.push(`platform_account_id.eq.${link.platform_account_id}`);
-        if (link.influencer_id) orParts.push(`influencer_id.eq.${link.influencer_id}`);
-        if (link.landing_page_instance_id) orParts.push(`landing_page_instance_id.eq.${link.landing_page_instance_id}`);
-        if (link.campanha_id) orParts.push(`campanha_id.eq.${link.campanha_id}`);
+        const metricsByLinkPromise = (supabase as any).from("tracking_metrics")
+          .select("*, platform_accounts(revshare_percent,cpa_value,cpa_baseline_deposit)")
+          .or("is_demo.is.false,is_demo.is.null")
+          .eq("tracking_link_id", link.id);
 
-        const metricsPromise = orParts.length
+        // Compatibilidade para linhas antigas do scraper que já vinham por campanha,
+        // mas ainda não tinham tracking_link_id gravado. Não usamos conta/plataforma
+        // como fallback porque isso replica o total geral em todos os links.
+        const legacyMetricPromise = link.tracking_code
           ? (supabase as any).from("tracking_metrics")
               .select("*, platform_accounts(revshare_percent,cpa_value,cpa_baseline_deposit)")
               .or("is_demo.is.false,is_demo.is.null")
-              .or(orParts.join(","))
+              .ilike("external_ref", `%:${link.tracking_code}`)
           : Promise.resolve({ data: [], error: null });
 
-        const [clicksRes, eventsRes, metricsRes] = await Promise.all([
+        const [clicksRes, eventsRes, metricsByLinkRes, legacyMetricRes] = await Promise.all([
           supabase.from("clicks").select("id, clicked_at", { count: "exact" })
             .eq("tracking_link_id", link.id)
             .eq("is_demo", false),
-          supabase.from("tracking_events").select("canonical_event_name, event_timestamp, amount")
+          supabase.from("tracking_events").select("canonical_event_name, event_timestamp, amount, converted_amount_brl, original_amount, commission_amount")
             .eq("tracking_link_id", link.id)
             .eq("is_demo", false)
             .eq("is_duplicate", false)
+            .or(VALID_EVENT_STATUS_FILTER)
             .limit(5000),
-          metricsPromise,
+          metricsByLinkPromise,
+          legacyMetricPromise,
         ]);
 
         if (cancelled) return;
@@ -81,7 +86,7 @@ export default function LinkReportDrawer({ link, onClose, influencer, manager }:
         const clicks = clicksRes.count ?? (clicksRes.data?.length ?? 0);
         const events = eventsRes.data ?? [];
         const seen = new Set<string>();
-        const metrics = ((metricsRes.data ?? []) as TrackingMetricRow[]).filter(m => {
+        const metrics = ([...(metricsByLinkRes.data ?? []), ...(legacyMetricRes.data ?? [])] as TrackingMetricRow[]).filter(m => {
           if (seen.has(m.id)) return false;
           seen.add(m.id);
           return true;
@@ -90,6 +95,13 @@ export default function LinkReportDrawer({ link, onClose, influencer, manager }:
         const lpViews = events.filter(e => e.canonical_event_name === "lp_view").length;
         const ctaClicks = events.filter(e => e.canonical_event_name === "click").length;
         let registrations = events.filter(e => ["registration", "signup", "lead"].includes(e.canonical_event_name)).length;
+
+        const eventRegistrations = events.filter(e => ["registration", "signup", "lead"].includes(e.canonical_event_name)).length;
+        const eventFtd = events.filter(e => ["ftd", "first_deposit"].includes(e.canonical_event_name)).length;
+        const eventDepositEvents = events.filter(e => ["deposit", "redeposit", "ftd"].includes(e.canonical_event_name));
+        const eventRevenueEvents = events.filter(e => ["revenue", "withdrawable_revenue"].includes(e.canonical_event_name));
+        const eventDepositsTotal = eventDepositEvents.reduce((sum, e: any) => sum + money(e.converted_amount_brl ?? e.original_amount ?? e.amount), 0);
+        const eventRevenue = eventRevenueEvents.reduce((sum, e: any) => sum + money(e.converted_amount_brl ?? e.commission_amount ?? e.original_amount ?? e.amount), 0);
 
         let ftd = 0, depositsTotal = 0, depositsCount = 0, revShare = 0, cpa = 0, commissionTotal = 0;
         let regsFromMetrics = 0;
@@ -103,10 +115,14 @@ export default function LinkReportDrawer({ link, onClose, influencer, manager }:
           depositsCount += Number(m.deposits_count || 0);
           regsFromMetrics += Number(m.registros || 0);
         }
-        if (regsFromMetrics > registrations) registrations = regsFromMetrics;
+        registrations = Math.max(registrations, eventRegistrations, regsFromMetrics);
 
-        if (ftd === 0) {
-          ftd = events.filter(e => ["ftd", "first_deposit"].includes(e.canonical_event_name)).length;
+        if (ftd === 0) ftd = eventFtd;
+        if (depositsTotal === 0) depositsTotal = eventDepositsTotal;
+        if (depositsCount === 0) depositsCount = eventDepositEvents.length;
+        if (revShare === 0 && commissionTotal === 0 && eventRevenue > 0) {
+          revShare = eventRevenue;
+          commissionTotal = eventRevenue;
         }
 
         const avgTicket = ftd > 0 ? depositsTotal / ftd : 0;
@@ -157,6 +173,8 @@ export default function LinkReportDrawer({ link, onClose, influencer, manager }:
     })();
     return () => { cancelled = true; };
   }, [link?.id, link?.landing_page_instance_id, link?.platform_account_id, link?.influencer_id, link?.campanha_id]);
+
+  const isSocioLink = ((link as any)?.tracking_role || "influencer") === "socio";
 
   const commissions = useMemo(() => {
     const total = agg?.commissionTotal ?? 0;
@@ -223,7 +241,21 @@ export default function LinkReportDrawer({ link, onClose, influencer, manager }:
             </div>
 
             {/* Split de comissão */}
-            {agg.commissionTotal > 0 && (
+            {agg.commissionTotal > 0 && isSocioLink && (
+              <div>
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">Regra financeira deste link</p>
+                <div className="grid grid-cols-1 gap-2">
+                  <SplitCard
+                    icon={Award}
+                    label="Sócio(a) · sem comissão de influencer"
+                    value={fmtBRL(agg.commissionTotal)}
+                    hint="Valor entra na base societária, não em repasse individual."
+                  />
+                </div>
+              </div>
+            )}
+
+            {agg.commissionTotal > 0 && !isSocioLink && (
               <div>
                 <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-2">Split de comissão deste link</p>
                 <div className="grid grid-cols-3 gap-2">

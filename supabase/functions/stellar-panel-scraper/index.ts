@@ -323,7 +323,7 @@ async function buildAttribution(
     const { data: links } = await run.supabase
       .from("tracking_links")
       .select(
-        "tracking_code, influencer_id, campanha_id, platform_account_id",
+        "id, tracking_code, influencer_id, campanha_id, platform_account_id, landing_page_id, landing_page_instance_id",
       )
       .in("tracking_code", codes);
     (links ?? []).forEach((l: any) => byCode.set(l.tracking_code, l));
@@ -427,8 +427,11 @@ async function persist(
       // pivot on platform_account_id.
       platform_id: brandPlatformId,
       platform_account_id: platformAccountId,
+      tracking_link_id: link?.id ?? null,
       influencer_id: link?.influencer_id ?? null,
       campanha_id: link?.campanha_id ?? null,
+      landing_page_id: link?.landing_page_id ?? null,
+      landing_page_instance_id: link?.landing_page_instance_id ?? null,
       registros: it.registrations ?? 0,
       ftd: it.ftds ?? 0,
       deposits_count: it.deposits ?? 0,

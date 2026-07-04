@@ -47,6 +47,7 @@ export interface TrackingMetricRow {
   id: string;
   platform_id: string | null;
   platform_account_id: string | null;
+  tracking_link_id?: string | null;
   influencer_id: string | null;
   campanha_id: string | null;
   conteudo_id: string | null;
