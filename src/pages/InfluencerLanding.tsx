@@ -329,10 +329,53 @@ interface GameArt {
   icon_url: string | null;
 }
 
+interface CachedLpSnapshot {
+  resolved: ResolvedLanding;
+  instanceCtx: InstanceContext | null;
+  gameArts: GameArt[];
+  storedAt: number;
+}
+
 const SUPABASE_URL = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_SUPABASE_URL ?? "";
 const SUPABASE_ANON_KEY = (import.meta as unknown as { env?: Record<string, string> }).env?.VITE_SUPABASE_PUBLISHABLE_KEY ?? "";
 const TRACKING_LINK_SELECT = "id, click_id_param_name, base_url, short_url, final_url, campanha_id, status, tracking_code, platform_account_id, landing_page_id, landing_page_instance_id, platform_accounts(platform_id, platforms(name, slug))";
 const LP_INSTANCE_SELECT = `id, slug, landing_page_id, affiliate_link, influencer_id, is_active, lp_mode, game_slugs, layout_config, hype_copy, source_tracking_link_id, source_tracking_link:tracking_links!landing_page_instances_source_tracking_link_id_fkey(${TRACKING_LINK_SELECT})`;
+const LP_CACHE_TTL_MS = 15 * 60 * 1000;
+
+function lpCacheKey(slug?: string | null) {
+  return `playbet_lp_snapshot:v2:${slug || "default"}`;
+}
+
+function readCachedLpSnapshot(slug?: string | null): CachedLpSnapshot | null {
+  if (!slug) return null;
+  try {
+    const raw = window.sessionStorage.getItem(lpCacheKey(slug)) || window.localStorage.getItem(lpCacheKey(slug));
+    if (!raw) return null;
+    const snapshot = JSON.parse(raw) as CachedLpSnapshot;
+    if (!snapshot?.resolved || Date.now() - snapshot.storedAt > LP_CACHE_TTL_MS) return null;
+    return snapshot;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedLpSnapshot(slug: string | null | undefined, snapshot: Omit<CachedLpSnapshot, "storedAt">) {
+  if (!slug || !snapshot.resolved?.affiliate_link) return;
+  try {
+    const payload = JSON.stringify({ ...snapshot, storedAt: Date.now() });
+    window.sessionStorage.setItem(lpCacheKey(slug), payload);
+    window.localStorage.setItem(lpCacheKey(slug), payload);
+  } catch {}
+}
+
+function runWhenIdle(task: () => void) {
+  const w = window as typeof window & { requestIdleCallback?: (cb: () => void, options?: { timeout?: number }) => number };
+  if (w.requestIdleCallback) {
+    w.requestIdleCallback(task, { timeout: 1200 });
+    return;
+  }
+  window.setTimeout(task, 180);
+}
 
 function insertClickKeepAlive(payload: Record<string, unknown>) {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return;
@@ -447,21 +490,31 @@ function GameImage({
   );
 }
 
-function BrandLogoImage({ src, name }: { src?: string | null; name: string }) {
+function LogoSlot({ src, name, className = "" }: { src?: string | null; name: string; className?: string }) {
   const [failed, setFailed] = useState(false);
   if (!src || failed) {
-    return <span className="text-sm font-extrabold tracking-wide text-white">{name}</span>;
+    return (
+      <span className={`inline-flex h-7 w-[104px] shrink-0 items-center justify-center text-center text-xs font-extrabold tracking-wide text-white ${className}`}>
+        {name}
+      </span>
+    );
   }
   return (
-    <img
-      src={src}
-      alt={name}
-      className="h-7 w-auto object-contain"
-      loading="eager"
-      decoding="async"
-      onError={() => setFailed(true)}
-    />
+    <span className={`inline-flex h-7 w-[104px] shrink-0 items-center justify-center ${className}`}>
+      <img
+        src={src}
+        alt={name}
+        className="max-h-5 max-w-full object-contain"
+        loading="eager"
+        decoding="async"
+        onError={() => setFailed(true)}
+      />
+    </span>
   );
+}
+
+function BrandLogoImage({ src, name }: { src?: string | null; name: string }) {
+  return <LogoSlot src={src} name={name} />;
 }
 
 export default function InfluencerLanding() {
