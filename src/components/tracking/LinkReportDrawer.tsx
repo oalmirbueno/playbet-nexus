@@ -210,11 +210,43 @@ export default function LinkReportDrawer({ link, onClose, influencer, manager }:
           </DialogTitle>
         </DialogHeader>
 
+        {odds && (
+          <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
+            <div className="flex items-center gap-2 text-[11px]">
+              <Sigma size={12} className="text-primary" />
+              <span className="uppercase tracking-wider font-semibold text-primary">Aposta compartilhada</span>
+              <Badge variant="outline" className="text-[9px] uppercase">{odds.bet_type}</Badge>
+              {odds.total_odd != null && (
+                <span className="ml-auto text-sm font-mono font-semibold text-primary">Odd {Number(odds.total_odd).toFixed(2)}</span>
+              )}
+            </div>
+            {odds.event_label && <div className="text-xs text-foreground">{odds.event_label}</div>}
+            {Array.isArray(odds.selections) && odds.selections.length > 0 && (
+              <div className="rounded border border-border/60 bg-background/40 divide-y divide-border/40 text-[11px]">
+                {odds.selections.map((s, i) => (
+                  <div key={i} className="grid grid-cols-[1fr_1fr_1fr_60px] gap-2 px-2 py-1.5">
+                    <span className="truncate text-foreground">{s.event || "—"}</span>
+                    <span className="truncate text-muted-foreground">{s.market || "—"}</span>
+                    <span className="truncate text-foreground">{s.pick || "—"}</span>
+                    <span className="text-right font-mono text-primary">{s.odd ? Number(s.odd).toFixed(2) : "—"}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {odds.bookmaker_share_url && (
+              <a href={odds.bookmaker_share_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[10px] text-primary hover:underline">
+                <ExternalLink size={10} /> abrir na casa
+              </a>
+            )}
+          </div>
+        )}
+
         {loading && (
           <div className="grid grid-cols-3 gap-2">
             {Array.from({ length: 9 }).map((_, i) => <Skeleton key={i} className="h-20 rounded-lg" />)}
           </div>
         )}
+
 
         {!loading && agg && (
           <div className="space-y-4">
