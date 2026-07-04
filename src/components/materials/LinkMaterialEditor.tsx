@@ -408,6 +408,15 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId, readOnl
                     </div>
                     <div className="grid grid-cols-2 gap-1.5">
                       <Button
+                        onClick={downloadPlaybetLogo}
+                        variant="outline"
+                        size="sm"
+                        className="h-8 text-[11px] px-2 col-span-2"
+                        title="Logo PlayBet"
+                      >
+                        <Package className="w-3.5 h-3.5 mr-1.5" /> Logo PlayBet
+                      </Button>
+                      <Button
                         onClick={downloadPlatformLogo}
                         disabled={!platformLogoSrc}
                         variant="outline"
