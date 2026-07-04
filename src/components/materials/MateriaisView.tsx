@@ -329,11 +329,12 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
 }
 
 function toStudioLink(r: Row, categoryOverride?: string): CreativeStudioLink {
+  const oddsMode = (categoryOverride ?? r.link_category) === "odds_share";
   return {
     id: r.id,
     influencerId: r.influencer_id,
-    gameName: r.game_name,
-    gameIconUrl: r.game_icon_url,
+    gameName: oddsMode ? (r.odds?.event_label ?? null) : r.game_name,
+    gameIconUrl: oddsMode ? null : r.game_icon_url,
     platformName: r.platform_name,
     hypeReason: r.hype_reason,
     shortUrl: r.short_url,
