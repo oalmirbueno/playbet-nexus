@@ -937,7 +937,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
 
             <CaptureOddPanel
               format={format}
-              suggestedUrl={link.shortUrl}
+              suggestedUrl={oddsCtx?.bookmaker_share_url || link.shortUrl}
               onCapture={(layer) => {
                 setLayers((ls) => [...ls, layer]);
                 setSelectedId(layer.id);
