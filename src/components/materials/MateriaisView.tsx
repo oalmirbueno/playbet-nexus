@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Sparkles, Search, ImageIcon, Wand2, Layers, Download, Pencil } from "lucide-react";
 import { CreativeStudio, type CreativeStudioLink } from "@/components/materials/CreativeStudio";
 import { LinkMaterialEditor } from "@/components/materials/LinkMaterialEditor";
+import { BrandKitInlineCard } from "@/components/materials/BrandKitInlineCard";
 import { toast } from "sonner";
 
 interface Row {
