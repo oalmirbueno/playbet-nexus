@@ -63,6 +63,9 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   // Marca que o operador escolheu manualmente o contexto — a detecção automática
   // não deve mais sobrescrever a escolha (evita "misturar" odds com jogos).
   const [contextTouched, setContextTouched] = useState(false);
+  // Modo de LP escolhido pelo operador. 'generated' = LP gerada pelo link (pull automático
+  // de bilhete/jogo/marca). 'catalog' = LP padrão da casa. 'none' = link direto sem LP.
+  const [lpGeneration, setLpGeneration] = useState<"none" | "catalog" | "generated">("generated");
   const [saving, setSaving] = useState(false);
 
 
