@@ -1,6 +1,6 @@
 // Domínio padrão das LPs públicas do Playbet.
 // Usado como fallback quando a LP não tem `domain` configurado.
-export const DEFAULT_LP_DOMAIN = "oportunidades.playbet.app.br";
+export const DEFAULT_LP_DOMAIN = "painelcentral.playbet.app.br";
 
 export function normalizeLpDomain(domain: string | null | undefined): string {
   const raw = (domain && domain.trim()) || DEFAULT_LP_DOMAIN;
