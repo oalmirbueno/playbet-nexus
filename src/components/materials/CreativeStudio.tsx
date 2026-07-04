@@ -83,7 +83,9 @@ interface SavedState {
   updatedAt: number;
   cloudSaved?: boolean;
   engine?: StudioEngine;
+  oddsPreset?: OddsPreset;
 }
+
 
 function loadState(linkId: string, fmt: CreativeFormat, engine: StudioEngine): SavedState | null {
   try {
