@@ -471,7 +471,7 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
     try {
       const { data: existing, error: readError } = await supabase
         .from("link_materials")
-        .select("id, meta")
+        .select("id, style, meta")
         .eq("tracking_link_id", link.id)
         .eq("format", format)
         .order("updated_at", { ascending: false })
@@ -481,7 +481,7 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
       const existingRow = ((existing ?? []) as any[]).find((m) => {
         const layoutEngine = m?.meta?.studioLayout?.engine;
         if (layoutEngine) return layoutEngine === engineMode;
-        return engineMode === "odds" ? m?.meta?.engine === "odds_share" : m?.meta?.engine !== "odds_share";
+        return engineMode === "odds" ? (m?.meta?.engine === "odds_share" || m?.style === "odds_hype") : (m?.meta?.engine !== "odds_share" && m?.style !== "odds_hype");
       }) ?? ((existing ?? []) as any[])[0];
 
       const nextMeta = {
