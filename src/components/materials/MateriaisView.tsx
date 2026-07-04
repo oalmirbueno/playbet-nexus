@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Sparkles, Search, ImageIcon, Wand2, Layers, Download, Pencil } from "lucide-react";
+import { Sparkles, Search, ImageIcon, Wand2, Layers, Download, Pencil, Sigma, TrendingUp } from "lucide-react";
 import { CreativeStudio, type CreativeStudioLink } from "@/components/materials/CreativeStudio";
 import { LinkMaterialEditor } from "@/components/materials/LinkMaterialEditor";
 import { BrandKitsSection } from "@/components/materials/BrandKitsSection";
