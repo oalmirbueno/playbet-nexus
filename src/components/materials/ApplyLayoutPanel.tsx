@@ -16,6 +16,17 @@ import {
 import type { Layer, CreativeFormat } from "@/lib/creativeStudio";
 import { CrestSearchPopover } from "@/components/materials/CrestSearchPopover";
 
+interface OddsAutoContext {
+  bet_type?: string | null;
+  total_odd?: number | null;
+  event_label?: string | null;
+  bookmaker_share_url?: string | null;
+  screenshot_url?: string | null;
+  selections?: Array<{ event?: string; market?: string; pick?: string; odd?: number }>;
+}
+
+type LayoutPanelCtx = Omit<ApplyReferenceCtx, "format" | "fills"> & { odds?: OddsAutoContext | null };
+
 const CATS: { id: ReferenceCategory | "all"; label: string }[] = [
   { id: "all", label: "Todos" },
   { id: "odds", label: "Odds" },
@@ -45,16 +56,18 @@ const IMAGE_ROLES = new Set(["hero-art", "game-logo", "team-crest-home", "team-c
 const CREST_ROLES = new Set(["team-crest-home", "team-crest-away"]);
 const LEAGUE_ROLES = new Set(["league-badge"]);
 
-function autoFillFor(role: ReferenceSlotFill["role"], ctx: Omit<ApplyReferenceCtx, "format" | "fills">): ReferenceSlotFill | undefined {
+function autoFillFor(role: ReferenceSlotFill["role"], ctx: LayoutPanelCtx): ReferenceSlotFill | undefined {
+  const first = ctx.odds?.selections?.[0];
+  if (role === "hero-art" && ctx.odds?.screenshot_url) return { role, imageUrl: ctx.odds.screenshot_url };
   if ((role === "hero-art" || role === "game-logo") && ctx.link?.gameIconUrl) {
     return { role, imageUrl: ctx.link.gameIconUrl };
   }
-  if (role === "headline") return { role, text: ctx.link?.gameName || ctx.link?.hypeReason || ctx.brand.platformName || "Oportunidade em destaque" };
-  if (role === "subhead") return { role, text: ctx.link?.hypeReason || ctx.brand.platformName || "Oferta ativa" };
+  if (role === "headline") return { role, text: ctx.odds?.event_label || ctx.link?.gameName || ctx.link?.hypeReason || ctx.brand.platformName || "Oportunidade em destaque" };
+  if (role === "subhead") return { role, text: first ? `${first.event || ctx.odds?.event_label || "Evento"} · ${first.pick || first.market || "Seleção"}` : (ctx.link?.hypeReason || ctx.brand.platformName || "Oferta ativa") };
   if (role === "cta") return { role, text: "APOSTAR AGORA →" };
-  if (role === "odd-value") return { role, text: "2.15" };
-  if (role === "odd-label") return { role, text: "Odd em destaque" };
-  if (role === "match-info") return { role, text: "Hoje · 18:30" };
+  if (role === "odd-value") return { role, text: ctx.odds?.total_odd ? `${ctx.odds.total_odd.toFixed(2).replace(".", ",")}x` : (first?.odd ? `${Number(first.odd).toFixed(2).replace(".", ",")}x` : "2.15x") };
+  if (role === "odd-label") return { role, text: ctx.odds?.bet_type ? `Aposta ${ctx.odds.bet_type}` : (first?.pick || "Odd em destaque") };
+  if (role === "match-info") return { role, text: ctx.odds?.event_label || first?.event || "Hoje · 18:30" };
   if (role === "vs-divider") return { role, text: "VS" };
   return undefined;
 }
@@ -62,22 +75,37 @@ function autoFillFor(role: ReferenceSlotFill["role"], ctx: Omit<ApplyReferenceCt
 
 interface Props {
   format: CreativeFormat;
-  ctx: Omit<ApplyReferenceCtx, "format" | "fills">;
+  ctx: LayoutPanelCtx;
   onApply: (layers: Layer[]) => void;
+  engine?: "games" | "odds";
 }
 
-export function ApplyLayoutPanel({ format, ctx, onApply }: Props) {
-  const [cat, setCat] = useState<ReferenceCategory | "all">("all");
+export function ApplyLayoutPanel({ format, ctx, onApply, engine = "games" }: Props) {
+  const [cat, setCat] = useState<ReferenceCategory | "all">(engine === "odds" ? "aposta-compartilhada" : "all");
   const [openId, setOpenId] = useState<string | null>(null);
   const [fills, setFills] = useState<Record<string, Record<string, ReferenceSlotFill>>>({});
+
+  const cats = useMemo(() => {
+    if (engine === "odds") return CATS.filter((c) => c.id === "all" || c.id === "odds" || c.id === "aposta-compartilhada");
+    return CATS.filter((c) => c.id !== "odds" && c.id !== "aposta-compartilhada");
+  }, [engine]);
 
   const list = useMemo(() => {
     return CREATIVE_REFERENCES.filter((r) => {
       if (!r.formats.includes(format)) return false;
+      if (engine === "odds" && r.category !== "odds" && r.category !== "aposta-compartilhada") return false;
+      if (engine === "games" && (r.category === "odds" || r.category === "aposta-compartilhada")) return false;
       if (cat !== "all" && r.category !== cat) return false;
       return true;
     });
-  }, [cat, format]);
+  }, [cat, engine, format]);
+
+  useEffect(() => {
+    setCat((cur) => {
+      if (engine === "odds") return cur === "odds" || cur === "aposta-compartilhada" ? cur : "aposta-compartilhada";
+      return cur === "odds" || cur === "aposta-compartilhada" ? "all" : cur;
+    });
+  }, [engine]);
 
   useEffect(() => {
     setOpenId(list[0]?.id ?? null);
@@ -112,7 +140,7 @@ export function ApplyLayoutPanel({ format, ctx, onApply }: Props) {
       </div>
 
       <div className="flex flex-wrap gap-1">
-        {CATS.map((c) => (
+        {cats.map((c) => (
           <button
             key={c.id}
             onClick={() => setCat(c.id)}

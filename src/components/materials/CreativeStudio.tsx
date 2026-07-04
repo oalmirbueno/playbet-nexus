@@ -8,7 +8,7 @@ import {
 } from "@/lib/creativeStudio";
 
 import playbetLogo from "@/assets/logo-mark.png";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -57,6 +57,8 @@ interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   link: CreativeStudioLink | null;
+  engine?: "games" | "odds";
+  lockEngine?: boolean;
 }
 
 const FORMATS: CreativeFormat[] = ["feed", "story", "landscape", "square_wa"];
@@ -68,8 +70,9 @@ const FAMILY_CSS: Record<TextLayer["family"], string> = {
 
 const WEIGHTS: TextLayer["weight"][] = [400, 500, 600, 700, 800, 900];
 
-const STORAGE_PREFIX = "playbet:creative-studio:v3";
-const storageKey = (linkId: string, fmt: CreativeFormat) => `${STORAGE_PREFIX}:${linkId}:${fmt}`;
+const STORAGE_PREFIX = "playbet:creative-studio:v4";
+type StudioEngine = "games" | "odds";
+const storageKey = (linkId: string, fmt: CreativeFormat, engine: StudioEngine) => `${STORAGE_PREFIX}:${engine}:${linkId}:${fmt}`;
 
 interface SavedState {
   layers: Layer[];
@@ -77,23 +80,25 @@ interface SavedState {
   editorMode: boolean;
   updatedAt: number;
   cloudSaved?: boolean;
+  engine?: StudioEngine;
 }
 
-function loadState(linkId: string, fmt: CreativeFormat): SavedState | null {
+function loadState(linkId: string, fmt: CreativeFormat, engine: StudioEngine): SavedState | null {
   try {
-    const raw = localStorage.getItem(storageKey(linkId, fmt));
+    const raw = localStorage.getItem(storageKey(linkId, fmt, engine));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as SavedState;
     if (!Array.isArray(parsed.layers)) return null;
+    if (parsed.engine && parsed.engine !== engine) return null;
     return parsed;
   } catch { return null; }
 }
 
-function saveState(linkId: string, fmt: CreativeFormat, s: SavedState) {
-  try { localStorage.setItem(storageKey(linkId, fmt), JSON.stringify(s)); } catch { /* ignore */ }
+function saveState(linkId: string, fmt: CreativeFormat, engine: StudioEngine, s: SavedState) {
+  try { localStorage.setItem(storageKey(linkId, fmt, engine), JSON.stringify({ ...s, engine })); } catch { /* ignore */ }
 }
 
-export function CreativeStudio({ open, onOpenChange, link }: Props) {
+export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = false }: Props) {
   const { data: brandCtx, isLoading: brandLoading } = useLinkBrand(link?.id ?? null);
 
   const [style, setStyle] = useState<CreativeStyle>("hype");
@@ -118,9 +123,14 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
   const autoOddsShare = (link?.linkCategory ?? "").toLowerCase() === "odds_share";
   // Modo do estúdio: 'games' (arte tradicional de jogo) vs 'odds' (aposta compartilhada).
   // Auto-seleciona 'odds' quando o link tem link_category = odds_share, mas o operador pode alternar.
-  const [engineMode, setEngineMode] = useState<"games" | "odds">(autoOddsShare ? "odds" : "games");
-  useEffect(() => { setEngineMode(autoOddsShare ? "odds" : "games"); }, [autoOddsShare, link?.id]);
+  const [engineMode, setEngineMode] = useState<StudioEngine>(engine ?? (autoOddsShare ? "odds" : "games"));
+  useEffect(() => { setEngineMode(engine ?? (autoOddsShare ? "odds" : "games")); }, [engine, autoOddsShare, link?.id]);
   const isOddsShare = engineMode === "odds";
+
+  useEffect(() => {
+    if (engineMode === "odds") setStyle("odds_hype");
+    else setStyle((cur) => cur === "odds_hype" ? "hype" : cur);
+  }, [engineMode, link?.id]);
 
   const selected = layers.find(l => l.id === selectedId) || null;
 
@@ -216,26 +226,31 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
 
 
 
-  const loadDatabaseState = useCallback(async (linkId: string, fmt: CreativeFormat): Promise<SavedState | null> => {
+  const loadDatabaseState = useCallback(async (linkId: string, fmt: CreativeFormat, engine: StudioEngine): Promise<SavedState | null> => {
     const { data, error } = await supabase
       .from("link_materials")
       .select("style, meta, updated_at")
       .eq("tracking_link_id", linkId)
       .eq("format", fmt)
       .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .limit(12);
 
     if (error) return null;
-    const layout = (data?.meta as any)?.studioLayout;
+    const row = (data ?? []).find((m: any) => {
+      const layoutEngine = m?.meta?.studioLayout?.engine;
+      if (layoutEngine) return layoutEngine === engine;
+      return engine === "odds" ? m.style === "odds_hype" : m.style !== "odds_hype";
+    }) as any;
+    const layout = row?.meta?.studioLayout;
     if (!layout || !Array.isArray(layout.layers)) return null;
     if (layout.version !== 3) return null;
     return {
       layers: layout.layers,
-      style: (layout.style ?? data?.style ?? "hype") as CreativeStyle,
+      style: (layout.style ?? row?.style ?? (engine === "odds" ? "odds_hype" : "hype")) as CreativeStyle,
       editorMode: true,
-      updatedAt: Date.parse(data?.updated_at ?? "") || layout.updatedAt || Date.now(),
+      updatedAt: Date.parse(row?.updated_at ?? "") || layout.updatedAt || Date.now(),
       cloudSaved: true,
+      engine,
     };
   }, []);
 
@@ -253,9 +268,9 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     setEditingTextId(null);
     setEditorMode(true);
     (async () => {
-      const databaseSaved = await loadDatabaseState(link.id, format);
+      const databaseSaved = await loadDatabaseState(link.id, format, engineMode);
       if (cancelled) return;
-      const localSaved = loadState(link.id, format);
+      const localSaved = loadState(link.id, format, engineMode);
       const saved = localSaved && databaseSaved
         ? (localSaved.updatedAt > databaseSaved.updatedAt ? localSaved : databaseSaved)
         : (databaseSaved ?? localSaved);
@@ -263,7 +278,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
         const hydrated = applyBrandChrome(saved.layers);
         const chromeChanged = JSON.stringify(hydrated) !== JSON.stringify(saved.layers);
         setLayers(hydrated);
-        setStyle(saved.style);
+        setStyle(engineMode === "odds" ? "odds_hype" : saved.style === "odds_hype" ? "hype" : saved.style);
         setSavedAt(saved.updatedAt);
         setDirty(!saved.cloudSaved || chromeChanged);
       } else {
@@ -274,17 +289,17 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
       setRenderKey(k => k + 1);
     })();
     return () => { cancelled = true; };
-  }, [link?.id, format, open, loadDatabaseState, brandLoading, brandCtx?.brand?.key, applyBrandChrome, engineMode, oddsFetched, oddsCtx?.total_odd, oddsCtx?.event_label]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [link?.id, format, open, loadDatabaseState, brandLoading, brandCtx?.brand?.key, applyBrandChrome, engineMode, oddsFetched, oddsCtx?.total_odd, oddsCtx?.event_label, oddsCtx?.screenshot_url]); // eslint-disable-line react-hooks/exhaustive-deps
 
 
   // Auto-save (debounced)
   useEffect(() => {
     if (!link || !open || !dirty) return;
     const t = setTimeout(() => {
-      saveState(link.id, format, { layers, style, editorMode, updatedAt: Date.now(), cloudSaved: false });
+      saveState(link.id, format, engineMode, { layers, style: engineMode === "odds" ? "odds_hype" : style, editorMode, updatedAt: Date.now(), cloudSaved: false, engine: engineMode });
     }, 300);
     return () => clearTimeout(t);
-  }, [layers, style, editorMode, link?.id, format, open, dirty]);
+  }, [layers, style, editorMode, link?.id, format, open, dirty, engineMode]);
 
   const baseInput = useMemo<CreativeInput | null>(() => {
     if (!link) return null;
@@ -449,36 +464,44 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
     if (!link) return;
     setSavingLayout(true);
     const now = Date.now();
-    const snapshot: SavedState = { layers, style, editorMode: true, updatedAt: now, cloudSaved: false };
-    saveState(link.id, format, snapshot);
+    const effectiveStyle = engineMode === "odds" ? "odds_hype" : style === "odds_hype" ? "hype" : style;
+    const snapshot: SavedState = { layers, style: effectiveStyle, editorMode: true, updatedAt: now, cloudSaved: false, engine: engineMode };
+    saveState(link.id, format, engineMode, snapshot);
 
     try {
       const { data: existing, error: readError } = await supabase
         .from("link_materials")
-        .select("id, meta")
+        .select("id, style, meta")
         .eq("tracking_link_id", link.id)
         .eq("format", format)
         .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(12);
       if (readError) throw readError;
 
+      const existingRow = ((existing ?? []) as any[]).find((m) => {
+        const layoutEngine = m?.meta?.studioLayout?.engine;
+        if (layoutEngine) return layoutEngine === engineMode;
+        return engineMode === "odds" ? (m?.meta?.engine === "odds_share" || m?.style === "odds_hype") : (m?.meta?.engine !== "odds_share" && m?.style !== "odds_hype");
+      });
+
       const nextMeta = {
-        ...((existing?.meta as any) ?? {}),
+        ...((existingRow?.meta as any) ?? {}),
+        ...(engineMode === "odds" ? { engine: "odds_share", odds: oddsCtx ?? (existingRow?.meta as any)?.odds ?? null } : { engine: "games" }),
         studioLayout: {
           version: 3,
+          engine: engineMode,
           format,
-          style,
+          style: effectiveStyle,
           layers,
           updatedAt: now,
         },
       };
 
-      if (existing?.id) {
+      if (existingRow?.id) {
         const { error } = await supabase
           .from("link_materials")
-          .update({ style, meta: nextMeta, updated_at: new Date(now).toISOString() } as any)
-          .eq("id", existing.id);
+          .update({ style: effectiveStyle, meta: nextMeta, updated_at: new Date(now).toISOString() } as any)
+          .eq("id", existingRow.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
@@ -487,7 +510,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
             tracking_link_id: link.id,
             influencer_id: link.influencerId ?? null,
             format,
-            style,
+            style: effectiveStyle,
             game_name: link.gameName ?? null,
             image_url: link.gameIconUrl ?? null,
             thumbnail_url: link.gameIconUrl ?? null,
@@ -499,7 +522,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
 
       setSavedAt(now);
       setDirty(false);
-      saveState(link.id, format, { ...snapshot, cloudSaved: true });
+      saveState(link.id, format, engineMode, { ...snapshot, cloudSaved: true });
       toast.success("Layout salvo");
     } catch (e) {
       toast.error("Salvo só neste navegador", { description: (e as Error).message });
@@ -616,7 +639,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
         };
         const raw = f === format
           ? layers
-          : (loadState(link.id, f)?.layers ?? seedLayers(f));
+          : (loadState(link.id, f, engineMode)?.layers ?? seedLayers(f));
         // Guard obrigatório: logo plataforma + assinatura PlayBet + selo legal SEMPRE presentes.
         const useLayers = ensureBrandChrome(raw, chromeSpec);
         const r = await renderCreative({
@@ -708,7 +731,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
             )}
             <div className="flex-1 min-w-0">
               <DialogTitle className="text-base flex items-center gap-2 truncate">
-                {isOddsShare ? "Estúdio · Aposta compartilhada" : `Estúdio · ${link.gameName || "Sem título"}`}
+                {isOddsShare ? "Estúdio Odds · Aposta esportiva" : `Estúdio Jogos · ${link.gameName || "Sem título"}`}
                 {isOddsShare && (
                   <Badge className="text-[10px] font-semibold bg-primary text-primary-foreground border-0">
                     Engine Odds
@@ -719,41 +742,42 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                   <Badge variant="secondary" className="text-[10px] font-normal"><Sparkles className="w-3 h-3 mr-1" />{link.hypeReason}</Badge>
                 )}
               </DialogTitle>
-              <DialogDescription className="text-xs flex items-center gap-2 flex-wrap">
+              <div className="text-xs flex items-center gap-2 flex-wrap text-muted-foreground">
                 {link.platformName || "Plataforma"} · {size.label} · {size.w}×{size.h}px
                 <BrandLockBadge ctx={brandCtx} className="text-[10px]" />
 
                 <span className={cn("inline-flex items-center gap-1", dirty ? "text-amber-500" : "text-primary/80")}>
                   <Save className="w-3 h-3" /> {dirty ? "alterações pendentes" : savedAt ? "salvo" : "rascunho"}
                 </span>
-              </DialogDescription>
+              </div>
             </div>
-            {/* Seletor de engine: Jogos ⇄ Odds. Auto-seleciona 'odds' se link_category=odds_share. */}
-            <div className="inline-flex items-center rounded-md border border-border/60 bg-secondary/40 p-0.5 text-[11px] font-medium">
-              <button
-                type="button"
-                onClick={() => setEngineMode("games")}
-                className={cn(
-                  "px-2.5 py-1 rounded-sm transition-all",
-                  engineMode === "games" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
-                )}
-                title="Arte tradicional de jogo"
-              >
-                🎮 Jogos
-              </button>
-              <button
-                type="button"
-                onClick={() => setEngineMode("odds")}
-                className={cn(
-                  "px-2.5 py-1 rounded-sm transition-all flex items-center gap-1",
-                  engineMode === "odds" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
-                )}
-                title="Engine dedicada de aposta compartilhada"
-              >
-                Σ Odds
-                {autoOddsShare && engineMode === "odds" && <span className="text-[9px] opacity-80">auto</span>}
-              </button>
-            </div>
+            {!lockEngine && (
+              <div className="inline-flex items-center rounded-md border border-border/60 bg-secondary/40 p-0.5 text-[11px] font-medium">
+                <button
+                  type="button"
+                  onClick={() => setEngineMode("games")}
+                  className={cn(
+                    "px-2.5 py-1 rounded-sm transition-all",
+                    engineMode === "games" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                  )}
+                  title="Arte tradicional de jogo"
+                >
+                  🎮 Jogos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEngineMode("odds")}
+                  className={cn(
+                    "px-2.5 py-1 rounded-sm transition-all flex items-center gap-1",
+                    engineMode === "odds" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                  )}
+                  title="Engine dedicada de aposta compartilhada"
+                >
+                  Σ Odds
+                  {autoOddsShare && engineMode === "odds" && <span className="text-[9px] opacity-80">auto</span>}
+                </button>
+              </div>
+            )}
             <button className="text-xs px-3 py-1.5 rounded-md border border-primary bg-primary/10 text-foreground transition-all flex items-center gap-1.5">
               <MousePointer2 className="w-3.5 h-3.5" />
               Editor ativo
@@ -932,9 +956,20 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <Label className="text-[11px] uppercase tracking-wider text-muted-foreground">Templates</Label>
-                <span className="text-[10px] text-muted-foreground">{CREATIVE_TEMPLATES.length} prontos</span>
+                <span className="text-[10px] text-muted-foreground">{isOddsShare ? "odds auto" : `${CREATIVE_TEMPLATES.length} prontos`}</span>
               </div>
-              <div className="grid grid-cols-2 gap-1.5">
+              {isOddsShare && oddsCtx && (
+                <div className="rounded-md border border-primary/30 bg-primary/5 p-2 text-[11px] space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-foreground truncate">{oddsCtx.event_label || "Aposta compartilhada"}</span>
+                    {oddsCtx.total_odd ? <Badge className="text-[10px] border-0 bg-primary text-primary-foreground">{oddsCtx.total_odd.toFixed(2).replace(".", ",")}x</Badge> : null}
+                  </div>
+                  <div className="text-muted-foreground line-clamp-3">
+                    {(oddsCtx.selections ?? []).slice(0, 3).map((s, i) => `${i + 1}. ${s.event || "Evento"} · ${s.pick || s.market} ${Number(s.odd || 0).toFixed(2)}x`).join("\n") || "Pronto para puxar seleções do link de aposta."}
+                  </div>
+                </div>
+              )}
+              {!isOddsShare && <div className="grid grid-cols-2 gap-1.5">
                 {CREATIVE_TEMPLATES.map(t => (
                   <button
                     key={t.id}
@@ -949,7 +984,7 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                     <span className="text-[9.5px] text-muted-foreground leading-tight line-clamp-2">{t.tagline}</span>
                   </button>
                 ))}
-            </div>
+              </div>}
 
             <ApplyLayoutPanel
               format={format}
@@ -963,12 +998,14 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
                   sealLabel: brandCtx?.brand?.seal?.alt ?? null,
                 },
                 link: {
-                  gameName: link.gameName,
-                  gameIconUrl: link.gameIconUrl,
-                  hypeReason: link.hypeReason,
+                  gameName: isOddsShare ? (oddsCtx?.event_label || link.gameName || "Aposta compartilhada") : link.gameName,
+                  gameIconUrl: isOddsShare ? (oddsCtx?.screenshot_url || link.gameIconUrl) : link.gameIconUrl,
+                  hypeReason: isOddsShare ? `${oddsCtx?.bet_type || "odds"}${oddsCtx?.total_odd ? ` · ${oddsCtx.total_odd.toFixed(2).replace(".", ",")}x` : ""}` : link.hypeReason,
                   shortUrl: link.shortUrl,
                 },
+                odds: oddsCtx,
               }}
+              engine={engineMode}
               onApply={(newLayers) => {
                 setLayers(applyBrandChrome(newLayers));
                 setSelectedId(null);
@@ -977,15 +1014,17 @@ export function CreativeStudio({ open, onOpenChange, link }: Props) {
               }}
             />
 
-            <CaptureOddPanel
-              format={format}
-              suggestedUrl={oddsCtx?.bookmaker_share_url || link.shortUrl}
-              onCapture={(layer) => {
-                setLayers((ls) => [...ls, layer]);
-                setSelectedId(layer.id);
-                setDirty(true);
-              }}
-            />
+            {isOddsShare && (
+              <CaptureOddPanel
+                format={format}
+                suggestedUrl={oddsCtx?.bookmaker_share_url || link.shortUrl}
+                onCapture={(layer) => {
+                  setLayers((ls) => [...ls, layer]);
+                  setSelectedId(layer.id);
+                  setDirty(true);
+                }}
+              />
+            )}
             </div>
 
             <div className="space-y-2">

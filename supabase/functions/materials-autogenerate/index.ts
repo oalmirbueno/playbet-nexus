@@ -114,14 +114,17 @@ Deno.serve(async (req) => {
         game_name: link.game_name,
         format: r.format,
         style: r.style,
-        status: "queued",
+        status: isOddsShare ? "ready" : "queued",
         meta: {
           icon_url: link.game_icon_url,
           hype_reason: link.hype_reason,
           link_category: link.link_category,
           auto: true,
           source: "materials-autogenerate",
-          ...(oddsMeta ? { odds: oddsMeta, engine: "odds_share" } : {}),
+          ...(isOddsShare ? {
+            odds: oddsMeta,
+            engine: "odds_share",
+          } : {}),
         },
       }));
 
