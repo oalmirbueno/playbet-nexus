@@ -306,11 +306,22 @@ export function LinkMaterialEditor({ open, onOpenChange, trackingLinkId, readOnl
       toast.success(`Selo ${brand?.name || "plataforma"} baixado`);
     } catch (e) { toast.error("Falha ao baixar selo", { description: (e as Error).message }); }
   };
+  const downloadPlatformSealTransparent = async () => {
+    if (!platformSealSrc) return toast.error("Selo da plataforma indisponível");
+    try {
+      await downloadSealTransparent(platformSealSrc, `${platformSlugForFile}-selo-oficial-sem-fundo.png`);
+      toast.success(`Selo ${brand?.name || "plataforma"} sem fundo baixado`);
+    } catch (e) { toast.error("Falha ao baixar selo sem fundo", { description: (e as Error).message }); }
+  };
   const downloadBrandKit = async () => {
     await downloadPlaybetLogo().catch(() => {});
     await new Promise((r) => setTimeout(r, 120));
     if (platformLogoSrc) { await downloadPlatformLogo().catch(() => {}); await new Promise((r) => setTimeout(r, 120)); }
-    if (platformSealSrc) { await downloadPlatformSeal().catch(() => {}); }
+    if (platformSealSrc) {
+      await downloadPlatformSeal().catch(() => {});
+      await new Promise((r) => setTimeout(r, 120));
+      await downloadPlatformSealTransparent().catch(() => {});
+    }
   };
 
 
