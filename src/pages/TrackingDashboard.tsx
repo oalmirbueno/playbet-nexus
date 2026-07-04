@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useTrackingMetrics, usePlatformAccounts, useTrackingEvents } from "@/hooks/useTrackingData";
 import { useInfluencers, useCampanhas, usePlatforms } from "@/hooks/useSupabaseQuery";
+import { useTrackingMetricsSummary } from "@/hooks/useTrackingMetricsSummary";
+import { useRealtimeMetrics } from "@/hooks/useRealtimeMetrics";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -76,6 +78,12 @@ export default function TrackingDashboard() {
   const { data: campanhas } = useCampanhas();
   const { data: platforms } = usePlatforms();
   const { data: periodEvents } = useTrackingEvents(filters);
+
+  // Mesma fonte oficial do Dashboard e do Financeiro — garante que os
+  // números aqui NUNCA divergem dos outros painéis.
+  const summaryPeriodKey = period === "7d" ? "7d" : period === "mes" ? "mtd" : "30d";
+  const { summary } = useTrackingMetricsSummary(summaryPeriodKey as any);
+  useRealtimeMetrics();
 
   // Realtime: refresh the dashboard the second a new row lands in
   // tracking_metrics or tracking_events, so the panel scraper cron and the
@@ -162,12 +170,19 @@ export default function TrackingDashboard() {
     return { visits, outboundClicks, conversions, total: periodEvents.length };
   }, [periodEvents]);
 
+  // Para 7d/30d/mês usamos a fonte oficial (mesma do Dashboard). Para "hoje"
+  // caímos no reduce local (o hook oficial não expõe "hoje").
+  const useOfficial = period !== "hoje";
   const kpiVisitas = periodEventKpis.visits;
   const kpiOutboundClicks = periodEventKpis.outboundClicks;
-  const kpiCadastros = periodKpis.cadastros;
-  const kpiReceita = periodKpis.receita;
-  const kpiCpa = periodKpis.cpa;
-  const kpiComissaoTotal = periodKpis.comissaoTotal || periodKpis.cpa + periodKpis.revshare;
+  const kpiCadastros = useOfficial ? summary.registrations : periodKpis.cadastros;
+  const kpiFtd = useOfficial ? summary.ftd : periodKpis.ftd;
+  const kpiDepositosCount = useOfficial ? summary.depositsCount : periodKpis.depositos;
+  const kpiDepositosVolume = useOfficial ? summary.depositsTotal : periodKpis.volumeDepositos;
+  const kpiRevshare = useOfficial ? summary.revenue : periodKpis.revshare;
+  const kpiReceita = useOfficial ? summary.profitBase : periodKpis.receita;
+  const kpiCpa = useOfficial ? summary.cpa : periodKpis.cpa;
+  const kpiComissaoTotal = useOfficial ? summary.commissionTotal : (periodKpis.comissaoTotal || periodKpis.cpa + periodKpis.revshare);
 
   const trend = useMemo(() => {
     const map = new Map<string, number>();
@@ -317,21 +332,21 @@ export default function TrackingDashboard() {
           icon={<UserPlus size={16} />}
           label="Cadastros"
           value={fmtNum(kpiCadastros)}
-          hint={`${fmtNum(periodKpis.ftd)} FTD/QFTD`}
+          hint={`${fmtNum(kpiFtd)} FTD/QFTD`}
         />
         <KpiCard
           variant="info"
           icon={<WalletCards size={16} />}
           label="Depósitos"
-          value={fmtNum(periodKpis.depositos)}
-          hint={fmtBRL(periodKpis.volumeDepositos)}
+          value={fmtNum(kpiDepositosCount)}
+          hint={fmtBRL(kpiDepositosVolume)}
         />
         <KpiCard
           variant="success"
           icon={<DollarSign size={16} />}
           label="Lucro real"
           value={fmtBRL(kpiReceita)}
-          hint={periodKpis.revshare > 0 ? `${fmtBRL(periodKpis.revshare)} RevShare` : "RevShare + CPA importado"}
+          hint={kpiRevshare > 0 ? `${fmtBRL(kpiRevshare)} RevShare` : "RevShare + CPA importado"}
         />
         <KpiCard
           variant="primary"
