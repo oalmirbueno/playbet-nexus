@@ -450,16 +450,17 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
   };
 
   const changeOddsPreset = (next: OddsPreset) => {
+    if (engineMode !== "odds") return; // guard: só re-seed odds, nunca jogos/cassino
     setOddsPreset(next);
     setSelectedId(null);
     setEditingTextId(null);
     setDirty(true);
-    // Re-seed usando o novo preset (mesmo brandOverride + oddsCtx atuais).
-    // Como `seedLayers` lê `oddsPreset` via closure, chamamos após o próximo tick.
-    setTimeout(() => {
-      setLayers((_prev) => applyBrandChrome(seedLayersWithPreset(format, next)));
-    }, 0);
+    // Re-seed usando o novo preset (apenas camadas de odds; brandOverride + oddsCtx atuais).
+    const nextLayers = applyBrandChrome(seedLayersWithPreset(format, next));
+    setLayers(nextLayers);
     toast.success(`Preset odds: ${ODDS_PRESET_LABEL[next]}`);
+    // Auto-gera / persiste material da engine de odds sem tocar em jogos/cassino.
+    void saveLayoutWith(nextLayers, next);
   };
 
   // Versão de seedLayers que aceita o preset diretamente (para evitar corrida de estado).
@@ -514,12 +515,13 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
     toast.success(`Template aplicado: ${name}`);
   };
 
-  const saveLayout = async () => {
+  const saveLayoutWith = async (layersArg: Layer[], presetArg?: OddsPreset) => {
     if (!link) return;
     setSavingLayout(true);
     const now = Date.now();
     const effectiveStyle = engineMode === "odds" ? "odds_hype" : style === "odds_hype" ? "hype" : style;
-    const snapshot: SavedState = { layers, style: effectiveStyle, editorMode: true, updatedAt: now, cloudSaved: false, engine: engineMode, oddsPreset: engineMode === "odds" ? oddsPreset : undefined };
+    const presetToSave = engineMode === "odds" ? (presetArg ?? oddsPreset) : undefined;
+    const snapshot: SavedState = { layers: layersArg, style: effectiveStyle, editorMode: true, updatedAt: now, cloudSaved: false, engine: engineMode, oddsPreset: presetToSave };
     saveState(link.id, format, engineMode, snapshot);
 
 
@@ -533,6 +535,7 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
         .limit(12);
       if (readError) throw readError;
 
+      // Filtro rígido por engine: NUNCA sobrescrever a linha de jogos/cassino quando estivermos em odds, e vice-versa.
       const existingRow = ((existing ?? []) as any[]).find((m) => {
         const layoutEngine = m?.meta?.studioLayout?.engine;
         if (layoutEngine) return layoutEngine === engineMode;
@@ -547,9 +550,9 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
           engine: engineMode,
           format,
           style: effectiveStyle,
-          layers,
+          layers: layersArg,
           updatedAt: now,
-          ...(engineMode === "odds" ? { oddsPreset } : {}),
+          ...(presetToSave ? { oddsPreset: presetToSave } : {}),
         },
       };
 
@@ -568,9 +571,9 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
             influencer_id: link.influencerId ?? null,
             format,
             style: effectiveStyle,
-            game_name: link.gameName ?? null,
-            image_url: link.gameIconUrl ?? null,
-            thumbnail_url: link.gameIconUrl ?? null,
+            game_name: engineMode === "odds" ? null : (link.gameName ?? null),
+            image_url: engineMode === "odds" ? null : (link.gameIconUrl ?? null),
+            thumbnail_url: engineMode === "odds" ? null : (link.gameIconUrl ?? null),
             status: "ready",
             meta: nextMeta,
           } as any);
@@ -587,6 +590,8 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
       setSavingLayout(false);
     }
   };
+
+  const saveLayout = () => saveLayoutWith(layers, engineMode === "odds" ? oddsPreset : undefined);
 
   /* ─────────── drag / resize ─────────── */
   type DragState =
