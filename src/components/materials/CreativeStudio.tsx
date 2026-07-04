@@ -482,7 +482,7 @@ export function CreativeStudio({ open, onOpenChange, link, engine, lockEngine = 
         const layoutEngine = m?.meta?.studioLayout?.engine;
         if (layoutEngine) return layoutEngine === engineMode;
         return engineMode === "odds" ? (m?.meta?.engine === "odds_share" || m?.style === "odds_hype") : (m?.meta?.engine !== "odds_share" && m?.style !== "odds_hype");
-      }) ?? ((existing ?? []) as any[])[0];
+      });
 
       const nextMeta = {
         ...((existingRow?.meta as any) ?? {}),
