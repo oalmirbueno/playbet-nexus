@@ -495,13 +495,13 @@ function LogoSlot({ src, name, className = "" }: { src?: string | null; name: st
   const [failed, setFailed] = useState(false);
   if (!src || failed) {
     return (
-      <span className={`inline-flex h-7 w-[104px] shrink-0 items-center justify-center text-center text-xs font-extrabold tracking-wide text-white ${className}`}>
+      <span className={`inline-flex h-7 w-[92px] shrink-0 items-center justify-center text-center text-xs font-extrabold tracking-wide text-white ${className}`}>
         {name}
       </span>
     );
   }
   return (
-    <span className={`inline-flex h-7 w-[104px] shrink-0 items-center justify-center ${className}`}>
+    <span className={`inline-flex h-7 w-[92px] shrink-0 items-center justify-center ${className}`}>
       <img
         src={src}
         alt={name}
@@ -726,6 +726,7 @@ export default function InfluencerLanding() {
         landingPageId: string | null,
         quickCtx?: InstanceContext | null,
         sourceTrackingLink?: any,
+        snapshotGameArts: GameArt[] = [],
       ) => {
         const preferredTrackingCode = setFastResolved(affiliateLink, influencerId, influencerName, instanceId, landingPageId, quickCtx);
         const tl = sourceTrackingLink || await findTrackingLink(instanceId, influencerId, preferredTrackingCode, affiliateLink);
@@ -762,7 +763,7 @@ export default function InfluencerLanding() {
           tracking_code: tl?.tracking_code || preferredTrackingCode,
         };
         setResolved(finalResolved);
-        writeCachedLpSnapshot(slug, { resolved: finalResolved, instanceCtx: quickCtx ?? null, gameArts });
+        writeCachedLpSnapshot(slug, { resolved: finalResolved, instanceCtx: quickCtx ?? null, gameArts: snapshotGameArts });
 
         // Register real public LP views only. Admin/editor previews must never
         // inflate production tracking.
@@ -833,7 +834,7 @@ export default function InfluencerLanding() {
             source_tracking_link_id: (instance as any).source_tracking_link_id,
           }));
         }
-        void finalize(instance.affiliate_link, instance.influencer_id, "", instance.id, instance.landing_page_id, nextCtx, (instance as any).source_tracking_link);
+        void finalize(instance.affiliate_link, instance.influencer_id, "", instance.id, instance.landing_page_id, nextCtx, (instance as any).source_tracking_link, fallbackArt);
         return true;
       };
 
@@ -882,7 +883,7 @@ export default function InfluencerLanding() {
             source_tracking_link_id: (instance as any).source_tracking_link_id,
           }));
         }
-        void finalize(instance.affiliate_link, instance.influencer_id, "", instance.id, instance.landing_page_id, nextCtx, (instance as any).source_tracking_link);
+        void finalize(instance.affiliate_link, instance.influencer_id, "", instance.id, instance.landing_page_id, nextCtx, (instance as any).source_tracking_link, fallbackArt);
         return;
       }
 
@@ -954,7 +955,7 @@ export default function InfluencerLanding() {
   if (state === "not_found") {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center text-white px-6 text-center">
-        <img src={logo} alt="PlayBet" className="h-8 w-auto mb-8 opacity-80" width={360} height={55} />
+        <LogoSlot src={logo} name="PlayBet" className="mb-8 opacity-80" />
         <h1 className="text-2xl font-bold mb-2">Página não encontrada</h1>
         <p className="text-sm text-gray-400 max-w-sm">O link que você acessou não está disponível ou não existe. Verifique o endereço e tente novamente.</p>
       </div>
@@ -965,7 +966,7 @@ export default function InfluencerLanding() {
   if (state === "no_domain") {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center text-white px-6 text-center">
-        <img src={logo} alt="PlayBet" className="h-8 w-auto mb-8 opacity-80" width={360} height={55} />
+        <LogoSlot src={logo} name="PlayBet" className="mb-8 opacity-80" />
         <h1 className="text-2xl font-bold mb-2">Domínio não configurado</h1>
         <p className="text-sm text-gray-400 max-w-sm">Este domínio ainda não foi vinculado a uma Landing Page no painel central da PlayBet.</p>
       </div>
@@ -976,7 +977,7 @@ export default function InfluencerLanding() {
   if (state === "inactive") {
     return (
       <div className="min-h-screen bg-[#0a0a0f] flex flex-col items-center justify-center text-white px-6 text-center">
-        <img src={logo} alt="PlayBet" className="h-8 w-auto mb-8 opacity-80" width={360} height={55} />
+        <LogoSlot src={logo} name="PlayBet" className="mb-8 opacity-80" />
         <h1 className="text-2xl font-bold mb-2">Página temporariamente indisponível</h1>
         <p className="text-sm text-gray-400 max-w-sm">Este link está temporariamente fora do ar. Tente novamente mais tarde.</p>
       </div>
@@ -1105,8 +1106,8 @@ export default function InfluencerLanding() {
           </div>
           <div className="max-w-md mx-auto relative z-10 text-center">
             {isPlatformDirect && brandCtx?.brand ? (
-              <div className="mb-8 flex items-center justify-center gap-4">
-              <img src={logo} alt="PlayBet" className="h-7 w-auto opacity-95" loading="eager" decoding="async" width={360} height={55} />
+              <div className="mb-8 flex items-center justify-center gap-3">
+                <LogoSlot src={logo} name="PlayBet" className="opacity-95" />
                 <span className="text-white/30 text-lg font-light select-none">×</span>
                 <BrandLogoImage
                   src={brandCtx.brand.logos.wordmark || brandCtx.brand.logos.lockup || brandCtx.brand.logos.mark}
@@ -1114,7 +1115,7 @@ export default function InfluencerLanding() {
                 />
               </div>
             ) : (
-              <img src={logo} alt="PlayBet" className="h-7 w-auto mx-auto mb-8 opacity-95" loading="eager" decoding="async" width={360} height={55} />
+              <LogoSlot src={logo} name="PlayBet" className="mx-auto mb-8 opacity-95" />
             )}
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] backdrop-blur border border-emerald-400/20 text-emerald-300 text-[10px] font-semibold uppercase tracking-[0.14em] mb-6">
               <Zap size={11} /> {mode === "odds" ? "Em destaque" : isCatalogMode ? "Oportunidades" : isPlatformDirect ? "Parceria oficial" : "Oferta oficial"}
