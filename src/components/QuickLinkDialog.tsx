@@ -60,7 +60,11 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
   const [campanhaId, setCampanhaId] = useState("");
   const [extraGameSlugs, setExtraGameSlugs] = useState<string[]>([]);
   const [odds, setOdds] = useState<OddsPanelValue>(emptyOddsValue);
+  // Marca que o operador escolheu manualmente o contexto — a detecção automática
+  // não deve mais sobrescrever a escolha (evita "misturar" odds com jogos).
+  const [contextTouched, setContextTouched] = useState(false);
   const [saving, setSaving] = useState(false);
+
 
   // Inline-create modal states
   const [newInfluencer, setNewInfluencer] = useState({ open: false, name: "", slug: "" });
