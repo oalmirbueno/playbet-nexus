@@ -127,6 +127,29 @@ export function MateriaisView({ influencerId, managerId, title = "Materiais", sh
           }));
         }
 
+        // Odds lookup — enriquece links de aposta compartilhada
+        const oddsIds = rowsData
+          .filter(r => (r.link_category ?? "").toLowerCase() === "odds_share")
+          .map(r => r.id);
+        if (oddsIds.length) {
+          const { data: oddsRows } = await (supabase as any)
+            .from("tracking_link_odds")
+            .select("tracking_link_id,bet_type,total_odd,event_label,selections,bookmaker_share_url,screenshot_url")
+            .in("tracking_link_id", oddsIds);
+          const oddsMap = new Map<string, OddsSummary>();
+          for (const o of (oddsRows ?? []) as any[]) {
+            oddsMap.set(o.tracking_link_id, {
+              bet_type: o.bet_type,
+              total_odd: o.total_odd,
+              event_label: o.event_label,
+              legs_count: Array.isArray(o.selections) ? o.selections.length : 0,
+              bookmaker_share_url: o.bookmaker_share_url,
+              screenshot_url: o.screenshot_url,
+            });
+          }
+          rowsData = rowsData.map(r => ({ ...r, odds: oddsMap.get(r.id) ?? null }));
+        }
+
         if (!cancelled) setRows(rowsData);
       } catch (e) {
         toast.error("Falha ao carregar materiais", { description: (e as Error).message });
