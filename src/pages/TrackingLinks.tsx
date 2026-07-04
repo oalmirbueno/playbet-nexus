@@ -11,6 +11,7 @@ import EmptyState from "@/components/EmptyState";
 import TrackingLinkForm, { emptyForm, formFromRow, type FormState } from "@/components/tracking/TrackingLinkForm";
 import QuickLinkDialog from "@/components/QuickLinkDialog";
 import TrackingLinkDetail from "@/components/tracking/TrackingLinkDetail";
+import LinkReportDrawer from "@/components/tracking/LinkReportDrawer";
 import TrackingSetupWizard from "@/components/tracking/TrackingSetupWizard";
 import HistoricalImport from "@/components/tracking/HistoricalImport";
 import {
@@ -18,12 +19,12 @@ import {
   useTrackingMetrics, useTrackingSnapshots,
 } from "@/hooks/useTrackingData";
 import {
-  useInfluencers, useCampanhas, useLandingPages, useLandingPageInstances, usePlatforms,
+  useInfluencers, useCampanhas, useLandingPages, useLandingPageInstances, usePlatforms, useManagers,
 } from "@/hooks/useSupabaseQuery";
 import {
   Plus, Pencil, Trash2, Link2, Copy, Check, ExternalLink, AlertTriangle,
   Sparkles, Upload, Users, ChevronDown, ChevronRight, Search, Flame,
-  LayoutGrid, Rows3, ShieldCheck, ShieldAlert, ArrowUpRight, Filter,
+  LayoutGrid, Rows3, ShieldCheck, ShieldAlert, ArrowUpRight, Filter, BarChart3,
 } from "lucide-react";
 import { findPresetByName, type PlatformPreset } from "@/config/platformPresets";
 import type { TrackingLinkRow } from "@/services/trackingService";
@@ -52,6 +53,7 @@ export default function TrackingLinks() {
   const { data: landingPages } = useLandingPages();
   const { data: lpInstances } = useLandingPageInstances();
   const { data: platforms } = usePlatforms();
+  const { data: managers } = useManagers();
   const { data: mappings, create: createMapping } = usePlatformEventMappings();
   const { data: metrics } = useTrackingMetrics();
   const { create: createMetric } = useTrackingMetrics();
@@ -65,6 +67,7 @@ export default function TrackingLinks() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [detailLink, setDetailLink] = useState<TrackingLinkRow | null>(null);
+  const [reportLink, setReportLink] = useState<TrackingLinkRow | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
 
@@ -78,6 +81,7 @@ export default function TrackingLinks() {
   const platMap = useMemo(() => new Map((platforms as any[]).map(p => [p.id, p])), [platforms]);
   const lpMap = useMemo(() => new Map((landingPages as any[]).map(l => [l.id, l])), [landingPages]);
   const instMap = useMemo(() => new Map((lpInstances as any[]).map(i => [i.id, i])), [lpInstances]);
+  const mgrMap = useMemo(() => new Map((managers as any[]).map((m: any) => [m.id, m])), [managers]);
 
   const isIncomplete = (l: TrackingLinkRow) => !l.platform_account_id || !l.influencer_id || !(l.base_url || l.final_url);
 
@@ -491,6 +495,9 @@ export default function TrackingLinks() {
                               <Button variant="ghost" size="icon" className="h-7 w-7" title="Copiar link" onClick={() => copyLink(l)}>
                                 {copiedId === l.id ? <Check size={13} className="text-success" /> : <Copy size={13} />}
                               </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" title="Relatório do link" onClick={() => setReportLink(l)}>
+                                <BarChart3 size={13} />
+                              </Button>
                               <Button variant="ghost" size="icon" className="h-7 w-7" title="Detalhes" onClick={() => setDetailLink(l)}>
                                 <ExternalLink size={13} />
                               </Button>
@@ -585,6 +592,9 @@ export default function TrackingLinks() {
                             <Button variant="ghost" size="icon" className="h-7 w-7" title="Copiar" onClick={() => copyLink(l)}>
                               {copiedId === l.id ? <Check size={13} className="text-success" /> : <Copy size={13} />}
                             </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-primary" title="Relatório do link" onClick={() => setReportLink(l)}>
+                              <BarChart3 size={13} />
+                            </Button>
                             <Button variant="ghost" size="icon" className="h-7 w-7" title="Detalhes" onClick={() => setDetailLink(l)}>
                               <ExternalLink size={13} />
                             </Button>
@@ -614,6 +624,16 @@ export default function TrackingLinks() {
         landingPages={landingPages as any[]}
         lpInstances={lpInstances as any[]}
         platforms={platforms as any[]}
+      />
+
+      <LinkReportDrawer
+        link={reportLink}
+        onClose={() => setReportLink(null)}
+        influencer={reportLink?.influencer_id ? (infMap.get(reportLink.influencer_id) as any) : null}
+        manager={(() => {
+          const inf: any = reportLink?.influencer_id ? infMap.get(reportLink.influencer_id) : null;
+          return inf?.manager_id ? (mgrMap.get(inf.manager_id) as any) : null;
+        })()}
       />
 
       <QuickLinkDialog
