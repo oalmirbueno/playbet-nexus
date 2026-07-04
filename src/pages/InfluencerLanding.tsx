@@ -1109,8 +1109,8 @@ export default function InfluencerLanding() {
           <div className="max-w-md mx-auto relative z-10 text-center">
             {isPlatformDirect && brandCtx?.brand ? (
               <div className="mb-8 flex items-center justify-center gap-3">
-                <LogoSlot src={logo} name="PlayBet" className="opacity-95" />
-                <span className="text-white/30 text-lg font-light select-none">×</span>
+                <LogoSlot src={logo} name="PlayBet" className="opacity-95 justify-end" />
+                <span className="text-white/30 text-lg font-light select-none leading-none">×</span>
                 <BrandLogoImage
                   src={brandCtx.brand.logos.wordmark || brandCtx.brand.logos.lockup || brandCtx.brand.logos.mark}
                   name={brandCtx.brand.name}
