@@ -302,9 +302,9 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
         tracking_code: trackingCode,
         click_id_param_name: clickIdParam,
         use_lp: useLp,
-        game_slug: gameSlug || null,
-        game_name: gameName || null,
-        game_icon_url: gameIconUrl || null,
+        game_slug: linkContext === LINK_CONTEXT_GAME ? gameSlug || null : null,
+        game_name: linkContext === LINK_CONTEXT_GAME ? gameName || null : null,
+        game_icon_url: linkContext === LINK_CONTEXT_GAME ? gameIconUrl || null : null,
         link_category: linkCategory || null,
         hype_reason: hypeReason || null,
         commission_percent: (selectedInfluencer as any)?.commission_percent ?? null,
@@ -331,7 +331,7 @@ export default function QuickLinkDialog({ open, onOpenChange, defaultInfluencerI
             .eq("id", instanceId);
         }
 
-        const needsLpExtras = useLp && (extraGameSlugs.length > 0 || !!hypeReason);
+        const needsLpExtras = useLp && linkContext === LINK_CONTEXT_GAME && (extraGameSlugs.length > 0 || !!hypeReason);
         syncLinkAssets(
           linkId,
           {
