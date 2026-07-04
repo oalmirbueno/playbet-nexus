@@ -2673,6 +2673,75 @@ export type Database = {
           },
         ]
       }
+      tracking_link_odds: {
+        Row: {
+          bet_type: string
+          bookmaker_share_url: string | null
+          created_at: string
+          event_label: string | null
+          event_starts_at: string | null
+          id: string
+          notes: string | null
+          platform_id: string | null
+          screenshot_url: string | null
+          selections: Json
+          stake_suggested: number | null
+          status: string
+          total_odd: number | null
+          tracking_link_id: string
+          updated_at: string
+        }
+        Insert: {
+          bet_type?: string
+          bookmaker_share_url?: string | null
+          created_at?: string
+          event_label?: string | null
+          event_starts_at?: string | null
+          id?: string
+          notes?: string | null
+          platform_id?: string | null
+          screenshot_url?: string | null
+          selections?: Json
+          stake_suggested?: number | null
+          status?: string
+          total_odd?: number | null
+          tracking_link_id: string
+          updated_at?: string
+        }
+        Update: {
+          bet_type?: string
+          bookmaker_share_url?: string | null
+          created_at?: string
+          event_label?: string | null
+          event_starts_at?: string | null
+          id?: string
+          notes?: string | null
+          platform_id?: string | null
+          screenshot_url?: string | null
+          selections?: Json
+          stake_suggested?: number | null
+          status?: string
+          total_odd?: number | null
+          tracking_link_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tracking_link_odds_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "platforms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tracking_link_odds_tracking_link_id_fkey"
+            columns: ["tracking_link_id"]
+            isOneToOne: true
+            referencedRelation: "tracking_links"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tracking_links: {
         Row: {
           base_url: string | null
