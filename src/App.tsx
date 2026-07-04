@@ -70,6 +70,7 @@ import PortalFinanceiro from "./pages/portal/PortalFinanceiro";
 import PortalSaques from "./pages/portal/PortalSaques";
 import PortalPerfil from "./pages/portal/PortalPerfil";
 import Materiais from "./pages/Materiais";
+import MateriaisKits from "./pages/MateriaisKits";
 import GerenteHome from "./pages/gerente/GerenteHome";
 import GerenteMateriais from "./pages/gerente/GerenteMateriais";
 import GerenteRanking from "./pages/gerente/GerenteRanking";
