@@ -358,6 +358,7 @@ function BrandLogoImage({ src, name }: { src?: string | null; name: string }) {
       className="h-11 object-contain"
       loading="eager"
       decoding="async"
+      fetchPriority="high"
       onError={() => setFailed(true)}
     />
   );
@@ -595,24 +596,24 @@ export default function InfluencerLanding() {
         if (!instance) { setState("not_found"); return; }
         if (!instance.is_active) { setState("inactive"); return; }
 
-        const { data: inf } = await supabase
-          .from("influencers")
-          .select("name")
-          .eq("id", instance.influencer_id)
-          .maybeSingle();
-
         setInstanceCtx({
           lp_mode: (instance as any).lp_mode,
           game_slugs: (instance as any).game_slugs,
           layout_config: (instance as any).layout_config,
           hype_copy: (instance as any).hype_copy,
         });
-        await hydrateGameArts(lpBase.id, instance.id, (instance as any).game_slugs || [], {
+        const infPromise = supabase
+          .from("influencers")
+          .select("name")
+          .eq("id", instance.influencer_id)
+          .maybeSingle();
+        const artsPromise = hydrateGameArts(lpBase.id, instance.id, (instance as any).game_slugs || [], {
           game_slug: (instance as any).hype_copy?.game_slug,
           game_name: (instance as any).hype_copy?.game_name,
           game_icon_url: (instance as any).hype_copy?.game_icon_url,
           source_tracking_link_id: (instance as any).source_tracking_link_id,
         });
+        const [{ data: inf }] = await Promise.all([infPromise, artsPromise]);
         await finalize(instance.affiliate_link, instance.influencer_id, inf?.name || "", instance.id, instance.landing_page_id);
         return;
       }
@@ -627,24 +628,24 @@ export default function InfluencerLanding() {
         .maybeSingle();
 
       if (instance) {
-        const { data: inf } = await supabase
-          .from("influencers")
-          .select("name")
-          .eq("id", instance.influencer_id)
-          .maybeSingle();
-
         setInstanceCtx({
           lp_mode: (instance as any).lp_mode,
           game_slugs: (instance as any).game_slugs,
           layout_config: (instance as any).layout_config,
           hype_copy: (instance as any).hype_copy,
         });
-        await hydrateGameArts(instance.landing_page_id, instance.id, (instance as any).game_slugs || [], {
+        const infPromise = supabase
+          .from("influencers")
+          .select("name")
+          .eq("id", instance.influencer_id)
+          .maybeSingle();
+        const artsPromise = hydrateGameArts(instance.landing_page_id, instance.id, (instance as any).game_slugs || [], {
           game_slug: (instance as any).hype_copy?.game_slug,
           game_name: (instance as any).hype_copy?.game_name,
           game_icon_url: (instance as any).hype_copy?.game_icon_url,
           source_tracking_link_id: (instance as any).source_tracking_link_id,
         });
+        const [{ data: inf }] = await Promise.all([infPromise, artsPromise]);
         await finalize(instance.affiliate_link, instance.influencer_id, inf?.name || "", instance.id, instance.landing_page_id);
         return;
       }
@@ -663,17 +664,23 @@ export default function InfluencerLanding() {
     })();
   }, [slug]);
 
-  const handleCTA = useCallback(async () => {
+  const handleCTA = useCallback(() => {
     if (!resolved?.affiliate_link || clicking) return;
     setClicking(true);
 
-    // Insert CTA click into legacy `clicks` table - DB trigger
-    // `sync_click_to_tracking_event` then creates the canonical
-    // tracking_event with platform_id resolved from the tracking_link,
-    // so the click counts in tracking_metrics for the right casa.
-    try {
-      if (!isInternalPreviewContext()) {
-        await supabase.from("clicks").insert({
+    // Build final URL first so redirect is instantaneous.
+    let finalUrl = injectClickId(resolved.affiliate_link, resolved.click_id_param, resolved.click_id);
+    const fwd2 = searchParams.get("sub2") || resolved.influencer_id;
+    const fwd3 = searchParams.get("sub3") || resolved.campanha_id;
+    if (fwd2) finalUrl = injectClickId(finalUrl, "sub2", fwd2);
+    if (fwd3) finalUrl = injectClickId(finalUrl, "sub3", fwd3);
+
+    // Fire-and-forget: never block the redirect on the click insert.
+    // The DB trigger `sync_click_to_tracking_event` will create the canonical
+    // tracking_event server-side, so attribution stays intact.
+    if (!isInternalPreviewContext()) {
+      try {
+        supabase.from("clicks").insert({
           click_id: resolved.click_id,
           influencer_id: resolved.influencer_id,
           landing_page_id: resolved.landing_page_id,
@@ -684,22 +691,14 @@ export default function InfluencerLanding() {
           referrer: document.referrer || null,
           route: window.location.pathname + window.location.search,
           source: "cta_click",
-        } as any);
+        } as any).then(() => {}, () => {});
+      } catch {
+        // ignore — redirect must never wait on tracking
       }
-    } catch {
-      // Don't block redirect
     }
 
-
-    // Inject click_id (sub1) into affiliate link, and forward sub2/sub3 from
-    // the LP's incoming URL so attribution survives the redirect.
-    let finalUrl = injectClickId(resolved.affiliate_link, resolved.click_id_param, resolved.click_id);
-    const fwd2 = searchParams.get("sub2") || resolved.influencer_id;
-    const fwd3 = searchParams.get("sub3") || resolved.campanha_id;
-    if (fwd2) finalUrl = injectClickId(finalUrl, "sub2", fwd2);
-    if (fwd3) finalUrl = injectClickId(finalUrl, "sub3", fwd3);
     window.location.href = finalUrl;
-  }, [resolved, clicking, slug, searchParams]);
+  }, [resolved, clicking, searchParams]);
 
   // ── Loading ──
   if (state === "loading") {
@@ -866,7 +865,7 @@ export default function InfluencerLanding() {
           <div className="max-w-md mx-auto relative z-10 text-center">
             {isPlatformDirect && brandCtx?.brand ? (
               <div className="mb-8 flex items-center justify-center gap-4">
-                <img src={logo} alt="PlayBet" className="h-11 opacity-95" />
+                <img src={logo} alt="PlayBet" className="h-11 opacity-95" fetchPriority="high" decoding="async" width={140} height={44} />
                 <span className="text-white/30 text-xl font-light select-none">×</span>
                 <BrandLogoImage
                   src={brandCtx.brand.logos.wordmark || brandCtx.brand.logos.lockup || brandCtx.brand.logos.mark}
@@ -874,7 +873,7 @@ export default function InfluencerLanding() {
                 />
               </div>
             ) : (
-              <img src={logo} alt="PlayBet" className="h-11 mx-auto mb-8 opacity-95" />
+              <img src={logo} alt="PlayBet" className="h-11 mx-auto mb-8 opacity-95" fetchPriority="high" decoding="async" width={140} height={44} />
             )}
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/[0.04] backdrop-blur border border-emerald-400/20 text-emerald-300 text-[10px] font-semibold uppercase tracking-[0.14em] mb-6">
               <Zap size={11} /> {mode === "odds" ? "Em destaque" : isCatalogMode ? "Oportunidades" : isPlatformDirect ? "Parceria oficial" : "Oferta oficial"}
