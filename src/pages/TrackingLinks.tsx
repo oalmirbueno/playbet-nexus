@@ -626,6 +626,16 @@ export default function TrackingLinks() {
         platforms={platforms as any[]}
       />
 
+      <LinkReportDrawer
+        link={reportLink}
+        onClose={() => setReportLink(null)}
+        influencer={reportLink?.influencer_id ? (infMap.get(reportLink.influencer_id) as any) : null}
+        manager={(() => {
+          const inf: any = reportLink?.influencer_id ? infMap.get(reportLink.influencer_id) : null;
+          return inf?.manager_id ? (mgrMap.get(inf.manager_id) as any) : null;
+        })()}
+      />
+
       <QuickLinkDialog
         open={quickOpen}
         onOpenChange={setQuickOpen}
