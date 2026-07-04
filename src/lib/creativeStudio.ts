@@ -12,7 +12,7 @@ import playbetLogo from "@/assets/logo-mark.png";
 export const PLAYBET_LOGO_SRC = playbetLogo;
 
 export type CreativeFormat = "feed" | "story" | "landscape" | "square_wa";
-export type CreativeStyle = "hype" | "minimal" | "editorial";
+export type CreativeStyle = "hype" | "minimal" | "editorial" | "odds_hype";
 
 /**
  * Marca camadas obrigatórias do "chrome" de marca (co-branding).
@@ -101,6 +101,7 @@ export const STYLE_LABEL: Record<CreativeStyle, string> = {
   hype: "Hype Neon",
   minimal: "Minimal",
   editorial: "Editorial",
+  odds_hype: "Odds Hype",
 };
 
 // Brand palette — Playbet blue + yellow.
@@ -285,7 +286,8 @@ export async function renderCreative(input: CreativeInput): Promise<RenderedCrea
     }
   } else if (input.hideAutoArt) {
     // Editor mode: draw a rich decorative background instead of a flat blur.
-    drawEditorBackdrop(ctx, size, brandAccent);
+    if (input.style === "odds_hype") drawOddsBackdrop(ctx, size, brandAccent);
+    else drawEditorBackdrop(ctx, size, brandAccent);
   } else {
     const pad = Math.round(Math.min(size.w, size.h) * 0.055);
     drawLogo(ctx, logoImg, pad, pad, Math.round(size.w * 0.24));
