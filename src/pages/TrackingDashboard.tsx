@@ -170,12 +170,19 @@ export default function TrackingDashboard() {
     return { visits, outboundClicks, conversions, total: periodEvents.length };
   }, [periodEvents]);
 
+  // Para 7d/30d/mês usamos a fonte oficial (mesma do Dashboard). Para "hoje"
+  // caímos no reduce local (o hook oficial não expõe "hoje").
+  const useOfficial = period !== "hoje";
   const kpiVisitas = periodEventKpis.visits;
   const kpiOutboundClicks = periodEventKpis.outboundClicks;
-  const kpiCadastros = periodKpis.cadastros;
-  const kpiReceita = periodKpis.receita;
-  const kpiCpa = periodKpis.cpa;
-  const kpiComissaoTotal = periodKpis.comissaoTotal || periodKpis.cpa + periodKpis.revshare;
+  const kpiCadastros = useOfficial ? summary.registrations : periodKpis.cadastros;
+  const kpiFtd = useOfficial ? summary.ftd : periodKpis.ftd;
+  const kpiDepositosCount = useOfficial ? summary.depositsCount : periodKpis.depositos;
+  const kpiDepositosVolume = useOfficial ? summary.depositsTotal : periodKpis.volumeDepositos;
+  const kpiRevshare = useOfficial ? summary.revenue : periodKpis.revshare;
+  const kpiReceita = useOfficial ? summary.profitBase : periodKpis.receita;
+  const kpiCpa = useOfficial ? summary.cpa : periodKpis.cpa;
+  const kpiComissaoTotal = useOfficial ? summary.commissionTotal : (periodKpis.comissaoTotal || periodKpis.cpa + periodKpis.revshare);
 
   const trend = useMemo(() => {
     const map = new Map<string, number>();
