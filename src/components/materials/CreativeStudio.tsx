@@ -86,7 +86,9 @@ interface SavedState {
   cloudSaved?: boolean;
   engine?: StudioEngine;
   oddsPreset?: OddsPreset;
+  brandOverrideKey?: BrandKey | null;
 }
+
 
 
 function loadState(linkId: string, fmt: CreativeFormat, engine: StudioEngine): SavedState | null {
