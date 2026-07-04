@@ -56,13 +56,17 @@ Deno.serve(async (req) => {
 
     // Resolve platform_id
     let platformId: string | null = null;
+    let platformName: string | null = null;
+    let platformSlug: string | null = null;
     if (link.platform_account_id) {
       const { data: pa } = await supa
         .from("platform_accounts")
-        .select("platform_id")
+        .select("platform_id, platforms(name, slug)")
         .eq("id", link.platform_account_id)
         .maybeSingle();
       platformId = pa?.platform_id ?? null;
+      platformName = (pa as any)?.platforms?.name ?? null;
+      platformSlug = (pa as any)?.platforms?.slug ?? null;
     }
 
     const mode = detectMode(link.link_category, link.game_slug, extraGameSlugs);
@@ -113,14 +117,17 @@ Deno.serve(async (req) => {
       : [];
 
     const finalHypeCopy: any = {
-      title: hypeCopy.title || (mode === "odds" ? oddsTitle : null),
-      subtitle: hypeCopy.subtitle || (mode === "odds" ? oddsSubtitle : link.hype_reason || null),
-      cta_label: hypeCopy.cta_label || (mode === "platform_direct" ? "Acessar plataforma" : mode === "odds" ? "Copiar e apostar" : "Jogar agora"),
+      title: hypeCopy.title || (mode === "odds" ? oddsTitle : mode === "platform_direct" ? platformName || "Oferta oficial" : link.game_name || "Oferta oficial"),
+      subtitle: hypeCopy.subtitle || (mode === "odds" ? oddsSubtitle : link.hype_reason || (mode === "platform_direct" && platformName ? `Acesse ${platformName} agora com bônus oficial PlayBet.` : null)),
+      cta_label: hypeCopy.cta_label || (mode === "platform_direct" ? (platformName ? `Acessar ${platformName}` : "Acessar plataforma") : mode === "odds" ? "Copiar e apostar" : "Jogar agora"),
       game_slug: (mode === "platform_direct" || mode === "odds") ? null : link.game_slug || null,
       game_name: (mode === "platform_direct" || mode === "odds") ? null : link.game_name || null,
       game_icon_url: (mode === "platform_direct" || mode === "odds") ? null : link.game_icon_url || null,
       bonus_offer: { enabled: mode !== "platform_direct" && mode !== "odds" },
       community_cta: { enabled: mode !== "platform_direct" },
+      category: link.link_category || null,
+      platform_slug: platformSlug,
+      platform_name: platformName,
       auto: true,
     };
     if (mode === "odds" && oddsTicket) {
@@ -167,6 +174,9 @@ Deno.serve(async (req) => {
               game_slug: link.game_slug ? (currentHype.game_slug || link.game_slug) : null,
               game_name: link.game_slug ? (currentHype.game_name || link.game_name) : null,
               game_icon_url: link.game_slug ? (currentHype.game_icon_url || link.game_icon_url) : null,
+              category: link.link_category || currentHype.category || null,
+              platform_slug: platformSlug,
+              platform_name: platformName,
             },
             source_tracking_link_id: currentInstance?.source_tracking_link_id || trackingLinkId,
             auto_generated: true,

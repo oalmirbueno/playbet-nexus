@@ -107,6 +107,19 @@ function safeDecode(value: string) {
   try { return decodeURIComponent(value); } catch { return value; }
 }
 
+function nestedUrlsFromUrl(url: string): string[] {
+  try {
+    const u = new URL(ensureUrl(url));
+    const nested: string[] = [];
+    u.searchParams.forEach((value) => {
+      extractUrls(safeDecode(value)).forEach((candidate) => nested.push(candidate));
+    });
+    return Array.from(new Set(nested.filter((candidate) => candidate !== url)));
+  } catch {
+    return [];
+  }
+}
+
 export function extractUrls(input: string): string[] {
   const raw = input.trim();
   if (!raw) return [];
@@ -140,11 +153,13 @@ function isAffiliateLikeUrl(url: string) {
 }
 
 export function splitAffiliateAndOddsUrls(input: string) {
-  const urls = extractUrls(input);
-  const bookmakerShareUrl = urls.find(isSharedOddsUrl) ?? (isSharedOddsUrl(input) ? urls[0] ?? "" : "");
-  const affiliateUrl = urls.find((u) => u !== bookmakerShareUrl && isAffiliateLikeUrl(u))
-    ?? urls.find((u) => u !== bookmakerShareUrl)
-    ?? urls[0]
+  const topLevelUrls = extractUrls(input);
+  const nestedUrls = topLevelUrls.flatMap(nestedUrlsFromUrl);
+  const urls = Array.from(new Set([...topLevelUrls, ...nestedUrls]));
+  const bookmakerShareUrl = [...nestedUrls, ...topLevelUrls].find(isSharedOddsUrl) ?? (isSharedOddsUrl(input) ? topLevelUrls[0] ?? "" : "");
+  const affiliateUrl = topLevelUrls.find((u) => u !== bookmakerShareUrl && isAffiliateLikeUrl(u))
+    ?? topLevelUrls.find((u) => u !== bookmakerShareUrl)
+    ?? topLevelUrls[0]
     ?? input.trim();
   return {
     urls,
@@ -224,12 +239,27 @@ export function scorePlatforms(hostname: string, platforms: PlatformLike[]) {
 
 function scorePlatformsForUrls(urls: string[], platforms: PlatformLike[]) {
   const byPlatform = new Map<string, { platformId: string; score: number; matchedOn: string }>();
+  const registerHit = (hit: { platformId: string; score: number; matchedOn: string }) => {
+    const existing = byPlatform.get(hit.platformId);
+    if (!existing || hit.score > existing.score) byPlatform.set(hit.platformId, hit);
+  };
+
   for (const url of urls) {
     const parsed = parseUrl(url);
     if (parsed?.hostname) {
       for (const hit of scorePlatforms(parsed.hostname, platforms)) {
-        const existing = byPlatform.get(hit.platformId);
-        if (!existing || hit.score > existing.score) byPlatform.set(hit.platformId, hit);
+        registerHit(hit);
+      }
+    }
+
+    // Some Stellar affiliate links use an Estrela tracking domain while the real
+    // destination inside the query is VUPI. The nested destination is the actual
+    // house/content source, so it must outrank the wrapper affiliate host.
+    for (const nested of nestedUrlsFromUrl(url)) {
+      const nestedParsed = parseUrl(nested);
+      if (!nestedParsed?.hostname) continue;
+      for (const hit of scorePlatforms(nestedParsed.hostname, platforms)) {
+        registerHit({ ...hit, score: hit.score + 40, matchedOn: `dest:${hit.matchedOn}` });
       }
     }
 
