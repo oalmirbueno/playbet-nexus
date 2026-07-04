@@ -734,7 +734,9 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
 
 
 
-  const brandKit = resolveBrand(platformName);
+  const detectedBrand = resolveBrand(platformName);
+  const brandKit = brandOverrideKey ? getBrandKit(brandOverrideKey) : detectedBrand;
+  const brandOptions = listBrands().filter(b => b.key !== "playbet");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
