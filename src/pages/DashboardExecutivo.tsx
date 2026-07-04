@@ -6,6 +6,7 @@ import { useInfluencers, usePlatforms, useCampanhas, useSaques, useSocios, useMa
 import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
 import { useTrackingMetricsSummary } from "@/hooks/useTrackingMetricsSummary";
 import { useFinanceiroData } from "@/hooks/useFinanceiroData";
+import { useRealtimeMetrics } from "@/hooks/useRealtimeMetrics";
 import { calculateSocioDistribution, readDistributionParams } from "@/lib/financialDistribution";
 
 const formatBRL = (v: number) =>
