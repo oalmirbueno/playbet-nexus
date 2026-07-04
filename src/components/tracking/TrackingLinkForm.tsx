@@ -537,27 +537,34 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
       const safeLpMode: LpMode = (effectiveLpMode === "single_game" || effectiveLpMode === "multi_game") && !hasGame
         ? "platform_direct"
         : effectiveLpMode;
-      const safeGameSlugs = safeLpMode === "platform_direct" || safeLpMode === "catalog" || !form.game_slug ? [] : [form.game_slug];
       const existingHype = (selectedInstance as any).hype_copy || {};
+      // Só sobrescrevemos layout/games/hype quando a LP ainda está no modo
+      // auto-gerado. Se o admin salvou algo pelo editor visual (auto=false),
+      // preservamos 100% do que ele configurou — este form não é o lugar
+      // de reescrever seções, jogos curados ou copy manual.
+      const isAutoManaged = existingHype.auto !== false;
       if (selectedInstance.affiliate_link !== trackedAffiliateUrl) patch.affiliate_link = trackedAffiliateUrl;
-      if (instanceMode !== safeLpMode) patch.lp_mode = safeLpMode;
-      patch.game_slugs = safeGameSlugs;
-      patch.layout_config = defaultLayoutConfig(safeLpMode);
-      patch.hype_copy = {
-        ...existingHype,
-        title: existingHype.title || (safeLpMode === "platform_direct" ? (platformName ? `${platformName} com PlayBet` : "Oferta oficial") : undefined),
-        subtitle: existingHype.subtitle || (safeLpMode === "platform_direct" && platformName ? `Acesse ${platformName} agora com bônus oficial PlayBet.` : undefined),
-        cta_label: existingHype.cta_label || (safeLpMode === "platform_direct" ? "Acessar plataforma" : undefined),
-        game_slug: safeGameSlugs[0] || null,
-        game_name: safeGameSlugs[0] ? (form.game_name || null) : null,
-        game_icon_url: safeGameSlugs[0] ? (form.game_icon_url || null) : null,
-        category: form.link_category || existingHype.category || null,
-        platform_slug: selectedPlatform?.slug || existingHype.platform_slug || null,
-        platform_name: platformName || existingHype.platform_name || null,
-        bonus_offer: existingHype.bonus_offer || { enabled: safeLpMode !== "platform_direct" && safeLpMode !== "catalog" },
-        community_cta: existingHype.community_cta || { enabled: safeLpMode !== "platform_direct" && safeLpMode !== "catalog" },
-        auto: false,
-      };
+      if (isAutoManaged && instanceMode !== safeLpMode) patch.lp_mode = safeLpMode;
+      if (isAutoManaged) {
+        const safeGameSlugs = safeLpMode === "platform_direct" || safeLpMode === "catalog" || !form.game_slug ? [] : [form.game_slug];
+        patch.game_slugs = safeGameSlugs;
+        patch.layout_config = defaultLayoutConfig(safeLpMode);
+        patch.hype_copy = {
+          ...existingHype,
+          title: existingHype.title || (safeLpMode === "platform_direct" ? (platformName ? `${platformName} com PlayBet` : "Oferta oficial") : undefined),
+          subtitle: existingHype.subtitle || (safeLpMode === "platform_direct" && platformName ? `Acesse ${platformName} agora com bônus oficial PlayBet.` : undefined),
+          cta_label: existingHype.cta_label || (safeLpMode === "platform_direct" ? "Acessar plataforma" : undefined),
+          game_slug: safeGameSlugs[0] || null,
+          game_name: safeGameSlugs[0] ? (form.game_name || null) : null,
+          game_icon_url: safeGameSlugs[0] ? (form.game_icon_url || null) : null,
+          category: form.link_category || existingHype.category || null,
+          platform_slug: selectedPlatform?.slug || existingHype.platform_slug || null,
+          platform_name: platformName || existingHype.platform_name || null,
+          bonus_offer: existingHype.bonus_offer || { enabled: safeLpMode !== "platform_direct" && safeLpMode !== "catalog" },
+          community_cta: existingHype.community_cta || { enabled: safeLpMode !== "platform_direct" && safeLpMode !== "catalog" },
+          auto: true,
+        };
+      }
       if (Object.keys(patch).length > 0) {
         try {
           await landingPageInstanceService.update(selectedInstance.id, patch);
@@ -568,6 +575,7 @@ export default function TrackingLinkForm({ open, onOpenChange, editing: initialE
         }
       }
     }
+
     // Bloqueio Odds Compartilhada: exige casa cadastrada (platform_id resolvido)
     if (isOddsShare && !currentPlatformId) {
       toast({ title: "Casa não cadastrada", description: "Cadastre a plataforma em Plataformas antes de criar o link de aposta compartilhada.", variant: "destructive" });

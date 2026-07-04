@@ -287,34 +287,25 @@ function isPublicLpLoop(url: string | null | undefined, hostname: string, slug?:
   }
 }
 
-/** Fallback: get the tracked affiliate destination from the bound opportunity. */
-async function findOpportunityDestination(instanceId: string | null, landingPageId: string | null, trackingLinkId?: string | null) {
-  if (trackingLinkId) {
-    const { data } = await supabase
-      .from("lp_opportunities")
-      .select("destination_url")
-      .eq("tracking_link_id", trackingLinkId)
-      .eq("is_active", true)
-      .not("destination_url", "is", null)
-      .order("updated_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    if (data?.destination_url) return data.destination_url;
-  }
-  if (instanceId) return null;
-  if (!landingPageId && !instanceId) return null;
-  const query = supabase
+/** Fallback: get the tracked affiliate destination from the bound opportunity.
+ *  IMPORTANTE: só retornamos uma opportunity que esteja explicitamente amarrada
+ *  a este tracking_link_id. Nunca caímos numa opportunity "LP-wide" — isso levaria
+ *  o CTA de um influenciador para a oferta de outro (quebra de atribuição e de casa).
+ */
+async function findOpportunityDestination(_instanceId: string | null, _landingPageId: string | null, trackingLinkId?: string | null) {
+  if (!trackingLinkId) return null;
+  const { data } = await supabase
     .from("lp_opportunities")
     .select("destination_url")
+    .eq("tracking_link_id", trackingLinkId)
     .eq("is_active", true)
     .not("destination_url", "is", null)
-    .order("sort_order", { ascending: false })
-    .limit(1);
-  const { data } = landingPageId
-    ? await query.eq("landing_page_id", landingPageId).maybeSingle()
-    : await query.maybeSingle();
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
   return data?.destination_url || null;
 }
+
 
 interface InstanceContext {
   lp_mode?: string | null;
@@ -733,14 +724,18 @@ export default function InfluencerLanding() {
         const preferredTrackingCode = setFastResolved(affiliateLink, influencerId, influencerName, instanceId, landingPageId, quickCtx);
         const tl = sourceTrackingLink || await findTrackingLink(instanceId, influencerId, preferredTrackingCode, affiliateLink);
         const paramName = tl?.click_id_param_name || "sub1";
+        // A URL do próprio tracking_link deste influenciador SEMPRE vence — só caímos
+        // para uma opportunity explicitamente amarrada a este tracking_link_id como
+        // último recurso, e nunca para uma opportunity "LP-wide" (outro influenciador).
         const fallbackOpportunity = sourceTrackingLink ? null : await findOpportunityDestination(instanceId, landingPageId, tl?.id || null);
         const outboundAffiliate = [
-          fallbackOpportunity,
           (tl as any)?.base_url,
           (tl as any)?.short_url,
           affiliateLink,
+          fallbackOpportunity,
           (tl as any)?.final_url,
         ].find((url) => url && !isPublicLpLoop(url, hostname, slug)) || "";
+
         const platformAccountId = (tl as any)?.platform_account_id || null;
         const platformId = (tl as any)?.platform_accounts?.platform_id || null;
         const platformName = (tl as any)?.platform_accounts?.platforms?.name || null;
@@ -918,8 +913,13 @@ export default function InfluencerLanding() {
     let finalUrl = injectClickId(
       resolved.affiliate_link,
       resolved.click_id_param,
-      resolved.tracking_code || resolved.click_id,
+      // Sempre o click_id único por visita — o postback da casa devolve esse valor
+      // em sub1 e o trigger `sync_click_to_tracking_event` casa 1:1 com a linha em
+      // public.clicks. Usar tracking_code aqui colapsaria todas as visitas do link
+      // no mesmo id e destruiria a atribuição por clique.
+      resolved.click_id || resolved.tracking_code || "",
     );
+
     const fwd2 = searchParams.get("sub2") || resolved.influencer_id;
     const fwd3 = searchParams.get("sub3") || resolved.campanha_id;
     if (fwd2) finalUrl = injectClickId(finalUrl, "sub2", fwd2);
