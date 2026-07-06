@@ -52,6 +52,7 @@ function buildRowShareUrl(row: Row): string | null {
     row.campanha_id || "",
     row.lp_route,
     row.tracking_code || "",
+    row.landing_page_instance_id || "",
   ) || buildLpBaseUrl(row.lp_domain, row.lp_route);
 }
 
@@ -183,6 +184,7 @@ export function LinkLpGrid({ influencerId, managerId, title = "LP por link", sho
     if (!url) return toast.error("LP sem slug público");
     const check = validateSharedLpUrl(url, {
       instanceSlug: r.lp_slug,
+      instanceId: r.landing_page_instance_id,
       trackingCode: r.tracking_code,
       influencerId: r.influencer_id,
       campanhaId: r.campanha_id,
