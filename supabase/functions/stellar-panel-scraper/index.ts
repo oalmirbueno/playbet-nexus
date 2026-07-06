@@ -541,11 +541,14 @@ async function persist(
     }
 
     const rawPeriod = it.period ?? "";
+    // Only persist rows with a REAL per-day period. Aggregate rows
+    // ("01/01/0001") would be stamped on the wrong date and inflate KPIs.
+    if (isRollingAggregatePeriod(rawPeriod)) {
+      log(run, "persist/skip_aggregate", { brand: brand.brand_slug, campaign: it.campaign_name });
+      continue;
+    }
     const dateRef = normalizePeriod(rawPeriod, fallbackDate);
     if (!dateRef) continue;
-    // Always key by the actual date. Previously used "_rolling" for
-    // aggregate rows, which prevented re-scrapes from overwriting stale
-    // totals when the panel later refreshed the same day.
     const externalDateKey = dateRef;
 
     const accountFinancial = platformAccountId
