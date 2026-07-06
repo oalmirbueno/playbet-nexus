@@ -253,7 +253,10 @@ async function fetchPerformance(
   // Try progressively more granular groupings; the API accepts a small set
   // of keywords. We keep the first non-empty response that gives us a real
   // per-day breakdown (period != "01/01/0001").
-  const groupings = ["day,campaign", "day", "date", "campaign"];
+  // Prefer per-day first (matches stellar-panel-reconcile behavior which
+  // produces the numbers that agree with the real panel). "day,campaign"
+  // was returning inflated aggregate totals for some brands.
+  const groupings = ["day", "day,campaign", "date", "campaign"];
   let lastItems: PerfItem[] = [];
   for (const g of groupings) {
     const qs = new URLSearchParams({
@@ -538,11 +541,12 @@ async function persist(
     }
 
     const rawPeriod = it.period ?? "";
+    // The Stellar panel API always returns aggregate rows (period=01/01/0001)
+    // for the requested window. We rely on the caller to pass a single-day
+    // window so `fallbackDate` = that day. Do NOT clamp aggregate rows to an
+    // arbitrary end date of a multi-day window (that inflated today's KPIs).
     const dateRef = normalizePeriod(rawPeriod, fallbackDate);
     if (!dateRef) continue;
-    // Always key by the actual date. Previously used "_rolling" for
-    // aggregate rows, which prevented re-scrapes from overwriting stale
-    // totals when the panel later refreshed the same day.
     const externalDateKey = dateRef;
 
     const accountFinancial = platformAccountId
@@ -748,10 +752,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Iterate DAY BY DAY so the API returns the smallest possible window.
-    // Fixes: when the panel returns aggregate-only rows (period "01/01/0001"),
-    // the previous single-window fetch dumped the ENTIRE range's totals into
-    // the last date — inflating today's KPIs by ~Nx.
+    // The Stellar panel API only returns aggregate totals for the requested
+    // window (period is always "01/01/0001", not per-day). So we MUST iterate
+    // day-by-day, passing date_start = date_end = day. This is the only way
+    // to get accurate daily KPIs that match the panel dashboard.
     const allItems: { brand: Brand; items: PerfItem[]; day: string }[] = [];
     const dayList: string[] = [];
     {
@@ -775,9 +779,6 @@ Deno.serve(async (req) => {
     let total = 0;
     const perBrand: Record<string, number> = {};
     for (const { brand, items, day } of allItems) {
-      // fallbackDate is now the actual single day being fetched, so
-      // aggregate-only rows land on the correct date instead of being
-      // clamped to dateEnd of a wide window.
       const n = await persist(run, brand, items, ctx, day, day);
       perBrand[brand.brand_slug] = (perBrand[brand.brand_slug] ?? 0) + n;
       total += n;
