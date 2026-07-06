@@ -1938,6 +1938,11 @@ export type Database = {
       platform_accounts: {
         Row: {
           account_external_id: string | null
+          balance_available: number | null
+          balance_currency: string | null
+          balance_pending: number | null
+          balance_source: string | null
+          balance_updated_at: string | null
           cpa_baseline_deposit: number | null
           cpa_value: number | null
           created_at: string | null
@@ -1961,6 +1966,11 @@ export type Database = {
         }
         Insert: {
           account_external_id?: string | null
+          balance_available?: number | null
+          balance_currency?: string | null
+          balance_pending?: number | null
+          balance_source?: string | null
+          balance_updated_at?: string | null
           cpa_baseline_deposit?: number | null
           cpa_value?: number | null
           created_at?: string | null
@@ -1984,6 +1994,11 @@ export type Database = {
         }
         Update: {
           account_external_id?: string | null
+          balance_available?: number | null
+          balance_currency?: string | null
+          balance_pending?: number | null
+          balance_source?: string | null
+          balance_updated_at?: string | null
           cpa_baseline_deposit?: number | null
           cpa_value?: number | null
           created_at?: string | null
@@ -2210,6 +2225,62 @@ export type Database = {
             columns: ["platform_id"]
             isOneToOne: false
             referencedRelation: "platforms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      platform_withdrawals: {
+        Row: {
+          amount_gross: number
+          amount_net: number
+          created_at: string
+          external_id: string | null
+          fee: number
+          id: string
+          method: string | null
+          notes: Json
+          paid_at: string | null
+          platform_account_id: string
+          requested_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount_gross?: number
+          amount_net?: number
+          created_at?: string
+          external_id?: string | null
+          fee?: number
+          id?: string
+          method?: string | null
+          notes?: Json
+          paid_at?: string | null
+          platform_account_id: string
+          requested_at: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount_gross?: number
+          amount_net?: number
+          created_at?: string
+          external_id?: string | null
+          fee?: number
+          id?: string
+          method?: string | null
+          notes?: Json
+          paid_at?: string | null
+          platform_account_id?: string
+          requested_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_withdrawals_platform_account_id_fkey"
+            columns: ["platform_account_id"]
+            isOneToOne: false
+            referencedRelation: "platform_accounts"
             referencedColumns: ["id"]
           },
         ]
