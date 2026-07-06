@@ -261,6 +261,20 @@ async function firecrawlLoginAndCapture(
   return json;
 }
 
+async function markStaleRuns(supabase: any) {
+  const staleBefore = new Date(Date.now() - 12 * 60_000).toISOString();
+  await supabase
+    .from("panel_scraper_runs")
+    .update({
+      status: "error",
+      finished_at: new Date().toISOString(),
+      message: "Sincronização anterior encerrada por timeout. Reexecutei com coleta paralela por marca.",
+    })
+    .eq("scraper_key", "affiliate_panel_html")
+    .eq("status", "running")
+    .lt("started_at", staleBefore);
+}
+
 
 async function persistBrand(supabase: any, brand: Brand, homeFc: any, perfFc: any) {
   const homeDoc = homeFc?.data ?? homeFc;
@@ -372,6 +386,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
+  await markStaleRuns(supabase);
   let payload: any = {};
   try { payload = await req.json(); } catch { /* body optional */ }
 
@@ -401,15 +416,20 @@ Deno.serve(async (req) => {
   const task = (async () => {
     const results: Record<string, any> = {};
     const rawDump: Record<string, any> = {};
-    for (const brand of targets) {
+    await Promise.all(targets.map(async (brand) => {
       try {
-        const homeFc = await firecrawlLoginAndCapture(
-          brand,
-          "/home",
-          HOME_SCHEMA,
-          "Extraia o valor do widget 'Saldo disponível' (ou 'Disponível para saque') e do widget 'Saldo pendente'/'A liberar' visíveis na página inicial do painel afiliado. Já é o valor líquido. Formato R$ 1.234,56 → 1234.56. Se algum campo não existir, omita — não invente.",
-        );
-        const perfFc = await firecrawlLoginAndCapture(brand, "/reports/performance", null, "");
+        // Home and Performance are independent authenticated captures. Running
+        // them in parallel keeps each sync inside the edge idle window and
+        // avoids the dashboard getting stuck with stale "running" jobs.
+        const [homeFc, perfFc] = await Promise.all([
+          firecrawlLoginAndCapture(
+            brand,
+            "/home",
+            HOME_SCHEMA,
+            "Extraia o valor do widget 'Saldo disponível' (ou 'Disponível para saque') e do widget 'Saldo pendente'/'A liberar' visíveis na página inicial do painel afiliado. Já é o valor líquido. Formato R$ 1.234,56 → 1234.56. Se algum campo não existir, omita — não invente.",
+          ),
+          firecrawlLoginAndCapture(brand, "/reports/performance", null, ""),
+        ]);
         const persisted = await persistBrand(supabase, brand, homeFc, perfFc);
         results[brand.slug] = { ok: true, ...persisted };
         if (debug) {
@@ -424,7 +444,7 @@ Deno.serve(async (req) => {
         results[brand.slug] = { ok: false, error: err?.message ?? String(err) };
         rawDump[brand.slug] = { error: err?.message ?? String(err) };
       }
-    }
+    }));
     if (runId) {
       await supabase.from("panel_scraper_runs").update({
         status: Object.values(results).every((r: any) => r.ok) ? "success" : "partial",

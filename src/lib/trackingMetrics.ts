@@ -22,11 +22,16 @@ export function isDeprecatedMetricSource(source?: string | null) {
 }
 
 export function shouldUseMetricSource(metric: { origem_importacao?: string | null; platform_id?: string | null }) {
-  // The old Stellar API overstates Estrela Bet, but VUPI still carries the
-  // real negative RevShare until the HTML brand switch is parsed safely.
-  // VUPI platform id is stable in this database.
-  if (!isDeprecatedMetricSource(metric.origem_importacao)) return true;
-  return metric.platform_id === "ad3d0d9d-c816-4a45-a069-8198d4a04425";
+  // The legacy Stellar scraper overstates visits/registrations/FTDs and must
+  // never participate in official KPIs once the live affiliate panel HTML
+  // scraper is available.
+  return !isDeprecatedMetricSource(metric.origem_importacao);
+}
+
+export function selectAuthoritativeMetricRows<T extends { origem_importacao?: string | null }>(rows: T[]): T[] {
+  const usable = rows.filter((row) => shouldUseMetricSource(row as any));
+  const livePanelRows = usable.filter((row) => String(row.origem_importacao ?? "").toLowerCase() === "panel_scrape_html");
+  return livePanelRows.length > 0 ? livePanelRows : usable;
 }
 
 const money = (value: unknown) => {
