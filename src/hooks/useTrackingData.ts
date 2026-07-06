@@ -8,7 +8,7 @@ import type {
   PlatformEventMappingRow, TrackingEventRow,
 } from "@/services/trackingService";
 import { useToast } from "@/hooks/use-toast";
-import { shouldUseMetricSource } from "@/lib/trackingMetrics";
+import { selectAuthoritativeMetricRows } from "@/lib/trackingMetrics";
 
 /** Filter out demo rows - always show only real data */
 function filterReal<T extends { is_demo: boolean }>(rows: T[]): T[] {
@@ -16,7 +16,7 @@ function filterReal<T extends { is_demo: boolean }>(rows: T[]): T[] {
 }
 
 function filterRealMetrics<T extends { is_demo: boolean; origem_importacao?: string | null }>(rows: T[]): T[] {
-  return rows.filter(r => !r.is_demo && shouldUseMetricSource(r as any));
+  return selectAuthoritativeMetricRows(rows.filter(r => !r.is_demo));
 }
 
 function filterValidEvents(rows: TrackingEventRow[]): TrackingEventRow[] {

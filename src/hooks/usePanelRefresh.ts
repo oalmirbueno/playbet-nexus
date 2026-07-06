@@ -7,6 +7,40 @@ import { useToast } from "@/hooks/use-toast";
 const REFRESH_THROTTLE_MS = 60_000;
 let lastRefreshAt = 0;
 
+const sb = supabase as any;
+
+const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+async function invalidatePanelQueries(qc: ReturnType<typeof useQueryClient>) {
+  await Promise.all([
+    qc.invalidateQueries({ queryKey: ["tracking_metrics_summary"] }),
+    qc.invalidateQueries({ queryKey: ["financeiro_metrics"] }),
+    qc.invalidateQueries({ queryKey: ["tracking_metrics"] }),
+    qc.invalidateQueries({ queryKey: ["tracking_events"] }),
+    qc.invalidateQueries({ queryKey: ["platform_accounts"] }),
+  ]);
+}
+
+async function pollPanelRuns(runIds: string[], qc: ReturnType<typeof useQueryClient>) {
+  if (runIds.length === 0) return [];
+  const deadline = Date.now() + 165_000;
+  let rows: any[] = [];
+
+  while (Date.now() < deadline) {
+    const { data, error } = await sb
+      .from("panel_scraper_runs")
+      .select("id,status,rows_imported,message,discovery,finished_at")
+      .in("id", runIds);
+    if (error) throw error;
+    rows = data ?? [];
+    await invalidatePanelQueries(qc);
+    if (rows.length === runIds.length && rows.every((row) => row.status !== "running")) break;
+    await sleep(6_000);
+  }
+
+  return rows;
+}
+
 /**
  * Dispara sincronização com o painel afiliado HTML e invalida os
  * caches de métricas / balances. Use em botões "Atualizar" nas telas de
@@ -32,29 +66,29 @@ export function usePanelRefresh() {
       lastRefreshAt = now;
       setIsRefreshing(true);
       try {
-        const [panel, smartico] = await Promise.allSettled([
-          supabase.functions.invoke("affiliate-panel-scraper", { body: { brand: "all", extract: true } }),
+        const [estrelabet, vupi, smartico] = await Promise.allSettled([
+          supabase.functions.invoke("affiliate-panel-scraper", { body: { brand: "estrelabet", extract: true } }),
+          supabase.functions.invoke("affiliate-panel-scraper", { body: { brand: "vupi", extract: true } }),
           supabase.functions.invoke("tracking-puller-smartico", { body: { source: "manual", mode: "recent" } }),
         ]);
-        if (panel.status === "fulfilled" && panel.value.error) throw panel.value.error;
-        if (panel.status === "rejected") throw panel.reason;
-        await Promise.all([
-          qc.invalidateQueries({ queryKey: ["tracking_metrics_summary"] }),
-          qc.invalidateQueries({ queryKey: ["financeiro_metrics"] }),
-          qc.invalidateQueries({ queryKey: ["tracking_metrics"] }),
-          qc.invalidateQueries({ queryKey: ["tracking_events"] }),
-          qc.invalidateQueries({ queryKey: ["platform_accounts"] }),
-        ]);
+        for (const result of [estrelabet, vupi]) {
+          if (result.status === "fulfilled" && result.value.error) throw result.value.error;
+          if (result.status === "rejected") throw result.reason;
+        }
+        const runIds = [estrelabet, vupi]
+          .map((result) => result.status === "fulfilled" ? (result.value.data as any)?.run_id : null)
+          .filter(Boolean) as string[];
+        const completedRuns = await pollPanelRuns(runIds, qc);
+        await invalidatePanelQueries(qc);
         if (!opts.silent) {
-          const panelData = panel.status === "fulfilled" ? panel.value.data as any : null;
-          const imported = Object.values(panelData?.results ?? {}).reduce((n: number, r: any) => n + Number(r?.updatedMetrics ?? 0), 0);
+          const imported = completedRuns.reduce((n, row) => n + Number(row?.rows_imported ?? 0), 0);
           const smarticoText = smartico.status === "fulfilled" && !smartico.value.error ? " · Smartico ok" : "";
           toast({
             title: "Painel sincronizado",
-            description: `${imported} métrica(s) reais atualizadas${smarticoText}.`,
+            description: `${imported} conta(s) reais atualizadas do painel${smarticoText}.`,
           });
         }
-        return { ok: true, data: panel.status === "fulfilled" ? panel.value.data : null };
+        return { ok: true, data: completedRuns };
       } catch (e: any) {
         if (!opts.silent) {
           toast({
