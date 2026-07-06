@@ -178,6 +178,7 @@ Deno.serve(async (req) => {
   const wantBrand = String(payload?.brand ?? "all").toLowerCase();
   const debug = payload?.debug === true;
   const wantExtract = payload?.extract !== false; // default true
+  const noActions = payload?.noActions === true;
 
   const targets = BRANDS.filter((b) => wantBrand === "all" || wantBrand === b.slug);
   if (!targets.length) {
