@@ -541,12 +541,10 @@ async function persist(
     }
 
     const rawPeriod = it.period ?? "";
-    // Only persist rows with a REAL per-day period. Aggregate rows
-    // ("01/01/0001") would be stamped on the wrong date and inflate KPIs.
-    if (isRollingAggregatePeriod(rawPeriod)) {
-      log(run, "persist/skip_aggregate", { brand: brand.brand_slug, campaign: it.campaign_name });
-      continue;
-    }
+    // The Stellar panel API always returns aggregate rows (period=01/01/0001)
+    // for the requested window. We rely on the caller to pass a single-day
+    // window so `fallbackDate` = that day. Do NOT clamp aggregate rows to an
+    // arbitrary end date of a multi-day window (that inflated today's KPIs).
     const dateRef = normalizePeriod(rawPeriod, fallbackDate);
     if (!dateRef) continue;
     const externalDateKey = dateRef;
