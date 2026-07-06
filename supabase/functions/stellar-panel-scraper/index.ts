@@ -752,13 +752,24 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch the full range once with group_by=day (same strategy as
-    // stellar-panel-reconcile, which produces numbers that match the real
-    // panel). Aggregate-only rows are filtered out in persist().
-    const allItems: { brand: Brand; items: PerfItem[] }[] = [];
+    // The Stellar panel API only returns aggregate totals for the requested
+    // window (period is always "01/01/0001", not per-day). So we MUST iterate
+    // day-by-day, passing date_start = date_end = day. This is the only way
+    // to get accurate daily KPIs that match the panel dashboard.
+    const allItems: { brand: Brand; items: PerfItem[]; day: string }[] = [];
+    const dayList: string[] = [];
+    {
+      const d0 = new Date(`${dateStart}T00:00:00.000Z`);
+      const d1 = new Date(`${dateEnd}T00:00:00.000Z`);
+      for (let d = new Date(d0); d <= d1; d.setUTCDate(d.getUTCDate() + 1)) {
+        dayList.push(d.toISOString().slice(0, 10));
+      }
+    }
     for (const b of brands) {
-      const items = await fetchPerformance(run, session, b, dateStart, dateEnd);
-      allItems.push({ brand: b, items });
+      for (const day of dayList) {
+        const items = await fetchPerformance(run, session, b, day, day);
+        if (items.length) allItems.push({ brand: b, items, day });
+      }
     }
     const campaigns = allItems.flatMap((x) =>
       x.items.map((i) => i.campaign_name),
@@ -767,9 +778,9 @@ Deno.serve(async (req) => {
 
     let total = 0;
     const perBrand: Record<string, number> = {};
-    for (const { brand, items } of allItems) {
-      const n = await persist(run, brand, items, ctx, dateStart, dateEnd);
-      perBrand[brand.brand_slug] = n;
+    for (const { brand, items, day } of allItems) {
+      const n = await persist(run, brand, items, ctx, day, day);
+      perBrand[brand.brand_slug] = (perBrand[brand.brand_slug] ?? 0) + n;
       total += n;
     }
 
