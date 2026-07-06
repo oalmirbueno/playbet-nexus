@@ -400,20 +400,36 @@ Deno.serve(async (req) => {
 
   for (const brand of targets) {
     try {
-      const fc = await firecrawlLoginAndScrape(brand, wantExtract, { noActions });
-      const persisted = await persistBrand(supabase, brand, fc);
+      // Capture 1: /home → widget Saldo disponível
+      const homeFc = await firecrawlLoginAndCapture(
+        brand,
+        "/home",
+        HOME_SCHEMA,
+        "Extraia o valor do widget 'Saldo disponível' (ou 'Disponível para saque') e do widget 'Saldo pendente'/'A liberar' visíveis na página inicial do painel afiliado. Já é o valor líquido. Formato R$ 1.234,56 → 1234.56. Se algum campo não existir, omita — não invente.",
+      );
+      // Capture 2: /reports/performance → tabela Total
+      const perfFc = await firecrawlLoginAndCapture(
+        brand,
+        "/reports/performance",
+        null,
+        "",
+      );
+      const persisted = await persistBrand(supabase, brand, homeFc, perfFc);
       results[brand.slug] = { ok: true, ...persisted };
 
       if (debug) {
-        // Keep only sizes to avoid blowing up the row; store first 5k of markdown for inspection.
-        const doc = fc?.data ?? fc;
+        const hd = homeFc?.data ?? homeFc;
+        const pd = perfFc?.data ?? perfFc;
         rawDump[brand.slug] = {
-          status: fc?.success ?? true,
-          metadata: doc?.metadata ?? null,
-          markdown_head: (doc?.markdown ?? "").slice(0, 5000),
-          html_head: (doc?.html ?? "").slice(0, 20000),
-          json: doc?.json ?? doc?.extract ?? null,
-          screenshot_length: (doc?.screenshot ?? "").length,
+          home: {
+            metadata: hd?.metadata ?? null,
+            markdown_head: (hd?.markdown ?? "").slice(0, 5000),
+            json: hd?.json ?? hd?.extract ?? null,
+          },
+          perf: {
+            metadata: pd?.metadata ?? null,
+            markdown_head: (pd?.markdown ?? "").slice(0, 5000),
+          },
         };
       }
     } catch (err: any) {
@@ -427,10 +443,11 @@ Deno.serve(async (req) => {
       status: Object.values(results).every((r: any) => r.ok) ? "success" : "partial",
       finished_at: new Date().toISOString(),
       rows_imported: Object.values(results).reduce((n: number, r: any) => n + (r?.updatedAccounts ?? 0), 0),
-      message: JSON.stringify(Object.fromEntries(Object.entries(results).map(([k, v]: any) => [k, v.ok ? `ok (balance=${v.extracted?.saldo_disponivel ?? "n/a"})` : v.error]))),
+      message: JSON.stringify(Object.fromEntries(Object.entries(results).map(([k, v]: any) => [k, v.ok ? `ok (saldo=${v.extracted?.saldo_disponivel ?? "n/a"} src=${v.saldo_source ?? "?"})` : v.error]))),
       discovery: { brands: targets.map((t) => t.slug), results, raw: debug ? rawDump : undefined },
     }).eq("id", runId);
   }
+
 
   return new Response(JSON.stringify({ ok: true, run_id: runId, results, raw: debug ? rawDump : undefined }, null, 2), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
