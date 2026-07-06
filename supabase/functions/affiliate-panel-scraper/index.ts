@@ -48,22 +48,12 @@ const BRANDS: Brand[] = [
 // Firecrawl v2 scrape endpoint
 const FIRECRAWL_URL = "https://api.firecrawl.dev/v2/scrape";
 
-// LLM extraction schema — every field is optional so the model doesn't
-// hallucinate zeros when the panel section isn't visible.
-const EXTRACTION_SCHEMA = {
+// Schema used ONLY for the Home widget (saldo disponível / pendente).
+const HOME_SCHEMA = {
   type: "object",
   properties: {
-    saldo_disponivel: { type: "number", description: "Saldo ou total líquido visível no relatório/painel, em BRL. Extraia apenas o número — 1.234,56 vira 1234.56." },
-    saldo_pendente: { type: "number", description: "Saldo pendente / a liberar em BRL." },
-    comissao_periodo: { type: "number", description: "Comissão total do período visível (mês atual ou range mostrado) em BRL." },
-    comissao_cpa: { type: "number", description: "Parcela de CPA da comissão do período." },
-    comissao_revshare: { type: "number", description: "Parcela de RevShare da comissão do período." },
-    ftds: { type: "integer", description: "Quantidade de FTDs (primeiros depósitos) no período visível." },
-    cadastros: { type: "integer", description: "Quantidade de cadastros/registrations no período visível." },
-    depositos_qtd: { type: "integer", description: "Quantidade total de depósitos." },
-    depositos_valor: { type: "number", description: "Valor total depositado em BRL." },
-    cliques: { type: "integer", description: "Cliques / visitas no período." },
-    periodo_label: { type: "string", description: "Rótulo do período mostrado no painel (ex.: 'julho/2026', 'últimos 30 dias')." },
+    saldo_disponivel: { type: "number", description: "Widget 'Saldo disponível' (ou 'Disponível para saque') visível na página inicial/saque do painel afiliado, em BRL. Já é líquido de saques pagos. Extraia apenas o número — 1.234,56 vira 1234.56." },
+    saldo_pendente: { type: "number", description: "Widget 'Saldo pendente' / 'A liberar' em BRL, se visível." },
   },
 };
 
@@ -113,43 +103,55 @@ function parsePerformanceTotalFromMarkdown(markdown?: string | null) {
   };
 }
 
-function compactExtraction(input: any) {
-  const cpa = firstNumber(input?.comissao_cpa) ?? 0;
-  const rev = firstNumber(input?.comissao_revshare) ?? 0;
-  const computedCommission = cpa + rev;
-  const panelTotal = firstNumber(input?.comissao_periodo);
-  const total = (cpa !== 0 || rev !== 0)
-    ? computedCommission
-    : (panelTotal ?? firstNumber(input?.saldo_disponivel) ?? 0);
+// Regex fallback for the saldo widget when the LLM extraction misses it.
+function parseSaldoFromMarkdown(markdown?: string | null): { saldo_disponivel: number | null; saldo_pendente: number | null } {
+  const out = { saldo_disponivel: null as number | null, saldo_pendente: null as number | null };
+  if (!markdown) return out;
+  const lines = markdown.split("\n").map((l) => l.trim());
+  const money = /R\$\s*([\d.]+,\d{2})/i;
+  const findAfter = (labelRe: RegExp): number | null => {
+    for (let i = 0; i < lines.length; i++) {
+      if (labelRe.test(lines[i])) {
+        // check same line or next 3 lines
+        for (let j = i; j < Math.min(i + 4, lines.length); j++) {
+          const m = lines[j].match(money);
+          if (m) return normalizeNumber(m[1]);
+        }
+      }
+    }
+    return null;
+  };
+  out.saldo_disponivel = findAfter(/saldo\s+dispon[íi]vel|dispon[íi]vel\s+para\s+saque/i);
+  out.saldo_pendente = findAfter(/saldo\s+pendente|a\s+liberar|pendente/i);
+  return out;
+}
+
+function compactExtraction(perf: any, saldo: { saldo_disponivel: number | null; saldo_pendente: number | null }) {
+  const cpa = firstNumber(perf?.comissao_cpa) ?? 0;
+  const rev = firstNumber(perf?.comissao_revshare) ?? 0;
+  const commissionPeriod = cpa + rev;
   return {
-    saldo_disponivel: total,
-    saldo_pendente: firstNumber(input?.saldo_pendente) ?? 0,
-    comissao_periodo: total,
+    // Saldo real vem SEMPRE do widget do painel (líquido de saques).
+    saldo_disponivel: firstNumber(saldo.saldo_disponivel) ?? 0,
+    saldo_pendente: firstNumber(saldo.saldo_pendente) ?? 0,
+    // Comissão do período = CPA + RevShare da tabela Total do performance report.
+    comissao_periodo: commissionPeriod,
     comissao_cpa: cpa,
     comissao_revshare: rev,
-    ftds: Math.round(firstNumber(input?.ftds) ?? 0),
-    cadastros: Math.round(firstNumber(input?.cadastros) ?? 0),
-    depositos_qtd: Math.round(firstNumber(input?.depositos_qtd) ?? 0),
-    depositos_valor: firstNumber(input?.depositos_valor) ?? 0,
-    cliques: Math.round(firstNumber(input?.cliques) ?? 0),
-    periodo_label: input?.periodo_label ? String(input.periodo_label) : "Período atual",
+    ftds: Math.round(firstNumber(perf?.ftds) ?? 0),
+    ftds_valor: firstNumber(perf?.ftds_valor) ?? 0,
+    cadastros: Math.round(firstNumber(perf?.cadastros) ?? 0),
+    depositos_qtd: Math.round(firstNumber(perf?.depositos_qtd) ?? 0),
+    depositos_valor: firstNumber(perf?.depositos_valor) ?? 0,
+    cliques: Math.round(firstNumber(perf?.cliques) ?? 0),
+    ggr: firstNumber(perf?.ggr) ?? 0,
+    ngr: firstNumber(perf?.ngr) ?? 0,
+    periodo_label: perf?.periodo_label ? String(perf.periodo_label) : "Período atual",
   };
 }
 
-async function firecrawlLoginAndScrape(brand: Brand, wantExtract: boolean, opts: { noActions?: boolean } = {}) {
-  if (!FIRECRAWL_API_KEY) throw new Error("FIRECRAWL_API_KEY not configured");
-  if (!brand.loginUrl || !brand.user || !brand.pass) {
-    throw new Error(`Missing credentials for ${brand.slug}`);
-  }
-
-  const formats: any[] = ["markdown", "html", "screenshot"];
-  if (wantExtract && !opts.noActions) {
-    formats.push({ type: "json", schema: EXTRACTION_SCHEMA, prompt: "Extraia somente os KPIs visíveis no relatório de performance do painel afiliado. Campos esperados: cliques/visitas, cadastros/registros, FTDs, quantidade e valor de depósitos, comissão de CPA, comissão de RevShare e comissão/saldo total do período. Se um campo não estiver visível, omita — não invente. Números em BRL: converta 'R$ 1.234,56' para 1234.56." });
-  }
-
-  // React controlled inputs: `write` doesn't fire onChange, so use JS to set
-  // the value via the native HTMLInputElement setter + dispatch input event.
-  const loginJs = `
+function buildLoginJs(brand: Brand) {
+  return `
     (function(){
       const setVal = (el, v) => {
         const s = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
@@ -168,8 +170,11 @@ async function firecrawlLoginAndScrape(brand: Brand, wantExtract: boolean, opts:
       }, 400);
     })();
   `;
+}
 
-  const switchBrandJs = brand.slug === "vupi" ? `
+function buildBrandSwitchJs(brand: Brand) {
+  if (brand.slug !== "vupi") return "";
+  return `
     (function(){
       const norm = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
       const clickLikeUser = (el) => {
@@ -197,17 +202,34 @@ async function firecrawlLoginAndScrape(brand: Brand, wantExtract: boolean, opts:
         clickLikeUser(vupi);
       }, 1200);
     })();
-  ` : "";
+  `;
+}
 
-  const actions = opts.noActions ? [
-    { type: "wait", milliseconds: 4000 },
-    { type: "screenshot", fullPage: true },
-  ] : [
+// One Firecrawl call: login → optional brand switch → navigate to `targetPath` → capture.
+async function firecrawlLoginAndCapture(
+  brand: Brand,
+  targetPath: string,
+  schema: any | null,
+  extractPrompt: string,
+) {
+  if (!FIRECRAWL_API_KEY) throw new Error("FIRECRAWL_API_KEY not configured");
+  if (!brand.loginUrl || !brand.user || !brand.pass) {
+    throw new Error(`Missing credentials for ${brand.slug}`);
+  }
+
+  const formats: any[] = ["markdown", "html"];
+  if (schema) formats.push({ type: "json", schema, prompt: extractPrompt });
+
+  const loginJs = buildLoginJs(brand);
+  const switchJs = buildBrandSwitchJs(brand);
+  const navJs = `window.location.assign(new URL(${JSON.stringify(targetPath)}, window.location.origin).href);`;
+
+  const actions: any[] = [
     { type: "wait", milliseconds: 8000 },
     { type: "executeJavascript", script: loginJs },
     { type: "wait", milliseconds: 12000 },
-    ...(switchBrandJs ? [{ type: "executeJavascript", script: switchBrandJs }, { type: "wait", milliseconds: 10000 }] : []),
-    { type: "executeJavascript", script: "window.location.assign(new URL('/reports/performance', window.location.origin).href);" },
+    ...(switchJs ? [{ type: "executeJavascript", script: switchJs }, { type: "wait", milliseconds: 10000 }] : []),
+    { type: "executeJavascript", script: navJs },
     { type: "wait", milliseconds: 14000 },
     { type: "screenshot", fullPage: true },
   ];
@@ -239,27 +261,36 @@ async function firecrawlLoginAndScrape(brand: Brand, wantExtract: boolean, opts:
   return json;
 }
 
-async function persistBrand(supabase: any, brand: Brand, fc: any) {
-  const doc = fc?.data ?? fc; // SDK vs REST
-  const md = doc?.markdown ?? null;
 
-  if (brand.slug === "vupi" && !/\bVUPI\b|\bVupi\b/.test(md ?? "")) {
+async function persistBrand(supabase: any, brand: Brand, homeFc: any, perfFc: any) {
+  const homeDoc = homeFc?.data ?? homeFc;
+  const perfDoc = perfFc?.data ?? perfFc;
+  const homeMd = homeDoc?.markdown ?? null;
+  const perfMd = perfDoc?.markdown ?? null;
+
+  // Sanity: for VUPI both captures should mention VUPI (else brand-switch failed).
+  const bothMd = `${homeMd ?? ""}\n${perfMd ?? ""}`;
+  if (brand.slug === "vupi" && !/\bVUPI\b|\bVupi\b/.test(bothMd)) {
     return {
       extracted: null,
       updatedAccounts: 0,
       updatedMetrics: 0,
       skipped: "brand_not_visible",
-      has_markdown: !!md,
-      has_html: !!(doc?.html ?? null),
-      has_screenshot: !!(doc?.screenshot ?? null),
-      metadata: doc?.metadata ?? null,
+      has_markdown: !!(homeMd || perfMd),
     };
   }
 
-  const extracted = compactExtraction({ ...(doc?.json ?? doc?.extract ?? {}), ...parsePerformanceTotalFromMarkdown(md) });
-  const html = doc?.html ?? null;
-  const screenshot = doc?.screenshot ?? null;
-  const meta = doc?.metadata ?? null;
+  const perfJson = perfDoc?.json ?? perfDoc?.extract ?? {};
+  const perf = { ...perfJson, ...parsePerformanceTotalFromMarkdown(perfMd) };
+
+  const homeJson = homeDoc?.json ?? homeDoc?.extract ?? {};
+  const saldoRegex = parseSaldoFromMarkdown(homeMd);
+  const saldo = {
+    saldo_disponivel: firstNumber(homeJson?.saldo_disponivel, saldoRegex.saldo_disponivel),
+    saldo_pendente: firstNumber(homeJson?.saldo_pendente, saldoRegex.saldo_pendente),
+  };
+
+  const extracted = compactExtraction(perf, saldo);
 
   const key = brand.slug === "estrelabet" ? "estrel" : "vupi";
   const { data: platforms } = await supabase
@@ -280,7 +311,8 @@ async function persistBrand(supabase: any, brand: Brand, fc: any) {
   }
 
   let updatedAccounts = 0;
-  if (extracted.saldo_disponivel != null) {
+  // Só grava balance se conseguimos ler o widget de saldo — nunca cai em CPA+Rev.
+  if (saldo.saldo_disponivel != null) {
     for (const acc of accounts) {
       const { error } = await supabase
         .from("platform_accounts")
@@ -300,7 +332,7 @@ async function persistBrand(supabase: any, brand: Brand, fc: any) {
   for (const acc of accounts) {
     const cpa = extracted.comissao_cpa ?? 0;
     const rev = extracted.comissao_revshare ?? 0;
-    const total = extracted.comissao_periodo ?? cpa + rev;
+    const total = cpa + rev;
     const { error } = await supabase.from("tracking_metrics").upsert({
       data_ref: today,
       platform_id: acc.platform_id,
@@ -322,21 +354,19 @@ async function persistBrand(supabase: any, brand: Brand, fc: any) {
       is_demo: false,
       external_ref: `${brand.slug}:panel_scrape_html:current_period:${acc.id}`,
     }, { onConflict: "external_ref" });
-    if (!error) {
-      updatedMetrics++;
-    }
+    if (!error) updatedMetrics++;
   }
 
   return {
     extracted,
+    saldo_source: saldo.saldo_disponivel != null ? "home_widget" : "missing",
     updatedAccounts,
     updatedMetrics,
-    has_markdown: !!md,
-    has_html: !!html,
-    has_screenshot: !!screenshot,
-    metadata: meta,
+    has_home_md: !!homeMd,
+    has_perf_md: !!perfMd,
   };
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -370,20 +400,36 @@ Deno.serve(async (req) => {
 
   for (const brand of targets) {
     try {
-      const fc = await firecrawlLoginAndScrape(brand, wantExtract, { noActions });
-      const persisted = await persistBrand(supabase, brand, fc);
+      // Capture 1: /home → widget Saldo disponível
+      const homeFc = await firecrawlLoginAndCapture(
+        brand,
+        "/home",
+        HOME_SCHEMA,
+        "Extraia o valor do widget 'Saldo disponível' (ou 'Disponível para saque') e do widget 'Saldo pendente'/'A liberar' visíveis na página inicial do painel afiliado. Já é o valor líquido. Formato R$ 1.234,56 → 1234.56. Se algum campo não existir, omita — não invente.",
+      );
+      // Capture 2: /reports/performance → tabela Total
+      const perfFc = await firecrawlLoginAndCapture(
+        brand,
+        "/reports/performance",
+        null,
+        "",
+      );
+      const persisted = await persistBrand(supabase, brand, homeFc, perfFc);
       results[brand.slug] = { ok: true, ...persisted };
 
       if (debug) {
-        // Keep only sizes to avoid blowing up the row; store first 5k of markdown for inspection.
-        const doc = fc?.data ?? fc;
+        const hd = homeFc?.data ?? homeFc;
+        const pd = perfFc?.data ?? perfFc;
         rawDump[brand.slug] = {
-          status: fc?.success ?? true,
-          metadata: doc?.metadata ?? null,
-          markdown_head: (doc?.markdown ?? "").slice(0, 5000),
-          html_head: (doc?.html ?? "").slice(0, 20000),
-          json: doc?.json ?? doc?.extract ?? null,
-          screenshot_length: (doc?.screenshot ?? "").length,
+          home: {
+            metadata: hd?.metadata ?? null,
+            markdown_head: (hd?.markdown ?? "").slice(0, 5000),
+            json: hd?.json ?? hd?.extract ?? null,
+          },
+          perf: {
+            metadata: pd?.metadata ?? null,
+            markdown_head: (pd?.markdown ?? "").slice(0, 5000),
+          },
         };
       }
     } catch (err: any) {
@@ -397,10 +443,11 @@ Deno.serve(async (req) => {
       status: Object.values(results).every((r: any) => r.ok) ? "success" : "partial",
       finished_at: new Date().toISOString(),
       rows_imported: Object.values(results).reduce((n: number, r: any) => n + (r?.updatedAccounts ?? 0), 0),
-      message: JSON.stringify(Object.fromEntries(Object.entries(results).map(([k, v]: any) => [k, v.ok ? `ok (balance=${v.extracted?.saldo_disponivel ?? "n/a"})` : v.error]))),
+      message: JSON.stringify(Object.fromEntries(Object.entries(results).map(([k, v]: any) => [k, v.ok ? `ok (saldo=${v.extracted?.saldo_disponivel ?? "n/a"} src=${v.saldo_source ?? "?"})` : v.error]))),
       discovery: { brands: targets.map((t) => t.slug), results, raw: debug ? rawDump : undefined },
     }).eq("id", runId);
   }
+
 
   return new Response(JSON.stringify({ ok: true, run_id: runId, results, raw: debug ? rawDump : undefined }, null, 2), {
     headers: { ...corsHeaders, "Content-Type": "application/json" },
