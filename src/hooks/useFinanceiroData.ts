@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useInfluencers, useManagers, usePlatforms, useSaques } from "@/hooks/useSupabaseQuery";
-import { getMetricMoneyParts } from "@/lib/trackingMetrics";
+import { getMetricMoneyParts, shouldUseMetricSource } from "@/lib/trackingMetrics";
 
 export type PeriodKey = "7d" | "30d" | "mtd" | "ytd" | "all";
 
@@ -78,7 +78,7 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
       if (platformId) q = q.eq("platform_id", platformId);
       const { data, error } = await q;
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []).filter((row: any) => shouldUseMetricSource(row));
     },
     refetchInterval: 30_000,
   });

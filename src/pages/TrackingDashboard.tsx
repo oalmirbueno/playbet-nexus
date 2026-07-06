@@ -11,9 +11,9 @@ import { useTrackingMetrics, usePlatformAccounts, useTrackingEvents } from "@/ho
 import { useInfluencers, useCampanhas, usePlatforms } from "@/hooks/useSupabaseQuery";
 import { useTrackingMetricsSummary } from "@/hooks/useTrackingMetricsSummary";
 import { useRealtimeMetrics } from "@/hooks/useRealtimeMetrics";
+import { usePanelRefresh } from "@/hooks/usePanelRefresh";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import {
   AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip as ReTooltip,
 } from "recharts";
@@ -63,7 +63,7 @@ export default function TrackingDashboard() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [period, setPeriod] = useState<Period>("30d");
-  const [syncing, setSyncing] = useState(false);
+  const { refresh: refreshPanels, isRefreshing: syncing } = usePanelRefresh();
   const [showImport, setShowImport] = useState(false);
 
   const range = useMemo(() => periodRange(period), [period]);
@@ -84,6 +84,10 @@ export default function TrackingDashboard() {
   const summaryPeriodKey = period === "7d" ? "7d" : period === "mes" ? "mtd" : "30d";
   const { summary } = useTrackingMetricsSummary(summaryPeriodKey as any);
   useRealtimeMetrics();
+
+  useEffect(() => {
+    refreshPanels({ silent: true });
+  }, [refreshPanels]);
 
   // Realtime: refresh the dashboard the second a new row lands in
   // tracking_metrics or tracking_events, so the panel scraper cron and the
@@ -106,41 +110,7 @@ export default function TrackingDashboard() {
   }, [qc]);
 
   const handleSync = async () => {
-    setSyncing(true);
-    try {
-      // Fan out to every configured puller so this button covers ALL
-      // platforms (Estrela Bet, VUPI, 1win, …). Panel scraper is the source
-      // of truth for Stellar brands; Smartico puller covers other tenants.
-      const [panel, smartico] = await Promise.allSettled([
-        supabase.functions.invoke("stellar-panel-scraper", { body: { days: 30 } }),
-        supabase.functions.invoke("tracking-puller-smartico", { body: { source: "manual", mode: "recent" } }),
-      ]);
-      const parts: string[] = [];
-      if (panel.status === "fulfilled" && !panel.value.error) {
-        const d = panel.value.data as { rows?: number; per_brand?: Record<string, number> };
-        const brands = d?.per_brand ? Object.entries(d.per_brand).map(([b, n]) => `${b}:${n}`).join(" · ") : "";
-        parts.push(`Painel ${d?.rows ?? 0} linhas${brands ? ` (${brands})` : ""}`);
-      } else if (panel.status === "fulfilled" && panel.value.error) {
-        parts.push(`Painel falhou: ${panel.value.error.message}`);
-      }
-      if (smartico.status === "fulfilled" && !smartico.value.error) {
-        const r = smartico.value.data as { rows_received?: number; upserts?: number };
-        parts.push(`Smartico ${r?.rows_received ?? 0}/${r?.upserts ?? 0}`);
-      }
-      // Force React Query to refetch immediately.
-      await Promise.all([
-        qc.invalidateQueries({ queryKey: ["tracking_metrics"] }),
-        qc.invalidateQueries({ queryKey: ["tracking_metrics_summary"] }),
-        qc.invalidateQueries({ queryKey: ["financeiro_metrics"] }),
-        qc.invalidateQueries({ queryKey: ["tracking_events"] }),
-        qc.invalidateQueries({ queryKey: ["platform_accounts"] }),
-      ]);
-      toast.success(`Atualizado em tempo real · ${parts.join(" · ") || "sem novidades"}`);
-    } catch (e) {
-      toast.error(`Falha ao sincronizar: ${e instanceof Error ? e.message : String(e)}`);
-    } finally {
-      setSyncing(false);
-    }
+    await refreshPanels();
   };
 
   const periodKpis = useMemo(() => {
@@ -174,7 +144,7 @@ export default function TrackingDashboard() {
   // caímos no reduce local (o hook oficial não expõe "hoje").
   const useOfficial = period !== "hoje";
   const kpiVisitas = periodEventKpis.visits;
-  const kpiOutboundClicks = periodEventKpis.outboundClicks;
+  const kpiOutboundClicks = useOfficial && summary.clicks > 0 ? summary.clicks : periodEventKpis.outboundClicks;
   const kpiCadastros = useOfficial ? summary.registrations : periodKpis.cadastros;
   const kpiFtd = useOfficial ? summary.ftd : periodKpis.ftd;
   const kpiDepositosCount = useOfficial ? summary.depositsCount : periodKpis.depositos;

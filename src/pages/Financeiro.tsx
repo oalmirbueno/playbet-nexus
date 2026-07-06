@@ -1,6 +1,5 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
 import { Loader2, RefreshCw } from "lucide-react";
 import Breadcrumbs from "@/components/Breadcrumbs";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -8,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { useFinanceiroData, type PeriodKey } from "@/hooks/useFinanceiroData";
 import { useRealtimeMetrics } from "@/hooks/useRealtimeMetrics";
+import { usePanelRefresh } from "@/hooks/usePanelRefresh";
 import { useSocios } from "@/hooks/useSupabaseQuery";
 import PeriodFilter from "@/components/financeiro/PeriodFilter";
 import KpiDuo from "@/components/financeiro/KpiDuo";
@@ -15,8 +15,6 @@ import RankingTable from "@/components/financeiro/RankingTable";
 import SaquesTab from "@/components/financeiro/SaquesTab";
 import PlatformBreakdown from "@/components/financeiro/PlatformBreakdown";
 import DistributionCard from "@/components/DistributionCard";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
 
 
 export default function Financeiro() {
@@ -24,10 +22,13 @@ export default function Financeiro() {
   const period = (params.get("p") ?? "30d") as PeriodKey;
   const platformId = params.get("plat") ?? "all";
   const activeTab = params.get("tab") ?? "distribuicao";
-  const queryClient = useQueryClient();
-  const [syncing, setSyncing] = useState(false);
+  const { refresh: refreshPanels, isRefreshing: syncing } = usePanelRefresh();
   const { data: socios } = useSocios();
   useRealtimeMetrics();
+
+  useEffect(() => {
+    refreshPanels({ silent: true });
+  }, [refreshPanels]);
 
   const setParam = (k: string, v: string) => {
     const next = new URLSearchParams(params);
@@ -43,23 +44,7 @@ export default function Financeiro() {
   } = useFinanceiroData({ period, platformId: platformId === "all" ? null : platformId });
 
   const handleSync = async () => {
-    setSyncing(true);
-    try {
-      await Promise.allSettled([
-        supabase.functions.invoke("stellar-panel-scraper", { body: { days: 30 } }),
-        supabase.functions.invoke("tracking-puller-smartico", { body: {} }),
-      ]);
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["financeiro_metrics"] }),
-        queryClient.invalidateQueries({ queryKey: ["tracking_metrics_summary"] }),
-        queryClient.invalidateQueries({ queryKey: ["tracking_metrics"] }),
-      ]);
-      toast({ title: "Painéis sincronizados" });
-    } catch (e: any) {
-      toast({ title: "Erro ao sincronizar", description: e?.message, variant: "destructive" });
-    } finally {
-      setSyncing(false);
-    }
+    await refreshPanels();
   };
 
   return (
@@ -147,7 +132,7 @@ export default function Financeiro() {
           <DistributionCard
             breakdown={distribution}
             socios={socios as any}
-            sourceLabel={`Rev + CPA · ${range.label.toLowerCase()}`}
+            sourceLabel={`Painel HTML · ${range.label.toLowerCase()}`}
           />
         </TabsContent>
 

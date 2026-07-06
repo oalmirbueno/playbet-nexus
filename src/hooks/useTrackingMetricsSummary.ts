@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getPeriodRange, type PeriodKey } from "@/hooks/useFinanceiroData";
-import { getMetricMoneyParts } from "@/lib/trackingMetrics";
+import { getMetricMoneyParts, shouldUseMetricSource } from "@/lib/trackingMetrics";
 
 export interface TrackingMetricsSummary {
   ftd: number;
@@ -47,6 +47,12 @@ export function useTrackingMetricsSummary(period: PeriodKey = "30d", platformId?
   });
 
   const summary = useMemo<TrackingMetricsSummary>(() => {
+    const allRows = (q.data ?? []).filter((row: any) => shouldUseMetricSource(row));
+    const officialRows = allRows.filter((row: any) => {
+      const source = String(row.origem_importacao ?? "").toLowerCase();
+      return source === "panel_scrape_html" || source === "panel_scraper_stellar";
+    });
+    const rows = officialRows.length > 0 ? officialRows : allRows;
     const acc: TrackingMetricsSummary = {
       ftd: 0,
       registrations: 0,
@@ -62,7 +68,7 @@ export function useTrackingMetricsSummary(period: PeriodKey = "30d", platformId?
       byPlatform: {},
     };
 
-    for (const row of q.data ?? []) {
+    for (const row of rows) {
       const r: any = row;
       const money = getMetricMoneyParts(r);
       const rev = money.revShare;
