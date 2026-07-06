@@ -211,7 +211,7 @@ Deno.serve(async (req) => {
           status: fc?.success ?? true,
           metadata: doc?.metadata ?? null,
           markdown_head: (doc?.markdown ?? "").slice(0, 5000),
-          html_head: (doc?.html ?? "").slice(0, 2000),
+          html_head: (doc?.html ?? "").slice(0, 20000),
           json: doc?.json ?? doc?.extract ?? null,
           screenshot_length: (doc?.screenshot ?? "").length,
         };
