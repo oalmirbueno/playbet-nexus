@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
 
   for (const brand of targets) {
     try {
-      const fc = await firecrawlLoginAndScrape(brand, wantExtract);
+      const fc = await firecrawlLoginAndScrape(brand, wantExtract, { noActions });
       const persisted = await persistBrand(supabase, brand, fc);
       results[brand.slug] = { ok: true, ...persisted };
 
