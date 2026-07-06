@@ -82,11 +82,11 @@ async function firecrawlLoginAndScrape(brand: Brand, wantExtract: boolean, opts:
     { type: "wait", milliseconds: 4000 },
     { type: "screenshot", fullPage: true },
   ] : [
-    { type: "wait", milliseconds: 3000 },
-    { type: "write", selector: "input[type='email'], input[name='email'], input[name='username']", text: brand.user },
-    { type: "write", selector: "input[type='password'], input[name='password']", text: brand.pass },
-    { type: "click", selector: "button[type='submit'], button:has-text('Entrar'), button:has-text('Login'), button:has-text('Acessar')" },
-    { type: "wait", milliseconds: 7000 },
+    { type: "wait", milliseconds: 8000 },
+    { type: "write", selector: "input[name=\"email\"]", text: brand.user },
+    { type: "write", selector: "input[name=\"password\"]", text: brand.pass },
+    { type: "click", selector: "button[type=\"submit\"]" },
+    { type: "wait", milliseconds: 10000 },
     { type: "screenshot", fullPage: true },
   ];
 
