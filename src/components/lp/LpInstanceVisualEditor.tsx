@@ -735,19 +735,25 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         lpDomain = (lp as any)?.domain || null;
       }
 
-      const { data: linkedTrackingLinks } = await supabase
-        .from("tracking_links")
-        .select("id, influencer_id, campanha_id, tracking_code, click_id_param_name, base_url, short_url")
-        .eq("landing_page_instance_id", instanceId);
-
-      let linksToSync = ((linkedTrackingLinks || []) as any[]);
-      if (!linksToSync.length && instance?.source_tracking_link_id) {
+      const canonicalTrackingLinkId = instance?.source_tracking_link_id || link?.id || null;
+      let linksToSync: any[] = [];
+      if (canonicalTrackingLinkId) {
         const { data: sourceTl } = await supabase
           .from("tracking_links")
           .select("id, influencer_id, campanha_id, tracking_code, click_id_param_name, base_url, short_url")
-          .eq("id", instance.source_tracking_link_id)
+          .eq("id", canonicalTrackingLinkId)
           .maybeSingle();
         if (sourceTl) linksToSync = [sourceTl as any];
+      }
+      if (!linksToSync.length) {
+        const { data: linkedTrackingLink } = await supabase
+          .from("tracking_links")
+          .select("id, influencer_id, campanha_id, tracking_code, click_id_param_name, base_url, short_url")
+          .eq("landing_page_instance_id", instanceId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (linkedTrackingLink) linksToSync = [linkedTrackingLink as any];
       }
 
       const catalogShareUrl = buildPublicLpUrl(
