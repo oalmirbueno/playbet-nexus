@@ -148,11 +148,13 @@ async function persistBrand(supabase: any, brand: Brand, fc: any) {
   // Update platform_accounts balance if we got a saldo_disponivel
   let updatedAccounts = 0;
   if (extracted?.saldo_disponivel != null) {
-    // Find accounts for this brand (by matching platform.brand_slug or platform.slug)
+    // Find platforms — Estrela Bet's slug is "estrela-bet" (with hyphen), so
+    // we match by the first 6 letters ("estrel"/"vupi") in slug or name.
+    const key = brand.slug === "estrelabet" ? "estrel" : "vupi";
     const { data: platforms } = await supabase
       .from("platforms")
-      .select("id, slug, nome")
-      .or(`slug.ilike.%${brand.slug}%,nome.ilike.%${brand.slug}%`);
+      .select("id, slug, name")
+      .or(`slug.ilike.%${key}%,name.ilike.%${key}%`);
 
     const platformIds = (platforms ?? []).map((p: any) => p.id);
     if (platformIds.length) {
