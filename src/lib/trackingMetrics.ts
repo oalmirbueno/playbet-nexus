@@ -17,6 +17,17 @@ export type TrackingMetricMoneyLike = {
   origem_importacao?: string | null;
 };
 
+export function isDeprecatedMetricSource(source?: string | null) {
+  return String(source ?? "").toLowerCase() === "panel_scraper_stellar";
+}
+
+export function shouldUseMetricSource(metric: { origem_importacao?: string | null; platform_id?: string | null }) {
+  // The old Stellar API overstates Estrela Bet, but VUPI still carries the
+  // real negative RevShare until the HTML brand switch is parsed safely.
+  // VUPI platform id is stable in this database.
+  if (!isDeprecatedMetricSource(metric.origem_importacao)) return true;
+  return metric.platform_id === "ad3d0d9d-c816-4a45-a069-8198d4a04425";
+}
 
 const money = (value: unknown) => {
   const n = Number(value ?? 0);

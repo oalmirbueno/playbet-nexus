@@ -3,8 +3,8 @@
 // Reads the REAL affiliate panel (Estrelabet / VUPI) via Firecrawl,
 // bypassing the broken /user/performance/report API.
 //
-// V1 = discovery mode. Logs in, waits for the SPA, captures screenshot
-// + markdown + HTML, and optionally asks the Firecrawl LLM to extract
+// Logs in, opens the performance report, captures screenshot + markdown + HTML,
+// and asks Firecrawl to extract
 // the visible KPIs (saldo disponível, comissão do período, FTDs, depósitos,
 // cadastros, cliques). Persists to:
 //   - platform_accounts.balance_available / balance_updated_at / balance_source
@@ -53,7 +53,7 @@ const FIRECRAWL_URL = "https://api.firecrawl.dev/v2/scrape";
 const EXTRACTION_SCHEMA = {
   type: "object",
   properties: {
-    saldo_disponivel: { type: "number", description: "Saldo disponível para saque, em BRL, líquido de heavy/chargeback. Extraia apenas o número — 1.234,56 vira 1234.56." },
+    saldo_disponivel: { type: "number", description: "Saldo ou total líquido visível no relatório/painel, em BRL. Extraia apenas o número — 1.234,56 vira 1234.56." },
     saldo_pendente: { type: "number", description: "Saldo pendente / a liberar em BRL." },
     comissao_periodo: { type: "number", description: "Comissão total do período visível (mês atual ou range mostrado) em BRL." },
     comissao_cpa: { type: "number", description: "Parcela de CPA da comissão do período." },
@@ -67,6 +67,75 @@ const EXTRACTION_SCHEMA = {
   },
 };
 
+function normalizeNumber(value: unknown): number | null {
+  if (value == null || value === "") return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  const raw = String(value).replace(/\s/g, "").replace(/R\$/gi, "");
+  const normalized = raw.includes(",") ? raw.replace(/\./g, "").replace(",", ".") : raw;
+  const n = Number(normalized.replace(/[^\d.-]/g, ""));
+  return Number.isFinite(n) ? n : null;
+}
+
+function firstNumber(...values: unknown[]): number | null {
+  for (const value of values) {
+    const n = normalizeNumber(value);
+    if (n != null) return n;
+  }
+  return null;
+}
+
+function parsePerformanceTotalFromMarkdown(markdown?: string | null) {
+  if (!markdown) return {};
+  const totalLine = markdown
+    .split("\n")
+    .map((line) => line.trim())
+    .find((line) => /^\|\s*Total\s*\|/i.test(line));
+  if (!totalLine) return {};
+
+  const cells = totalLine
+    .split("|")
+    .slice(1, -1)
+    .map((cell) => cell.trim());
+
+  return {
+    periodo_label: cells[0] || "Total",
+    cliques: normalizeNumber(cells[2]),
+    cadastros: normalizeNumber(cells[3]),
+    ftds: normalizeNumber(cells[4]),
+    ftds_valor: normalizeNumber(cells[5]),
+    qftds: normalizeNumber(cells[6]),
+    depositos_qtd: normalizeNumber(cells[7]),
+    depositos_valor: normalizeNumber(cells[8]),
+    ggr: normalizeNumber(cells[9]),
+    ngr: normalizeNumber(cells[10]),
+    comissao_cpa: normalizeNumber(cells[11]),
+    comissao_revshare: normalizeNumber(cells[12]),
+  };
+}
+
+function compactExtraction(input: any) {
+  const cpa = firstNumber(input?.comissao_cpa) ?? 0;
+  const rev = firstNumber(input?.comissao_revshare) ?? 0;
+  const computedCommission = cpa + rev;
+  const panelTotal = firstNumber(input?.comissao_periodo);
+  const total = (cpa !== 0 || rev !== 0)
+    ? computedCommission
+    : (panelTotal ?? firstNumber(input?.saldo_disponivel) ?? 0);
+  return {
+    saldo_disponivel: total,
+    saldo_pendente: firstNumber(input?.saldo_pendente) ?? 0,
+    comissao_periodo: total,
+    comissao_cpa: cpa,
+    comissao_revshare: rev,
+    ftds: Math.round(firstNumber(input?.ftds) ?? 0),
+    cadastros: Math.round(firstNumber(input?.cadastros) ?? 0),
+    depositos_qtd: Math.round(firstNumber(input?.depositos_qtd) ?? 0),
+    depositos_valor: firstNumber(input?.depositos_valor) ?? 0,
+    cliques: Math.round(firstNumber(input?.cliques) ?? 0),
+    periodo_label: input?.periodo_label ? String(input.periodo_label) : "Período atual",
+  };
+}
+
 async function firecrawlLoginAndScrape(brand: Brand, wantExtract: boolean, opts: { noActions?: boolean } = {}) {
   if (!FIRECRAWL_API_KEY) throw new Error("FIRECRAWL_API_KEY not configured");
   if (!brand.loginUrl || !brand.user || !brand.pass) {
@@ -75,7 +144,7 @@ async function firecrawlLoginAndScrape(brand: Brand, wantExtract: boolean, opts:
 
   const formats: any[] = ["markdown", "html", "screenshot"];
   if (wantExtract && !opts.noActions) {
-    formats.push({ type: "json", schema: EXTRACTION_SCHEMA, prompt: "Extraia os KPIs financeiros visíveis no painel do afiliado. Se um campo não estiver visível, omita — não invente. Números em BRL: converta 'R$ 1.234,56' para 1234.56." });
+    formats.push({ type: "json", schema: EXTRACTION_SCHEMA, prompt: "Extraia somente os KPIs visíveis no relatório de performance do painel afiliado. Campos esperados: cliques/visitas, cadastros/registros, FTDs, quantidade e valor de depósitos, comissão de CPA, comissão de RevShare e comissão/saldo total do período. Se um campo não estiver visível, omita — não invente. Números em BRL: converta 'R$ 1.234,56' para 1234.56." });
   }
 
   // React controlled inputs: `write` doesn't fire onChange, so use JS to set
@@ -100,6 +169,36 @@ async function firecrawlLoginAndScrape(brand: Brand, wantExtract: boolean, opts:
     })();
   `;
 
+  const switchBrandJs = brand.slug === "vupi" ? `
+    (function(){
+      const norm = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      const clickLikeUser = (el) => {
+        if (!el) return false;
+        el.scrollIntoView({block:'center', inline:'center'});
+        el.dispatchEvent(new MouseEvent('pointerdown', {bubbles:true}));
+        el.dispatchEvent(new MouseEvent('mousedown', {bubbles:true}));
+        el.dispatchEvent(new MouseEvent('mouseup', {bubbles:true}));
+        el.click();
+        return true;
+      };
+      const nodes = Array.from(document.querySelectorAll('button,[role="button"],a,li,div,span'));
+      const direct = nodes
+        .filter((el) => /vupi/i.test(el.textContent || ''))
+        .sort((a,b) => (a.textContent || '').length - (b.textContent || '').length)[0];
+      if (clickLikeUser(direct)) return;
+      const brandToggle = nodes
+        .filter((el) => /estrelabet|estrela bet/i.test(el.textContent || ''))
+        .sort((a,b) => (a.textContent || '').length - (b.textContent || '').length)[0];
+      clickLikeUser(brandToggle);
+      setTimeout(() => {
+        const vupi = Array.from(document.querySelectorAll('button,[role="button"],a,li,div,span'))
+          .filter((el) => norm(el.textContent).includes('vupi'))
+          .sort((a,b) => (a.textContent || '').length - (b.textContent || '').length)[0];
+        clickLikeUser(vupi);
+      }, 1200);
+    })();
+  ` : "";
+
   const actions = opts.noActions ? [
     { type: "wait", milliseconds: 4000 },
     { type: "screenshot", fullPage: true },
@@ -107,6 +206,9 @@ async function firecrawlLoginAndScrape(brand: Brand, wantExtract: boolean, opts:
     { type: "wait", milliseconds: 8000 },
     { type: "executeJavascript", script: loginJs },
     { type: "wait", milliseconds: 12000 },
+    ...(switchBrandJs ? [{ type: "executeJavascript", script: switchBrandJs }, { type: "wait", milliseconds: 10000 }] : []),
+    { type: "executeJavascript", script: "window.location.assign(new URL('/reports/performance', window.location.origin).href);" },
+    { type: "wait", milliseconds: 14000 },
     { type: "screenshot", fullPage: true },
   ];
 
@@ -139,50 +241,96 @@ async function firecrawlLoginAndScrape(brand: Brand, wantExtract: boolean, opts:
 
 async function persistBrand(supabase: any, brand: Brand, fc: any) {
   const doc = fc?.data ?? fc; // SDK vs REST
-  const extracted = doc?.json ?? doc?.extract ?? null;
   const md = doc?.markdown ?? null;
+
+  if (brand.slug === "vupi" && !/\bVUPI\b|\bVupi\b/.test(md ?? "")) {
+    return {
+      extracted: null,
+      updatedAccounts: 0,
+      updatedMetrics: 0,
+      skipped: "brand_not_visible",
+      has_markdown: !!md,
+      has_html: !!(doc?.html ?? null),
+      has_screenshot: !!(doc?.screenshot ?? null),
+      metadata: doc?.metadata ?? null,
+    };
+  }
+
+  const extracted = compactExtraction({ ...(doc?.json ?? doc?.extract ?? {}), ...parsePerformanceTotalFromMarkdown(md) });
   const html = doc?.html ?? null;
   const screenshot = doc?.screenshot ?? null;
   const meta = doc?.metadata ?? null;
 
-  // Update platform_accounts balance if we got a saldo_disponivel
+  const key = brand.slug === "estrelabet" ? "estrel" : "vupi";
+  const { data: platforms } = await supabase
+    .from("platforms")
+    .select("id, slug, name")
+    .or(`slug.ilike.%${key}%,name.ilike.%${key}%`);
+
+  const platformIds = (platforms ?? []).map((p: any) => p.id);
+  const accounts: any[] = [];
+  if (platformIds.length) {
+    const { data } = await supabase
+      .from("platform_accounts")
+      .select("id, platform_id")
+      .in("platform_id", platformIds)
+      .eq("is_active", true)
+      .eq("is_demo", false);
+    accounts.push(...(data ?? []));
+  }
+
   let updatedAccounts = 0;
-  if (extracted?.saldo_disponivel != null) {
-    // Find platforms — Estrela Bet's slug is "estrela-bet" (with hyphen), so
-    // we match by the first 6 letters ("estrel"/"vupi") in slug or name.
-    const key = brand.slug === "estrelabet" ? "estrel" : "vupi";
-    const { data: platforms } = await supabase
-      .from("platforms")
-      .select("id, slug, name")
-      .or(`slug.ilike.%${key}%,name.ilike.%${key}%`);
-
-    const platformIds = (platforms ?? []).map((p: any) => p.id);
-    if (platformIds.length) {
-      const { data: accounts } = await supabase
+  if (extracted.saldo_disponivel != null) {
+    for (const acc of accounts) {
+      const { error } = await supabase
         .from("platform_accounts")
-        .select("id")
-        .in("platform_id", platformIds)
-        .eq("is_active", true)
-        .eq("is_demo", false);
+        .update({
+          balance_available: extracted.saldo_disponivel,
+          balance_pending: extracted.saldo_pendente ?? null,
+          balance_updated_at: new Date().toISOString(),
+          balance_source: "panel_scrape_html",
+        })
+        .eq("id", acc.id);
+      if (!error) updatedAccounts++;
+    }
+  }
 
-      for (const acc of accounts ?? []) {
-        const { error } = await supabase
-          .from("platform_accounts")
-          .update({
-            balance_available: extracted.saldo_disponivel,
-            balance_pending: extracted.saldo_pendente ?? null,
-            balance_updated_at: new Date().toISOString(),
-            balance_source: "panel_scrape_html",
-          })
-          .eq("id", acc.id);
-        if (!error) updatedAccounts++;
-      }
+  let updatedMetrics = 0;
+  const today = new Date().toISOString().slice(0, 10);
+  for (const acc of accounts) {
+    const cpa = extracted.comissao_cpa ?? 0;
+    const rev = extracted.comissao_revshare ?? 0;
+    const total = extracted.comissao_periodo ?? cpa + rev;
+    const { error } = await supabase.from("tracking_metrics").upsert({
+      data_ref: today,
+      platform_id: acc.platform_id,
+      platform_account_id: acc.id,
+      cliques: extracted.cliques ?? 0,
+      registros: extracted.cadastros ?? 0,
+      ftd: extracted.ftds ?? 0,
+      deposits_count: extracted.depositos_qtd ?? 0,
+      depositos_total: extracted.depositos_valor ?? 0,
+      revenue: rev,
+      revshare_commission: rev,
+      cpa_commission: cpa,
+      commission_total: total,
+      converted_amount: extracted.depositos_valor ?? 0,
+      converted_currency: "BRL",
+      original_amount: extracted.depositos_valor ?? 0,
+      original_currency: "BRL",
+      origem_importacao: "panel_scrape_html",
+      is_demo: false,
+      external_ref: `${brand.slug}:panel_scrape_html:current_period:${acc.id}`,
+    }, { onConflict: "external_ref" });
+    if (!error) {
+      updatedMetrics++;
     }
   }
 
   return {
     extracted,
     updatedAccounts,
+    updatedMetrics,
     has_markdown: !!md,
     has_html: !!html,
     has_screenshot: !!screenshot,

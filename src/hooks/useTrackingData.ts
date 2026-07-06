@@ -8,10 +8,15 @@ import type {
   PlatformEventMappingRow, TrackingEventRow,
 } from "@/services/trackingService";
 import { useToast } from "@/hooks/use-toast";
+import { shouldUseMetricSource } from "@/lib/trackingMetrics";
 
 /** Filter out demo rows - always show only real data */
 function filterReal<T extends { is_demo: boolean }>(rows: T[]): T[] {
   return rows.filter(r => !r.is_demo);
+}
+
+function filterRealMetrics<T extends { is_demo: boolean; origem_importacao?: string | null }>(rows: T[]): T[] {
+  return rows.filter(r => !r.is_demo && shouldUseMetricSource(r as any));
 }
 
 function filterValidEvents(rows: TrackingEventRow[]): TrackingEventRow[] {
@@ -82,7 +87,7 @@ export function useTrackingMetrics(filters?: {
     queryFn: () => hasFilters ? trackingMetricService.getFiltered(filters!) : trackingMetricService.getAll(),
   });
 
-  const data = filterReal(rawData);
+  const data = filterRealMetrics(rawData);
 
   const createMut = useMutation({
     mutationFn: (item: Partial<TrackingMetricRow>) => trackingMetricService.create(item),

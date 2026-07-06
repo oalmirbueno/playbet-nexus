@@ -8,12 +8,9 @@ const REFRESH_THROTTLE_MS = 60_000;
 let lastRefreshAt = 0;
 
 /**
- * Dispara sincronização com o painel afiliado (Stellar) e invalida os
+ * Dispara sincronização com o painel afiliado HTML e invalida os
  * caches de métricas / balances. Use em botões "Atualizar" nas telas de
  * Dashboard, Financeiro, Portal e Gerente.
- *
- * TODO(affiliate-scraper): quando o `affiliate-panel-scraper` entrar em
- * produção, trocar o nome da função invocada aqui.
  */
 export function usePanelRefresh() {
   const qc = useQueryClient();
@@ -35,24 +32,29 @@ export function usePanelRefresh() {
       lastRefreshAt = now;
       setIsRefreshing(true);
       try {
-        const { data, error } = await supabase.functions.invoke(
-          "stellar-panel-scraper",
-          { body: { days: opts.days ?? 7 } },
-        );
-        if (error) throw error;
+        const [panel, smartico] = await Promise.allSettled([
+          supabase.functions.invoke("affiliate-panel-scraper", { body: { brand: "all", extract: true } }),
+          supabase.functions.invoke("tracking-puller-smartico", { body: { source: "manual", mode: "recent" } }),
+        ]);
+        if (panel.status === "fulfilled" && panel.value.error) throw panel.value.error;
+        if (panel.status === "rejected") throw panel.reason;
         await Promise.all([
           qc.invalidateQueries({ queryKey: ["tracking_metrics_summary"] }),
-          qc.invalidateQueries({ queryKey: ["financeiro"] }),
+          qc.invalidateQueries({ queryKey: ["financeiro_metrics"] }),
           qc.invalidateQueries({ queryKey: ["tracking_metrics"] }),
+          qc.invalidateQueries({ queryKey: ["tracking_events"] }),
           qc.invalidateQueries({ queryKey: ["platform_accounts"] }),
         ]);
         if (!opts.silent) {
+          const panelData = panel.status === "fulfilled" ? panel.value.data as any : null;
+          const imported = Object.values(panelData?.results ?? {}).reduce((n: number, r: any) => n + Number(r?.updatedMetrics ?? 0), 0);
+          const smarticoText = smartico.status === "fulfilled" && !smartico.value.error ? " · Smartico ok" : "";
           toast({
             title: "Painel sincronizado",
-            description: `${data?.rows ?? 0} linhas atualizadas.`,
+            description: `${imported} métrica(s) reais atualizadas${smarticoText}.`,
           });
         }
-        return { ok: true, data };
+        return { ok: true, data: panel.status === "fulfilled" ? panel.value.data : null };
       } catch (e: any) {
         if (!opts.silent) {
           toast({

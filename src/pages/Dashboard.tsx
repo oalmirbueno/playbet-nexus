@@ -1,5 +1,4 @@
-import { useState, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MousePointerClick, UserPlus, DollarSign, Gamepad2, Monitor, Users, Link2, FileText, ArrowRight, CheckCircle, Database, Trash2, Loader2, TrendingUp, Wallet, Target, RefreshCw } from "lucide-react";
 import TrackingOverviewCard from "@/components/TrackingOverviewCard";
@@ -7,6 +6,7 @@ import { useAutoConsolidation } from "@/hooks/useAutoConsolidation";
 import { useTrackingMetricsSummary } from "@/hooks/useTrackingMetricsSummary";
 import { useRealtimeMetrics } from "@/hooks/useRealtimeMetrics";
 import { useFinanceiroData } from "@/hooks/useFinanceiroData";
+import { usePanelRefresh } from "@/hooks/usePanelRefresh";
 import { useInfluencers, useGames, usePlatforms, useLandingPages, useTemplates, useUtms, useCampanhas, useSocios, useSaques, useConteudo } from "@/hooks/useSupabaseQuery";
 import { useQueryClient } from "@tanstack/react-query";
 import { seedDemoData, clearDemoData } from "@/services/seedDemoData";
@@ -45,8 +45,12 @@ export default function Dashboard() {
   const { consolidated, hasData: hasTrackingData } = useAutoConsolidation();
   const { summary: metricsSummary, isLoading: loadingMetrics, refetch: refetchMetrics } = useTrackingMetricsSummary("30d");
   const { distribution: financeiroDistribution } = useFinanceiroData({ period: "30d" });
-  const [syncingPanel, setSyncingPanel] = useState(false);
+  const { refresh: refreshPanels, isRefreshing: syncingPanel } = usePanelRefresh();
   useRealtimeMetrics();
+
+  useEffect(() => {
+    refreshPanels({ silent: true });
+  }, [refreshPanels]);
 
   const platformMap = useMemo(() => {
     const m = new Map<string, any>();
@@ -61,25 +65,9 @@ export default function Dashboard() {
   );
 
   const handleSyncPanels = async () => {
-    setSyncingPanel(true);
-    try {
-      await Promise.allSettled([
-        supabase.functions.invoke("stellar-panel-scraper", { body: { days: 30 } }),
-        supabase.functions.invoke("tracking-puller-smartico", { body: {} }),
-      ]);
-      await Promise.all([
-        refetchMetrics(),
-        queryClient.invalidateQueries({ queryKey: ["tracking_metrics"] }),
-        queryClient.invalidateQueries({ queryKey: ["tracking_metrics_summary"] }),
-        queryClient.invalidateQueries({ queryKey: ["tracking_consolidated_real_source"] }),
-        queryClient.invalidateQueries({ queryKey: ["financeiro_metrics"] }),
-      ]);
-      toast({ title: "Painéis sincronizados" });
-    } catch (e: any) {
-      toast({ title: "Erro ao sincronizar", description: e.message, variant: "destructive" });
-    } finally {
-      setSyncingPanel(false);
-    }
+    await refreshPanels();
+    await refetchMetrics();
+    await queryClient.invalidateQueries({ queryKey: ["tracking_consolidated_real_source"] });
   };
 
   const counts: Record<string, number> = {
@@ -210,6 +198,7 @@ export default function Dashboard() {
             <div className="rounded-lg border border-border/60 bg-background/40 p-3">
               <p className="text-[10px] uppercase text-muted-foreground">Registros</p>
               <p className="text-lg font-bold">{metricsSummary.registrations}</p>
+              <p className="text-[10px] text-muted-foreground">{metricsSummary.clicks.toLocaleString("pt-BR")} cliques</p>
             </div>
           </div>
 
