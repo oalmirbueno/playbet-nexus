@@ -67,32 +67,35 @@ const EXTRACTION_SCHEMA = {
   },
 };
 
-async function firecrawlLoginAndScrape(brand: Brand, wantExtract: boolean) {
+async function firecrawlLoginAndScrape(brand: Brand, wantExtract: boolean, opts: { noActions?: boolean } = {}) {
   if (!FIRECRAWL_API_KEY) throw new Error("FIRECRAWL_API_KEY not configured");
   if (!brand.loginUrl || !brand.user || !brand.pass) {
     throw new Error(`Missing credentials for ${brand.slug}`);
   }
 
   const formats: any[] = ["markdown", "html", "screenshot"];
-  if (wantExtract) {
+  if (wantExtract && !opts.noActions) {
     formats.push({ type: "json", schema: EXTRACTION_SCHEMA, prompt: "Extraia os KPIs financeiros visíveis no painel do afiliado. Se um campo não estiver visível, omita — não invente. Números em BRL: converta 'R$ 1.234,56' para 1234.56." });
   }
 
-  // Actions: type email, type password, click login, wait for dashboard to render
+  const actions = opts.noActions ? [
+    { type: "wait", milliseconds: 4000 },
+    { type: "screenshot", fullPage: true },
+  ] : [
+    { type: "wait", milliseconds: 3000 },
+    { type: "write", selector: "input[type='email'], input[name='email'], input[name='username']", text: brand.user },
+    { type: "write", selector: "input[type='password'], input[name='password']", text: brand.pass },
+    { type: "click", selector: "button[type='submit'], button:has-text('Entrar'), button:has-text('Login'), button:has-text('Acessar')" },
+    { type: "wait", milliseconds: 7000 },
+    { type: "screenshot", fullPage: true },
+  ];
+
   const body = {
     url: brand.loginUrl,
     formats,
     onlyMainContent: false,
     waitFor: 4000,
-    actions: [
-      { type: "wait", milliseconds: 2500 },
-      // Common Estrelabet/Stellar admin login form uses input[type=email] and input[type=password]
-      { type: "write", selector: "input[type='email'], input[name='email'], input[name='username']", text: brand.user },
-      { type: "write", selector: "input[type='password'], input[name='password']", text: brand.pass },
-      { type: "click", selector: "button[type='submit'], button:has-text('Entrar'), button:has-text('Login')" },
-      { type: "wait", milliseconds: 6000 },
-      { type: "screenshot", fullPage: true },
-    ],
+    actions,
     timeout: 90000,
   };
 
