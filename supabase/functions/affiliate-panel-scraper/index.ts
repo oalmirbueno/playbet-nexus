@@ -78,15 +78,35 @@ async function firecrawlLoginAndScrape(brand: Brand, wantExtract: boolean, opts:
     formats.push({ type: "json", schema: EXTRACTION_SCHEMA, prompt: "Extraia os KPIs financeiros visíveis no painel do afiliado. Se um campo não estiver visível, omita — não invente. Números em BRL: converta 'R$ 1.234,56' para 1234.56." });
   }
 
+  // React controlled inputs: `write` doesn't fire onChange, so use JS to set
+  // the value via the native HTMLInputElement setter + dispatch input event.
+  const loginJs = `
+    (function(){
+      const setVal = (el, v) => {
+        const s = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+        s.call(el, v);
+        el.dispatchEvent(new Event('input', {bubbles:true}));
+        el.dispatchEvent(new Event('change', {bubbles:true}));
+        el.dispatchEvent(new Event('blur', {bubbles:true}));
+      };
+      const email = document.querySelector('input[name="email"]');
+      const pass  = document.querySelector('input[name="password"]');
+      if (email) setVal(email, ${JSON.stringify(brand.user)});
+      if (pass)  setVal(pass,  ${JSON.stringify(brand.pass)});
+      setTimeout(() => {
+        const btn = document.querySelector('button[type="submit"]');
+        if (btn) btn.click();
+      }, 400);
+    })();
+  `;
+
   const actions = opts.noActions ? [
     { type: "wait", milliseconds: 4000 },
     { type: "screenshot", fullPage: true },
   ] : [
     { type: "wait", milliseconds: 8000 },
-    { type: "write", selector: "input[name=\"email\"]", text: brand.user },
-    { type: "write", selector: "input[name=\"password\"]", text: brand.pass },
-    { type: "click", selector: "button[type=\"submit\"]" },
-    { type: "wait", milliseconds: 10000 },
+    { type: "executeJavascript", script: loginJs },
+    { type: "wait", milliseconds: 12000 },
     { type: "screenshot", fullPage: true },
   ];
 
