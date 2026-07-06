@@ -9,11 +9,13 @@ describe("validateSharedLpUrl — guard do fluxo copiar link", () => {
     "camp-456",
     "/",
     "camilly-mr5j872w",
+    "lp-instance-123",
   );
 
   it("aprova URL que casa slug + tracking code + influencer + campanha", () => {
     const res = validateSharedLpUrl(base, {
       instanceSlug: "camilly-9",
+      instanceId: "lp-instance-123",
       trackingCode: "camilly-mr5j872w",
       influencerId: "inf-123",
       campanhaId: "camp-456",

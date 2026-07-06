@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { ArrowUp, ArrowDown, RefreshCw, ExternalLink, Loader2, Wand2, Users, Sparkles, TrendingUp, Gift, GripVertical, Check, ImageIcon, AlignLeft, AlignCenter, AlignRight } from "lucide-react";
+import { ArrowUp, ArrowDown, RefreshCw, ExternalLink, Loader2, Wand2, Users, Sparkles, TrendingUp, Gift, GripVertical, Check, ImageIcon, AlignLeft, AlignCenter, AlignRight, Copy } from "lucide-react";
 import { LP_MODE_LABELS, defaultLayoutConfig, type LpMode } from "@/lib/lpMode";
 import GameArtwork from "@/components/tracking/GameArtwork";
 import { suggestThreeOptions, computeOpportunityScore } from "@/lib/opportunityEngine";
@@ -239,23 +239,27 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         });
         setSmartOdds(Array.isArray(hc.smart_odds) ? hc.smart_odds : []);
 
-        // Load tracking link linked to this instance (source of truth for game/hype).
-        // Prefer the live instance relation, but fall back to source_tracking_link_id
-        // so already registered LPs keep working even if an older sync missed the FK.
-        let { data: tl } = await supabase
-          .from("tracking_links")
-          .select("id, influencer_id, campanha_id, tracking_code, click_id_param_name, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, short_url, platform_account_id, platform_accounts(platform_id, platforms(name, slug))")
-          .eq("landing_page_instance_id", instanceId)
-          .order("created_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (!tl && (inst as any).source_tracking_link_id) {
+        // Load the exact source tracking link for this LP instance. This is the
+        // canonical link that generated the LP; never let a sibling link on the
+        // same influencer/LP override the copy, brand, CTA or public URL.
+        let tl: any = null;
+        if ((inst as any).source_tracking_link_id) {
           const { data: sourceTl } = await supabase
             .from("tracking_links")
             .select("id, influencer_id, campanha_id, tracking_code, click_id_param_name, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, short_url, platform_account_id, platform_accounts(platform_id, platforms(name, slug))")
             .eq("id", (inst as any).source_tracking_link_id)
             .maybeSingle();
           tl = sourceTl;
+        }
+        if (!tl) {
+          const { data: linkedTl } = await supabase
+            .from("tracking_links")
+            .select("id, influencer_id, campanha_id, tracking_code, click_id_param_name, game_name, game_slug, game_icon_url, hype_reason, link_category, base_url, short_url, platform_account_id, platform_accounts(platform_id, platforms(name, slug))")
+            .eq("landing_page_instance_id", instanceId)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          tl = linkedTl;
         }
         setLink(tl);
         const platformId = (tl as any)?.platform_accounts?.platform_id;
@@ -646,8 +650,8 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
   };
 
 
-  const handleSave = async () => {
-    if (!instanceId) return;
+  const saveLp = async (copyAfterSave = false) => {
+    if (!instanceId) return null;
     const requestedMode: LpMode = previewTab === "generated" && mode === "catalog" ? "single_game" : mode;
     const hasSelectedGame = Boolean(link?.game_slug || gameSlugs[0]);
     const effectiveMode: LpMode = !hasSelectedGame
@@ -731,19 +735,25 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         lpDomain = (lp as any)?.domain || null;
       }
 
-      const { data: linkedTrackingLinks } = await supabase
-        .from("tracking_links")
-        .select("id, influencer_id, campanha_id, tracking_code, click_id_param_name, base_url, short_url")
-        .eq("landing_page_instance_id", instanceId);
-
-      let linksToSync = ((linkedTrackingLinks || []) as any[]);
-      if (!linksToSync.length && instance?.source_tracking_link_id) {
+      const canonicalTrackingLinkId = instance?.source_tracking_link_id || link?.id || null;
+      let linksToSync: any[] = [];
+      if (canonicalTrackingLinkId) {
         const { data: sourceTl } = await supabase
           .from("tracking_links")
           .select("id, influencer_id, campanha_id, tracking_code, click_id_param_name, base_url, short_url")
-          .eq("id", instance.source_tracking_link_id)
+          .eq("id", canonicalTrackingLinkId)
           .maybeSingle();
         if (sourceTl) linksToSync = [sourceTl as any];
+      }
+      if (!linksToSync.length) {
+        const { data: linkedTrackingLink } = await supabase
+          .from("tracking_links")
+          .select("id, influencer_id, campanha_id, tracking_code, click_id_param_name, base_url, short_url")
+          .eq("landing_page_instance_id", instanceId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (linkedTrackingLink) linksToSync = [linkedTrackingLink as any];
       }
 
       const catalogShareUrl = buildPublicLpUrl(
@@ -790,9 +800,10 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         || publicUrl
         || "";
       let copiedShareUrl = "";
-      if (publicShareUrl) {
+      if (publicShareUrl && copyAfterSave) {
         const validation = validateSharedLpUrl(publicShareUrl, {
           instanceSlug: instance?.slug,
+          instanceId,
           trackingCode: primaryLink?.tracking_code,
           influencerId: primaryLink?.influencer_id || instance?.influencer_id,
           campanhaId: primaryLink?.campanha_id,
@@ -833,14 +844,49 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
         title: "LP salva",
         description: copiedShareUrl
           ? `Link ${effectiveMode === "catalog" ? "da LP padrão" : "da LP gerada"} atualizado e copiado.`
-          : (publicShareUrl ? "LP salva. Link não foi copiado — revise os dados." : "Página preservada e preview atualizado."),
+          : (copyAfterSave && publicShareUrl ? "LP salva. Link não foi copiado — revise os dados." : "Página preservada e preview atualizado."),
       });
 
       setPreviewKey((k) => k + 1);
+      return publicShareUrl || null;
     } catch (e: any) {
       toast({ title: "Erro ao salvar", description: e?.message, variant: "destructive" });
+      return null;
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleSave = () => {
+    void saveLp(false);
+  };
+
+  const handleSaveAndCopy = () => {
+    void saveLp(true);
+  };
+
+  const copyCurrentLpLink = async () => {
+    const url = activeExternalUrl;
+    if (!url || !instanceId) {
+      toast({ title: "Link indisponível", description: "Salve a LP para gerar o link público.", variant: "destructive" });
+      return;
+    }
+    const validation = validateSharedLpUrl(url, {
+      instanceSlug: instance?.slug,
+      instanceId,
+      trackingCode: link?.tracking_code,
+      influencerId: link?.influencer_id || instance?.influencer_id,
+      campanhaId: link?.campanha_id,
+    });
+    if (!validation.ok) {
+      toast({ title: "Link não copiado", description: validation.reason, variant: "destructive" });
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(validation.url);
+      toast({ title: "Link da LP copiado", description: "URL travada nesta instância editada." });
+    } catch {
+      toast({ title: "Não consegui copiar", variant: "destructive" });
     }
   };
 
@@ -1424,14 +1470,23 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
                   <RefreshCw size={11} /> Reload
                 </button>
                 {activeExternalUrl && (
-                  <a
-                    href={activeExternalUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[10px] text-primary hover:underline inline-flex items-center gap-1"
-                  >
-                    Abrir <ExternalLink size={10} />
-                  </a>
+                  <>
+                    <button
+                      type="button"
+                      onClick={copyCurrentLpLink}
+                      className="text-[10px] text-primary hover:underline inline-flex items-center gap-1"
+                    >
+                      Copiar <Copy size={10} />
+                    </button>
+                    <a
+                      href={activeExternalUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-[10px] text-primary hover:underline inline-flex items-center gap-1"
+                    >
+                      Abrir <ExternalLink size={10} />
+                    </a>
+                  </>
                 )}
               </div>
             </div>
@@ -1475,6 +1530,9 @@ export default function LpInstanceVisualEditor({ open, onOpenChange, instanceId,
 
         <DialogFooter className="px-6 py-3 border-t shrink-0">
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Fechar</Button>
+          <Button variant="outline" onClick={handleSaveAndCopy} disabled={saving || loading}>
+            <Copy size={14} className="mr-1" /> {saving ? "Salvando…" : "Salvar e copiar LP"}
+          </Button>
           <Button onClick={handleSave} disabled={saving || loading}>
             {saving ? "Salvando…" : "Salvar LP"}
           </Button>

@@ -35,6 +35,7 @@ interface Row {
   lp_domain?: string | null;
   lp_name?: string | null;
   lp_route?: string | null;
+  lp_source_tracking_link_id?: string | null;
 }
 
 interface Props {
@@ -52,6 +53,7 @@ function buildRowShareUrl(row: Row): string | null {
     row.campanha_id || "",
     row.lp_route,
     row.tracking_code || "",
+    row.landing_page_instance_id || "",
   ) || buildLpBaseUrl(row.lp_domain, row.lp_route);
 }
 
@@ -124,7 +126,7 @@ export function LinkLpGrid({ influencerId, managerId, title = "LP por link", sho
         if (lpiIds.length) {
           const { data: lpis } = await supabase
             .from("landing_page_instances")
-            .select("id, lp_mode, slug, landing_pages(name, domain, route)")
+            .select("id, lp_mode, slug, source_tracking_link_id, landing_pages(name, domain, route)")
             .in("id", lpiIds);
           const lpiMap = new Map((lpis ?? []).map((l: any) => [l.id, l]));
           rowsData = rowsData.map(r => {
@@ -136,8 +138,10 @@ export function LinkLpGrid({ influencerId, managerId, title = "LP por link", sho
               lp_name: lpi?.landing_pages?.name ?? null,
               lp_domain: lpi?.landing_pages?.domain ?? null,
               lp_route: lpi?.landing_pages?.route ?? null,
+              lp_source_tracking_link_id: lpi?.source_tracking_link_id ?? null,
             };
           });
+          rowsData = rowsData.filter(r => !r.lp_source_tracking_link_id || r.lp_source_tracking_link_id === r.id);
         }
 
         if (!cancelled) setRows(rowsData);
@@ -183,6 +187,7 @@ export function LinkLpGrid({ influencerId, managerId, title = "LP por link", sho
     if (!url) return toast.error("LP sem slug público");
     const check = validateSharedLpUrl(url, {
       instanceSlug: r.lp_slug,
+      instanceId: r.landing_page_instance_id,
       trackingCode: r.tracking_code,
       influencerId: r.influencer_id,
       campanhaId: r.campanha_id,
