@@ -23,10 +23,20 @@ const money = (value: unknown) => {
   return Number.isFinite(n) ? n : 0;
 };
 
+const hasMoney = (value: unknown) => {
+  if (value == null) return false;
+  const n = Number(value);
+  return Number.isFinite(n);
+};
+
 /**
  * Base financeira oficial da PlayBet.
  * Painéis importados podem trazer `revenue` como NGR/GGR bruto da casa;
- * nosso dinheiro é RevShare + CPA, preferindo `commission_total`.
+ * nosso dinheiro é a comissão líquida oficial do painel.
+ *
+ * Importante: RevShare pode vir negativo quando a casa desconta heavy,
+ * chargeback ou estorno. Nunca zerar valores negativos do painel, senão o
+ * dashboard dobra/infla o lucro (ex.: CPA cheio + RevShare negativo ignorado).
  */
 export function getMetricMoneyParts(metric: TrackingMetricMoneyLike) {
   const grossRevenue = money(metric.revenue);
@@ -45,27 +55,31 @@ export function getMetricMoneyParts(metric: TrackingMetricMoneyLike) {
     source.includes("smartico") ||
     source.includes("plataforma") ||
     source.includes("historico");
-  const estimatedRevShare = revsharePct > 0 ? Math.max(0, grossRevenue) * (revsharePct / 100) : 0;
+  const estimatedRevShare = revsharePct > 0
+    ? (revenueIsGrossPanelValue ? grossRevenue : Math.max(0, grossRevenue)) * (revsharePct / 100)
+    : 0;
   const estimatedCpa = cpaUnit > 0 && ftd > 0 && meetsBaseline ? ftd * cpaUnit : 0;
   const importedCpa = money(metric.cpa_commission);
   const cpa = importedCpa > 0 ? Math.max(0, importedCpa) : Math.max(0, estimatedCpa);
 
-  const importedRevShare = Math.max(0, money(metric.revshare_commission));
+  const importedRevShare = hasMoney(metric.revshare_commission)
+    ? money(metric.revshare_commission)
+    : 0;
   const looksLikeGrossWasSavedAsCommission =
     revenueIsGrossPanelValue &&
     revsharePct > 0 &&
     grossRevenue > 0 &&
     importedRevShare >= grossRevenue * 0.98;
   const explicitRevShare = looksLikeGrossWasSavedAsCommission ? estimatedRevShare : importedRevShare;
-  const commissionTotal = Math.max(0, money(metric.commission_total));
+  const commissionTotal = money(metric.commission_total);
+  const hasExplicitCommissionTotal = hasMoney(metric.commission_total) && commissionTotal !== 0;
 
-  if (commissionTotal > 0 && !looksLikeGrossWasSavedAsCommission) {
-    const revShare = explicitRevShare > 0 ? explicitRevShare : Math.max(commissionTotal - cpa, 0);
-    const total = revShare + cpa || commissionTotal;
-    return { revShare, cpa, total, grossRevenue };
+  if (hasExplicitCommissionTotal && !looksLikeGrossWasSavedAsCommission) {
+    const revShare = hasMoney(metric.revshare_commission) ? explicitRevShare : commissionTotal - cpa;
+    return { revShare, cpa, total: commissionTotal, grossRevenue };
   }
 
-  if (explicitRevShare > 0 || cpa > 0) {
+  if (explicitRevShare !== 0 || cpa > 0) {
     return { revShare: explicitRevShare, cpa, total: explicitRevShare + cpa, grossRevenue };
   }
 
