@@ -48,22 +48,12 @@ const BRANDS: Brand[] = [
 // Firecrawl v2 scrape endpoint
 const FIRECRAWL_URL = "https://api.firecrawl.dev/v2/scrape";
 
-// LLM extraction schema — every field is optional so the model doesn't
-// hallucinate zeros when the panel section isn't visible.
-const EXTRACTION_SCHEMA = {
+// Schema used ONLY for the Home widget (saldo disponível / pendente).
+const HOME_SCHEMA = {
   type: "object",
   properties: {
-    saldo_disponivel: { type: "number", description: "Saldo ou total líquido visível no relatório/painel, em BRL. Extraia apenas o número — 1.234,56 vira 1234.56." },
-    saldo_pendente: { type: "number", description: "Saldo pendente / a liberar em BRL." },
-    comissao_periodo: { type: "number", description: "Comissão total do período visível (mês atual ou range mostrado) em BRL." },
-    comissao_cpa: { type: "number", description: "Parcela de CPA da comissão do período." },
-    comissao_revshare: { type: "number", description: "Parcela de RevShare da comissão do período." },
-    ftds: { type: "integer", description: "Quantidade de FTDs (primeiros depósitos) no período visível." },
-    cadastros: { type: "integer", description: "Quantidade de cadastros/registrations no período visível." },
-    depositos_qtd: { type: "integer", description: "Quantidade total de depósitos." },
-    depositos_valor: { type: "number", description: "Valor total depositado em BRL." },
-    cliques: { type: "integer", description: "Cliques / visitas no período." },
-    periodo_label: { type: "string", description: "Rótulo do período mostrado no painel (ex.: 'julho/2026', 'últimos 30 dias')." },
+    saldo_disponivel: { type: "number", description: "Widget 'Saldo disponível' (ou 'Disponível para saque') visível na página inicial/saque do painel afiliado, em BRL. Já é líquido de saques pagos. Extraia apenas o número — 1.234,56 vira 1234.56." },
+    saldo_pendente: { type: "number", description: "Widget 'Saldo pendente' / 'A liberar' em BRL, se visível." },
   },
 };
 
@@ -113,43 +103,55 @@ function parsePerformanceTotalFromMarkdown(markdown?: string | null) {
   };
 }
 
-function compactExtraction(input: any) {
-  const cpa = firstNumber(input?.comissao_cpa) ?? 0;
-  const rev = firstNumber(input?.comissao_revshare) ?? 0;
-  const computedCommission = cpa + rev;
-  const panelTotal = firstNumber(input?.comissao_periodo);
-  const total = (cpa !== 0 || rev !== 0)
-    ? computedCommission
-    : (panelTotal ?? firstNumber(input?.saldo_disponivel) ?? 0);
+// Regex fallback for the saldo widget when the LLM extraction misses it.
+function parseSaldoFromMarkdown(markdown?: string | null): { saldo_disponivel: number | null; saldo_pendente: number | null } {
+  const out = { saldo_disponivel: null as number | null, saldo_pendente: null as number | null };
+  if (!markdown) return out;
+  const lines = markdown.split("\n").map((l) => l.trim());
+  const money = /R\$\s*([\d.]+,\d{2})/i;
+  const findAfter = (labelRe: RegExp): number | null => {
+    for (let i = 0; i < lines.length; i++) {
+      if (labelRe.test(lines[i])) {
+        // check same line or next 3 lines
+        for (let j = i; j < Math.min(i + 4, lines.length); j++) {
+          const m = lines[j].match(money);
+          if (m) return normalizeNumber(m[1]);
+        }
+      }
+    }
+    return null;
+  };
+  out.saldo_disponivel = findAfter(/saldo\s+dispon[íi]vel|dispon[íi]vel\s+para\s+saque/i);
+  out.saldo_pendente = findAfter(/saldo\s+pendente|a\s+liberar|pendente/i);
+  return out;
+}
+
+function compactExtraction(perf: any, saldo: { saldo_disponivel: number | null; saldo_pendente: number | null }) {
+  const cpa = firstNumber(perf?.comissao_cpa) ?? 0;
+  const rev = firstNumber(perf?.comissao_revshare) ?? 0;
+  const commissionPeriod = cpa + rev;
   return {
-    saldo_disponivel: total,
-    saldo_pendente: firstNumber(input?.saldo_pendente) ?? 0,
-    comissao_periodo: total,
+    // Saldo real vem SEMPRE do widget do painel (líquido de saques).
+    saldo_disponivel: firstNumber(saldo.saldo_disponivel) ?? 0,
+    saldo_pendente: firstNumber(saldo.saldo_pendente) ?? 0,
+    // Comissão do período = CPA + RevShare da tabela Total do performance report.
+    comissao_periodo: commissionPeriod,
     comissao_cpa: cpa,
     comissao_revshare: rev,
-    ftds: Math.round(firstNumber(input?.ftds) ?? 0),
-    cadastros: Math.round(firstNumber(input?.cadastros) ?? 0),
-    depositos_qtd: Math.round(firstNumber(input?.depositos_qtd) ?? 0),
-    depositos_valor: firstNumber(input?.depositos_valor) ?? 0,
-    cliques: Math.round(firstNumber(input?.cliques) ?? 0),
-    periodo_label: input?.periodo_label ? String(input.periodo_label) : "Período atual",
+    ftds: Math.round(firstNumber(perf?.ftds) ?? 0),
+    ftds_valor: firstNumber(perf?.ftds_valor) ?? 0,
+    cadastros: Math.round(firstNumber(perf?.cadastros) ?? 0),
+    depositos_qtd: Math.round(firstNumber(perf?.depositos_qtd) ?? 0),
+    depositos_valor: firstNumber(perf?.depositos_valor) ?? 0,
+    cliques: Math.round(firstNumber(perf?.cliques) ?? 0),
+    ggr: firstNumber(perf?.ggr) ?? 0,
+    ngr: firstNumber(perf?.ngr) ?? 0,
+    periodo_label: perf?.periodo_label ? String(perf.periodo_label) : "Período atual",
   };
 }
 
-async function firecrawlLoginAndScrape(brand: Brand, wantExtract: boolean, opts: { noActions?: boolean } = {}) {
-  if (!FIRECRAWL_API_KEY) throw new Error("FIRECRAWL_API_KEY not configured");
-  if (!brand.loginUrl || !brand.user || !brand.pass) {
-    throw new Error(`Missing credentials for ${brand.slug}`);
-  }
-
-  const formats: any[] = ["markdown", "html", "screenshot"];
-  if (wantExtract && !opts.noActions) {
-    formats.push({ type: "json", schema: EXTRACTION_SCHEMA, prompt: "Extraia somente os KPIs visíveis no relatório de performance do painel afiliado. Campos esperados: cliques/visitas, cadastros/registros, FTDs, quantidade e valor de depósitos, comissão de CPA, comissão de RevShare e comissão/saldo total do período. Se um campo não estiver visível, omita — não invente. Números em BRL: converta 'R$ 1.234,56' para 1234.56." });
-  }
-
-  // React controlled inputs: `write` doesn't fire onChange, so use JS to set
-  // the value via the native HTMLInputElement setter + dispatch input event.
-  const loginJs = `
+function buildLoginJs(brand: Brand) {
+  return `
     (function(){
       const setVal = (el, v) => {
         const s = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
@@ -168,8 +170,11 @@ async function firecrawlLoginAndScrape(brand: Brand, wantExtract: boolean, opts:
       }, 400);
     })();
   `;
+}
 
-  const switchBrandJs = brand.slug === "vupi" ? `
+function buildBrandSwitchJs(brand: Brand) {
+  if (brand.slug !== "vupi") return "";
+  return `
     (function(){
       const norm = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
       const clickLikeUser = (el) => {
@@ -197,17 +202,34 @@ async function firecrawlLoginAndScrape(brand: Brand, wantExtract: boolean, opts:
         clickLikeUser(vupi);
       }, 1200);
     })();
-  ` : "";
+  `;
+}
 
-  const actions = opts.noActions ? [
-    { type: "wait", milliseconds: 4000 },
-    { type: "screenshot", fullPage: true },
-  ] : [
+// One Firecrawl call: login → optional brand switch → navigate to `targetPath` → capture.
+async function firecrawlLoginAndCapture(
+  brand: Brand,
+  targetPath: string,
+  schema: any | null,
+  extractPrompt: string,
+) {
+  if (!FIRECRAWL_API_KEY) throw new Error("FIRECRAWL_API_KEY not configured");
+  if (!brand.loginUrl || !brand.user || !brand.pass) {
+    throw new Error(`Missing credentials for ${brand.slug}`);
+  }
+
+  const formats: any[] = ["markdown", "html"];
+  if (schema) formats.push({ type: "json", schema, prompt: extractPrompt });
+
+  const loginJs = buildLoginJs(brand);
+  const switchJs = buildBrandSwitchJs(brand);
+  const navJs = `window.location.assign(new URL(${JSON.stringify(targetPath)}, window.location.origin).href);`;
+
+  const actions: any[] = [
     { type: "wait", milliseconds: 8000 },
     { type: "executeJavascript", script: loginJs },
     { type: "wait", milliseconds: 12000 },
-    ...(switchBrandJs ? [{ type: "executeJavascript", script: switchBrandJs }, { type: "wait", milliseconds: 10000 }] : []),
-    { type: "executeJavascript", script: "window.location.assign(new URL('/reports/performance', window.location.origin).href);" },
+    ...(switchJs ? [{ type: "executeJavascript", script: switchJs }, { type: "wait", milliseconds: 10000 }] : []),
+    { type: "executeJavascript", script: navJs },
     { type: "wait", milliseconds: 14000 },
     { type: "screenshot", fullPage: true },
   ];
@@ -238,6 +260,7 @@ async function firecrawlLoginAndScrape(brand: Brand, wantExtract: boolean, opts:
   }
   return json;
 }
+
 
 async function persistBrand(supabase: any, brand: Brand, fc: any) {
   const doc = fc?.data ?? fc; // SDK vs REST
