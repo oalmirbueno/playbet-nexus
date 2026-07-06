@@ -754,24 +754,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Iterate DAY BY DAY so the API returns the smallest possible window.
-    // Fixes: when the panel returns aggregate-only rows (period "01/01/0001"),
-    // the previous single-window fetch dumped the ENTIRE range's totals into
-    // the last date — inflating today's KPIs by ~Nx.
-    const allItems: { brand: Brand; items: PerfItem[]; day: string }[] = [];
-    const dayList: string[] = [];
-    {
-      const d0 = new Date(`${dateStart}T00:00:00.000Z`);
-      const d1 = new Date(`${dateEnd}T00:00:00.000Z`);
-      for (let d = new Date(d0); d <= d1; d.setUTCDate(d.getUTCDate() + 1)) {
-        dayList.push(d.toISOString().slice(0, 10));
-      }
-    }
+    // Fetch the full range once with group_by=day (same strategy as
+    // stellar-panel-reconcile, which produces numbers that match the real
+    // panel). Aggregate-only rows are filtered out in persist().
+    const allItems: { brand: Brand; items: PerfItem[] }[] = [];
     for (const b of brands) {
-      for (const day of dayList) {
-        const items = await fetchPerformance(run, session, b, day, day);
-        if (items.length) allItems.push({ brand: b, items, day });
-      }
+      const items = await fetchPerformance(run, session, b, dateStart, dateEnd);
+      allItems.push({ brand: b, items });
     }
     const campaigns = allItems.flatMap((x) =>
       x.items.map((i) => i.campaign_name),
@@ -780,12 +769,9 @@ Deno.serve(async (req) => {
 
     let total = 0;
     const perBrand: Record<string, number> = {};
-    for (const { brand, items, day } of allItems) {
-      // fallbackDate is now the actual single day being fetched, so
-      // aggregate-only rows land on the correct date instead of being
-      // clamped to dateEnd of a wide window.
-      const n = await persist(run, brand, items, ctx, day, day);
-      perBrand[brand.brand_slug] = (perBrand[brand.brand_slug] ?? 0) + n;
+    for (const { brand, items } of allItems) {
+      const n = await persist(run, brand, items, ctx, dateStart, dateEnd);
+      perBrand[brand.brand_slug] = n;
       total += n;
     }
 
