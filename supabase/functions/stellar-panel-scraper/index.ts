@@ -540,7 +540,10 @@ async function persist(
     const rawPeriod = it.period ?? "";
     const dateRef = normalizePeriod(rawPeriod, fallbackDate);
     if (!dateRef) continue;
-    const externalDateKey = isRollingAggregatePeriod(rawPeriod) ? "_rolling" : dateRef;
+    // Always key by the actual date. Previously used "_rolling" for
+    // aggregate rows, which prevented re-scrapes from overwriting stale
+    // totals when the panel later refreshed the same day.
+    const externalDateKey = dateRef;
 
     const accountFinancial = platformAccountId
       ? (await run.supabase
