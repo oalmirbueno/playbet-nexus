@@ -253,7 +253,10 @@ async function fetchPerformance(
   // Try progressively more granular groupings; the API accepts a small set
   // of keywords. We keep the first non-empty response that gives us a real
   // per-day breakdown (period != "01/01/0001").
-  const groupings = ["day,campaign", "day", "date", "campaign"];
+  // Prefer per-day first (matches stellar-panel-reconcile behavior which
+  // produces the numbers that agree with the real panel). "day,campaign"
+  // was returning inflated aggregate totals for some brands.
+  const groupings = ["day", "day,campaign", "date", "campaign"];
   let lastItems: PerfItem[] = [];
   for (const g of groupings) {
     const qs = new URLSearchParams({
