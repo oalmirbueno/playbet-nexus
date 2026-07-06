@@ -262,27 +262,35 @@ async function firecrawlLoginAndCapture(
 }
 
 
-async function persistBrand(supabase: any, brand: Brand, fc: any) {
-  const doc = fc?.data ?? fc; // SDK vs REST
-  const md = doc?.markdown ?? null;
+async function persistBrand(supabase: any, brand: Brand, homeFc: any, perfFc: any) {
+  const homeDoc = homeFc?.data ?? homeFc;
+  const perfDoc = perfFc?.data ?? perfFc;
+  const homeMd = homeDoc?.markdown ?? null;
+  const perfMd = perfDoc?.markdown ?? null;
 
-  if (brand.slug === "vupi" && !/\bVUPI\b|\bVupi\b/.test(md ?? "")) {
+  // Sanity: for VUPI both captures should mention VUPI (else brand-switch failed).
+  const bothMd = `${homeMd ?? ""}\n${perfMd ?? ""}`;
+  if (brand.slug === "vupi" && !/\bVUPI\b|\bVupi\b/.test(bothMd)) {
     return {
       extracted: null,
       updatedAccounts: 0,
       updatedMetrics: 0,
       skipped: "brand_not_visible",
-      has_markdown: !!md,
-      has_html: !!(doc?.html ?? null),
-      has_screenshot: !!(doc?.screenshot ?? null),
-      metadata: doc?.metadata ?? null,
+      has_markdown: !!(homeMd || perfMd),
     };
   }
 
-  const extracted = compactExtraction({ ...(doc?.json ?? doc?.extract ?? {}), ...parsePerformanceTotalFromMarkdown(md) });
-  const html = doc?.html ?? null;
-  const screenshot = doc?.screenshot ?? null;
-  const meta = doc?.metadata ?? null;
+  const perfJson = perfDoc?.json ?? perfDoc?.extract ?? {};
+  const perf = { ...perfJson, ...parsePerformanceTotalFromMarkdown(perfMd) };
+
+  const homeJson = homeDoc?.json ?? homeDoc?.extract ?? {};
+  const saldoRegex = parseSaldoFromMarkdown(homeMd);
+  const saldo = {
+    saldo_disponivel: firstNumber(homeJson?.saldo_disponivel, saldoRegex.saldo_disponivel),
+    saldo_pendente: firstNumber(homeJson?.saldo_pendente, saldoRegex.saldo_pendente),
+  };
+
+  const extracted = compactExtraction(perf, saldo);
 
   const key = brand.slug === "estrelabet" ? "estrel" : "vupi";
   const { data: platforms } = await supabase
@@ -303,7 +311,8 @@ async function persistBrand(supabase: any, brand: Brand, fc: any) {
   }
 
   let updatedAccounts = 0;
-  if (extracted.saldo_disponivel != null) {
+  // Só grava balance se conseguimos ler o widget de saldo — nunca cai em CPA+Rev.
+  if (saldo.saldo_disponivel != null) {
     for (const acc of accounts) {
       const { error } = await supabase
         .from("platform_accounts")
@@ -323,7 +332,7 @@ async function persistBrand(supabase: any, brand: Brand, fc: any) {
   for (const acc of accounts) {
     const cpa = extracted.comissao_cpa ?? 0;
     const rev = extracted.comissao_revshare ?? 0;
-    const total = extracted.comissao_periodo ?? cpa + rev;
+    const total = cpa + rev;
     const { error } = await supabase.from("tracking_metrics").upsert({
       data_ref: today,
       platform_id: acc.platform_id,
@@ -345,21 +354,19 @@ async function persistBrand(supabase: any, brand: Brand, fc: any) {
       is_demo: false,
       external_ref: `${brand.slug}:panel_scrape_html:current_period:${acc.id}`,
     }, { onConflict: "external_ref" });
-    if (!error) {
-      updatedMetrics++;
-    }
+    if (!error) updatedMetrics++;
   }
 
   return {
     extracted,
+    saldo_source: saldo.saldo_disponivel != null ? "home_widget" : "missing",
     updatedAccounts,
     updatedMetrics,
-    has_markdown: !!md,
-    has_html: !!html,
-    has_screenshot: !!screenshot,
-    metadata: meta,
+    has_home_md: !!homeMd,
+    has_perf_md: !!perfMd,
   };
 }
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
