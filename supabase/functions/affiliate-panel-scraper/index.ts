@@ -26,6 +26,7 @@ type Brand = {
   loginUrl: string | undefined;
   user: string | undefined;
   pass: string | undefined;
+  accountId?: string;
   // Post-login SPA path to visit (dashboard). We wait for it to fully render.
   dashboardPath?: string;
 };
@@ -36,12 +37,14 @@ const BRANDS: Brand[] = [
     loginUrl: Deno.env.get("ESTRELABET_AFFILIATE_LOGIN_URL"),
     user: Deno.env.get("ESTRELABET_AFFILIATE_USER"),
     pass: Deno.env.get("ESTRELABET_AFFILIATE_PASS"),
+    accountId: Deno.env.get("ESTRELABET_AFFILIATE_ACCOUNT_ID") ?? undefined,
   },
   {
     slug: "vupi",
     loginUrl: Deno.env.get("VUPI_AFFILIATE_LOGIN_URL"),
     user: Deno.env.get("VUPI_AFFILIATE_USER"),
     pass: Deno.env.get("VUPI_AFFILIATE_PASS"),
+    accountId: Deno.env.get("VUPI_AFFILIATE_ACCOUNT_ID") ?? Deno.env.get("SMARTICO_LABEL_ID") ?? Deno.env.get("STELLAR_TAP_LABEL_ID") ?? undefined,
   },
 ];
 
@@ -259,6 +262,89 @@ function buildBrandSwitchJs(brand: Brand) {
   `;
 }
 
+function buildAccountSwitchJs(brand: Brand) {
+  if (!brand.accountId) return "";
+  return `
+    (function(){
+      const target = ${JSON.stringify(brand.accountId)};
+      const norm = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      const clickLikeUser = (el) => {
+        if (!el) return false;
+        el.scrollIntoView({block:'center', inline:'center'});
+        el.dispatchEvent(new MouseEvent('pointerdown', {bubbles:true}));
+        el.dispatchEvent(new MouseEvent('mousedown', {bubbles:true}));
+        el.dispatchEvent(new MouseEvent('mouseup', {bubbles:true}));
+        el.click();
+        return true;
+      };
+      const findText = (needle) => Array.from(document.querySelectorAll('button,[role="button"],a,li,div,span'))
+        .filter((el) => norm(el.textContent).includes(norm(needle)))
+        .sort((a,b) => (a.textContent || '').length - (b.textContent || '').length)[0];
+
+      if (clickLikeUser(findText(target))) return;
+
+      const opener = Array.from(document.querySelectorAll('button,[role="button"],a,li,div,span'))
+        .filter((el) => /conta|account|label|id|afiliad|playbet|vupi|estrela/i.test(el.textContent || ''))
+        .sort((a,b) => (a.textContent || '').length - (b.textContent || '').length)[0];
+      clickLikeUser(opener);
+      setTimeout(() => clickLikeUser(findText(target)), 1200);
+    })();
+  `;
+}
+
+function formatDateParts(date = new Date()) {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(date.getUTCDate()).padStart(2, "0");
+  return { iso: `${y}-${m}-${d}`, br: `${d}/${m}/${y}` };
+}
+
+function buildPerformanceDateFilterJs(targetPath: string) {
+  if (!/reports\/performance/i.test(targetPath)) return "";
+  const end = new Date();
+  const start = new Date(end);
+  start.setUTCDate(start.getUTCDate() - 29);
+  const from = formatDateParts(start);
+  const to = formatDateParts(end);
+  return `
+    (function(){
+      const from = ${JSON.stringify(from)};
+      const to = ${JSON.stringify(to)};
+      const setVal = (el, value) => {
+        if (!el) return false;
+        const proto = el instanceof HTMLInputElement ? window.HTMLInputElement.prototype : window.HTMLTextAreaElement.prototype;
+        const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+        if (setter) setter.call(el, value); else el.value = value;
+        el.dispatchEvent(new Event('input', {bubbles:true}));
+        el.dispatchEvent(new Event('change', {bubbles:true}));
+        el.dispatchEvent(new Event('blur', {bubbles:true}));
+        return true;
+      };
+      const inputs = Array.from(document.querySelectorAll('input'))
+        .filter((el) => !/password|email|search/i.test(el.type || ''))
+        .sort((a,b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top || a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+      if (inputs[0]) setVal(inputs[0], inputs[0].type === 'date' ? from.iso : from.br);
+      if (inputs[1]) setVal(inputs[1], inputs[1].type === 'date' ? to.iso : to.br);
+      const clickLikeUser = (el) => {
+        if (!el) return false;
+        el.scrollIntoView({block:'center', inline:'center'});
+        el.dispatchEvent(new MouseEvent('pointerdown', {bubbles:true}));
+        el.dispatchEvent(new MouseEvent('mousedown', {bubbles:true}));
+        el.dispatchEvent(new MouseEvent('mouseup', {bubbles:true}));
+        el.click();
+        return true;
+      };
+      const btn = Array.from(document.querySelectorAll('button,[role="button"]'))
+        .filter((el) => /buscar|filtrar|aplicar|gerar|pesquisar|consultar/i.test(el.textContent || ''))
+        .sort((a,b) => (a.textContent || '').length - (b.textContent || '').length)[0];
+      if (!clickLikeUser(btn) && inputs[1]) {
+        inputs[1].dispatchEvent(new KeyboardEvent('keydown', {key:'Enter', bubbles:true}));
+        inputs[1].dispatchEvent(new KeyboardEvent('keyup', {key:'Enter', bubbles:true}));
+      }
+    })();
+  `;
+}
+
 // One Firecrawl call: login → optional brand switch → navigate to `targetPath` → capture.
 async function firecrawlLoginAndCapture(
   brand: Brand,
@@ -276,22 +362,38 @@ async function firecrawlLoginAndCapture(
 
   const loginJs = buildLoginJs(brand);
   const switchJs = buildBrandSwitchJs(brand);
-  const navJs = `window.location.assign(new URL(${JSON.stringify(targetPath)}, window.location.origin).href);`;
+  const accountJs = buildAccountSwitchJs(brand);
+  const perfFilterJs = buildPerformanceDateFilterJs(targetPath);
+  const navJs = `
+    (function(){
+      const url = new URL(${JSON.stringify(targetPath)}, window.location.origin);
+      if (/reports\\/performance/i.test(url.pathname)) {
+        const end = new Date();
+        const start = new Date(end);
+        start.setUTCDate(start.getUTCDate() - 29);
+        url.searchParams.set('date_start', start.toISOString().slice(0,10));
+        url.searchParams.set('date_end', end.toISOString().slice(0,10));
+      }
+      window.location.assign(url.href);
+    })();
+  `;
 
   const actions: any[] = [
     { type: "wait", milliseconds: 5000 },
     { type: "executeJavascript", script: loginJs },
     { type: "wait", milliseconds: 8000 },
     ...(switchJs ? [{ type: "executeJavascript", script: switchJs }, { type: "wait", milliseconds: 7000 }] : []),
+    ...(accountJs ? [{ type: "executeJavascript", script: accountJs }, { type: "wait", milliseconds: 3000 }] : []),
     { type: "executeJavascript", script: navJs },
     { type: "wait", milliseconds: 8000 },
+    ...(perfFilterJs ? [{ type: "executeJavascript", script: perfFilterJs }, { type: "wait", milliseconds: 8000 }] : []),
   ];
 
   const body = {
     url: brand.loginUrl,
     formats,
     onlyMainContent: false,
-    waitFor: 2500,
+    waitFor: 4500,
     actions,
     timeout: 120000,
   };
@@ -371,11 +473,15 @@ async function persistBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
   if (platformIds.length) {
     const { data } = await supabase
       .from("platform_accounts")
-      .select("id, platform_id")
+      .select("id, platform_id, account_external_id")
       .in("platform_id", platformIds)
       .eq("is_active", true)
       .eq("is_demo", false);
-    accounts.push(...(data ?? []));
+    const fetched = data ?? [];
+    const preferred = brand.accountId
+      ? fetched.filter((acc: any) => String(acc.account_external_id ?? "").trim() === brand.accountId)
+      : [];
+    accounts.push(...(preferred.length ? preferred : fetched));
   }
 
   let updatedAccounts = 0;
@@ -481,7 +587,7 @@ Deno.serve(async (req) => {
   const { data: run } = await supabase.from("panel_scraper_runs").insert({
     scraper_key: "affiliate_panel_html",
     status: "running",
-    discovery: { brands: targets.map((t) => t.slug), started_from: source, extract: wantExtract },
+    discovery: { brands: targets.map((t) => t.slug), account_ids: Object.fromEntries(targets.map((t) => [t.slug, t.accountId ?? null])), started_from: source, extract: wantExtract },
   }).select("id").maybeSingle();
   const runId = run?.id;
 
@@ -526,7 +632,7 @@ Deno.serve(async (req) => {
         finished_at: new Date().toISOString(),
         rows_imported: Object.values(results).reduce((n: number, r: any) => n + (r?.updatedAccounts ?? 0), 0),
         message: JSON.stringify(Object.fromEntries(Object.entries(results).map(([k, v]: any) => [k, v.ok ? `ok (saldo=${v.extracted?.saldo_disponivel ?? "n/a"} src=${v.saldo_source ?? "?"})` : v.error]))),
-        discovery: { brands: targets.map((t) => t.slug), results, raw: debug ? rawDump : undefined },
+        discovery: { brands: targets.map((t) => t.slug), account_ids: Object.fromEntries(targets.map((t) => [t.slug, t.accountId ?? null])), results, raw: debug ? rawDump : undefined },
       }).eq("id", runId);
     }
   })().catch(async (err) => {
