@@ -3,8 +3,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-// Throttle: don't hammer the panel more than once per 60s per browser tab.
-const REFRESH_THROTTLE_MS = 60_000;
+// Throttle: evita cliques repetidos, mas permite correção quase imediata.
+const REFRESH_THROTTLE_MS = 30_000;
 let lastRefreshAt = 0;
 
 const sb = supabase as any;
@@ -23,7 +23,7 @@ async function invalidatePanelQueries(qc: ReturnType<typeof useQueryClient>) {
 
 async function pollPanelRuns(runIds: string[], qc: ReturnType<typeof useQueryClient>) {
   if (runIds.length === 0) return [];
-  const deadline = Date.now() + 165_000;
+  const deadline = Date.now() + 180_000;
   let rows: any[] = [];
 
   while (Date.now() < deadline) {
@@ -35,7 +35,7 @@ async function pollPanelRuns(runIds: string[], qc: ReturnType<typeof useQueryCli
     rows = data ?? [];
     await invalidatePanelQueries(qc);
     if (rows.length === runIds.length && rows.every((row) => row.status !== "running")) break;
-    await sleep(6_000);
+    await sleep(3_000);
   }
 
   return rows;
@@ -66,16 +66,13 @@ export function usePanelRefresh() {
       lastRefreshAt = now;
       setIsRefreshing(true);
       try {
-        const [estrelabet, vupi, smartico] = await Promise.allSettled([
-          supabase.functions.invoke("affiliate-panel-scraper", { body: { brand: "estrelabet", extract: true } }),
-          supabase.functions.invoke("affiliate-panel-scraper", { body: { brand: "vupi", extract: true } }),
+        const [panel, smartico] = await Promise.allSettled([
+          supabase.functions.invoke("affiliate-panel-scraper", { body: { brand: "all", extract: true, source: "manual" } }),
           supabase.functions.invoke("tracking-puller-smartico", { body: { source: "manual", mode: "recent" } }),
         ]);
-        for (const result of [estrelabet, vupi]) {
-          if (result.status === "fulfilled" && result.value.error) throw result.value.error;
-          if (result.status === "rejected") throw result.reason;
-        }
-        const runIds = [estrelabet, vupi]
+        if (panel.status === "fulfilled" && panel.value.error) throw panel.value.error;
+        if (panel.status === "rejected") throw panel.reason;
+        const runIds = [panel]
           .map((result) => result.status === "fulfilled" ? (result.value.data as any)?.run_id : null)
           .filter(Boolean) as string[];
         const completedRuns = await pollPanelRuns(runIds, qc);

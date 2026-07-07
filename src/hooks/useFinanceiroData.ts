@@ -80,7 +80,8 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
       if (error) throw error;
       return selectAuthoritativeMetricRows((data ?? []) as any[]);
     },
-    refetchInterval: 30_000,
+    refetchInterval: 10_000,
+    refetchOnWindowFocus: true,
   });
 
   // Saques in period (by data field)
