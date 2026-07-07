@@ -74,32 +74,79 @@ function firstNumber(...values: unknown[]): number | null {
   return null;
 }
 
+// Mapeia colunas por NOME do header em vez de índice fixo — VUPI e Estrelabet
+// podem reordenar/adicionar colunas (impressões, qFTDs, chargeback…) e o parser
+// não pode "escorregar" centavos entre depósitos, GGR, comissão etc.
+const HEADER_ALIASES: Record<string, RegExp[]> = {
+  cliques: [/^cliques?$/i, /clicks?/i],
+  cadastros: [/^cadastros?$/i, /^registros?$/i, /sign[- ]?ups?/i],
+  ftds: [/^ftds?$/i, /first.*deposit/i],
+  ftds_valor: [/valor.*ftd/i, /ftd.*(valor|total|amount)/i, /first.*deposit.*(amount|value)/i],
+  qftds: [/^q?\.?\s*ftds?$/i, /qualified.*ftd/i],
+  depositos_qtd: [/dep[óo]sitos?\b(?!.*valor)(?!.*total)/i, /qtd.*dep/i, /deposits?(?!.*(amount|value|total))/i],
+  depositos_valor: [/valor.*dep[óo]sit/i, /dep[óo]sitos?.*(valor|total|amount)/i, /deposit.*(amount|value|total)/i, /volume.*dep/i],
+  ggr: [/^ggr$/i, /gross.*revenue/i],
+  ngr: [/^ngr$/i, /net.*revenue/i],
+  comissao_cpa: [/comiss[ãa]o.*cpa/i, /^cpa\b/i],
+  comissao_revshare: [/comiss[ãa]o.*rev/i, /rev[- ]?share/i, /^rev\b/i],
+};
+
+function splitRow(line: string): string[] {
+  return line.split("|").slice(1, -1).map((cell) => cell.trim());
+}
+
 function parsePerformanceTotalFromMarkdown(markdown?: string | null) {
   if (!markdown) return {};
-  const totalLine = markdown
-    .split("\n")
-    .map((line) => line.trim())
-    .find((line) => /^\|\s*Total\s*\|/i.test(line));
-  if (!totalLine) return {};
+  const lines = markdown.split("\n").map((l) => l.trim());
 
-  const cells = totalLine
-    .split("|")
-    .slice(1, -1)
-    .map((cell) => cell.trim());
+  // Encontra bloco de tabela que contém a linha "Total".
+  let totalIdx = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (/^\|\s*Total\s*\|/i.test(lines[i])) { totalIdx = i; break; }
+  }
+  if (totalIdx < 0) return {};
+
+  // Header = primeira linha "|...|" antes do totalIdx que NÃO é separador (`---`).
+  let headerIdx = -1;
+  for (let i = totalIdx - 1; i >= 0; i--) {
+    const l = lines[i];
+    if (!l.startsWith("|")) break;
+    if (/^\|\s*:?-+/.test(l)) continue; // separador markdown
+    headerIdx = i;
+    break;
+  }
+  if (headerIdx < 0) return {};
+
+  const headers = splitRow(lines[headerIdx]).map((h) => h.replace(/\s+/g, " ").trim());
+  const totals = splitRow(lines[totalIdx]);
+
+  const findIdx = (key: string): number => {
+    const aliases = HEADER_ALIASES[key] ?? [];
+    for (let i = 0; i < headers.length; i++) {
+      const h = headers[i];
+      if (aliases.some((re) => re.test(h))) return i;
+    }
+    return -1;
+  };
+
+  const cell = (key: string): string | undefined => {
+    const idx = findIdx(key);
+    return idx >= 0 ? totals[idx] : undefined;
+  };
 
   return {
-    periodo_label: cells[0] || "Total",
-    cliques: normalizeNumber(cells[2]),
-    cadastros: normalizeNumber(cells[3]),
-    ftds: normalizeNumber(cells[4]),
-    ftds_valor: normalizeNumber(cells[5]),
-    qftds: normalizeNumber(cells[6]),
-    depositos_qtd: normalizeNumber(cells[7]),
-    depositos_valor: normalizeNumber(cells[8]),
-    ggr: normalizeNumber(cells[9]),
-    ngr: normalizeNumber(cells[10]),
-    comissao_cpa: normalizeNumber(cells[11]),
-    comissao_revshare: normalizeNumber(cells[12]),
+    periodo_label: totals[0] || "Total",
+    cliques: normalizeNumber(cell("cliques")),
+    cadastros: normalizeNumber(cell("cadastros")),
+    ftds: normalizeNumber(cell("ftds")),
+    ftds_valor: normalizeNumber(cell("ftds_valor")),
+    qftds: normalizeNumber(cell("qftds")),
+    depositos_qtd: normalizeNumber(cell("depositos_qtd")),
+    depositos_valor: normalizeNumber(cell("depositos_valor")),
+    ggr: normalizeNumber(cell("ggr")),
+    ngr: normalizeNumber(cell("ngr")),
+    comissao_cpa: normalizeNumber(cell("comissao_cpa")),
+    comissao_revshare: normalizeNumber(cell("comissao_revshare")),
   };
 }
 
