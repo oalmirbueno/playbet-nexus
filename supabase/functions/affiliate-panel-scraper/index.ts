@@ -99,55 +99,63 @@ function parsePerformanceTotalFromMarkdown(markdown?: string | null) {
   if (!markdown) return {};
   const lines = markdown.split("\n").map((l) => l.trim());
 
-  // Encontra bloco de tabela que contém a linha "Total".
   let totalIdx = -1;
   for (let i = 0; i < lines.length; i++) {
     if (/^\|\s*Total\s*\|/i.test(lines[i])) { totalIdx = i; break; }
   }
   if (totalIdx < 0) return {};
 
-  // Header = primeira linha "|...|" antes do totalIdx que NÃO é separador (`---`).
-  let headerIdx = -1;
+  // Header = linha imediatamente acima do separador `|---|` mais próximo (subindo).
+  let sepIdx = -1;
   for (let i = totalIdx - 1; i >= 0; i--) {
-    const l = lines[i];
-    if (!l.startsWith("|")) break;
-    if (/^\|\s*:?-+/.test(l)) continue; // separador markdown
-    headerIdx = i;
-    break;
+    if (/^\|\s*:?-{2,}/.test(lines[i])) { sepIdx = i; break; }
+    if (!lines[i].startsWith("|")) break;
   }
-  if (headerIdx < 0) return {};
-
-  const headers = splitRow(lines[headerIdx]).map((h) => h.replace(/\s+/g, " ").trim());
   const totals = splitRow(lines[totalIdx]);
+  const headers = sepIdx > 0
+    ? splitRow(lines[sepIdx - 1]).map((h) => h.replace(/\s+/g, " ").trim())
+    : [];
 
   const findIdx = (key: string): number => {
+    if (!headers.length) return -1;
     const aliases = HEADER_ALIASES[key] ?? [];
     for (let i = 0; i < headers.length; i++) {
-      const h = headers[i];
-      if (aliases.some((re) => re.test(h))) return i;
+      if (aliases.some((re) => re.test(headers[i]))) return i;
     }
     return -1;
   };
 
-  const cell = (key: string): string | undefined => {
+  // Fallback posicional (layout histórico Estrelabet/VUPI) quando o header
+  // não bate — garante que nunca zeramos por falha de matching de nome.
+  const POSITIONAL: Record<string, number> = {
+    cliques: 2, cadastros: 3, ftds: 4, ftds_valor: 5, qftds: 6,
+    depositos_qtd: 7, depositos_valor: 8, ggr: 9, ngr: 10,
+    comissao_cpa: 11, comissao_revshare: 12,
+  };
+
+  const pick = (key: string) => {
     const idx = findIdx(key);
-    return idx >= 0 ? totals[idx] : undefined;
+    const value = idx >= 0 ? normalizeNumber(totals[idx]) : null;
+    if (value != null) return value;
+    const fallbackIdx = POSITIONAL[key];
+    return fallbackIdx != null ? normalizeNumber(totals[fallbackIdx]) : null;
   };
 
   return {
     periodo_label: totals[0] || "Total",
-    cliques: normalizeNumber(cell("cliques")),
-    cadastros: normalizeNumber(cell("cadastros")),
-    ftds: normalizeNumber(cell("ftds")),
-    ftds_valor: normalizeNumber(cell("ftds_valor")),
-    qftds: normalizeNumber(cell("qftds")),
-    depositos_qtd: normalizeNumber(cell("depositos_qtd")),
-    depositos_valor: normalizeNumber(cell("depositos_valor")),
-    ggr: normalizeNumber(cell("ggr")),
-    ngr: normalizeNumber(cell("ngr")),
-    comissao_cpa: normalizeNumber(cell("comissao_cpa")),
-    comissao_revshare: normalizeNumber(cell("comissao_revshare")),
+    cliques: pick("cliques"),
+    cadastros: pick("cadastros"),
+    ftds: pick("ftds"),
+    ftds_valor: pick("ftds_valor"),
+    qftds: pick("qftds"),
+    depositos_qtd: pick("depositos_qtd"),
+    depositos_valor: pick("depositos_valor"),
+    ggr: pick("ggr"),
+    ngr: pick("ngr"),
+    comissao_cpa: pick("comissao_cpa"),
+    comissao_revshare: pick("comissao_revshare"),
   };
+}
 }
 
 // Regex fallback for the saldo widget when the LLM extraction misses it.
