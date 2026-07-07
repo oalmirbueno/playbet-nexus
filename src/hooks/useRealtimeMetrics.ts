@@ -23,9 +23,11 @@ export function useRealtimeMetrics() {
       qc.invalidateQueries({ queryKey: ["tracking_events"] });
       qc.invalidateQueries({ queryKey: ["tracking_links"] });
       qc.invalidateQueries({ queryKey: ["clicks-all"] });
+      qc.invalidateQueries({ queryKey: ["platform_accounts"] });
       qc.refetchQueries({ queryKey: ["tracking_metrics_summary"], type: "active" });
       qc.refetchQueries({ queryKey: ["financeiro_metrics"], type: "active" });
       qc.refetchQueries({ queryKey: ["tracking_consolidated_real_source"], type: "active" });
+      qc.refetchQueries({ queryKey: ["platform_accounts"], type: "active" });
     };
 
     const channel = supabase
@@ -34,6 +36,7 @@ export function useRealtimeMetrics() {
       .on("postgres_changes", { event: "*", schema: "public", table: "tracking_events" }, bump)
       .on("postgres_changes", { event: "*", schema: "public", table: "tracking_links" }, bump)
       .on("postgres_changes", { event: "*", schema: "public", table: "clicks" }, bump)
+      .on("postgres_changes", { event: "*", schema: "public", table: "platform_accounts" }, bump)
       .on("postgres_changes", { event: "*", schema: "public", table: "panel_scraper_runs" }, bump)
       .on("postgres_changes", { event: "*", schema: "public", table: "panel_reconciliations" }, bump)
       .subscribe();

@@ -42,7 +42,7 @@ export function useTrackingMetricsSummary(period: PeriodKey = "30d", platformId?
       if (error) throw error;
       return data ?? [];
     },
-    refetchInterval: 15_000,
+    refetchInterval: 10_000,
     refetchOnWindowFocus: true,
   });
 

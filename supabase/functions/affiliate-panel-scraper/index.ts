@@ -11,7 +11,7 @@
 //   - tracking_metrics (one summary row per brand per day, origem='panel_scrape_html')
 //   - panel_scraper_runs (debug jsonb with the raw Firecrawl response)
 //
-// Body: { brand?: "estrelabet" | "vupi" | "all", debug?: boolean, extract?: boolean }
+// Body: { brand?: "estrelabet" | "vupi" | "all", debug?: boolean, extract?: boolean, source?: "manual" | "cron" }
 // -------------------------------------------------------------
 
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -225,22 +225,21 @@ async function firecrawlLoginAndCapture(
   const navJs = `window.location.assign(new URL(${JSON.stringify(targetPath)}, window.location.origin).href);`;
 
   const actions: any[] = [
-    { type: "wait", milliseconds: 8000 },
+    { type: "wait", milliseconds: 5000 },
     { type: "executeJavascript", script: loginJs },
-    { type: "wait", milliseconds: 12000 },
-    ...(switchJs ? [{ type: "executeJavascript", script: switchJs }, { type: "wait", milliseconds: 10000 }] : []),
+    { type: "wait", milliseconds: 8000 },
+    ...(switchJs ? [{ type: "executeJavascript", script: switchJs }, { type: "wait", milliseconds: 7000 }] : []),
     { type: "executeJavascript", script: navJs },
-    { type: "wait", milliseconds: 14000 },
-    { type: "screenshot", fullPage: true },
+    { type: "wait", milliseconds: 8000 },
   ];
 
   const body = {
     url: brand.loginUrl,
     formats,
     onlyMainContent: false,
-    waitFor: 4000,
+    waitFor: 2500,
     actions,
-    timeout: 90000,
+    timeout: 120000,
   };
 
   const res = await fetch(FIRECRAWL_URL, {
@@ -262,13 +261,13 @@ async function firecrawlLoginAndCapture(
 }
 
 async function markStaleRuns(supabase: any) {
-  const staleBefore = new Date(Date.now() - 12 * 60_000).toISOString();
+  const staleBefore = new Date(Date.now() - 4 * 60_000).toISOString();
   await supabase
     .from("panel_scraper_runs")
     .update({
       status: "error",
       finished_at: new Date().toISOString(),
-      message: "Sincronização anterior encerrada por timeout. Reexecutei com coleta paralela por marca.",
+      message: "Sincronização anterior encerrada por timeout. Nova coleta pode iniciar automaticamente.",
     })
     .eq("scraper_key", "affiliate_panel_html")
     .eq("status", "running")
@@ -300,8 +299,9 @@ async function persistBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
   const homeJson = homeDoc?.json ?? homeDoc?.extract ?? {};
   const saldoRegex = parseSaldoFromMarkdown(homeMd);
   const saldo = {
-    saldo_disponivel: firstNumber(homeJson?.saldo_disponivel, saldoRegex.saldo_disponivel),
-    saldo_pendente: firstNumber(homeJson?.saldo_pendente, saldoRegex.saldo_pendente),
+    // Regex vem primeiro porque lê exatamente o texto visível do widget; LLM fica só como fallback.
+    saldo_disponivel: firstNumber(saldoRegex.saldo_disponivel, homeJson?.saldo_disponivel),
+    saldo_pendente: firstNumber(saldoRegex.saldo_pendente, homeJson?.saldo_pendente),
   };
 
   const extracted = compactExtraction(perf, saldo);
@@ -391,6 +391,7 @@ Deno.serve(async (req) => {
   try { payload = await req.json(); } catch { /* body optional */ }
 
   const wantBrand = String(payload?.brand ?? "all").toLowerCase();
+  const source = String(payload?.source ?? "manual").toLowerCase();
   const debug = payload?.debug === true;
   const wantExtract = payload?.extract !== false; // default true
   const noActions = payload?.noActions === true;
@@ -403,10 +404,30 @@ Deno.serve(async (req) => {
     });
   }
 
+  if (source === "cron" && payload?.force !== true) {
+    const runningSince = new Date(Date.now() - 4 * 60_000).toISOString();
+    const { data: activeRun } = await supabase
+      .from("panel_scraper_runs")
+      .select("id,started_at")
+      .eq("scraper_key", "affiliate_panel_html")
+      .eq("status", "running")
+      .gte("started_at", runningSince)
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (activeRun?.id) {
+      return new Response(
+        JSON.stringify({ ok: true, run_id: activeRun.id, status: "already_processing", brands: targets.map((t) => t.slug) }, null, 2),
+        { status: 202, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+  }
+
   const { data: run } = await supabase.from("panel_scraper_runs").insert({
     scraper_key: "affiliate_panel_html",
     status: "running",
-    discovery: { brands: targets.map((t) => t.slug), started_from: "manual", extract: wantExtract },
+    discovery: { brands: targets.map((t) => t.slug), started_from: source, extract: wantExtract },
   }).select("id").maybeSingle();
   const runId = run?.id;
 
