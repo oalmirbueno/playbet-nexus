@@ -520,7 +520,7 @@ Deno.serve(async (req) => {
   const { data: run } = await supabase.from("panel_scraper_runs").insert({
     scraper_key: "affiliate_panel_html",
     status: "running",
-    discovery: { brands: targets.map((t) => t.slug), started_from: source, extract: wantExtract },
+    discovery: { brands: targets.map((t) => t.slug), account_ids: Object.fromEntries(targets.map((t) => [t.slug, t.accountId ?? null])), started_from: source, extract: wantExtract },
   }).select("id").maybeSingle();
   const runId = run?.id;
 
