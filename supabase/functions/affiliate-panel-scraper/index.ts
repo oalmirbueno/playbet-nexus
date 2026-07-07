@@ -207,6 +207,23 @@ function compactExtraction(perf: any, saldo: { saldo_disponivel: number | null; 
   };
 }
 
+function numberOrZero(value: unknown): number {
+  const n = Number(value ?? 0);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function isPartialDowngrade(existing: any, extracted: ReturnType<typeof compactExtraction>) {
+  if (!existing) return false;
+  const checks: Array<[unknown, unknown]> = [
+    [extracted.cliques, existing.cliques],
+    [extracted.cadastros, existing.registros],
+    [extracted.ftds, existing.ftd],
+    [extracted.depositos_qtd, existing.deposits_count],
+    [extracted.depositos_valor, existing.depositos_total],
+  ];
+  return checks.some(([next, prev]) => numberOrZero(next) < numberOrZero(prev));
+}
+
 function buildLoginJs(brand: Brand) {
   return `
     (function(){
@@ -502,11 +519,26 @@ async function persistBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
   }
 
   let updatedMetrics = 0;
+  let skippedMetrics = 0;
   const today = new Date().toISOString().slice(0, 10);
   for (const acc of accounts) {
     const cpa = extracted.comissao_cpa ?? 0;
     const rev = extracted.comissao_revshare ?? 0;
     const total = cpa + rev;
+    const externalRef = `${brand.slug}:panel_scrape_html:current_period:${acc.id}`;
+    const { data: existingMetric } = await supabase
+      .from("tracking_metrics")
+      .select("cliques,registros,ftd,deposits_count,depositos_total,updated_at")
+      .eq("external_ref", externalRef)
+      .maybeSingle();
+
+    // O painel às vezes renderiza a tabela antes do filtro de 30 dias aplicar.
+    // Nunca deixa uma coleta parcial/menor sobrescrever a última coleta completa.
+    if (isPartialDowngrade(existingMetric, extracted)) {
+      skippedMetrics++;
+      continue;
+    }
+
     const { error } = await supabase.from("tracking_metrics").upsert({
       data_ref: today,
       platform_id: acc.platform_id,
@@ -526,7 +558,7 @@ async function persistBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
       original_currency: "BRL",
       origem_importacao: "panel_scrape_html",
       is_demo: false,
-      external_ref: `${brand.slug}:panel_scrape_html:current_period:${acc.id}`,
+      external_ref: externalRef,
     }, { onConflict: "external_ref" });
     if (!error) updatedMetrics++;
   }
@@ -536,6 +568,7 @@ async function persistBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
     saldo_source: saldo.saldo_disponivel != null ? "home_widget" : "missing",
     updatedAccounts,
     updatedMetrics,
+    skippedMetrics,
     has_home_md: !!homeMd,
     has_perf_md: !!perfMd,
   };
