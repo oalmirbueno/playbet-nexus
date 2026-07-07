@@ -156,7 +156,6 @@ function parsePerformanceTotalFromMarkdown(markdown?: string | null) {
     comissao_revshare: pick("comissao_revshare"),
   };
 }
-}
 
 // Regex fallback for the saldo widget when the LLM extraction misses it.
 function parseSaldoFromMarkdown(markdown?: string | null): { saldo_disponivel: number | null; saldo_pendente: number | null } {
