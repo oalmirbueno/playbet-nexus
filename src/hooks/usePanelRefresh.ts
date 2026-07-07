@@ -58,7 +58,7 @@ export function usePanelRefresh() {
         if (!opts.silent) {
           toast({
             title: "Aguarde um instante",
-            description: "Última sincronização foi há menos de 1 minuto.",
+            description: "Última sincronização foi há menos de 30 segundos.",
           });
         }
         return { ok: false, throttled: true };

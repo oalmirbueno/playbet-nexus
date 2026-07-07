@@ -261,7 +261,7 @@ async function firecrawlLoginAndCapture(
 }
 
 async function markStaleRuns(supabase: any) {
-  const staleBefore = new Date(Date.now() - 6 * 60_000).toISOString();
+  const staleBefore = new Date(Date.now() - 4 * 60_000).toISOString();
   await supabase
     .from("panel_scraper_runs")
     .update({
