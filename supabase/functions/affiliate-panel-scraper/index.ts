@@ -26,6 +26,7 @@ type Brand = {
   loginUrl: string | undefined;
   user: string | undefined;
   pass: string | undefined;
+  accountId?: string;
   // Post-login SPA path to visit (dashboard). We wait for it to fully render.
   dashboardPath?: string;
 };
@@ -36,12 +37,14 @@ const BRANDS: Brand[] = [
     loginUrl: Deno.env.get("ESTRELABET_AFFILIATE_LOGIN_URL"),
     user: Deno.env.get("ESTRELABET_AFFILIATE_USER"),
     pass: Deno.env.get("ESTRELABET_AFFILIATE_PASS"),
+    accountId: Deno.env.get("ESTRELABET_AFFILIATE_ACCOUNT_ID") ?? undefined,
   },
   {
     slug: "vupi",
     loginUrl: Deno.env.get("VUPI_AFFILIATE_LOGIN_URL"),
     user: Deno.env.get("VUPI_AFFILIATE_USER"),
     pass: Deno.env.get("VUPI_AFFILIATE_PASS"),
+    accountId: Deno.env.get("VUPI_AFFILIATE_ACCOUNT_ID") ?? Deno.env.get("SMARTICO_LABEL_ID") ?? Deno.env.get("STELLAR_TAP_LABEL_ID") ?? undefined,
   },
 ];
 
@@ -259,6 +262,36 @@ function buildBrandSwitchJs(brand: Brand) {
   `;
 }
 
+function buildAccountSwitchJs(brand: Brand) {
+  if (!brand.accountId) return "";
+  return `
+    (function(){
+      const target = ${JSON.stringify(brand.accountId)};
+      const norm = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      const clickLikeUser = (el) => {
+        if (!el) return false;
+        el.scrollIntoView({block:'center', inline:'center'});
+        el.dispatchEvent(new MouseEvent('pointerdown', {bubbles:true}));
+        el.dispatchEvent(new MouseEvent('mousedown', {bubbles:true}));
+        el.dispatchEvent(new MouseEvent('mouseup', {bubbles:true}));
+        el.click();
+        return true;
+      };
+      const findText = (needle) => Array.from(document.querySelectorAll('button,[role="button"],a,li,div,span'))
+        .filter((el) => norm(el.textContent).includes(norm(needle)))
+        .sort((a,b) => (a.textContent || '').length - (b.textContent || '').length)[0];
+
+      if (clickLikeUser(findText(target))) return;
+
+      const opener = Array.from(document.querySelectorAll('button,[role="button"],a,li,div,span'))
+        .filter((el) => /conta|account|label|id|afiliad|playbet|vupi|estrela/i.test(el.textContent || ''))
+        .sort((a,b) => (a.textContent || '').length - (b.textContent || '').length)[0];
+      clickLikeUser(opener);
+      setTimeout(() => clickLikeUser(findText(target)), 1200);
+    })();
+  `;
+}
+
 // One Firecrawl call: login → optional brand switch → navigate to `targetPath` → capture.
 async function firecrawlLoginAndCapture(
   brand: Brand,
@@ -276,6 +309,7 @@ async function firecrawlLoginAndCapture(
 
   const loginJs = buildLoginJs(brand);
   const switchJs = buildBrandSwitchJs(brand);
+  const accountJs = buildAccountSwitchJs(brand);
   const navJs = `window.location.assign(new URL(${JSON.stringify(targetPath)}, window.location.origin).href);`;
 
   const actions: any[] = [
@@ -283,15 +317,16 @@ async function firecrawlLoginAndCapture(
     { type: "executeJavascript", script: loginJs },
     { type: "wait", milliseconds: 8000 },
     ...(switchJs ? [{ type: "executeJavascript", script: switchJs }, { type: "wait", milliseconds: 7000 }] : []),
+    ...(accountJs ? [{ type: "executeJavascript", script: accountJs }, { type: "wait", milliseconds: 3000 }] : []),
     { type: "executeJavascript", script: navJs },
-    { type: "wait", milliseconds: 8000 },
+    { type: "wait", milliseconds: 12000 },
   ];
 
   const body = {
     url: brand.loginUrl,
     formats,
     onlyMainContent: false,
-    waitFor: 2500,
+    waitFor: 4500,
     actions,
     timeout: 120000,
   };
@@ -371,11 +406,15 @@ async function persistBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
   if (platformIds.length) {
     const { data } = await supabase
       .from("platform_accounts")
-      .select("id, platform_id")
+      .select("id, platform_id, account_external_id")
       .in("platform_id", platformIds)
       .eq("is_active", true)
       .eq("is_demo", false);
-    accounts.push(...(data ?? []));
+    const fetched = data ?? [];
+    const preferred = brand.accountId
+      ? fetched.filter((acc: any) => String(acc.account_external_id ?? "").trim() === brand.accountId)
+      : [];
+    accounts.push(...(preferred.length ? preferred : fetched));
   }
 
   let updatedAccounts = 0;
@@ -526,7 +565,7 @@ Deno.serve(async (req) => {
         finished_at: new Date().toISOString(),
         rows_imported: Object.values(results).reduce((n: number, r: any) => n + (r?.updatedAccounts ?? 0), 0),
         message: JSON.stringify(Object.fromEntries(Object.entries(results).map(([k, v]: any) => [k, v.ok ? `ok (saldo=${v.extracted?.saldo_disponivel ?? "n/a"} src=${v.saldo_source ?? "?"})` : v.error]))),
-        discovery: { brands: targets.map((t) => t.slug), results, raw: debug ? rawDump : undefined },
+        discovery: { brands: targets.map((t) => t.slug), account_ids: Object.fromEntries(targets.map((t) => [t.slug, t.accountId ?? null])), results, raw: debug ? rawDump : undefined },
       }).eq("id", runId);
     }
   })().catch(async (err) => {
