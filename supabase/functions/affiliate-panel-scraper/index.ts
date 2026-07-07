@@ -292,6 +292,59 @@ function buildAccountSwitchJs(brand: Brand) {
   `;
 }
 
+function formatDateParts(date = new Date()) {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(date.getUTCDate()).padStart(2, "0");
+  return { iso: `${y}-${m}-${d}`, br: `${d}/${m}/${y}` };
+}
+
+function buildPerformanceDateFilterJs(targetPath: string) {
+  if (!/reports\/performance/i.test(targetPath)) return "";
+  const end = new Date();
+  const start = new Date(end);
+  start.setUTCDate(start.getUTCDate() - 29);
+  const from = formatDateParts(start);
+  const to = formatDateParts(end);
+  return `
+    (function(){
+      const from = ${JSON.stringify(from)};
+      const to = ${JSON.stringify(to)};
+      const setVal = (el, value) => {
+        if (!el) return false;
+        const proto = el instanceof HTMLInputElement ? window.HTMLInputElement.prototype : window.HTMLTextAreaElement.prototype;
+        const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+        if (setter) setter.call(el, value); else el.value = value;
+        el.dispatchEvent(new Event('input', {bubbles:true}));
+        el.dispatchEvent(new Event('change', {bubbles:true}));
+        el.dispatchEvent(new Event('blur', {bubbles:true}));
+        return true;
+      };
+      const inputs = Array.from(document.querySelectorAll('input'))
+        .filter((el) => !/password|email|search/i.test(el.type || ''))
+        .sort((a,b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top || a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+      if (inputs[0]) setVal(inputs[0], inputs[0].type === 'date' ? from.iso : from.br);
+      if (inputs[1]) setVal(inputs[1], inputs[1].type === 'date' ? to.iso : to.br);
+      const clickLikeUser = (el) => {
+        if (!el) return false;
+        el.scrollIntoView({block:'center', inline:'center'});
+        el.dispatchEvent(new MouseEvent('pointerdown', {bubbles:true}));
+        el.dispatchEvent(new MouseEvent('mousedown', {bubbles:true}));
+        el.dispatchEvent(new MouseEvent('mouseup', {bubbles:true}));
+        el.click();
+        return true;
+      };
+      const btn = Array.from(document.querySelectorAll('button,[role="button"]'))
+        .filter((el) => /buscar|filtrar|aplicar|gerar|pesquisar|consultar/i.test(el.textContent || ''))
+        .sort((a,b) => (a.textContent || '').length - (b.textContent || '').length)[0];
+      if (!clickLikeUser(btn) && inputs[1]) {
+        inputs[1].dispatchEvent(new KeyboardEvent('keydown', {key:'Enter', bubbles:true}));
+        inputs[1].dispatchEvent(new KeyboardEvent('keyup', {key:'Enter', bubbles:true}));
+      }
+    })();
+  `;
+}
+
 // One Firecrawl call: login → optional brand switch → navigate to `targetPath` → capture.
 async function firecrawlLoginAndCapture(
   brand: Brand,
@@ -310,7 +363,20 @@ async function firecrawlLoginAndCapture(
   const loginJs = buildLoginJs(brand);
   const switchJs = buildBrandSwitchJs(brand);
   const accountJs = buildAccountSwitchJs(brand);
-  const navJs = `window.location.assign(new URL(${JSON.stringify(targetPath)}, window.location.origin).href);`;
+  const perfFilterJs = buildPerformanceDateFilterJs(targetPath);
+  const navJs = `
+    (function(){
+      const url = new URL(${JSON.stringify(targetPath)}, window.location.origin);
+      if (/reports\\/performance/i.test(url.pathname)) {
+        const end = new Date();
+        const start = new Date(end);
+        start.setUTCDate(start.getUTCDate() - 29);
+        url.searchParams.set('date_start', start.toISOString().slice(0,10));
+        url.searchParams.set('date_end', end.toISOString().slice(0,10));
+      }
+      window.location.assign(url.href);
+    })();
+  `;
 
   const actions: any[] = [
     { type: "wait", milliseconds: 5000 },
@@ -319,7 +385,8 @@ async function firecrawlLoginAndCapture(
     ...(switchJs ? [{ type: "executeJavascript", script: switchJs }, { type: "wait", milliseconds: 7000 }] : []),
     ...(accountJs ? [{ type: "executeJavascript", script: accountJs }, { type: "wait", milliseconds: 3000 }] : []),
     { type: "executeJavascript", script: navJs },
-    { type: "wait", milliseconds: 12000 },
+    { type: "wait", milliseconds: 8000 },
+    ...(perfFilterJs ? [{ type: "executeJavascript", script: perfFilterJs }, { type: "wait", milliseconds: 8000 }] : []),
   ];
 
   const body = {
