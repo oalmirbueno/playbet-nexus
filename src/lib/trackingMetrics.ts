@@ -28,10 +28,49 @@ export function shouldUseMetricSource(metric: { origem_importacao?: string | nul
   return !isDeprecatedMetricSource(metric.origem_importacao);
 }
 
-export function selectAuthoritativeMetricRows<T extends { origem_importacao?: string | null }>(rows: T[]): T[] {
-  const usable = rows.filter((row) => shouldUseMetricSource(row as any));
-  const livePanelRows = usable.filter((row) => String(row.origem_importacao ?? "").toLowerCase() === "panel_scrape_html");
-  return livePanelRows.length > 0 ? livePanelRows : usable;
+function hasMetricContent(row: any) {
+  return (
+    Number(row?.cliques ?? 0) !== 0 ||
+    Number(row?.registros ?? 0) !== 0 ||
+    Number(row?.ftd ?? 0) !== 0 ||
+    Number(row?.deposits_count ?? 0) !== 0 ||
+    Number(row?.depositos_total ?? row?.converted_amount ?? 0) !== 0 ||
+    Number(row?.cpa_commission ?? 0) !== 0 ||
+    Number(row?.revshare_commission ?? 0) !== 0 ||
+    Number(row?.commission_total ?? 0) !== 0 ||
+    Number(row?.revenue ?? 0) !== 0
+  );
+}
+
+export function selectAuthoritativeMetricRows<T extends { origem_importacao?: string | null; platform_id?: string | null }>(rows: T[]): T[] {
+  const groups = new Map<string, T[]>();
+  for (const row of rows) {
+    const key = (row as any).platform_id ?? "__no_platform__";
+    groups.set(key, [...(groups.get(key) ?? []), row]);
+  }
+
+  const selected: T[] = [];
+  for (const groupRows of groups.values()) {
+    const livePanelRows = groupRows.filter((row) =>
+      String(row.origem_importacao ?? "").toLowerCase() === "panel_scrape_html" && hasMetricContent(row),
+    );
+    if (livePanelRows.length > 0) {
+      selected.push(...livePanelRows);
+      continue;
+    }
+
+    const nonDeprecated = groupRows.filter((row) => shouldUseMetricSource(row as any));
+    const nonDeprecatedWithContent = nonDeprecated.filter(hasMetricContent);
+    if (nonDeprecatedWithContent.length > 0) {
+      selected.push(...nonDeprecatedWithContent);
+      continue;
+    }
+
+    const legacyWithContent = groupRows.filter((row) => isDeprecatedMetricSource(row.origem_importacao) && hasMetricContent(row));
+    selected.push(...(legacyWithContent.length > 0 ? legacyWithContent : nonDeprecated));
+  }
+
+  return selected;
 }
 
 const money = (value: unknown) => {
