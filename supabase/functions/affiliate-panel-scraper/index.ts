@@ -507,7 +507,7 @@ async function persistBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
   const perfUrl = String(perfDoc?.metadata?.url ?? perfDoc?.metadata?.sourceURL ?? "");
   const bothMd = `${homeMd ?? ""}\n${perfMd ?? ""}`;
   const vupiHint = /vupi/i.test(bothMd) || /vupi/i.test(homeUrl) || /vupi/i.test(perfUrl);
-  if (brand.slug === "vupi" && !vupiHint && !perfHasData) {
+  if (brand.slug === "vupi" && !vupiHint) {
     return {
       extracted: null,
       updatedAccounts: 0,
