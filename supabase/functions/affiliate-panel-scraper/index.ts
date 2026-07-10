@@ -63,7 +63,12 @@ const HOME_SCHEMA = {
 function normalizeNumber(value: unknown): number | null {
   if (value == null || value === "") return null;
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  const raw = String(value).replace(/\s/g, "").replace(/R\$/gi, "");
+  let raw = String(value).replace(/\s/g, "").replace(/R\$/gi, "");
+  // Estrelabet cola o percentual no valor: "R$750,0092%" ou "R$-13,41-10%".
+  // Formato = <valor>,<centavos-2-digitos><pct>%. Preserva os centavos.
+  raw = raw.replace(/(,\d{2})-?\d+%$/, "$1");
+  // Caso genérico sem centavos, ex.: "0%" no fim.
+  raw = raw.replace(/-?\d+%$/i, "");
   const normalized = raw.includes(",") ? raw.replace(/\./g, "").replace(",", ".") : raw;
   const n = Number(normalized.replace(/[^\d.-]/g, ""));
   return Number.isFinite(n) ? n : null;
@@ -81,15 +86,15 @@ function firstNumber(...values: unknown[]): number | null {
 // podem reordenar/adicionar colunas (impressões, qFTDs, chargeback…) e o parser
 // não pode "escorregar" centavos entre depósitos, GGR, comissão etc.
 const HEADER_ALIASES: Record<string, RegExp[]> = {
-  cliques: [/^cliques?$/i, /clicks?/i],
+  cliques: [/^cliques?$/i, /clicks?/i, /^visitas?$/i, /impress/i],
   cadastros: [/^cadastros?$/i, /^registros?$/i, /sign[- ]?ups?/i],
   ftds: [/^ftds?$/i, /first.*deposit/i],
-  ftds_valor: [/valor.*ftd/i, /ftd.*(valor|total|amount)/i, /first.*deposit.*(amount|value)/i],
+  ftds_valor: [/ftd.*amount/i, /valor.*ftd/i, /ftd.*(valor|total)/i, /first.*deposit.*(amount|value)/i],
   qftds: [/^q?\.?\s*ftds?$/i, /qualified.*ftd/i],
-  depositos_qtd: [/dep[óo]sitos?\b(?!.*valor)(?!.*total)/i, /qtd.*dep/i, /deposits?(?!.*(amount|value|total))/i],
-  depositos_valor: [/valor.*dep[óo]sit/i, /dep[óo]sitos?.*(valor|total|amount)/i, /deposit.*(amount|value|total)/i, /volume.*dep/i],
-  ggr: [/^ggr$/i, /gross.*revenue/i],
-  ngr: [/^ngr$/i, /net.*revenue/i],
+  depositos_qtd: [/^dep[óo]sitos?$/i, /dep[óo]sitos?\b(?!.*(valor|total|amount))/i, /qtd.*dep/i, /deposits?(?!.*(amount|value|total))/i],
+  depositos_valor: [/dep\.?\s*amount/i, /valor.*dep[óo]sit/i, /dep[óo]sitos?.*(valor|total|amount)/i, /deposit.*(amount|value|total)/i, /volume.*dep/i],
+  ggr: [/^ggr\b/i, /gross.*revenue/i],
+  ngr: [/^ngr\b/i, /net.*revenue|net\s*p&l/i],
   comissao_cpa: [/comiss[ãa]o.*cpa/i, /^cpa\b/i],
   comissao_revshare: [/comiss[ãa]o.*rev/i, /rev[- ]?share/i, /^rev\b/i],
 };
@@ -104,7 +109,7 @@ function parsePerformanceTotalFromMarkdown(markdown?: string | null) {
 
   let totalIdx = -1;
   for (let i = 0; i < lines.length; i++) {
-    if (/^\|\s*Total\s*\|/i.test(lines[i])) { totalIdx = i; break; }
+    if (/^\|\s*Total/i.test(lines[i])) { totalIdx = i; break; }
   }
   if (totalIdx < 0) return {};
 
@@ -128,12 +133,14 @@ function parsePerformanceTotalFromMarkdown(markdown?: string | null) {
     return -1;
   };
 
-  // Fallback posicional (layout histórico Estrelabet/VUPI) quando o header
-  // não bate — garante que nunca zeramos por falha de matching de nome.
+  // Fallback posicional para o layout atual Estrelabet:
+  // | Período | CPA | RevShare | Visitas | Registros | FTDs | QFTDs |
+  //   FTDs Amount | Depósitos | Dep. Amount | GGR | NGR |
   const POSITIONAL: Record<string, number> = {
-    cliques: 2, cadastros: 3, ftds: 4, ftds_valor: 5, qftds: 6,
-    depositos_qtd: 7, depositos_valor: 8, ggr: 9, ngr: 10,
-    comissao_cpa: 11, comissao_revshare: 12,
+    comissao_cpa: 1, comissao_revshare: 2,
+    cliques: 3, cadastros: 4, ftds: 5, qftds: 6,
+    ftds_valor: 7, depositos_qtd: 8, depositos_valor: 9,
+    ggr: 10, ngr: 11,
   };
 
   const pick = (key: string) => {
@@ -212,16 +219,33 @@ function numberOrZero(value: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function isPartialDowngrade(existing: any, extracted: ReturnType<typeof compactExtraction>) {
+// Only block a write when the extraction is CLEARLY empty (painel não
+// renderizou / filtro caiu / sessão expirou) e já tínhamos dados. Antes
+// bloqueávamos qualquer métrica que oscilasse pra baixo — isso congelava o
+// dashboard porque o painel oficial oscila naturalmente (chargeback, estorno,
+// reclassificação de FTD). O painel é a fonte da verdade: se o painel diz
+// que caiu, a gente reflete. Só ignora leitura totalmente vazia.
+function isEmptyExtraction(extracted: ReturnType<typeof compactExtraction>) {
+  return (
+    numberOrZero(extracted.cliques) === 0 &&
+    numberOrZero(extracted.cadastros) === 0 &&
+    numberOrZero(extracted.ftds) === 0 &&
+    numberOrZero(extracted.depositos_qtd) === 0 &&
+    numberOrZero(extracted.depositos_valor) === 0 &&
+    numberOrZero(extracted.comissao_cpa) === 0 &&
+    numberOrZero(extracted.comissao_revshare) === 0
+  );
+}
+
+function existingHasData(existing: any) {
   if (!existing) return false;
-  const checks: Array<[unknown, unknown]> = [
-    [extracted.cliques, existing.cliques],
-    [extracted.cadastros, existing.registros],
-    [extracted.ftds, existing.ftd],
-    [extracted.depositos_qtd, existing.deposits_count],
-    [extracted.depositos_valor, existing.depositos_total],
-  ];
-  return checks.some(([next, prev]) => numberOrZero(next) < numberOrZero(prev));
+  return (
+    numberOrZero(existing.cliques) > 0 ||
+    numberOrZero(existing.registros) > 0 ||
+    numberOrZero(existing.ftd) > 0 ||
+    numberOrZero(existing.deposits_count) > 0 ||
+    numberOrZero(existing.depositos_total) > 0
+  );
 }
 
 function buildLoginJs(brand: Brand) {
@@ -327,21 +351,7 @@ function buildPerformanceDateFilterJs(targetPath: string) {
     (function(){
       const from = ${JSON.stringify(from)};
       const to = ${JSON.stringify(to)};
-      const setVal = (el, value) => {
-        if (!el) return false;
-        const proto = el instanceof HTMLInputElement ? window.HTMLInputElement.prototype : window.HTMLTextAreaElement.prototype;
-        const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
-        if (setter) setter.call(el, value); else el.value = value;
-        el.dispatchEvent(new Event('input', {bubbles:true}));
-        el.dispatchEvent(new Event('change', {bubbles:true}));
-        el.dispatchEvent(new Event('blur', {bubbles:true}));
-        return true;
-      };
-      const inputs = Array.from(document.querySelectorAll('input'))
-        .filter((el) => !/password|email|search/i.test(el.type || ''))
-        .sort((a,b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top || a.getBoundingClientRect().left - b.getBoundingClientRect().left);
-      if (inputs[0]) setVal(inputs[0], inputs[0].type === 'date' ? from.iso : from.br);
-      if (inputs[1]) setVal(inputs[1], inputs[1].type === 'date' ? to.iso : to.br);
+      const norm = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
       const clickLikeUser = (el) => {
         if (!el) return false;
         el.scrollIntoView({block:'center', inline:'center'});
@@ -351,13 +361,43 @@ function buildPerformanceDateFilterJs(targetPath: string) {
         el.click();
         return true;
       };
-      const btn = Array.from(document.querySelectorAll('button,[role="button"]'))
-        .filter((el) => /buscar|filtrar|aplicar|gerar|pesquisar|consultar/i.test(el.textContent || ''))
+      const findText = (re) => Array.from(document.querySelectorAll('button,[role="button"],a,li,div,span,option'))
+        .filter((el) => re.test(norm(el.textContent || '')))
         .sort((a,b) => (a.textContent || '').length - (b.textContent || '').length)[0];
-      if (!clickLikeUser(btn) && inputs[1]) {
-        inputs[1].dispatchEvent(new KeyboardEvent('keydown', {key:'Enter', bubbles:true}));
-        inputs[1].dispatchEvent(new KeyboardEvent('keyup', {key:'Enter', bubbles:true}));
-      }
+
+      // 1) Preferência: abrir o seletor de período e clicar em "Últimos 30 dias".
+      const periodOpener = findText(/(periodo|per.odo|data|date|range|filtro)/);
+      if (periodOpener) clickLikeUser(periodOpener);
+      setTimeout(() => {
+        const preset30 = findText(/(ultimos?\s*30|last\s*30|30\s*dias?|30\s*days)/);
+        if (preset30) clickLikeUser(preset30);
+      }, 800);
+
+      // 2) Fallback: digitar as datas nos dois primeiros inputs de data.
+      setTimeout(() => {
+        const setVal = (el, value) => {
+          if (!el) return false;
+          const proto = el instanceof HTMLInputElement ? window.HTMLInputElement.prototype : window.HTMLTextAreaElement.prototype;
+          const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+          if (setter) setter.call(el, value); else el.value = value;
+          el.dispatchEvent(new Event('input', {bubbles:true}));
+          el.dispatchEvent(new Event('change', {bubbles:true}));
+          el.dispatchEvent(new Event('blur', {bubbles:true}));
+          return true;
+        };
+        const inputs = Array.from(document.querySelectorAll('input'))
+          .filter((el) => !/password|email|search|checkbox|radio/i.test(el.type || ''))
+          .sort((a,b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top || a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+        if (inputs[0]) setVal(inputs[0], inputs[0].type === 'date' ? from.iso : from.br);
+        if (inputs[1]) setVal(inputs[1], inputs[1].type === 'date' ? to.iso : to.br);
+        const applyBtn = Array.from(document.querySelectorAll('button,[role="button"]'))
+          .filter((el) => /(buscar|filtrar|aplicar|gerar|pesquisar|consultar|apply|search)/i.test(el.textContent || ''))
+          .sort((a,b) => (a.textContent || '').length - (b.textContent || '').length)[0];
+        if (!clickLikeUser(applyBtn) && inputs[1]) {
+          inputs[1].dispatchEvent(new KeyboardEvent('keydown', {key:'Enter', bubbles:true}));
+          inputs[1].dispatchEvent(new KeyboardEvent('keyup', {key:'Enter', bubbles:true}));
+        }
+      }, 1800);
     })();
   `;
 }
@@ -403,7 +443,7 @@ async function firecrawlLoginAndCapture(
     ...(accountJs ? [{ type: "executeJavascript", script: accountJs }, { type: "wait", milliseconds: 3000 }] : []),
     { type: "executeJavascript", script: navJs },
     { type: "wait", milliseconds: 8000 },
-    ...(perfFilterJs ? [{ type: "executeJavascript", script: perfFilterJs }, { type: "wait", milliseconds: 8000 }] : []),
+    ...(perfFilterJs ? [{ type: "executeJavascript", script: perfFilterJs }, { type: "wait", milliseconds: 12000 }] : []),
   ];
 
   const body = {
@@ -412,7 +452,7 @@ async function firecrawlLoginAndCapture(
     onlyMainContent: false,
     waitFor: 4500,
     actions,
-    timeout: 120000,
+    timeout: 180000,
   };
 
   const res = await fetch(FIRECRAWL_URL, {
@@ -454,9 +494,20 @@ async function persistBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
   const homeMd = homeDoc?.markdown ?? null;
   const perfMd = perfDoc?.markdown ?? null;
 
-  // Sanity: for VUPI both captures should mention VUPI (else brand-switch failed).
+  const perfJson = perfDoc?.json ?? perfDoc?.extract ?? {};
+  const perf = { ...perfJson, ...parsePerformanceTotalFromMarkdown(perfMd) };
+  const extractedPreview = compactExtraction(perf, { saldo_disponivel: null, saldo_pendente: null });
+  const perfHasData = !isEmptyExtraction(extractedPreview);
+
+  // Sanity para VUPI: aceita se a URL/metadata/markdown menciona VUPI OU se
+  // a tabela de performance veio com dados reais (login autenticado e conta
+  // certa). O check estrito de texto "VUPI" quebra quando o painel troca o
+  // label (ex.: mostra só o ID da conta).
+  const homeUrl = String(homeDoc?.metadata?.url ?? homeDoc?.metadata?.sourceURL ?? "");
+  const perfUrl = String(perfDoc?.metadata?.url ?? perfDoc?.metadata?.sourceURL ?? "");
   const bothMd = `${homeMd ?? ""}\n${perfMd ?? ""}`;
-  if (brand.slug === "vupi" && !/\bVUPI\b|\bVupi\b/.test(bothMd)) {
+  const vupiHint = /vupi/i.test(bothMd) || /vupi/i.test(homeUrl) || /vupi/i.test(perfUrl);
+  if (brand.slug === "vupi" && !vupiHint) {
     return {
       extracted: null,
       updatedAccounts: 0,
@@ -465,9 +516,6 @@ async function persistBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
       has_markdown: !!(homeMd || perfMd),
     };
   }
-
-  const perfJson = perfDoc?.json ?? perfDoc?.extract ?? {};
-  const perf = { ...perfJson, ...parsePerformanceTotalFromMarkdown(perfMd) };
 
   const homeJson = homeDoc?.json ?? homeDoc?.extract ?? {};
   const saldoRegex = parseSaldoFromMarkdown(homeMd);
@@ -532,9 +580,11 @@ async function persistBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
       .eq("external_ref", externalRef)
       .maybeSingle();
 
-    // O painel às vezes renderiza a tabela antes do filtro de 30 dias aplicar.
-    // Nunca deixa uma coleta parcial/menor sobrescrever a última coleta completa.
-    if (isPartialDowngrade(existingMetric, extracted)) {
+    // Painel é a fonte da verdade. Só ignora a coleta quando ela vem
+    // completamente vazia (session expirou, filtro caiu, tabela não
+    // renderizou) e já tínhamos dados válidos — nunca sobrescreve verdade
+    // com zero.
+    if (isEmptyExtraction(extracted) && existingHasData(existingMetric)) {
       skippedMetrics++;
       continue;
     }
