@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getMetricMoneyParts } from "../trackingMetrics";
+import { getMetricMoneyParts, selectAuthoritativeMetricRows } from "../trackingMetrics";
 
 describe("getMetricMoneyParts", () => {
   it("preserves negative RevShare discounts from the panel", () => {
@@ -40,5 +40,17 @@ describe("getMetricMoneyParts", () => {
     const total = rows.reduce((sum, row) => sum + getMetricMoneyParts(row).total, 0);
 
     expect(Math.round(total * 100) / 100).toBe(136.59);
+  });
+});
+
+describe("selectAuthoritativeMetricRows", () => {
+  it("keeps each platform authoritative independently", () => {
+    const rows = [
+      { platform_id: "estrela", origem_importacao: "panel_scrape_html", commission_total: 815, cliques: 73 },
+      { platform_id: "vupi", origem_importacao: "panel_scrape_html", commission_total: 0, cliques: 0 },
+      { platform_id: "vupi", origem_importacao: "panel_scraper_stellar", commission_total: 2.89, cliques: 12 },
+    ];
+
+    expect(selectAuthoritativeMetricRows(rows)).toEqual([rows[0], rows[2]]);
   });
 });
