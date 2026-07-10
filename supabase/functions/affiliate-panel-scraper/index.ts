@@ -436,7 +436,7 @@ async function firecrawlLoginAndCapture(
     ...(accountJs ? [{ type: "executeJavascript", script: accountJs }, { type: "wait", milliseconds: 3000 }] : []),
     { type: "executeJavascript", script: navJs },
     { type: "wait", milliseconds: 8000 },
-    ...(perfFilterJs ? [{ type: "executeJavascript", script: perfFilterJs }, { type: "wait", milliseconds: 8000 }] : []),
+    ...(perfFilterJs ? [{ type: "executeJavascript", script: perfFilterJs }, { type: "wait", milliseconds: 12000 }] : []),
   ];
 
   const body = {
