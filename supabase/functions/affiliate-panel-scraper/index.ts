@@ -454,8 +454,11 @@ function buildRevealBalanceJs(targetPath: string) {
   return `
     (function(){
       const norm = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      const clicked = new WeakSet();
       const clickLikeUser = (el) => {
         if (!el) return false;
+        if (clicked.has(el)) return false;
+        clicked.add(el);
         try { el.scrollIntoView({block:'center', inline:'center'}); } catch (_) {}
         el.dispatchEvent(new MouseEvent('pointerdown', {bubbles:true}));
         el.dispatchEvent(new MouseEvent('mousedown', {bubbles:true}));
@@ -466,10 +469,11 @@ function buildRevealBalanceJs(targetPath: string) {
       const explicit = Array.from(document.querySelectorAll('button,[role="button"],a'))
         .filter((el) => {
           const txt = norm([el.textContent, el.getAttribute('aria-label'), el.getAttribute('title'), el.getAttribute('data-testid')].filter(Boolean).join(' '));
-          return /(mostrar|exibir|visualizar|revelar|saldo|balance|eye|olho|visibility)/.test(txt);
+          return /(mostrar|exibir|visualizar|revelar|eye|olho|visibility)/.test(txt) && /(saldo|balance|saque|retirada|mostrar|exibir|visualizar|revelar)/.test(txt);
         })
         .sort((a,b) => (a.textContent || '').length - (b.textContent || '').length);
-      for (const el of explicit) clickLikeUser(el.closest('button,[role="button"],a') || el);
+      const explicitTargets = new Set(explicit.map((el) => el.closest('button,[role="button"],a') || el));
+      for (const el of explicitTargets) clickLikeUser(el);
 
       const maskedBlocks = Array.from(document.querySelectorAll('div,section,article,main'))
         .filter((el) => /[•●*]{3,}/.test(el.textContent || '') && /saldo|balance|saque/i.test(el.textContent || ''))
@@ -481,8 +485,10 @@ function buildRevealBalanceJs(targetPath: string) {
             const txt = norm([el.textContent, el.getAttribute('aria-label'), el.getAttribute('title'), el.getAttribute('data-testid'), el.className].filter(Boolean).join(' '));
             return txt === '' || /(mostrar|exibir|visualizar|eye|olho|visibility|saldo|balance)/.test(txt);
           })
+          .map((el) => el.closest('button,[role="button"],a') || el.parentElement || el)
+          .filter((el) => !explicitTargets.has(el))
           .slice(0, 8);
-        for (const el of controls) clickLikeUser(el.closest('button,[role="button"],a') || el.parentElement || el);
+        for (const el of controls) clickLikeUser(el);
       }
     })();
   `;
