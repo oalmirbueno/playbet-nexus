@@ -49,7 +49,7 @@ export default function PortalFinanceiro() {
       setPaidTotal(paid); setPendingTotal(pending);
       setLoading(false);
     })();
-  }, [user]);
+  }, [user, revision]);
 
   const commissionPct = Number(inf?.commission_percent ?? 0);
   const totals = useMemo(() => rows.reduce((a, r) => ({
