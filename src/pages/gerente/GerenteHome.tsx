@@ -77,18 +77,67 @@ export default function GerenteHome() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        {cards.map(c => (
-          <div key={c.label} className="glass-card p-4 md:p-5">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] text-muted-foreground">{c.label}</span>
-              <c.icon size={14} className="text-primary/80" />
-            </div>
-            <div className="text-xl md:text-2xl font-semibold tracking-tight">
-              {loading ? <span className="inline-block h-6 w-16 rounded bg-secondary/60 animate-pulse" /> : c.value}
-            </div>
+      {/* Meta hero + KPIs */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="glass-card p-5 lg:col-span-1 relative overflow-hidden">
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">Meta do mês</span>
+            <Target size={13} className="text-primary/80" />
           </div>
-        ))}
+          {(() => {
+            const goal = Number(squad?.monthly_goal ?? 0);
+            const done = kpi.revenue;
+            const pct = goal > 0 ? Math.min(100, (done / goal) * 100) : 0;
+            const R = 46; const C = 2 * Math.PI * R;
+            const dash = (pct / 100) * C;
+            return (
+              <div className="flex items-center gap-4">
+                <div className="relative w-[112px] h-[112px] shrink-0">
+                  <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
+                    <circle cx="60" cy="60" r={R} strokeWidth="10" className="stroke-secondary/60" fill="none" />
+                    <circle
+                      cx="60" cy="60" r={R} strokeWidth="10" fill="none"
+                      stroke="url(#ring-grad)" strokeLinecap="round"
+                      strokeDasharray={`${dash} ${C}`}
+                      style={{ transition: "stroke-dasharray 600ms ease" }}
+                    />
+                    <defs>
+                      <linearGradient id="ring-grad" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="hsl(238 84% 60%)" />
+                        <stop offset="100%" stopColor="hsl(189 94% 55%)" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-xl font-semibold tabular-nums">{loading ? "…" : `${pct.toFixed(0)}%`}</span>
+                    <span className="text-[10px] text-muted-foreground">atingido</span>
+                  </div>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] text-muted-foreground">Realizado</p>
+                  <p className="text-lg font-semibold tabular-nums truncate">{done.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 })}</p>
+                  <p className="text-[11px] text-muted-foreground mt-2">Meta</p>
+                  <p className="text-[13px] tabular-nums text-foreground/80 truncate">{goal > 0 ? goal.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }) : "—"}</p>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+
+        <div className="lg:col-span-2 grid grid-cols-2 gap-3 md:gap-4">
+          {cards.map(c => (
+            <div key={c.label} className="glass-card p-4 md:p-5">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] text-muted-foreground">{c.label}</span>
+                <c.icon size={14} className="text-primary/80" />
+              </div>
+              <div className="text-xl md:text-2xl font-semibold tracking-tight">
+                {loading ? <span className="inline-block h-6 w-16 rounded bg-secondary/60 animate-pulse" /> : c.value}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
