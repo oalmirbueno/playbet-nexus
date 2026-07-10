@@ -1,6 +1,10 @@
 import { Link, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { LayoutDashboard, Link2, Wallet, DollarSign, User, LogOut, Wand2 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { usePortalRealtime } from "@/hooks/usePortalRealtime";
 import PreviewBanner from "@/components/PreviewBanner";
 import { PortalNotificationBell } from "@/components/PortalNotificationBell";
 import logo from "@/assets/logo.png";
@@ -17,6 +21,20 @@ const items = [
 export default function InfluencerPortalLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { signOut, user } = useAuth();
+  const scope = usePreviewScope();
+  const qc = useQueryClient();
+  const [influencerId, setInfluencerId] = useState<string | null>(scope.influencerId ?? null);
+
+  useEffect(() => {
+    if (scope.active) { setInfluencerId(scope.influencerId ?? null); return; }
+    if (!user?.id) return;
+    supabase.from("profiles").select("influencer_id").eq("id", user.id).maybeSingle()
+      .then(({ data }) => setInfluencerId(data?.influencer_id ?? null));
+  }, [user?.id, scope.active, scope.influencerId]);
+
+  usePortalRealtime({ influencerId }, () => qc.invalidateQueries());
+
+
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
