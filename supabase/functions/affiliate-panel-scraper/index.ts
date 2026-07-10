@@ -51,6 +51,34 @@ const BRANDS: Brand[] = [
 // Firecrawl v2 scrape endpoint
 const FIRECRAWL_URL = "https://api.firecrawl.dev/v2/scrape";
 
+function brandLookupKey(slug: Brand["slug"]) {
+  return slug === "estrelabet" ? "estrel" : "vupi";
+}
+
+async function resolveBrandForCapture(supabase: any, brand: Brand): Promise<Brand> {
+  if (brand.accountId) return brand;
+  const key = brandLookupKey(brand.slug);
+  const { data: platforms } = await supabase
+    .from("platforms")
+    .select("id")
+    .or(`slug.ilike.%${key}%,name.ilike.%${key}%`)
+    .limit(5);
+  const platformIds = (platforms ?? []).map((p: any) => p.id);
+  if (!platformIds.length) return brand;
+  const { data: account } = await supabase
+    .from("platform_accounts")
+    .select("account_external_id")
+    .in("platform_id", platformIds)
+    .eq("is_active", true)
+    .eq("is_demo", false)
+    .not("account_external_id", "is", null)
+    .order("updated_at", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+  const accountId = String(account?.account_external_id ?? "").trim();
+  return accountId ? { ...brand, accountId } : brand;
+}
+
 // Schema used ONLY for the Home widget (saldo disponível / pendente).
 const HOME_SCHEMA = {
   type: "object",
@@ -577,7 +605,7 @@ async function prepareBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
   };
   const extracted = compactExtraction(perf, saldo);
 
-  const key = brand.slug === "estrelabet" ? "estrel" : "vupi";
+  const key = brandLookupKey(brand.slug);
   const { data: platforms } = await supabase
     .from("platforms")
     .select("id, slug, name")
@@ -770,8 +798,10 @@ Deno.serve(async (req) => {
     const rawDump: Record<string, any> = {};
     const preps: Record<string, any> = {};
 
+    const captureTargets = await Promise.all(targets.map((brand) => resolveBrandForCapture(supabase, brand)));
+
     // Fase 1 — extração paralela (Firecrawl + parse). Nenhuma escrita ainda.
-    await Promise.all(targets.map(async (brand) => {
+    await Promise.all(captureTargets.map(async (brand) => {
       try {
         const [homeFc, perfFc] = await Promise.all([
           firecrawlLoginAndCapture(
@@ -788,7 +818,7 @@ Deno.serve(async (req) => {
           const hd = homeFc?.data ?? homeFc;
           const pd = perfFc?.data ?? perfFc;
           rawDump[brand.slug] = {
-            home: { metadata: hd?.metadata ?? null, markdown_head: (hd?.markdown ?? "").slice(0, 5000), json: hd?.json ?? hd?.extract ?? null },
+            home: { metadata: hd?.metadata ?? null, markdown_head: (hd?.markdown ?? "").slice(0, 5000), html_head: (hd?.html ?? "").slice(0, 12000), json: hd?.json ?? hd?.extract ?? null },
             perf: { metadata: pd?.metadata ?? null, markdown_head: (pd?.markdown ?? "").slice(0, 5000) },
           };
         }
@@ -808,7 +838,7 @@ Deno.serve(async (req) => {
       && looksLikeDuplicateOf(vupiPrep.extracted, estrelaPrep.extracted);
     const vupiBrandNotVisible = !!vupiPrep && !vupiPrep.vupiHint;
 
-    for (const brand of targets) {
+    for (const brand of captureTargets) {
       const prep = preps[brand.slug];
       if (!prep) continue;
       try {
@@ -830,7 +860,7 @@ Deno.serve(async (req) => {
         finished_at: new Date().toISOString(),
         rows_imported: Object.values(results).reduce((n: number, r: any) => n + (r?.updatedAccounts ?? 0), 0),
         message: JSON.stringify(Object.fromEntries(Object.entries(results).map(([k, v]: any) => [k, v.ok ? `ok (saldo=${v.extracted?.saldo_disponivel ?? "n/a"} src=${v.saldo_source ?? "?"})` : v.error]))),
-        discovery: { brands: targets.map((t) => t.slug), account_ids: Object.fromEntries(targets.map((t) => [t.slug, t.accountId ?? null])), results, raw: debug ? rawDump : undefined },
+        discovery: { brands: captureTargets.map((t) => t.slug), account_ids: Object.fromEntries(captureTargets.map((t) => [t.slug, t.accountId ?? null])), results, raw: debug ? rawDump : undefined },
       }).eq("id", runId);
     }
   })().catch(async (err) => {
