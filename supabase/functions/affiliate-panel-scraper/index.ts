@@ -63,7 +63,10 @@ const HOME_SCHEMA = {
 function normalizeNumber(value: unknown): number | null {
   if (value == null || value === "") return null;
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
-  const raw = String(value).replace(/\s/g, "").replace(/R\$/gi, "");
+  let raw = String(value).replace(/\s/g, "").replace(/R\$/gi, "");
+  // Estrelabet cola percentual no valor: "R$750,0092%" → "R$750,00".
+  // Remove qualquer sufixo `-?<digitos>%` colado no fim.
+  raw = raw.replace(/-?\d+(?:[.,]\d+)?%$/i, "");
   const normalized = raw.includes(",") ? raw.replace(/\./g, "").replace(",", ".") : raw;
   const n = Number(normalized.replace(/[^\d.-]/g, ""));
   return Number.isFinite(n) ? n : null;
