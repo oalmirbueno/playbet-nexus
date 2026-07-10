@@ -4,12 +4,14 @@ import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { Wallet, TrendingUp, Percent, ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getMetricMoneyParts } from "@/lib/trackingMetrics";
+import { usePanelSync } from "@/hooks/usePanelSync";
 
 interface DayRow { data_ref: string; cliques: number; registros: number; ftd: number; revenue: number }
 
 export default function PortalFinanceiro() {
   const { user } = useAuth();
   const scope = usePreviewScope();
+  const { revision } = usePanelSync();
   const [rows, setRows] = useState<DayRow[]>([]);
   const [inf, setInf] = useState<any>(null);
   const [paidTotal, setPaidTotal] = useState(0);
@@ -47,7 +49,7 @@ export default function PortalFinanceiro() {
       setPaidTotal(paid); setPendingTotal(pending);
       setLoading(false);
     })();
-  }, [user]);
+  }, [user, revision]);
 
   const commissionPct = Number(inf?.commission_percent ?? 0);
   const totals = useMemo(() => rows.reduce((a, r) => ({

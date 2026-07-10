@@ -4,12 +4,14 @@ import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { MousePointerClick, UserPlus, Wallet, TrendingUp, Percent, Users, ArrowUpRight, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getMetricMoneyParts } from "@/lib/trackingMetrics";
+import { usePanelSync } from "@/hooks/usePanelSync";
 
 interface DayRow { data_ref: string; cliques: number; registros: number; ftd: number; revenue: number }
 
 export default function PortalHome() {
   const { user } = useAuth();
   const scope = usePreviewScope();
+  const { revision } = usePanelSync();
   const [name, setName] = useState("");
   const [inf, setInf] = useState<any>(null);
   const [manager, setManager] = useState<any>(null);
@@ -48,7 +50,7 @@ export default function PortalHome() {
       setLinkCount(lc ?? 0);
       setLoading(false);
     })();
-  }, [user]);
+  }, [user, revision]);
 
   const totals = useMemo(() => rows.reduce((a, r) => ({
     clicks: a.clicks + r.cliques,

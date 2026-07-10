@@ -6,6 +6,7 @@ import { toast } from "@/hooks/use-toast";
 import { resolveShareUrl } from "@/lib/trackingUrl";
 import { getMetricMoneyParts } from "@/lib/trackingMetrics";
 import { useQuery } from "@tanstack/react-query";
+import { usePanelSync } from "@/hooks/usePanelSync";
 
 interface EnrichedLink {
   id: string;
@@ -28,6 +29,7 @@ interface EnrichedLink {
 export default function PortalLinks() {
   const { user } = useAuth();
   const scope = usePreviewScope();
+  const { revision } = usePanelSync();
   const [links, setLinks] = useState<EnrichedLink[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -131,7 +133,7 @@ export default function PortalLinks() {
       setLinks(enriched);
       setLoading(false);
     })();
-  }, [user]);
+  }, [user, revision]);
 
   const totals = useMemo(() => links.reduce((a, l) => ({
     clicks: a.clicks + l.metrics.clicks,
