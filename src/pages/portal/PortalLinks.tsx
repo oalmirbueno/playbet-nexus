@@ -29,6 +29,7 @@ interface EnrichedLink {
 export default function PortalLinks() {
   const { user } = useAuth();
   const scope = usePreviewScope();
+  const { revision } = usePanelSync();
   const [links, setLinks] = useState<EnrichedLink[]>([]);
   const [loading, setLoading] = useState(true);
 
