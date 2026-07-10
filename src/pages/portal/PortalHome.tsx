@@ -11,6 +11,7 @@ interface DayRow { data_ref: string; cliques: number; registros: number; ftd: nu
 export default function PortalHome() {
   const { user } = useAuth();
   const scope = usePreviewScope();
+  const { revision } = usePanelSync();
   const [name, setName] = useState("");
   const [inf, setInf] = useState<any>(null);
   const [manager, setManager] = useState<any>(null);
