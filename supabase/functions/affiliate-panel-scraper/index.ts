@@ -107,7 +107,7 @@ function parsePerformanceTotalFromMarkdown(markdown?: string | null) {
 
   let totalIdx = -1;
   for (let i = 0; i < lines.length; i++) {
-    if (/^\|\s*Total\s*\|/i.test(lines[i])) { totalIdx = i; break; }
+    if (/^\|\s*Total\b/i.test(lines[i])) { totalIdx = i; break; }
   }
   if (totalIdx < 0) return {};
 
