@@ -4,6 +4,7 @@ import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { MousePointerClick, UserPlus, Wallet, TrendingUp, Percent, Users, ArrowUpRight, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getMetricMoneyParts } from "@/lib/trackingMetrics";
+import { usePanelSync } from "@/hooks/usePanelSync";
 
 interface DayRow { data_ref: string; cliques: number; registros: number; ftd: number; revenue: number }
 
