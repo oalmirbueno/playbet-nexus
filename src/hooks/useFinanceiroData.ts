@@ -84,6 +84,23 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
     refetchOnWindowFocus: true,
   });
 
+  const balancesQuery = useQuery({
+    queryKey: ["platform_accounts_balances", platformId ?? "all"],
+    queryFn: async () => {
+      let q = (supabase as any)
+        .from("platform_accounts")
+        .select("id, platform_id, balance_available, balance_updated_at, is_active, is_demo")
+        .or("is_demo.is.false,is_demo.is.null")
+        .eq("is_active", true);
+      if (platformId) q = q.eq("platform_id", platformId);
+      const { data, error } = await q;
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+    refetchInterval: 10_000,
+    refetchOnWindowFocus: true,
+  });
+
   // Saques in period (by data field)
   const saquesInPeriod = useMemo(() => {
     return (saques ?? []).filter((s: any) => {
@@ -120,8 +137,25 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
     );
   }, [metricsQuery.data]);
 
+  const authoritativeProfitBase = useMemo(() => {
+    const freshMs = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    let sum = 0;
+    let hasFresh = false;
+    for (const b of balancesQuery.data ?? []) {
+      const val = Number(b?.balance_available ?? 0);
+      const updated = b?.balance_updated_at ? new Date(b.balance_updated_at).getTime() : NaN;
+      if (!Number.isFinite(val) || !Number.isFinite(updated) || now - updated > freshMs) continue;
+      sum += val;
+      hasFresh = true;
+    }
+    // Zero fresco vindo do painel com métricas positivas é leitura mascarada/oculta,
+    // não saldo real. Mantém Rev+CPA até o scraper revelar o saldo disponível.
+    return hasFresh && (sum > 0 || trackingTotals.profitBase === 0) ? sum : trackingTotals.profitBase;
+  }, [balancesQuery.data, trackingTotals.profitBase]);
+
   // Receita oficial da operação = RevShare + CPA. Depósito/NGR ficam só como telemetria.
-  const revenueTracking = trackingTotals.profitBase;
+  const revenueTracking = authoritativeProfitBase;
 
   const influencerMap = useMemo(() => {
     const m = new Map<string, any>();
@@ -266,7 +300,7 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
   // Manager só desconta quando o influencer atribuído tem manager_id definido.
   // Linhas sem influencer (só sócios) fluem 100% para o pool dos sócios.
   const distribution = useMemo(() => {
-    let profitBase = 0;             // Rev + CPA total
+    let metricProfitBase = 0;       // Rev + CPA total importado por linhas
     let attributedProfit = 0;       // parcela com influencer atribuído
     let unattributedProfit = 0;     // parcela sem influencer (100% sócios)
     let influencerCommissionsOwed = 0;
@@ -275,7 +309,7 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
     for (const m of metricsQuery.data ?? []) {
       const base = getMetricMoneyParts(m as any).total;
       if (base <= 0) continue;
-      profitBase += base;
+      metricProfitBase += base;
 
       const infId = (m as any).influencer_id;
       const inf = infId ? influencerMap.get(infId) : null;
@@ -293,19 +327,24 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
       }
     }
 
+    const balanceAdjustment = authoritativeProfitBase - metricProfitBase;
+    if (Math.abs(balanceAdjustment) >= 0.01) {
+      unattributedProfit += balanceAdjustment;
+    }
+
     return {
-      profitBase,
+      profitBase: authoritativeProfitBase,
       attributedProfit,
       unattributedProfit,
       influencerCommissionsOwed,
       managerCommissionsOwed,
-      netAfterCommissions: profitBase - influencerCommissionsOwed - managerCommissionsOwed,
+      netAfterCommissions: authoritativeProfitBase - influencerCommissionsOwed - managerCommissionsOwed,
     };
-  }, [metricsQuery.data, influencerMap, managerMap]);
+  }, [metricsQuery.data, influencerMap, managerMap, authoritativeProfitBase]);
 
   return {
     range,
-    isLoading: metricsQuery.isLoading,
+    isLoading: metricsQuery.isLoading || balancesQuery.isLoading,
     caixaRealizado,
     revenueTracking,
     diff: caixaRealizado - revenueTracking,

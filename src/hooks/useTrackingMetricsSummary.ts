@@ -134,7 +134,10 @@ export function useTrackingMetricsSummary(period: PeriodKey = "30d", platformId?
         anyFresh = true;
       }
     }
-    acc.profitBase = anyFresh ? balanceSum : acc.commissionTotal;
+    // Zero fresco com comissão positiva normalmente significa saldo mascarado/
+    // oculto no painel, não lucro real zerado. Mantém Rev+CPA como fallback
+    // até a função conseguir revelar o saldo disponível de saque.
+    acc.profitBase = anyFresh && (balanceSum > 0 || acc.commissionTotal === 0) ? balanceSum : acc.commissionTotal;
 
     return acc;
   }, [q.data, balancesQ.data]);

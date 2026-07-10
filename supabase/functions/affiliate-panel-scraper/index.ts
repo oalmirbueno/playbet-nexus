@@ -51,6 +51,34 @@ const BRANDS: Brand[] = [
 // Firecrawl v2 scrape endpoint
 const FIRECRAWL_URL = "https://api.firecrawl.dev/v2/scrape";
 
+function brandLookupKey(slug: Brand["slug"]) {
+  return slug === "estrelabet" ? "estrel" : "vupi";
+}
+
+async function resolveBrandForCapture(supabase: any, brand: Brand): Promise<Brand> {
+  if (brand.accountId) return brand;
+  const key = brandLookupKey(brand.slug);
+  const { data: platforms } = await supabase
+    .from("platforms")
+    .select("id")
+    .or(`slug.ilike.%${key}%,name.ilike.%${key}%`)
+    .limit(5);
+  const platformIds = (platforms ?? []).map((p: any) => p.id);
+  if (!platformIds.length) return brand;
+  const { data: account } = await supabase
+    .from("platform_accounts")
+    .select("account_external_id")
+    .in("platform_id", platformIds)
+    .eq("is_active", true)
+    .eq("is_demo", false)
+    .not("account_external_id", "is", null)
+    .order("updated_at", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+  const accountId = String(account?.account_external_id ?? "").trim();
+  return accountId ? { ...brand, accountId } : brand;
+}
+
 // Schema used ONLY for the Home widget (saldo disponível / pendente).
 const HOME_SCHEMA = {
   type: "object",
@@ -168,10 +196,11 @@ function parsePerformanceTotalFromMarkdown(markdown?: string | null) {
 }
 
 // Regex fallback for the saldo widget when the LLM extraction misses it.
-function parseSaldoFromMarkdown(markdown?: string | null): { saldo_disponivel: number | null; saldo_pendente: number | null } {
+function parseSaldoFromMarkdown(markdown?: string | null): { saldo_disponivel: number | null; saldo_pendente: number | null; masked: boolean } {
   const out = { saldo_disponivel: null as number | null, saldo_pendente: null as number | null };
-  if (!markdown) return out;
+  if (!markdown) return { ...out, masked: false };
   const lines = markdown.split("\n").map((l) => l.trim());
+  const masked = /[•●*]{3,}|\*\*\*\*/.test(markdown);
   const money = /R\$\s*([\d.]+,\d{2})/i;
   const findAfter = (labelRe: RegExp): number | null => {
     for (let i = 0; i < lines.length; i++) {
@@ -185,9 +214,27 @@ function parseSaldoFromMarkdown(markdown?: string | null): { saldo_disponivel: n
     }
     return null;
   };
-  out.saldo_disponivel = findAfter(/saldo\s+dispon[íi]vel|dispon[íi]vel\s+para\s+saque/i);
+
+  const findOperationalBalance = (): number | null => {
+    const sectionIdx = lines.findIndex((line) => /balan[çc]o\s+de\s+saldo/i.test(line));
+    if (sectionIdx < 0) return null;
+    for (let i = sectionIdx + 1; i < Math.min(sectionIdx + 12, lines.length); i++) {
+      if (/^saldo$/i.test(lines[i]) || /saldo\s*R\$/i.test(lines[i])) {
+        for (let j = i; j < Math.min(i + 5, lines.length); j++) {
+          const m = lines[j].match(money);
+          if (m) return normalizeNumber(m[1]);
+        }
+      }
+    }
+    return null;
+  };
+
+  // O painel Estrelabet exibe um “Saldo total R$ 0,00” na Home, mas o saldo
+  // financeiro real fica no bloco “BALANÇO DE SALDO”. Quando esse bloco está
+  // mascarado (••••••), zero da Home/LLM NÃO é fonte confiável.
+  out.saldo_disponivel = findOperationalBalance() ?? findAfter(/saldo\s+dispon[íi]vel|dispon[íi]vel\s+para\s+saque|dispon[íi]vel\s+para\s+retirada|valor\s+dispon[íi]vel|saldo\s+afil/i);
   out.saldo_pendente = findAfter(/saldo\s+pendente|a\s+liberar|pendente/i);
-  return out;
+  return { ...out, masked };
 }
 
 function compactExtraction(perf: any, saldo: { saldo_disponivel: number | null; saldo_pendente: number | null }) {
@@ -402,6 +449,51 @@ function buildPerformanceDateFilterJs(targetPath: string) {
   `;
 }
 
+function buildRevealBalanceJs(targetPath: string) {
+  if (!/\/home|\/withdraw|\/extract/i.test(targetPath)) return "";
+  return `
+    (function(){
+      const norm = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+      const clicked = new WeakSet();
+      const clickLikeUser = (el) => {
+        if (!el) return false;
+        if (clicked.has(el)) return false;
+        clicked.add(el);
+        try { el.scrollIntoView({block:'center', inline:'center'}); } catch (_) {}
+        el.dispatchEvent(new MouseEvent('pointerdown', {bubbles:true}));
+        el.dispatchEvent(new MouseEvent('mousedown', {bubbles:true}));
+        el.dispatchEvent(new MouseEvent('mouseup', {bubbles:true}));
+        el.click();
+        return true;
+      };
+      const explicit = Array.from(document.querySelectorAll('button,[role="button"],a'))
+        .filter((el) => {
+          const txt = norm([el.textContent, el.getAttribute('aria-label'), el.getAttribute('title'), el.getAttribute('data-testid')].filter(Boolean).join(' '));
+          return /(mostrar|exibir|visualizar|revelar|eye|olho|visibility)/.test(txt) && /(saldo|balance|saque|retirada|mostrar|exibir|visualizar|revelar)/.test(txt);
+        })
+        .sort((a,b) => (a.textContent || '').length - (b.textContent || '').length);
+      const explicitTargets = new Set(explicit.map((el) => el.closest('button,[role="button"],a') || el));
+      for (const el of explicitTargets) clickLikeUser(el);
+
+      const maskedBlocks = Array.from(document.querySelectorAll('div,section,article,main'))
+        .filter((el) => /[•●*]{3,}/.test(el.textContent || '') && /saldo|balance|saque/i.test(el.textContent || ''))
+        .sort((a,b) => (a.textContent || '').length - (b.textContent || '').length)
+        .slice(0, 4);
+      for (const block of maskedBlocks) {
+        const controls = Array.from(block.querySelectorAll('button,[role="button"],svg,i,span'))
+          .filter((el) => {
+            const txt = norm([el.textContent, el.getAttribute('aria-label'), el.getAttribute('title'), el.getAttribute('data-testid'), el.className].filter(Boolean).join(' '));
+            return txt === '' || /(mostrar|exibir|visualizar|eye|olho|visibility|saldo|balance)/.test(txt);
+          })
+          .map((el) => el.closest('button,[role="button"],a') || el.parentElement || el)
+          .filter((el) => !explicitTargets.has(el))
+          .slice(0, 8);
+        for (const el of controls) clickLikeUser(el);
+      }
+    })();
+  `;
+}
+
 // One Firecrawl call: login → optional brand switch → navigate to `targetPath` → capture.
 async function firecrawlLoginAndCapture(
   brand: Brand,
@@ -421,6 +513,7 @@ async function firecrawlLoginAndCapture(
   const switchJs = buildBrandSwitchJs(brand);
   const accountJs = buildAccountSwitchJs(brand);
   const perfFilterJs = buildPerformanceDateFilterJs(targetPath);
+  const revealBalanceJs = buildRevealBalanceJs(targetPath);
   const navJs = `
     (function(){
       const url = new URL(${JSON.stringify(targetPath)}, window.location.origin);
@@ -443,6 +536,7 @@ async function firecrawlLoginAndCapture(
     ...(accountJs ? [{ type: "executeJavascript", script: accountJs }, { type: "wait", milliseconds: 3000 }] : []),
     { type: "executeJavascript", script: navJs },
     { type: "wait", milliseconds: 8000 },
+    ...(revealBalanceJs ? [{ type: "executeJavascript", script: revealBalanceJs }, { type: "wait", milliseconds: 4000 }] : []),
     ...(perfFilterJs ? [{ type: "executeJavascript", script: perfFilterJs }, { type: "wait", milliseconds: 12000 }] : []),
   ];
 
@@ -508,13 +602,16 @@ async function prepareBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
 
   const homeJson = homeDoc?.json ?? homeDoc?.extract ?? {};
   const saldoRegex = parseSaldoFromMarkdown(homeMd);
+  const homeJsonSaldo = firstNumber(homeJson?.saldo_disponivel);
+  const maskedZero = saldoRegex.masked && homeJsonSaldo === 0 && saldoRegex.saldo_disponivel == null;
   const saldo = {
-    saldo_disponivel: firstNumber(saldoRegex.saldo_disponivel, homeJson?.saldo_disponivel),
+    saldo_disponivel: firstNumber(saldoRegex.saldo_disponivel, maskedZero ? null : homeJsonSaldo),
     saldo_pendente: firstNumber(saldoRegex.saldo_pendente, homeJson?.saldo_pendente),
+    masked: saldoRegex.masked,
   };
   const extracted = compactExtraction(perf, saldo);
 
-  const key = brand.slug === "estrelabet" ? "estrel" : "vupi";
+  const key = brandLookupKey(brand.slug);
   const { data: platforms } = await supabase
     .from("platforms")
     .select("id, slug, name")
@@ -562,10 +659,10 @@ function looksLikeDuplicateOf(a: any, b: any) {
   return metricsFingerprint(a) === metricsFingerprint(b);
 }
 
-async function writeBrand(supabase: any, prep: Awaited<ReturnType<typeof prepareBrand>>, opts: { skipMetrics?: string } = {}) {
+async function writeBrand(supabase: any, prep: Awaited<ReturnType<typeof prepareBrand>>, opts: { skipMetrics?: string; skipBalance?: string } = {}) {
   const { brand, extracted, saldo, accounts, homeMd, perfMd } = prep;
   let updatedAccounts = 0;
-  if (saldo.saldo_disponivel != null) {
+  if (!opts.skipBalance && saldo.saldo_disponivel != null) {
     for (const acc of accounts) {
       const { error } = await supabase
         .from("platform_accounts")
@@ -587,11 +684,12 @@ async function writeBrand(supabase: any, prep: Awaited<ReturnType<typeof prepare
   if (opts.skipMetrics) {
     return {
       extracted,
-      saldo_source: saldo.saldo_disponivel != null ? "home_widget" : "missing",
+      saldo_source: saldo.saldo_disponivel != null ? "home_widget" : (saldo.masked ? "masked_or_hidden" : "missing"),
       updatedAccounts,
       updatedMetrics: 0,
       skippedMetrics: accounts.length,
       skipped: opts.skipMetrics,
+      skippedBalance: opts.skipBalance ?? undefined,
       has_home_md: !!homeMd,
       has_perf_md: !!perfMd,
     };
@@ -639,7 +737,7 @@ async function writeBrand(supabase: any, prep: Awaited<ReturnType<typeof prepare
 
   return {
     extracted,
-    saldo_source: saldo.saldo_disponivel != null ? "home_widget" : "missing",
+    saldo_source: saldo.saldo_disponivel != null ? "home_widget" : (saldo.masked ? "masked_or_hidden" : "missing"),
     updatedAccounts,
     updatedMetrics,
     skippedMetrics,
@@ -706,15 +804,17 @@ Deno.serve(async (req) => {
     const rawDump: Record<string, any> = {};
     const preps: Record<string, any> = {};
 
+    const captureTargets = await Promise.all(targets.map((brand) => resolveBrandForCapture(supabase, brand)));
+
     // Fase 1 — extração paralela (Firecrawl + parse). Nenhuma escrita ainda.
-    await Promise.all(targets.map(async (brand) => {
+    await Promise.all(captureTargets.map(async (brand) => {
       try {
         const [homeFc, perfFc] = await Promise.all([
           firecrawlLoginAndCapture(
             brand,
-            "/home",
+            "/withdraw",
             HOME_SCHEMA,
-            "Extraia o valor do widget 'Saldo disponível' (ou 'Disponível para saque') e do widget 'Saldo pendente'/'A liberar' visíveis na página inicial do painel afiliado. Já é o valor líquido. Formato R$ 1.234,56 → 1234.56. Se algum campo não existir, omita — não invente.",
+            "Extraia o valor real disponível para saque/retirada no painel afiliado. Use o saldo do bloco de saque ou balanço de saldo, não use comissão do relatório e não use valores mascarados como ••••••. Formato R$ 1.234,56 → 1234.56. Se o saldo estiver oculto ou mascarado, omita — não invente zero.",
           ),
           firecrawlLoginAndCapture(brand, "/reports/performance", null, ""),
         ]);
@@ -724,7 +824,7 @@ Deno.serve(async (req) => {
           const hd = homeFc?.data ?? homeFc;
           const pd = perfFc?.data ?? perfFc;
           rawDump[brand.slug] = {
-            home: { metadata: hd?.metadata ?? null, markdown_head: (hd?.markdown ?? "").slice(0, 5000), json: hd?.json ?? hd?.extract ?? null },
+            home: { metadata: hd?.metadata ?? null, markdown_head: (hd?.markdown ?? "").slice(0, 8000), html_head: (hd?.html ?? "").slice(0, 60000), json: hd?.json ?? hd?.extract ?? null },
             perf: { metadata: pd?.metadata ?? null, markdown_head: (pd?.markdown ?? "").slice(0, 5000) },
           };
         }
@@ -744,7 +844,7 @@ Deno.serve(async (req) => {
       && looksLikeDuplicateOf(vupiPrep.extracted, estrelaPrep.extracted);
     const vupiBrandNotVisible = !!vupiPrep && !vupiPrep.vupiHint;
 
-    for (const brand of targets) {
+    for (const brand of captureTargets) {
       const prep = preps[brand.slug];
       if (!prep) continue;
       try {
@@ -753,7 +853,8 @@ Deno.serve(async (req) => {
           if (vupiBrandNotVisible) skipMetrics = "brand_not_visible";
           else if (vupiIsDupOfEstrela) skipMetrics = "duplicate_of_estrelabet";
         }
-        const persisted = await writeBrand(supabase, prep, { skipMetrics });
+        const skipBalance = brand.slug === "vupi" && skipMetrics ? skipMetrics : undefined;
+        const persisted = await writeBrand(supabase, prep, { skipMetrics, skipBalance });
         results[brand.slug] = { ok: true, ...persisted };
       } catch (err: any) {
         results[brand.slug] = { ok: false, error: err?.message ?? String(err) };
@@ -765,7 +866,7 @@ Deno.serve(async (req) => {
         finished_at: new Date().toISOString(),
         rows_imported: Object.values(results).reduce((n: number, r: any) => n + (r?.updatedAccounts ?? 0), 0),
         message: JSON.stringify(Object.fromEntries(Object.entries(results).map(([k, v]: any) => [k, v.ok ? `ok (saldo=${v.extracted?.saldo_disponivel ?? "n/a"} src=${v.saldo_source ?? "?"})` : v.error]))),
-        discovery: { brands: targets.map((t) => t.slug), account_ids: Object.fromEntries(targets.map((t) => [t.slug, t.accountId ?? null])), results, raw: debug ? rawDump : undefined },
+        discovery: { brands: captureTargets.map((t) => t.slug), account_ids: Object.fromEntries(captureTargets.map((t) => [t.slug, t.accountId ?? null])), results, raw: debug ? rawDump : undefined },
       }).eq("id", runId);
     }
   })().catch(async (err) => {
