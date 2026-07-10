@@ -131,12 +131,14 @@ function parsePerformanceTotalFromMarkdown(markdown?: string | null) {
     return -1;
   };
 
-  // Fallback posicional (layout histórico Estrelabet/VUPI) quando o header
-  // não bate — garante que nunca zeramos por falha de matching de nome.
+  // Fallback posicional para o layout atual Estrelabet:
+  // | Período | CPA | RevShare | Visitas | Registros | FTDs | QFTDs |
+  //   FTDs Amount | Depósitos | Dep. Amount | GGR | NGR |
   const POSITIONAL: Record<string, number> = {
-    cliques: 2, cadastros: 3, ftds: 4, ftds_valor: 5, qftds: 6,
-    depositos_qtd: 7, depositos_valor: 8, ggr: 9, ngr: 10,
-    comissao_cpa: 11, comissao_revshare: 12,
+    comissao_cpa: 1, comissao_revshare: 2,
+    cliques: 3, cadastros: 4, ftds: 5, qftds: 6,
+    ftds_valor: 7, depositos_qtd: 8, depositos_valor: 9,
+    ggr: 10, ngr: 11,
   };
 
   const pick = (key: string) => {
