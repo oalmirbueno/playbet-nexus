@@ -84,15 +84,15 @@ function firstNumber(...values: unknown[]): number | null {
 // podem reordenar/adicionar colunas (impressões, qFTDs, chargeback…) e o parser
 // não pode "escorregar" centavos entre depósitos, GGR, comissão etc.
 const HEADER_ALIASES: Record<string, RegExp[]> = {
-  cliques: [/^cliques?$/i, /clicks?/i],
+  cliques: [/^cliques?$/i, /clicks?/i, /^visitas?$/i, /impress/i],
   cadastros: [/^cadastros?$/i, /^registros?$/i, /sign[- ]?ups?/i],
   ftds: [/^ftds?$/i, /first.*deposit/i],
-  ftds_valor: [/valor.*ftd/i, /ftd.*(valor|total|amount)/i, /first.*deposit.*(amount|value)/i],
+  ftds_valor: [/ftd.*amount/i, /valor.*ftd/i, /ftd.*(valor|total)/i, /first.*deposit.*(amount|value)/i],
   qftds: [/^q?\.?\s*ftds?$/i, /qualified.*ftd/i],
-  depositos_qtd: [/dep[óo]sitos?\b(?!.*valor)(?!.*total)/i, /qtd.*dep/i, /deposits?(?!.*(amount|value|total))/i],
-  depositos_valor: [/valor.*dep[óo]sit/i, /dep[óo]sitos?.*(valor|total|amount)/i, /deposit.*(amount|value|total)/i, /volume.*dep/i],
-  ggr: [/^ggr$/i, /gross.*revenue/i],
-  ngr: [/^ngr$/i, /net.*revenue/i],
+  depositos_qtd: [/^dep[óo]sitos?$/i, /dep[óo]sitos?\b(?!.*(valor|total|amount))/i, /qtd.*dep/i, /deposits?(?!.*(amount|value|total))/i],
+  depositos_valor: [/dep\.?\s*amount/i, /valor.*dep[óo]sit/i, /dep[óo]sitos?.*(valor|total|amount)/i, /deposit.*(amount|value|total)/i, /volume.*dep/i],
+  ggr: [/^ggr\b/i, /gross.*revenue/i],
+  ngr: [/^ngr\b/i, /net.*revenue|net\s*p&l/i],
   comissao_cpa: [/comiss[ãa]o.*cpa/i, /^cpa\b/i],
   comissao_revshare: [/comiss[ãa]o.*rev/i, /rev[- ]?share/i, /^rev\b/i],
 };
