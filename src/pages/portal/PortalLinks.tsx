@@ -6,6 +6,7 @@ import { toast } from "@/hooks/use-toast";
 import { resolveShareUrl } from "@/lib/trackingUrl";
 import { getMetricMoneyParts } from "@/lib/trackingMetrics";
 import { useQuery } from "@tanstack/react-query";
+import { usePanelSync } from "@/hooks/usePanelSync";
 
 interface EnrichedLink {
   id: string;
