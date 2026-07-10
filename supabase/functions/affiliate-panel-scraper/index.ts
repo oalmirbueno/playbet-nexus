@@ -212,16 +212,33 @@ function numberOrZero(value: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function isPartialDowngrade(existing: any, extracted: ReturnType<typeof compactExtraction>) {
+// Only block a write when the extraction is CLEARLY empty (painel não
+// renderizou / filtro caiu / sessão expirou) e já tínhamos dados. Antes
+// bloqueávamos qualquer métrica que oscilasse pra baixo — isso congelava o
+// dashboard porque o painel oficial oscila naturalmente (chargeback, estorno,
+// reclassificação de FTD). O painel é a fonte da verdade: se o painel diz
+// que caiu, a gente reflete. Só ignora leitura totalmente vazia.
+function isEmptyExtraction(extracted: ReturnType<typeof compactExtraction>) {
+  return (
+    numberOrZero(extracted.cliques) === 0 &&
+    numberOrZero(extracted.cadastros) === 0 &&
+    numberOrZero(extracted.ftds) === 0 &&
+    numberOrZero(extracted.depositos_qtd) === 0 &&
+    numberOrZero(extracted.depositos_valor) === 0 &&
+    numberOrZero(extracted.comissao_cpa) === 0 &&
+    numberOrZero(extracted.comissao_revshare) === 0
+  );
+}
+
+function existingHasData(existing: any) {
   if (!existing) return false;
-  const checks: Array<[unknown, unknown]> = [
-    [extracted.cliques, existing.cliques],
-    [extracted.cadastros, existing.registros],
-    [extracted.ftds, existing.ftd],
-    [extracted.depositos_qtd, existing.deposits_count],
-    [extracted.depositos_valor, existing.depositos_total],
-  ];
-  return checks.some(([next, prev]) => numberOrZero(next) < numberOrZero(prev));
+  return (
+    numberOrZero(existing.cliques) > 0 ||
+    numberOrZero(existing.registros) > 0 ||
+    numberOrZero(existing.ftd) > 0 ||
+    numberOrZero(existing.deposits_count) > 0 ||
+    numberOrZero(existing.depositos_total) > 0
+  );
 }
 
 function buildLoginJs(brand: Brand) {
