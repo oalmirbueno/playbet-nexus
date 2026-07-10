@@ -232,7 +232,7 @@ function parseSaldoFromMarkdown(markdown?: string | null): { saldo_disponivel: n
   // O painel Estrelabet exibe um “Saldo total R$ 0,00” na Home, mas o saldo
   // financeiro real fica no bloco “BALANÇO DE SALDO”. Quando esse bloco está
   // mascarado (••••••), zero da Home/LLM NÃO é fonte confiável.
-  out.saldo_disponivel = findOperationalBalance() ?? findAfter(/saldo\s+dispon[íi]vel|dispon[íi]vel\s+para\s+saque/i);
+  out.saldo_disponivel = findOperationalBalance() ?? findAfter(/saldo\s+dispon[íi]vel|dispon[íi]vel\s+para\s+saque|dispon[íi]vel\s+para\s+retirada|valor\s+dispon[íi]vel|saldo\s+afil/i);
   out.saldo_pendente = findAfter(/saldo\s+pendente|a\s+liberar|pendente/i);
   return { ...out, masked };
 }
@@ -469,7 +469,7 @@ function buildRevealBalanceJs(targetPath: string) {
           return /(mostrar|exibir|visualizar|revelar|saldo|balance|eye|olho|visibility)/.test(txt);
         })
         .sort((a,b) => (a.textContent || '').length - (b.textContent || '').length);
-      for (const el of explicit) clickLikeUser(el);
+      for (const el of explicit) clickLikeUser(el.closest('button,[role="button"],a') || el);
 
       const maskedBlocks = Array.from(document.querySelectorAll('div,section,article,main'))
         .filter((el) => /[•●*]{3,}/.test(el.textContent || '') && /saldo|balance|saque/i.test(el.textContent || ''))
@@ -482,7 +482,7 @@ function buildRevealBalanceJs(targetPath: string) {
             return txt === '' || /(mostrar|exibir|visualizar|eye|olho|visibility|saldo|balance)/.test(txt);
           })
           .slice(0, 8);
-        for (const el of controls) clickLikeUser(el);
+        for (const el of controls) clickLikeUser(el.closest('button,[role="button"],a') || el.parentElement || el);
       }
     })();
   `;
@@ -806,9 +806,9 @@ Deno.serve(async (req) => {
         const [homeFc, perfFc] = await Promise.all([
           firecrawlLoginAndCapture(
             brand,
-            "/home",
+            "/withdraw",
             HOME_SCHEMA,
-            "Extraia o valor do widget 'Saldo disponível' (ou 'Disponível para saque') e do widget 'Saldo pendente'/'A liberar' visíveis na página inicial do painel afiliado. Já é o valor líquido. Formato R$ 1.234,56 → 1234.56. Se algum campo não existir, omita — não invente.",
+            "Extraia o valor real disponível para saque/retirada no painel afiliado. Use o saldo do bloco de saque ou balanço de saldo, não use comissão do relatório e não use valores mascarados como ••••••. Formato R$ 1.234,56 → 1234.56. Se o saldo estiver oculto ou mascarado, omita — não invente zero.",
           ),
           firecrawlLoginAndCapture(brand, "/reports/performance", null, ""),
         ]);
@@ -818,7 +818,7 @@ Deno.serve(async (req) => {
           const hd = homeFc?.data ?? homeFc;
           const pd = perfFc?.data ?? perfFc;
           rawDump[brand.slug] = {
-            home: { metadata: hd?.metadata ?? null, markdown_head: (hd?.markdown ?? "").slice(0, 5000), html_head: (hd?.html ?? "").slice(0, 12000), json: hd?.json ?? hd?.extract ?? null },
+            home: { metadata: hd?.metadata ?? null, markdown_head: (hd?.markdown ?? "").slice(0, 8000), html_head: (hd?.html ?? "").slice(0, 60000), json: hd?.json ?? hd?.extract ?? null },
             perf: { metadata: pd?.metadata ?? null, markdown_head: (pd?.markdown ?? "").slice(0, 5000) },
           };
         }
