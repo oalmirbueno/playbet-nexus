@@ -344,21 +344,7 @@ function buildPerformanceDateFilterJs(targetPath: string) {
     (function(){
       const from = ${JSON.stringify(from)};
       const to = ${JSON.stringify(to)};
-      const setVal = (el, value) => {
-        if (!el) return false;
-        const proto = el instanceof HTMLInputElement ? window.HTMLInputElement.prototype : window.HTMLTextAreaElement.prototype;
-        const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
-        if (setter) setter.call(el, value); else el.value = value;
-        el.dispatchEvent(new Event('input', {bubbles:true}));
-        el.dispatchEvent(new Event('change', {bubbles:true}));
-        el.dispatchEvent(new Event('blur', {bubbles:true}));
-        return true;
-      };
-      const inputs = Array.from(document.querySelectorAll('input'))
-        .filter((el) => !/password|email|search/i.test(el.type || ''))
-        .sort((a,b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top || a.getBoundingClientRect().left - b.getBoundingClientRect().left);
-      if (inputs[0]) setVal(inputs[0], inputs[0].type === 'date' ? from.iso : from.br);
-      if (inputs[1]) setVal(inputs[1], inputs[1].type === 'date' ? to.iso : to.br);
+      const norm = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
       const clickLikeUser = (el) => {
         if (!el) return false;
         el.scrollIntoView({block:'center', inline:'center'});
@@ -368,13 +354,43 @@ function buildPerformanceDateFilterJs(targetPath: string) {
         el.click();
         return true;
       };
-      const btn = Array.from(document.querySelectorAll('button,[role="button"]'))
-        .filter((el) => /buscar|filtrar|aplicar|gerar|pesquisar|consultar/i.test(el.textContent || ''))
+      const findText = (re) => Array.from(document.querySelectorAll('button,[role="button"],a,li,div,span,option'))
+        .filter((el) => re.test(norm(el.textContent || '')))
         .sort((a,b) => (a.textContent || '').length - (b.textContent || '').length)[0];
-      if (!clickLikeUser(btn) && inputs[1]) {
-        inputs[1].dispatchEvent(new KeyboardEvent('keydown', {key:'Enter', bubbles:true}));
-        inputs[1].dispatchEvent(new KeyboardEvent('keyup', {key:'Enter', bubbles:true}));
-      }
+
+      // 1) Preferência: abrir o seletor de período e clicar em "Últimos 30 dias".
+      const periodOpener = findText(/(periodo|per.odo|data|date|range|filtro)/);
+      if (periodOpener) clickLikeUser(periodOpener);
+      setTimeout(() => {
+        const preset30 = findText(/(ultimos?\s*30|last\s*30|30\s*dias?|30\s*days)/);
+        if (preset30) clickLikeUser(preset30);
+      }, 800);
+
+      // 2) Fallback: digitar as datas nos dois primeiros inputs de data.
+      setTimeout(() => {
+        const setVal = (el, value) => {
+          if (!el) return false;
+          const proto = el instanceof HTMLInputElement ? window.HTMLInputElement.prototype : window.HTMLTextAreaElement.prototype;
+          const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+          if (setter) setter.call(el, value); else el.value = value;
+          el.dispatchEvent(new Event('input', {bubbles:true}));
+          el.dispatchEvent(new Event('change', {bubbles:true}));
+          el.dispatchEvent(new Event('blur', {bubbles:true}));
+          return true;
+        };
+        const inputs = Array.from(document.querySelectorAll('input'))
+          .filter((el) => !/password|email|search|checkbox|radio/i.test(el.type || ''))
+          .sort((a,b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top || a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+        if (inputs[0]) setVal(inputs[0], inputs[0].type === 'date' ? from.iso : from.br);
+        if (inputs[1]) setVal(inputs[1], inputs[1].type === 'date' ? to.iso : to.br);
+        const applyBtn = Array.from(document.querySelectorAll('button,[role="button"]'))
+          .filter((el) => /(buscar|filtrar|aplicar|gerar|pesquisar|consultar|apply|search)/i.test(el.textContent || ''))
+          .sort((a,b) => (a.textContent || '').length - (b.textContent || '').length)[0];
+        if (!clickLikeUser(applyBtn) && inputs[1]) {
+          inputs[1].dispatchEvent(new KeyboardEvent('keydown', {key:'Enter', bubbles:true}));
+          inputs[1].dispatchEvent(new KeyboardEvent('keyup', {key:'Enter', bubbles:true}));
+        }
+      }, 1800);
     })();
   `;
 }
