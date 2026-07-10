@@ -704,11 +704,11 @@ Deno.serve(async (req) => {
   const task = (async () => {
     const results: Record<string, any> = {};
     const rawDump: Record<string, any> = {};
+    const preps: Record<string, any> = {};
+
+    // Fase 1 — extração paralela (Firecrawl + parse). Nenhuma escrita ainda.
     await Promise.all(targets.map(async (brand) => {
       try {
-        // Home and Performance are independent authenticated captures. Running
-        // them in parallel keeps each sync inside the edge idle window and
-        // avoids the dashboard getting stuck with stale "running" jobs.
         const [homeFc, perfFc] = await Promise.all([
           firecrawlLoginAndCapture(
             brand,
@@ -718,8 +718,8 @@ Deno.serve(async (req) => {
           ),
           firecrawlLoginAndCapture(brand, "/reports/performance", null, ""),
         ]);
-        const persisted = await persistBrand(supabase, brand, homeFc, perfFc);
-        results[brand.slug] = { ok: true, ...persisted };
+        const prep = await prepareBrand(supabase, brand, homeFc, perfFc);
+        preps[brand.slug] = prep;
         if (debug) {
           const hd = homeFc?.data ?? homeFc;
           const pd = perfFc?.data ?? perfFc;
@@ -733,6 +733,32 @@ Deno.serve(async (req) => {
         rawDump[brand.slug] = { error: err?.message ?? String(err) };
       }
     }));
+
+    // Fase 2 — cruza VUPI x Estrelabet. Se a extração da VUPI vier idêntica
+    // à Estrelabet (brand switch falhou silenciosamente e ambos vistos como
+    // o mesmo painel), NÃO grava métricas na VUPI — só o saldo (que vem do
+    // widget do painel VUPI, quando presente).
+    const estrelaPrep = preps["estrelabet"];
+    const vupiPrep = preps["vupi"];
+    const vupiIsDupOfEstrela = !!estrelaPrep && !!vupiPrep
+      && looksLikeDuplicateOf(vupiPrep.extracted, estrelaPrep.extracted);
+    const vupiBrandNotVisible = !!vupiPrep && !vupiPrep.vupiHint;
+
+    for (const brand of targets) {
+      const prep = preps[brand.slug];
+      if (!prep) continue;
+      try {
+        let skipMetrics: string | undefined;
+        if (brand.slug === "vupi") {
+          if (vupiBrandNotVisible) skipMetrics = "brand_not_visible";
+          else if (vupiIsDupOfEstrela) skipMetrics = "duplicate_of_estrelabet";
+        }
+        const persisted = await writeBrand(supabase, prep, { skipMetrics });
+        results[brand.slug] = { ok: true, ...persisted };
+      } catch (err: any) {
+        results[brand.slug] = { ok: false, error: err?.message ?? String(err) };
+      }
+    }
     if (runId) {
       await supabase.from("panel_scraper_runs").update({
         status: Object.values(results).every((r: any) => r.ok) ? "success" : "partial",
