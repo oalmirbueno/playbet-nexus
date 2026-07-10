@@ -133,7 +133,7 @@ export default function PortalLinks() {
       setLinks(enriched);
       setLoading(false);
     })();
-  }, [user]);
+  }, [user, revision]);
 
   const totals = useMemo(() => links.reduce((a, l) => ({
     clicks: a.clicks + l.metrics.clicks,
