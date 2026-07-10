@@ -471,9 +471,20 @@ async function persistBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
   const homeMd = homeDoc?.markdown ?? null;
   const perfMd = perfDoc?.markdown ?? null;
 
-  // Sanity: for VUPI both captures should mention VUPI (else brand-switch failed).
+  const perfJson = perfDoc?.json ?? perfDoc?.extract ?? {};
+  const perf = { ...perfJson, ...parsePerformanceTotalFromMarkdown(perfMd) };
+  const extractedPreview = compactExtraction(perf, { saldo_disponivel: null, saldo_pendente: null });
+  const perfHasData = !isEmptyExtraction(extractedPreview);
+
+  // Sanity para VUPI: aceita se a URL/metadata/markdown menciona VUPI OU se
+  // a tabela de performance veio com dados reais (login autenticado e conta
+  // certa). O check estrito de texto "VUPI" quebra quando o painel troca o
+  // label (ex.: mostra só o ID da conta).
+  const homeUrl = String(homeDoc?.metadata?.url ?? homeDoc?.metadata?.sourceURL ?? "");
+  const perfUrl = String(perfDoc?.metadata?.url ?? perfDoc?.metadata?.sourceURL ?? "");
   const bothMd = `${homeMd ?? ""}\n${perfMd ?? ""}`;
-  if (brand.slug === "vupi" && !/\bVUPI\b|\bVupi\b/.test(bothMd)) {
+  const vupiHint = /vupi/i.test(bothMd) || /vupi/i.test(homeUrl) || /vupi/i.test(perfUrl);
+  if (brand.slug === "vupi" && !vupiHint && !perfHasData) {
     return {
       extracted: null,
       updatedAccounts: 0,
@@ -482,9 +493,6 @@ async function persistBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
       has_markdown: !!(homeMd || perfMd),
     };
   }
-
-  const perfJson = perfDoc?.json ?? perfDoc?.extract ?? {};
-  const perf = { ...perfJson, ...parsePerformanceTotalFromMarkdown(perfMd) };
 
   const homeJson = homeDoc?.json ?? homeDoc?.extract ?? {};
   const saldoRegex = parseSaldoFromMarkdown(homeMd);
