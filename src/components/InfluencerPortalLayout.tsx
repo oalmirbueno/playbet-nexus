@@ -25,6 +25,7 @@ export default function InfluencerPortalLayout({ children }: { children: React.R
   const { signOut, user } = useAuth();
   const scope = usePreviewScope();
   const qc = useQueryClient();
+  const { lastSyncedAt } = usePanelSync();
   const [influencerId, setInfluencerId] = useState<string | null>(scope.influencerId ?? null);
 
   useEffect(() => {
