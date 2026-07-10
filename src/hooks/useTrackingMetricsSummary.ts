@@ -46,6 +46,27 @@ export function useTrackingMetricsSummary(period: PeriodKey = "30d", platformId?
     refetchOnWindowFocus: true,
   });
 
+  // Saldo autoritativo do painel afiliado. É o que o influenciador/gerente
+  // vê como "saldo disponível" na Estrelabet/VUPI — inclui CPA + RevShare
+  // consolidados pela casa, líquido de chargeback/estorno. Esse é o lucro
+  // real; comissão bruta somada linha-a-linha é só estimativa.
+  const balancesQ = useQuery({
+    queryKey: ["platform_accounts_balances", platformId ?? "all"],
+    queryFn: async () => {
+      let query = (supabase as any)
+        .from("platform_accounts")
+        .select("id, platform_id, balance_available, balance_pending, balance_updated_at, is_demo, is_active")
+        .or("is_demo.is.false,is_demo.is.null")
+        .eq("is_active", true);
+      if (platformId) query = query.eq("platform_id", platformId);
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+    refetchInterval: 10_000,
+    refetchOnWindowFocus: true,
+  });
+
   const summary = useMemo<TrackingMetricsSummary>(() => {
     const rows = selectAuthoritativeMetricRows((q.data ?? []) as any[]);
     const acc: TrackingMetricsSummary = {
@@ -76,7 +97,6 @@ export function useTrackingMetricsSummary(period: PeriodKey = "30d", platformId?
       acc.depositsTotal += deposits;
       acc.revenue += rev;
       acc.cpa += cpa;
-      acc.profitBase += money.total;
       acc.commissionTotal += money.total;
       acc.clicks += Number(r.cliques || 0);
 
@@ -97,12 +117,31 @@ export function useTrackingMetricsSummary(period: PeriodKey = "30d", platformId?
       }
     }
 
+    // Prefere o saldo consolidado do painel (fonte da verdade). Só cai no
+    // Rev+CPA agregado quando não há nenhuma leitura fresca (<24h).
+    const BALANCE_STALE_MS = 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    let balanceSum = 0;
+    let anyFresh = false;
+    for (const b of (balancesQ.data ?? []) as any[]) {
+      const val = b?.balance_available;
+      if (val == null) continue;
+      const num = Number(val);
+      if (!Number.isFinite(num)) continue;
+      const updated = b?.balance_updated_at ? new Date(b.balance_updated_at).getTime() : NaN;
+      if (Number.isFinite(updated) && now - updated <= BALANCE_STALE_MS) {
+        balanceSum += num;
+        anyFresh = true;
+      }
+    }
+    acc.profitBase = anyFresh ? balanceSum : acc.commissionTotal;
+
     return acc;
-  }, [q.data]);
+  }, [q.data, balancesQ.data]);
 
   return {
     summary,
-    isLoading: q.isLoading,
+    isLoading: q.isLoading || balancesQ.isLoading,
     refetch: q.refetch,
     range,
   };
