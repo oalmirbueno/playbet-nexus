@@ -50,7 +50,7 @@ export default function PortalHome() {
       setLinkCount(lc ?? 0);
       setLoading(false);
     })();
-  }, [user]);
+  }, [user, revision]);
 
   const totals = useMemo(() => rows.reduce((a, r) => ({
     clicks: a.clicks + r.cliques,
