@@ -488,7 +488,11 @@ async function markStaleRuns(supabase: any) {
 }
 
 
-async function persistBrand(supabase: any, brand: Brand, homeFc: any, perfFc: any) {
+// Extrai extracted+accounts+gate SEM escrever no banco. O write é feito só
+// depois de comparar as duas marcas — evita gravar dados da Estrelabet
+// dentro do VUPI quando o brand switch silenciosamente falha (nesse caso
+// o painel mostra os mesmos números para ambas as marcas).
+async function prepareBrand(supabase: any, brand: Brand, homeFc: any, perfFc: any) {
   const homeDoc = homeFc?.data ?? homeFc;
   const perfDoc = perfFc?.data ?? perfFc;
   const homeMd = homeDoc?.markdown ?? null;
@@ -496,35 +500,18 @@ async function persistBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
 
   const perfJson = perfDoc?.json ?? perfDoc?.extract ?? {};
   const perf = { ...perfJson, ...parsePerformanceTotalFromMarkdown(perfMd) };
-  const extractedPreview = compactExtraction(perf, { saldo_disponivel: null, saldo_pendente: null });
-  const perfHasData = !isEmptyExtraction(extractedPreview);
 
-  // Sanity para VUPI: aceita se a URL/metadata/markdown menciona VUPI OU se
-  // a tabela de performance veio com dados reais (login autenticado e conta
-  // certa). O check estrito de texto "VUPI" quebra quando o painel troca o
-  // label (ex.: mostra só o ID da conta).
   const homeUrl = String(homeDoc?.metadata?.url ?? homeDoc?.metadata?.sourceURL ?? "");
   const perfUrl = String(perfDoc?.metadata?.url ?? perfDoc?.metadata?.sourceURL ?? "");
   const bothMd = `${homeMd ?? ""}\n${perfMd ?? ""}`;
   const vupiHint = /vupi/i.test(bothMd) || /vupi/i.test(homeUrl) || /vupi/i.test(perfUrl);
-  if (brand.slug === "vupi" && !vupiHint) {
-    return {
-      extracted: null,
-      updatedAccounts: 0,
-      updatedMetrics: 0,
-      skipped: "brand_not_visible",
-      has_markdown: !!(homeMd || perfMd),
-    };
-  }
 
   const homeJson = homeDoc?.json ?? homeDoc?.extract ?? {};
   const saldoRegex = parseSaldoFromMarkdown(homeMd);
   const saldo = {
-    // Regex vem primeiro porque lê exatamente o texto visível do widget; LLM fica só como fallback.
     saldo_disponivel: firstNumber(saldoRegex.saldo_disponivel, homeJson?.saldo_disponivel),
     saldo_pendente: firstNumber(saldoRegex.saldo_pendente, homeJson?.saldo_pendente),
   };
-
   const extracted = compactExtraction(perf, saldo);
 
   const key = brand.slug === "estrelabet" ? "estrel" : "vupi";
@@ -532,7 +519,6 @@ async function persistBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
     .from("platforms")
     .select("id, slug, name")
     .or(`slug.ilike.%${key}%,name.ilike.%${key}%`);
-
   const platformIds = (platforms ?? []).map((p: any) => p.id);
   const accounts: any[] = [];
   if (platformIds.length) {
@@ -549,8 +535,36 @@ async function persistBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
     accounts.push(...(preferred.length ? preferred : fetched));
   }
 
+  return { brand, extracted, saldo, accounts, homeMd, perfMd, vupiHint };
+}
+
+function metricsFingerprint(e: any) {
+  return [
+    Math.round(numberOrZero(e?.cliques)),
+    Math.round(numberOrZero(e?.cadastros)),
+    Math.round(numberOrZero(e?.ftds)),
+    Math.round(numberOrZero(e?.depositos_qtd)),
+    Math.round(numberOrZero(e?.depositos_valor) * 100),
+    Math.round(numberOrZero(e?.comissao_cpa) * 100),
+    Math.round(numberOrZero(e?.comissao_revshare) * 100),
+  ].join(":");
+}
+
+function looksLikeDuplicateOf(a: any, b: any) {
+  if (!a || !b) return false;
+  // Se ambos vieram totalmente zerados, não é duplicação — é ausência de dado.
+  const nonZero = numberOrZero(a.cliques) > 0
+    || numberOrZero(a.cadastros) > 0
+    || numberOrZero(a.ftds) > 0
+    || numberOrZero(a.depositos_qtd) > 0
+    || numberOrZero(a.depositos_valor) > 0;
+  if (!nonZero) return false;
+  return metricsFingerprint(a) === metricsFingerprint(b);
+}
+
+async function writeBrand(supabase: any, prep: Awaited<ReturnType<typeof prepareBrand>>, opts: { skipMetrics?: string } = {}) {
+  const { brand, extracted, saldo, accounts, homeMd, perfMd } = prep;
   let updatedAccounts = 0;
-  // Só grava balance se conseguimos ler o widget de saldo — nunca cai em CPA+Rev.
   if (saldo.saldo_disponivel != null) {
     for (const acc of accounts) {
       const { error } = await supabase
@@ -569,6 +583,20 @@ async function persistBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
   let updatedMetrics = 0;
   let skippedMetrics = 0;
   const today = new Date().toISOString().slice(0, 10);
+
+  if (opts.skipMetrics) {
+    return {
+      extracted,
+      saldo_source: saldo.saldo_disponivel != null ? "home_widget" : "missing",
+      updatedAccounts,
+      updatedMetrics: 0,
+      skippedMetrics: accounts.length,
+      skipped: opts.skipMetrics,
+      has_home_md: !!homeMd,
+      has_perf_md: !!perfMd,
+    };
+  }
+
   for (const acc of accounts) {
     const cpa = extracted.comissao_cpa ?? 0;
     const rev = extracted.comissao_revshare ?? 0;
@@ -580,10 +608,6 @@ async function persistBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
       .eq("external_ref", externalRef)
       .maybeSingle();
 
-    // Painel é a fonte da verdade. Só ignora a coleta quando ela vem
-    // completamente vazia (session expirou, filtro caiu, tabela não
-    // renderizou) e já tínhamos dados válidos — nunca sobrescreve verdade
-    // com zero.
     if (isEmptyExtraction(extracted) && existingHasData(existingMetric)) {
       skippedMetrics++;
       continue;
