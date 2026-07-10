@@ -549,9 +549,11 @@ async function persistBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
       .eq("external_ref", externalRef)
       .maybeSingle();
 
-    // O painel às vezes renderiza a tabela antes do filtro de 30 dias aplicar.
-    // Nunca deixa uma coleta parcial/menor sobrescrever a última coleta completa.
-    if (isPartialDowngrade(existingMetric, extracted)) {
+    // Painel é a fonte da verdade. Só ignora a coleta quando ela vem
+    // completamente vazia (session expirou, filtro caiu, tabela não
+    // renderizou) e já tínhamos dados válidos — nunca sobrescreve verdade
+    // com zero.
+    if (isEmptyExtraction(extracted) && existingHasData(existingMetric)) {
       skippedMetrics++;
       continue;
     }
