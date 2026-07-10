@@ -445,7 +445,7 @@ async function firecrawlLoginAndCapture(
     onlyMainContent: false,
     waitFor: 4500,
     actions,
-    timeout: 120000,
+    timeout: 180000,
   };
 
   const res = await fetch(FIRECRAWL_URL, {
