@@ -1,6 +1,10 @@
 import { Link, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { LayoutDashboard, Trophy, Users, Link2, Sparkles, Wallet, User, LogOut, Wand2 } from "lucide-react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
+import { usePortalRealtime } from "@/hooks/usePortalRealtime";
 import PreviewBanner from "@/components/PreviewBanner";
 import LiveSyncBadge from "@/components/LiveSyncBadge";
 import { useManagerSync } from "@/hooks/useManagerSync";
@@ -21,7 +25,20 @@ const items = [
 export default function ManagerLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const { signOut, user } = useAuth();
+  const scope = usePreviewScope();
   const { lastSyncedAt } = useManagerSync();
+  const qc = useQueryClient();
+  const [managerId, setManagerId] = useState<string | null>(scope.managerId ?? null);
+
+  useEffect(() => {
+    if (scope.active) { setManagerId(scope.managerId ?? null); return; }
+    if (!user?.id) return;
+    supabase.from("profiles").select("manager_id").eq("id", user.id).maybeSingle()
+      .then(({ data }) => setManagerId(data?.manager_id ?? null));
+  }, [user?.id, scope.active, scope.managerId]);
+
+  usePortalRealtime({ managerId }, () => qc.invalidateQueries());
+
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -63,13 +80,14 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
 
       <main className="flex-1 p-4 md:p-8 pb-24 md:pb-8 max-w-7xl w-full mx-auto animate-fade-in">{children}</main>
 
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl grid grid-cols-8">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl grid grid-cols-8 pb-[env(safe-area-inset-bottom)]">
         {items.map((it) => {
           const active = location.pathname === it.path;
           return (
-            <Link key={it.path} to={it.path} className={`flex flex-col items-center justify-center py-2 gap-0.5 text-[10px] ${active ? "text-primary" : "text-muted-foreground"}`}>
-              <it.icon size={17} strokeWidth={active ? 2.25 : 1.7} />
-              <span>{it.label}</span>
+            <Link key={it.path} to={it.path} className={`relative flex flex-col items-center justify-center py-2.5 gap-0.5 text-[9.5px] transition-colors ${active ? "text-primary" : "text-muted-foreground active:text-foreground"}`}>
+              {active && <span className="absolute top-0 left-3 right-3 h-[2px] rounded-full bg-gradient-to-r from-primary-glow to-primary" />}
+              <it.icon size={18} strokeWidth={active ? 2.25 : 1.6} />
+              <span className="leading-tight">{it.label}</span>
             </Link>
           );
         })}

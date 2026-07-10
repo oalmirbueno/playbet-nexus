@@ -161,6 +161,12 @@
     @apply badge bg-accent/10 text-[hsl(43,45%,54%)];
   }
 
+  /* ── Inputs ────────────────────────────────── */
+  .input {
+    @apply w-full px-3 py-2 text-[13px] rounded-lg bg-secondary/40 border border-border/60 outline-none focus:border-primary/60 transition-colors;
+  }
+
+
   /* ── Buttons ───────────────────────────────── */
   .btn-primary {
     @apply inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-[hsl(var(--primary-glow))] transition-all duration-200;

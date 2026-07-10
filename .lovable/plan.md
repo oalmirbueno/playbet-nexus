@@ -1,71 +1,95 @@
-## Contexto
+## Objetivo
 
-Hoje o `stellar-panel-scraper` chama a API `/user/performance/report`, que devolve **agregado por janela** (`period=01/01/0001`) e não expõe dados do dia corrente até o fechamento. Por isso os valores no dashboard divergem do painel real da casa (admin.aff.estrelabetpartners.com), que mostra o **valor real disponível para saque, líquido, já descontado** — e esse valor flutua ao longo do dia.
+Entrega faseada mantendo a identidade **PlayBet Noir** (dark, indigo `#4f46e5`, cyan `#22d3ee`). Sem tocar em lógica de negócio nem em schema existente além do necessário para vincular usuários. Realtime em métricas, saques, materiais/links e notificações.
 
-Solução: trocar a fonte para scraping direto do painel HTML (mesmo painel que você vê), usando as credenciais afiliado que já estão salvas (`ESTRELABET_AFFILIATE_*` e `VUPI_AFFILIATE_*`).
+---
 
-## O que vai mudar
+## Fase 1 — Tela de Usuários (admin)
 
-### 1. Nova edge function `affiliate-panel-scraper`
-Substitui o `stellar-panel-scraper`. Fluxo:
-- Login com credenciais salvas em cada painel afiliado
-- Extrai via Firecrawl (com `waitFor` pra SPA renderizar) as telas de:
-  - **Dashboard / Saldo**: valor real disponível para saque (líquido)
-  - **Relatório de comissões**: comissão bruta do mês, do dia
-  - **Performance**: registros, FTDs, depósitos, NGR
-  - **Histórico de saques**: cada saque com data/valor/status
-- Persiste em `platform_accounts.balance_available`, `tracking_metrics` (métricas diárias) e nova tabela `platform_withdrawals` (histórico)
-- Todas as escritas com `origem_importacao='panel_scrape_html'`
+Nova rota `/usuarios` (já existe `UsuariosInternos.tsx` como stub; será substituída pela versão real). Reaproveita `profiles`, `user_roles`, `influencers`, `managers`.
 
-### 2. Nova tabela `platform_withdrawals`
-Colunas: `platform_account_id`, `withdrawn_at`, `amount`, `status`, `external_id`. Substitui/complementa dados que hoje ficam em `saques`.
+**UI**
+- Header com busca, filtros (Todos · Admin · Sócio · Gerente · Influencer · Sem role) e botão "Convidar".
+- Tabela densa: avatar, nome, e-mail, role atual (badge), vínculo (Influencer X / Gerente Y / —), último acesso, ações.
+- Ações por linha: mudar role, vincular a influencer/manager existente (Combobox), desvincular, desativar/ativar, reenviar convite.
+- Drawer "Convidar usuário": e-mail + role + vínculo opcional (influencer/manager). Envia via edge function `admin-user-manage` (já existe) usando `inviteUserByEmail`.
+- Skeletons enquanto carrega; EmptyState quando vazio.
 
-### 3. Coluna `balance_available` em `platform_accounts`
-Guarda o saldo real do painel + `balance_updated_at`. É o "valor pra saque" autoritativo.
+**Backend (mínimo)**
+- Migration: adicionar `influencer_id` e `manager_id` em `profiles` já existem (confirmado no schema). Nenhuma nova tabela.
+- Edge function `admin-user-manage`: ampliar ações `invite`, `set_role`, `link_influencer`, `link_manager`, `deactivate` — todas protegidas por `is_admin(auth.uid())`.
+- RLS: admin lê todos profiles/user_roles (já ok via `is_admin`).
 
-### 4. Camada de cálculo de **Lucro Real** (nova em `src/lib/profitModel.ts`)
-Nunca mais mostrar "comissão bruta" como se fosse lucro. Fórmula:
+**Sincronização automática**
+- Ao criar um influencer/manager, se houver e-mail, oferecer "Convidar agora" com um clique.
+- Quando um convite é aceito, `handle_new_user` roda; a tela de Usuários atualiza via realtime em `profiles` + `user_roles`.
 
+---
+
+## Fase 2 — Portal Influenciador (mobile-first, refinado)
+
+Escopo restrito a `InfluencerPortalLayout` + páginas `/portal/*`. Sem mudar lógica.
+
+**Shell**
+- Top bar mais compacta (h-12), logo + saudação "Olá, {primeiro nome}", sino de notificações, avatar.
+- Bottom tabs mobile: ícones maiores (20px), rótulos menores, indicador ativo em gradiente indigo→cyan com haptic-like scale. Safe-area padding para iOS.
+- Desktop nav mantém o pill underline atual, mais respiração.
+
+**Home (`PortalHome`)**
+- Hero card com KPI principal (comissão do mês) em número grande + delta vs mês anterior.
+- Grid 2x2 de KPIs secundários (cliques, FTDs, depósitos, saldo disponível) — cards com sparkline.
+- Seção "Meus links em destaque" (top 3 por conversão) com CTA copiar.
+- Seção "Últimas notificações" (3 itens) com deep link.
+- Todos os KPIs plugados em `useRealtimeMetrics` + realtime channel em `tracking_metrics` filtrado pelo `current_influencer_id()`.
+
+**Demais páginas (Links, Materiais, Financeiro, Saques, Perfil)**
+- Aplicar mesmo sistema: cards com `rounded-2xl`, `border-border/50`, `bg-card/60 backdrop-blur`, gradiente sutil na borda do card ativo.
+- Listas viram cards empilhados no mobile; tabela reservada para ≥ md.
+- Sticky action bar no mobile (ex.: "Copiar link", "Solicitar saque") com blur.
+
+**Realtime**
+- Channel único no layout: subscribe em `tracking_metrics`, `saques`, `link_materials`, `tracking_links`, `notifications` filtrados pelo `influencer_id` do usuário. Invalida queries do React Query correspondentes.
+
+---
+
+## Fase 3 — Painel Gerente (mesmo padrão)
+
+Escopo em `ManagerLayout` + `/gerente/*`.
+
+- Home do gerente: KPI da squad (meta vs realizado com anel de progresso), ranking dos influencers em cards horizontais com avatar + delta, atalhos.
+- Aba "Meus influencers": lista com filtro por status, com botão "Convidar/Vincular usuário" (dispara mesma edge function da Fase 1).
+- Materiais/Links/Financeiro/Saques: reaproveitar os componentes do portal com variantes que aceitam `scope: influencer | manager`.
+- Realtime: mesmo channel filtrado por `manager_id = current_manager_id()` (joins na squad).
+
+---
+
+## Detalhes técnicos
+
+**Design tokens** (adicionar em `index.css` sem quebrar o existente):
 ```
-lucro_bruto        = comissao_total_periodo (do painel)
-lucro_liquido_casa = balance_available (o que sobra no painel após heavy/estornos/chargebacks)
-lucro_influenciador= sum(custo_influencer) do periodo  
-lucro_real         = lucro_liquido_casa - lucro_influenciador - custo_trafego
+--portal-surface: hsl(var(--card) / 0.6)
+--portal-border: hsl(var(--border) / 0.5)
+--portal-glow: linear-gradient(135deg, hsl(238 84% 60%), hsl(189 94% 55%))
+--portal-shadow: 0 10px 30px -12px hsl(238 84% 60% / 0.25)
 ```
 
-Dashboard, Financeiro, Portal e Gerente passam a exibir `lucro_real` como métrica principal, com breakdown expansível mostrando cada parcela.
+**Realtime helper** — novo `src/hooks/usePortalRealtime.ts` centraliza subscribes por escopo (influencer|manager) e invalida queries. Um único channel por sessão.
 
-### 5. Refresh on-demand
-- Botão "Atualizar do painel" em cada tela financeira
-- Hook `usePanelRefresh()` que dispara a edge function e invalida `react-query`
-- Trigger automático quando o usuário abre Dashboard/Financeiro (com throttle de 60s)
+**Edge function** `admin-user-manage` — expandir com validação Zod e checagem `is_admin`.
 
-### 6. Robustez
-- Retries com backoff exponencial
-- Cache no Redis/DB do último HTML por 60s (evita rate-limit)
-- Logs estruturados em `panel_scraper_runs` com screenshot em caso de erro (via Firecrawl screenshot)
-- Alertas quando o valor extraído difere >30% da última leitura (possível DOM mudança)
-- Testes unitários dos parsers em `src/lib/__tests__/panelParsers.test.ts`
+**Testes rápidos**
+- Login como admin → /usuarios → convidar e-mail teste → verificar linha aparecendo em realtime.
+- Preview como influencer → /portal → checar layout mobile (viewport 390) e KPIs.
+- Preview como gerente → /gerente → mesmo check.
 
-### 7. Descontinuação do fluxo atual
-- Marca `stellar-panel-scraper` como deprecated (mantém rodando por 7 dias em paralelo pra comparar)
-- Após validação, cron passa a chamar só o novo scraper
-- Remove rows `panel_scraper_stellar` das últimas 30 dias e reingere
+---
 
-## Requisitos que preciso confirmar antes
+## Ordem de commits
 
-1. **URL do painel VUPI**: você mencionou o da Estrelabet (admin.aff.estrelabetpartners.com/460395), mas não colou o da VUPI. Onde eu logo pra pegar os valores da VUPI?
-2. **O que exatamente é "heavy"** no seu vocabulário? É o chargeback/estorno que a casa desconta, certo? Aparece como linha separada no painel ou é embutido no saldo?
-3. **Custo do influenciador**: já está sendo lançado em `tracking_metrics.custo_influencer` hoje ou preciso criar fluxo pra inserir?
+1. Migration + edge function `admin-user-manage` ampliada.
+2. Página `/usuarios` completa + realtime.
+3. Refino do Portal Influenciador (layout + Home + demais páginas em passes).
+4. Refino do Painel Gerente (mesmo padrão).
+5. Hook `usePortalRealtime` integrado nas duas superfícies.
 
-## Ordem de execução (após aprovação)
-
-```text
-1. Migration: platform_withdrawals + balance_available/balance_updated_at
-2. Nova função affiliate-panel-scraper (Estrelabet primeiro)
-3. Parser + testes
-4. Camada de lucro (profitModel.ts) + hook usePanelRefresh
-5. Atualizar Dashboard/Financeiro/Portal/Gerente pra usar lucro real
-6. Adicionar VUPI ao scraper
-7. Trocar cron + limpar dados legados
-```
+Cada fase é um commit isolado, revertível.

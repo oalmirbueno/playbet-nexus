@@ -62,10 +62,12 @@ const sections: MenuSection[] = [
   {
     title: "SISTEMA",
     items: [
+      { label: "Usuários", icon: UserCheck, path: "/usuarios" },
       { label: "Configurações", icon: Settings, path: "/configuracoes" },
       { label: "Integrações", icon: Plug, path: "/integracoes" },
     ],
   },
+
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
