@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { useManagerSync } from "@/hooks/useManagerSync";
-import { Users, Target, TrendingUp, Wallet, Trophy, Link2, Sparkles, ArrowRight } from "lucide-react";
+import { Users, Target, TrendingUp, Wallet, Trophy, Link2, Sparkles, ArrowRight, Banknote, PiggyBank } from "lucide-react";
 import { getMetricMoneyParts } from "@/lib/trackingMetrics";
 
 export default function GerenteHome() {
