@@ -172,6 +172,30 @@ export default function GerenteHome() {
         </div>
 
         <div className="space-y-3">
+          <Link to="/gerente/influenciadores" className="glass-card p-4 flex items-center gap-3 hover:border-primary/40 transition-colors">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><Users size={16} /></div>
+            <div className="flex-1">
+              <p className="text-[13px] font-medium">Meu squad</p>
+              <p className="text-[11px] text-muted-foreground">{kpi.influencers} influenciadores</p>
+            </div>
+            <ArrowRight size={13} className="text-muted-foreground" />
+          </Link>
+          <Link to="/gerente/financeiro" className="glass-card p-4 flex items-center gap-3 hover:border-primary/40 transition-colors">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><Banknote size={16} /></div>
+            <div className="flex-1">
+              <p className="text-[13px] font-medium">Financeiro</p>
+              <p className="text-[11px] text-muted-foreground">Comissões e receita do squad</p>
+            </div>
+            <ArrowRight size={13} className="text-muted-foreground" />
+          </Link>
+          <Link to="/gerente/saques" className="glass-card p-4 flex items-center gap-3 hover:border-primary/40 transition-colors">
+            <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><PiggyBank size={16} /></div>
+            <div className="flex-1">
+              <p className="text-[13px] font-medium">Saques do squad</p>
+              <p className="text-[11px] text-muted-foreground">Solicitações e status</p>
+            </div>
+            <ArrowRight size={13} className="text-muted-foreground" />
+          </Link>
           <Link to="/gerente/links" className="glass-card p-4 flex items-center gap-3 hover:border-primary/40 transition-colors">
             <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><Link2 size={16} /></div>
             <div className="flex-1">
@@ -185,14 +209,6 @@ export default function GerenteHome() {
             <div className="flex-1">
               <p className="text-[13px] font-medium">Oportunidades ativas</p>
               <p className="text-[11px] text-muted-foreground">Campanhas para repassar</p>
-            </div>
-            <ArrowRight size={13} className="text-muted-foreground" />
-          </Link>
-          <Link to="/gerente/influenciadores" className="glass-card p-4 flex items-center gap-3 hover:border-primary/40 transition-colors">
-            <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center"><Users size={16} /></div>
-            <div className="flex-1">
-              <p className="text-[13px] font-medium">Meu squad</p>
-              <p className="text-[11px] text-muted-foreground">{kpi.influencers} influenciadores</p>
             </div>
             <ArrowRight size={13} className="text-muted-foreground" />
           </Link>
