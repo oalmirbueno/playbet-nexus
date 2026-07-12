@@ -232,6 +232,8 @@ export default function ComercialPipeline() {
   }
 
   const analiseCount = useMemo(() => cards.filter(c => c.stage === "analise").length, [cards]);
+  const stageCount = STAGES.length;
+  const totalCards = filtered.length;
 
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden">
