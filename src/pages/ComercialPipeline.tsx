@@ -149,8 +149,89 @@ export default function ComercialPipeline() {
     if (STAGES.find(s => s.id === stage)) moveCard(e.active.id as string, stage);
   }
 
-  const stageCount = STAGES.length;
-  const totalCards = filtered.length;
+  async function exportAnaliseDossies(targetCards?: Card[]) {
+    const target = targetCards ?? cards.filter(c => c.stage === "analise");
+    if (target.length === 0) {
+      toast({ title: "Nada para exportar", description: "Nenhum card em Análise." });
+      return;
+    }
+    setExportingAnalise(true);
+    try {
+      const ids = target.map(c => c.id);
+      const { data: fullRows } = await supabase
+        .from("commercial_pipeline_cards").select("*").in("id", ids);
+      const rowsById = new Map<string, any>();
+      (fullRows ?? []).forEach(r => rowsById.set(r.id, r));
+
+      // active checklist template (single fetch)
+      const { data: tpl } = await supabase
+        .from("commercial_checklist_templates")
+        .select("id").eq("is_active", true).order("version", { ascending: false }).limit(1).maybeSingle();
+      let items: any[] = [];
+      if (tpl?.id) {
+        const { data } = await supabase
+          .from("commercial_checklist_items").select("id,group_label,label,required").eq("template_id", tpl.id).order("position");
+        items = data ?? [];
+      }
+
+      const ctxByCard: Record<string, DossierContext> = {};
+      for (const c of target) {
+        const { data: ans } = await supabase
+          .from("commercial_card_checklist").select("item_id,checked,value_text").eq("card_id", c.id);
+        const answers: Record<string, { checked: boolean; value_text?: string | null }> = {};
+        (ans ?? []).forEach(a => { answers[a.item_id] = { checked: a.checked, value_text: a.value_text }; });
+        ctxByCard[c.id] = {
+          squads: squads.map(s => ({ id: s.id, name: s.name })),
+          managers: managers.map(m => ({ id: m.id, name: m.name })),
+          checklist: { items, answers },
+        };
+      }
+
+      const dossierCards: DossierCard[] = target.map(c => {
+        const full = rowsById.get(c.id) ?? {};
+        return {
+          id: c.id,
+          name: full.name ?? c.name,
+          handle: full.handle ?? c.handle,
+          primary_channel: full.primary_channel ?? c.primary_channel,
+          source: full.source ?? c.source,
+          niche: full.niche ?? c.niche,
+          tags: full.tags ?? c.tags ?? [],
+          email: full.email ?? c.email,
+          phone: full.phone ?? c.phone,
+          city: full.city ?? c.city,
+          uf: full.uf ?? c.uf,
+          document: full.document ?? null,
+          stage: full.stage ?? c.stage,
+          stage_moved_at: full.stage_moved_at ?? c.stage_moved_at,
+          responded_at: full.responded_at ?? null,
+          created_at: full.created_at ?? null,
+          notes: full.notes ?? c.notes,
+          checklist_progress: full.checklist_progress ?? c.checklist_progress ?? 0,
+          social_profiles: full.social_profiles ?? [],
+          content_info: full.content_info ?? {},
+          financial_info: full.financial_info ?? {},
+          squad_id: full.squad_id ?? c.squad_id,
+          squad_ids: full.squad_ids ?? c.squad_ids ?? [],
+          manager_id: full.manager_id ?? c.manager_id,
+        };
+      });
+
+      await exportCandidateDossierPdf(dossierCards, ctxByCard, {
+        subtitle: target.length === 1 ? "Analise comercial" : `Analise comercial - ${target.length} candidatos`,
+      });
+      toast({
+        title: "Dossie exportado",
+        description: `${target.length} candidato${target.length > 1 ? "s" : ""} pronto${target.length > 1 ? "s" : ""} para envio.`,
+      });
+    } catch (e: any) {
+      toast({ title: "Erro ao exportar PDF", description: e?.message ?? "Falha inesperada", variant: "destructive" });
+    } finally {
+      setExportingAnalise(false);
+    }
+  }
+
+  const analiseCount = useMemo(() => cards.filter(c => c.stage === "analise").length, [cards]);
 
   return (
     <div className="flex flex-col h-full min-h-0 overflow-hidden">
