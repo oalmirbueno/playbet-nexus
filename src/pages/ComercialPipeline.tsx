@@ -566,8 +566,9 @@ interface ChecklistItem {
 }
 interface ChecklistAnswer { item_id: string; checked: boolean; value_text: string | null }
 
-function CardDetailSheet({ card, squads, managers, onClose, onUpdated }: {
+function CardDetailSheet({ card, squads, managers, onClose, onUpdated, onExportPdf, exporting }: {
   card: Card | null; squads: Squad[]; managers: Manager[]; onClose: () => void; onUpdated: () => void;
+  onExportPdf?: (card: Card) => void; exporting?: boolean;
 }) {
   const { toast } = useToast();
   const [items, setItems] = useState<ChecklistItem[]>([]);
