@@ -596,15 +596,8 @@ export async function exportCandidateDossierPdf(
       );
     }
 
-    // checklist
-    sectionTitle(doc, cursor, "Checklist de qualificacao", () => drawChrome(card.name));
-    progressBar(doc, cursor, Math.max(0, Math.min(100, card.checklist_progress ?? 0)), () => drawChrome(card.name));
-    const ck = ctxByCard[card.id]?.checklist;
-    if (ck) {
-      checklistBlock(doc, cursor, ck, () => drawChrome(card.name));
-    } else {
-      paragraph(doc, cursor, "Checklist nao carregado para este dossie.", () => drawChrome(card.name));
-    }
+
+
 
     // atribuicao
     const ctx = ctxByCard[card.id] ?? {};
