@@ -22,7 +22,8 @@ import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors,
   useDraggable, useDroppable,
 } from "@dnd-kit/core";
-import { Plus, GripVertical, Users, Calendar as CalendarIcon, Sparkles, KeyRound, Copy, Check, Loader2, ShieldCheck } from "lucide-react";
+import { Plus, GripVertical, Users, Calendar as CalendarIcon, Sparkles, KeyRound, Copy, Check, Loader2, ShieldCheck, FileDown } from "lucide-react";
+import { exportCandidateDossierPdf, type DossierCard, type DossierContext } from "@/lib/exportCandidatePdf";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
