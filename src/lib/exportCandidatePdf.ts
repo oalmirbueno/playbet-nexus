@@ -7,7 +7,7 @@
  *   await exportCandidateDossierPdf(cards, { filename: "playbet_dossies_analise.pdf" });
  */
 import { jsPDF } from "jspdf";
-import wordmarkSvg from "@/assets/playbet-wordmark.svg?raw";
+import wordmarkUrl from "@/assets/playbet-wordmark.webp";
 
 /* ----------------------------- palette ---------------------------- */
 const COLOR = {
@@ -64,29 +64,24 @@ export interface DossierContext {
 }
 
 /* --------------------------- helpers ------------------------------ */
-async function svgToPngDataUrl(svg: string, targetW = 480): Promise<string> {
-  const blob = new Blob([svg], { type: "image/svg+xml" });
-  const url = URL.createObjectURL(blob);
-  try {
-    const img = new Image();
-    await new Promise<void>((res, rej) => {
-      img.onload = () => res();
-      img.onerror = () => rej(new Error("svg load failed"));
-      img.src = url;
-    });
-    const ratio = img.height / img.width || 0.3;
-    const w = targetW;
-    const h = Math.round(w * ratio);
-    const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext("2d")!;
-    ctx.clearRect(0, 0, w, h);
-    ctx.drawImage(img, 0, 0, w, h);
-    return canvas.toDataURL("image/png");
-  } finally {
-    URL.revokeObjectURL(url);
-  }
+async function imageUrlToPngDataUrl(src: string, targetW = 720): Promise<{ dataUrl: string; ratio: number }> {
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  await new Promise<void>((res, rej) => {
+    img.onload = () => res();
+    img.onerror = () => rej(new Error("image load failed"));
+    img.src = src;
+  });
+  const ratio = img.naturalHeight / img.naturalWidth || 0.3;
+  const w = targetW;
+  const h = Math.round(w * ratio);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d")!;
+  ctx.clearRect(0, 0, w, h);
+  ctx.drawImage(img, 0, 0, w, h);
+  return { dataUrl: canvas.toDataURL("image/png"), ratio };
 }
 
 function setFill(doc: jsPDF, c: readonly [number, number, number]) {
@@ -219,7 +214,11 @@ const MARGIN = { x: 16, top: 44, bottom: 22 };
 
 interface Cursor { y: number; page: number }
 
-async function drawHeader(doc: jsPDF, logo: string, subtitle: string) {
+async function drawHeader(
+  doc: jsPDF,
+  logo: { dataUrl: string; ratio: number } | null,
+  subtitle: string,
+) {
   // navy strip
   setFill(doc, COLOR.navy);
   doc.rect(0, 0, PAGE.w, 30, "F");
@@ -230,10 +229,19 @@ async function drawHeader(doc: jsPDF, logo: string, subtitle: string) {
   setFill(doc, COLOR.brand2);
   doc.rect(PAGE.w * 0.55, 30, PAGE.w * 0.45, 1.2, "F");
 
-  // wordmark
-  try {
-    doc.addImage(logo, "PNG", MARGIN.x, 8, 34, 10.2, undefined, "FAST");
-  } catch {
+  // wordmark — mantém aspect ratio do arquivo real
+  const logoH = 11.5; // mm
+  if (logo?.dataUrl) {
+    const logoW = logoH / (logo.ratio || 0.3);
+    try {
+      doc.addImage(logo.dataUrl, "PNG", MARGIN.x, (30 - logoH) / 2, logoW, logoH, undefined, "FAST");
+    } catch {
+      setText(doc, COLOR.paper);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text("playbet", MARGIN.x, 18);
+    }
+  } else {
     setText(doc, COLOR.paper);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
@@ -485,7 +493,7 @@ export async function exportCandidateDossierPdf(
   if (cards.length === 0) throw new Error("Nenhum candidato para exportar.");
 
   const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const logoPng = await svgToPngDataUrl(wordmarkSvg, 720).catch(() => "");
+  const logoPng = await imageUrlToPngDataUrl(wordmarkUrl, 720).catch(() => null);
   const subtitle = opts.subtitle ?? "Analise comercial";
 
   const drawChrome = (name: string) => {
@@ -588,15 +596,8 @@ export async function exportCandidateDossierPdf(
       );
     }
 
-    // checklist
-    sectionTitle(doc, cursor, "Checklist de qualificacao", () => drawChrome(card.name));
-    progressBar(doc, cursor, Math.max(0, Math.min(100, card.checklist_progress ?? 0)), () => drawChrome(card.name));
-    const ck = ctxByCard[card.id]?.checklist;
-    if (ck) {
-      checklistBlock(doc, cursor, ck, () => drawChrome(card.name));
-    } else {
-      paragraph(doc, cursor, "Checklist nao carregado para este dossie.", () => drawChrome(card.name));
-    }
+
+
 
     // atribuicao
     const ctx = ctxByCard[card.id] ?? {};

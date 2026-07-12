@@ -163,27 +163,11 @@ export default function ComercialPipeline() {
       const rowsById = new Map<string, any>();
       (fullRows ?? []).forEach(r => rowsById.set(r.id, r));
 
-      // active checklist template (single fetch)
-      const { data: tpl } = await supabase
-        .from("commercial_checklist_templates")
-        .select("id").eq("is_active", true).order("version", { ascending: false }).limit(1).maybeSingle();
-      let items: any[] = [];
-      if (tpl?.id) {
-        const { data } = await supabase
-          .from("commercial_checklist_items").select("id,group_label,label,required").eq("template_id", tpl.id).order("position");
-        items = data ?? [];
-      }
-
       const ctxByCard: Record<string, DossierContext> = {};
       for (const c of target) {
-        const { data: ans } = await supabase
-          .from("commercial_card_checklist").select("item_id,checked,value_text").eq("card_id", c.id);
-        const answers: Record<string, { checked: boolean; value_text?: string | null }> = {};
-        (ans ?? []).forEach(a => { answers[a.item_id] = { checked: a.checked, value_text: a.value_text }; });
         ctxByCard[c.id] = {
           squads: squads.map(s => ({ id: s.id, name: s.name })),
           managers: managers.map(m => ({ id: m.id, name: m.name })),
-          checklist: { items, answers },
         };
       }
 
