@@ -661,6 +661,20 @@ function CardDetailSheet({ card, squads, managers, onClose, onUpdated, onExportP
         <SheetHeader>
           <SheetTitle className="font-display">{card.name}</SheetTitle>
           <SheetDescription>{card.handle ?? "—"} · {card.niche ?? "sem nicho"} · etapa atual: <span className="text-foreground">{card.stage}</span></SheetDescription>
+          {card.stage === "analise" && onExportPdf && (
+            <div className="pt-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onExportPdf(card)}
+                disabled={!!exporting}
+                className="gap-1.5"
+              >
+                {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5" />}
+                Exportar dossiê em PDF
+              </Button>
+            </div>
+          )}
         </SheetHeader>
 
         {(card.stage === "aprovado" || card.stage === "concluido") && (
