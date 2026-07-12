@@ -7,7 +7,7 @@
  *   await exportCandidateDossierPdf(cards, { filename: "playbet_dossies_analise.pdf" });
  */
 import { jsPDF } from "jspdf";
-import wordmarkSvg from "@/assets/playbet-wordmark.svg?raw";
+import wordmarkUrl from "@/assets/playbet-wordmark.webp";
 
 /* ----------------------------- palette ---------------------------- */
 const COLOR = {
