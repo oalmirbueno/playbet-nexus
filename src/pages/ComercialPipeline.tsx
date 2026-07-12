@@ -251,6 +251,20 @@ export default function ComercialPipeline() {
             onChange={e => setSearch(e.target.value)}
             className="min-w-0 flex-1 xl:w-72 h-9"
           />
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => exportAnaliseDossies()}
+            disabled={exportingAnalise || analiseCount === 0}
+            className="gap-1.5 shrink-0"
+            title={analiseCount === 0 ? "Nenhum card em Análise" : `Exportar ${analiseCount} dossiê(s) da coluna Análise`}
+          >
+            {exportingAnalise ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+            <span className="hidden sm:inline">Exportar análise</span>
+            {analiseCount > 0 && (
+              <Badge variant="secondary" className="h-4 px-1.5 text-[10px] ml-0.5">{analiseCount}</Badge>
+            )}
+          </Button>
           <NewCardDialog open={newOpen} onOpenChange={setNewOpen} onCreated={load} />
         </div>
       </div>
