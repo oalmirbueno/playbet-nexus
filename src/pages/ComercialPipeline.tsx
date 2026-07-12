@@ -300,6 +300,8 @@ export default function ComercialPipeline() {
         managers={managers}
         onClose={() => setOpenCard(null)}
         onUpdated={load}
+        onExportPdf={(c) => exportAnaliseDossies([c])}
+        exporting={exportingAnalise}
       />
     </div>
   );
