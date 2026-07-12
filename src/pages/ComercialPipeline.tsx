@@ -22,7 +22,8 @@ import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors,
   useDraggable, useDroppable,
 } from "@dnd-kit/core";
-import { Plus, GripVertical, Users, Calendar as CalendarIcon, Sparkles, KeyRound, Copy, Check, Loader2, ShieldCheck } from "lucide-react";
+import { Plus, GripVertical, Users, Calendar as CalendarIcon, Sparkles, KeyRound, Copy, Check, Loader2, ShieldCheck, FileDown } from "lucide-react";
+import { exportCandidateDossierPdf, type DossierCard, type DossierContext } from "@/lib/exportCandidatePdf";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -82,6 +83,7 @@ export default function ComercialPipeline() {
   const [activeCard, setActiveCard] = useState<Card | null>(null);
   const [openCard, setOpenCard] = useState<Card | null>(null);
   const [newOpen, setNewOpen] = useState(false);
+  const [exportingAnalise, setExportingAnalise] = useState(false);
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
@@ -147,6 +149,89 @@ export default function ComercialPipeline() {
     if (STAGES.find(s => s.id === stage)) moveCard(e.active.id as string, stage);
   }
 
+  async function exportAnaliseDossies(targetCards?: Card[]) {
+    const target = targetCards ?? cards.filter(c => c.stage === "analise");
+    if (target.length === 0) {
+      toast({ title: "Nada para exportar", description: "Nenhum card em Análise." });
+      return;
+    }
+    setExportingAnalise(true);
+    try {
+      const ids = target.map(c => c.id);
+      const { data: fullRows } = await supabase
+        .from("commercial_pipeline_cards").select("*").in("id", ids);
+      const rowsById = new Map<string, any>();
+      (fullRows ?? []).forEach(r => rowsById.set(r.id, r));
+
+      // active checklist template (single fetch)
+      const { data: tpl } = await supabase
+        .from("commercial_checklist_templates")
+        .select("id").eq("is_active", true).order("version", { ascending: false }).limit(1).maybeSingle();
+      let items: any[] = [];
+      if (tpl?.id) {
+        const { data } = await supabase
+          .from("commercial_checklist_items").select("id,group_label,label,required").eq("template_id", tpl.id).order("position");
+        items = data ?? [];
+      }
+
+      const ctxByCard: Record<string, DossierContext> = {};
+      for (const c of target) {
+        const { data: ans } = await supabase
+          .from("commercial_card_checklist").select("item_id,checked,value_text").eq("card_id", c.id);
+        const answers: Record<string, { checked: boolean; value_text?: string | null }> = {};
+        (ans ?? []).forEach(a => { answers[a.item_id] = { checked: a.checked, value_text: a.value_text }; });
+        ctxByCard[c.id] = {
+          squads: squads.map(s => ({ id: s.id, name: s.name })),
+          managers: managers.map(m => ({ id: m.id, name: m.name })),
+          checklist: { items, answers },
+        };
+      }
+
+      const dossierCards: DossierCard[] = target.map(c => {
+        const full = rowsById.get(c.id) ?? {};
+        return {
+          id: c.id,
+          name: full.name ?? c.name,
+          handle: full.handle ?? c.handle,
+          primary_channel: full.primary_channel ?? c.primary_channel,
+          source: full.source ?? c.source,
+          niche: full.niche ?? c.niche,
+          tags: full.tags ?? c.tags ?? [],
+          email: full.email ?? c.email,
+          phone: full.phone ?? c.phone,
+          city: full.city ?? c.city,
+          uf: full.uf ?? c.uf,
+          document: full.document ?? null,
+          stage: full.stage ?? c.stage,
+          stage_moved_at: full.stage_moved_at ?? c.stage_moved_at,
+          responded_at: full.responded_at ?? null,
+          created_at: full.created_at ?? null,
+          notes: full.notes ?? c.notes,
+          checklist_progress: full.checklist_progress ?? c.checklist_progress ?? 0,
+          social_profiles: full.social_profiles ?? [],
+          content_info: full.content_info ?? {},
+          financial_info: full.financial_info ?? {},
+          squad_id: full.squad_id ?? c.squad_id,
+          squad_ids: full.squad_ids ?? c.squad_ids ?? [],
+          manager_id: full.manager_id ?? c.manager_id,
+        };
+      });
+
+      await exportCandidateDossierPdf(dossierCards, ctxByCard, {
+        subtitle: target.length === 1 ? "Analise comercial" : `Analise comercial - ${target.length} candidatos`,
+      });
+      toast({
+        title: "Dossie exportado",
+        description: `${target.length} candidato${target.length > 1 ? "s" : ""} pronto${target.length > 1 ? "s" : ""} para envio.`,
+      });
+    } catch (e: any) {
+      toast({ title: "Erro ao exportar PDF", description: e?.message ?? "Falha inesperada", variant: "destructive" });
+    } finally {
+      setExportingAnalise(false);
+    }
+  }
+
+  const analiseCount = useMemo(() => cards.filter(c => c.stage === "analise").length, [cards]);
   const stageCount = STAGES.length;
   const totalCards = filtered.length;
 
@@ -166,6 +251,20 @@ export default function ComercialPipeline() {
             onChange={e => setSearch(e.target.value)}
             className="min-w-0 flex-1 xl:w-72 h-9"
           />
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => exportAnaliseDossies()}
+            disabled={exportingAnalise || analiseCount === 0}
+            className="gap-1.5 shrink-0"
+            title={analiseCount === 0 ? "Nenhum card em Análise" : `Exportar ${analiseCount} dossiê(s) da coluna Análise`}
+          >
+            {exportingAnalise ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+            <span className="hidden sm:inline">Exportar análise</span>
+            {analiseCount > 0 && (
+              <Badge variant="secondary" className="h-4 px-1.5 text-[10px] ml-0.5">{analiseCount}</Badge>
+            )}
+          </Button>
           <NewCardDialog open={newOpen} onOpenChange={setNewOpen} onCreated={load} />
         </div>
       </div>
@@ -201,6 +300,8 @@ export default function ComercialPipeline() {
         managers={managers}
         onClose={() => setOpenCard(null)}
         onUpdated={load}
+        onExportPdf={(c) => exportAnaliseDossies([c])}
+        exporting={exportingAnalise}
       />
     </div>
   );
@@ -465,8 +566,9 @@ interface ChecklistItem {
 }
 interface ChecklistAnswer { item_id: string; checked: boolean; value_text: string | null }
 
-function CardDetailSheet({ card, squads, managers, onClose, onUpdated }: {
+function CardDetailSheet({ card, squads, managers, onClose, onUpdated, onExportPdf, exporting }: {
   card: Card | null; squads: Squad[]; managers: Manager[]; onClose: () => void; onUpdated: () => void;
+  onExportPdf?: (card: Card) => void; exporting?: boolean;
 }) {
   const { toast } = useToast();
   const [items, setItems] = useState<ChecklistItem[]>([]);
@@ -559,6 +661,20 @@ function CardDetailSheet({ card, squads, managers, onClose, onUpdated }: {
         <SheetHeader>
           <SheetTitle className="font-display">{card.name}</SheetTitle>
           <SheetDescription>{card.handle ?? "—"} · {card.niche ?? "sem nicho"} · etapa atual: <span className="text-foreground">{card.stage}</span></SheetDescription>
+          {card.stage === "analise" && onExportPdf && (
+            <div className="pt-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onExportPdf(card)}
+                disabled={!!exporting}
+                className="gap-1.5"
+              >
+                {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileDown className="h-3.5 w-3.5" />}
+                Exportar dossiê em PDF
+              </Button>
+            </div>
+          )}
         </SheetHeader>
 
         {(card.stage === "aprovado" || card.stage === "concluido") && (
