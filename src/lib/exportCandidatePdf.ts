@@ -64,29 +64,24 @@ export interface DossierContext {
 }
 
 /* --------------------------- helpers ------------------------------ */
-async function svgToPngDataUrl(svg: string, targetW = 480): Promise<string> {
-  const blob = new Blob([svg], { type: "image/svg+xml" });
-  const url = URL.createObjectURL(blob);
-  try {
-    const img = new Image();
-    await new Promise<void>((res, rej) => {
-      img.onload = () => res();
-      img.onerror = () => rej(new Error("svg load failed"));
-      img.src = url;
-    });
-    const ratio = img.height / img.width || 0.3;
-    const w = targetW;
-    const h = Math.round(w * ratio);
-    const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext("2d")!;
-    ctx.clearRect(0, 0, w, h);
-    ctx.drawImage(img, 0, 0, w, h);
-    return canvas.toDataURL("image/png");
-  } finally {
-    URL.revokeObjectURL(url);
-  }
+async function imageUrlToPngDataUrl(src: string, targetW = 720): Promise<string> {
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  await new Promise<void>((res, rej) => {
+    img.onload = () => res();
+    img.onerror = () => rej(new Error("image load failed"));
+    img.src = src;
+  });
+  const ratio = img.naturalHeight / img.naturalWidth || 0.3;
+  const w = targetW;
+  const h = Math.round(w * ratio);
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d")!;
+  ctx.clearRect(0, 0, w, h);
+  ctx.drawImage(img, 0, 0, w, h);
+  return canvas.toDataURL("image/png");
 }
 
 function setFill(doc: jsPDF, c: readonly [number, number, number]) {
