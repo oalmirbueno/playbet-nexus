@@ -83,6 +83,7 @@ export default function ComercialPipeline() {
   const [activeCard, setActiveCard] = useState<Card | null>(null);
   const [openCard, setOpenCard] = useState<Card | null>(null);
   const [newOpen, setNewOpen] = useState(false);
+  const [exportingAnalise, setExportingAnalise] = useState(false);
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
