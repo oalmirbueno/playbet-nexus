@@ -64,7 +64,7 @@ export interface DossierContext {
 }
 
 /* --------------------------- helpers ------------------------------ */
-async function imageUrlToPngDataUrl(src: string, targetW = 720): Promise<string> {
+async function imageUrlToPngDataUrl(src: string, targetW = 720): Promise<{ dataUrl: string; ratio: number }> {
   const img = new Image();
   img.crossOrigin = "anonymous";
   await new Promise<void>((res, rej) => {
@@ -81,7 +81,7 @@ async function imageUrlToPngDataUrl(src: string, targetW = 720): Promise<string>
   const ctx = canvas.getContext("2d")!;
   ctx.clearRect(0, 0, w, h);
   ctx.drawImage(img, 0, 0, w, h);
-  return canvas.toDataURL("image/png");
+  return { dataUrl: canvas.toDataURL("image/png"), ratio };
 }
 
 function setFill(doc: jsPDF, c: readonly [number, number, number]) {
