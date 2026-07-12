@@ -493,7 +493,7 @@ export async function exportCandidateDossierPdf(
   if (cards.length === 0) throw new Error("Nenhum candidato para exportar.");
 
   const doc = new jsPDF({ unit: "mm", format: "a4" });
-  const logoPng = await imageUrlToPngDataUrl(wordmarkUrl, 720).catch(() => "");
+  const logoPng = await imageUrlToPngDataUrl(wordmarkUrl, 720).catch(() => null);
   const subtitle = opts.subtitle ?? "Analise comercial";
 
   const drawChrome = (name: string) => {
