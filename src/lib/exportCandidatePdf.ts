@@ -214,7 +214,11 @@ const MARGIN = { x: 16, top: 44, bottom: 22 };
 
 interface Cursor { y: number; page: number }
 
-async function drawHeader(doc: jsPDF, logo: string, subtitle: string) {
+async function drawHeader(
+  doc: jsPDF,
+  logo: { dataUrl: string; ratio: number } | null,
+  subtitle: string,
+) {
   // navy strip
   setFill(doc, COLOR.navy);
   doc.rect(0, 0, PAGE.w, 30, "F");
@@ -225,10 +229,19 @@ async function drawHeader(doc: jsPDF, logo: string, subtitle: string) {
   setFill(doc, COLOR.brand2);
   doc.rect(PAGE.w * 0.55, 30, PAGE.w * 0.45, 1.2, "F");
 
-  // wordmark
-  try {
-    doc.addImage(logo, "PNG", MARGIN.x, 8, 34, 10.2, undefined, "FAST");
-  } catch {
+  // wordmark — mantém aspect ratio do arquivo real
+  const logoH = 11.5; // mm
+  if (logo?.dataUrl) {
+    const logoW = logoH / (logo.ratio || 0.3);
+    try {
+      doc.addImage(logo.dataUrl, "PNG", MARGIN.x, (30 - logoH) / 2, logoW, logoH, undefined, "FAST");
+    } catch {
+      setText(doc, COLOR.paper);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.text("playbet", MARGIN.x, 18);
+    }
+  } else {
     setText(doc, COLOR.paper);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
