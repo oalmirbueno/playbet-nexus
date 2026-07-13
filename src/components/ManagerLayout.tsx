@@ -44,7 +44,7 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
     <div className="min-h-screen bg-background flex flex-col">
       <PreviewBanner />
 
-      <header className="sticky top-0 z-30 flex items-center justify-between h-14 px-4 md:px-6 border-b border-border/60 bg-background/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 flex items-center justify-between h-14 px-4 md:px-6 border-b border-border/60 bg-background/80 backdrop-blur-xl safe-pt">
         <div className="flex items-center gap-3">
           <img src={logo} alt="PlayBet" className="h-8 w-auto opacity-95" />
           <span className="hidden sm:inline text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Painel do Gerente</span>
@@ -78,19 +78,22 @@ export default function ManagerLayout({ children }: { children: React.ReactNode 
         })}
       </nav>
 
-      <main className="flex-1 p-4 md:p-8 pb-24 md:pb-8 max-w-7xl w-full mx-auto animate-fade-in">{children}</main>
+      <main className="flex-1 p-4 md:p-8 pb-28 md:pb-8 max-w-7xl w-full mx-auto animate-fade-in">{children}</main>
 
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl grid grid-cols-8 pb-[env(safe-area-inset-bottom)]">
-        {items.map((it) => {
-          const active = location.pathname === it.path;
-          return (
-            <Link key={it.path} to={it.path} className={`relative flex flex-col items-center justify-center py-2.5 gap-0.5 text-[9.5px] transition-colors ${active ? "text-primary" : "text-muted-foreground active:text-foreground"}`}>
-              {active && <span className="absolute top-0 left-3 right-3 h-[2px] rounded-full bg-gradient-to-r from-primary-glow to-primary" />}
-              <it.icon size={18} strokeWidth={active ? 2.25 : 1.6} />
-              <span className="leading-tight">{it.label}</span>
-            </Link>
-          );
-        })}
+      {/* Mobile bottom tabs — horizontal scroll fallback for 8 items, elevated above home indicator */}
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl safe-pb">
+        <div className="grid grid-cols-8">
+          {items.map((it) => {
+            const active = location.pathname === it.path;
+            return (
+              <Link key={it.path} to={it.path} className={`relative flex flex-col items-center justify-center min-h-[56px] py-2 gap-0.5 text-[9px] transition-colors ${active ? "text-primary" : "text-muted-foreground active:text-foreground"}`}>
+                {active && <span className="absolute top-0 left-2 right-2 h-[2px] rounded-full bg-gradient-to-r from-primary-glow to-primary" />}
+                <it.icon size={18} strokeWidth={active ? 2.25 : 1.6} />
+                <span className="leading-tight">{it.label}</span>
+              </Link>
+            );
+          })}
+        </div>
       </nav>
     </div>
   );

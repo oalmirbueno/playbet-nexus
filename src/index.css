@@ -54,6 +54,7 @@
 
 @layer base {
   * { @apply border-border; }
+  html, body { overscroll-behavior-y: none; }
   body {
     @apply bg-background text-foreground antialiased;
     font-family: 'Manrope', system-ui, -apple-system, sans-serif;
@@ -62,11 +63,20 @@
     letter-spacing: -0.008em;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    -webkit-tap-highlight-color: transparent;
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
     background-image:
       radial-gradient(ellipse 80% 50% at 50% -10%, hsl(244 75% 30% / 0.18), transparent 60%),
       radial-gradient(ellipse 60% 40% at 100% 100%, hsl(262 70% 35% / 0.10), transparent 60%);
     background-attachment: fixed;
   }
+  button, a, [role="button"] { touch-action: manipulation; }
+  /* Bottom-nav safe touch area helpers */
+  .safe-pt { padding-top: env(safe-area-inset-top); }
+  .safe-pb { padding-bottom: env(safe-area-inset-bottom); }
+  .safe-mb { margin-bottom: env(safe-area-inset-bottom); }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Sora', system-ui, -apple-system, sans-serif;
     letter-spacing: -0.022em;
