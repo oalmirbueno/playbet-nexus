@@ -44,7 +44,7 @@ export default function InfluencerPortalLayout({ children }: { children: React.R
       <PreviewBanner />
 
       {/* Top bar (desktop + mobile) */}
-      <header className="sticky top-0 z-30 flex items-center justify-between h-14 px-4 md:px-6 border-b border-border/60 bg-background/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 flex items-center justify-between h-14 px-4 md:px-6 border-b border-border/60 bg-background/80 backdrop-blur-xl safe-pt">
         <div className="flex items-center gap-3">
           <img src={logo} alt="PlayBet" className="h-8 w-auto opacity-95" />
           <span className="hidden sm:inline text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Portal Influenciador</span>
