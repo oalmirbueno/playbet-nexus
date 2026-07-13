@@ -76,7 +76,6 @@
   .safe-pt { padding-top: env(safe-area-inset-top); }
   .safe-pb { padding-bottom: env(safe-area-inset-bottom); }
   .safe-mb { margin-bottom: env(safe-area-inset-bottom); }
-}
 
   h1, h2, h3, h4, h5, h6 {
     font-family: 'Sora', system-ui, -apple-system, sans-serif;
