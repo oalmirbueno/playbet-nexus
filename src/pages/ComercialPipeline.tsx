@@ -198,6 +198,7 @@ export default function ComercialPipeline() {
           squad_id: full.squad_id ?? c.squad_id,
           squad_ids: full.squad_ids ?? c.squad_ids ?? [],
           manager_id: full.manager_id ?? c.manager_id,
+          documents: full.documents ?? {},
         };
       });
 
