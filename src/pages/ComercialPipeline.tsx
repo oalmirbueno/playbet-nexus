@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CandidateRegistrationForm } from "@/components/comercial/CandidateRegistrationForm";
+import { CandidateDocumentsPanel } from "@/components/comercial/CandidateDocumentsPanel";
 import { useToast } from "@/hooks/use-toast";
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors,
