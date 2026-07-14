@@ -773,11 +773,16 @@ function CardDetailSheet({ card, squads, managers, onClose, onUpdated, onExportP
             </SheetFooter>
           </TabsContent>
 
-          <TabsContent value="cadastro" className="mt-6">
+          <TabsContent value="cadastro" className="mt-6 space-y-6">
             <CandidateRegistrationForm
               cardId={card.id}
               initial={card as any}
               onSaved={() => { onUpdated(); }}
+            />
+            <CandidateDocumentsPanel
+              cardId={card.id}
+              candidateName={card.name}
+              onChanged={onUpdated}
             />
           </TabsContent>
         </Tabs>
