@@ -58,6 +58,7 @@ export interface DossierCard {
   squad_id?: string | null;
   squad_ids?: string[] | null;
   manager_id?: string | null;
+  documents?: CandidateDocuments | unknown;
 }
 
 export interface DossierContext {
