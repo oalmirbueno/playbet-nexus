@@ -7,7 +7,13 @@
  *   await exportCandidateDossierPdf(cards, { filename: "playbet_dossies_analise.pdf" });
  */
 import { jsPDF } from "jspdf";
+import { PDFDocument } from "pdf-lib";
+import JSZip from "jszip";
 import wordmarkUrl from "@/assets/playbet-wordmark.webp";
+import {
+  downloadCandidateDoc, type CandidateDocFile, type CandidateDocuments, normalizeDocs,
+  KIND_LABEL, humanSize,
+} from "@/lib/candidateDocuments";
 
 /* ----------------------------- palette ---------------------------- */
 const COLOR = {
@@ -52,6 +58,7 @@ export interface DossierCard {
   squad_id?: string | null;
   squad_ids?: string[] | null;
   manager_id?: string | null;
+  documents?: CandidateDocuments | unknown;
 }
 
 export interface DossierContext {
@@ -629,22 +636,152 @@ export async function exportCandidateDossierPdf(
       sectionTitle(doc, cursor, "Observacoes internas", () => drawChrome(card.name));
       paragraph(doc, cursor, card.notes!.trim(), () => drawChrome(card.name));
     }
+
+    // documentos anexados (listagem no dossie)
+    const docsMeta = normalizeDocs(card.documents);
+    if (docsMeta.files.length > 0) {
+      sectionTitle(doc, cursor, "Documentos anexados", () => drawChrome(card.name));
+      const rows: [string, string][] = docsMeta.files.map((f, i) => [
+        `${String(i + 1).padStart(2, "0")}  ${KIND_LABEL[f.kind]}`,
+        `${f.name}  ·  ${humanSize(f.size)}`,
+      ]);
+      kvGrid(doc, cursor, rows, () => drawChrome(card.name), 1);
+      setText(doc, COLOR.slate);
+      doc.setFont("helvetica", "italic");
+      doc.setFontSize(8);
+      const info = "Os arquivos originais seguem anexados nas paginas seguintes deste PDF.";
+      doc.text(dashSanitize(info), MARGIN.x, cursor.y);
+      cursor.y += 5;
+    }
   });
 
-  // final footers with correct total pages
+  // final footers with correct total pages (dossier only, before merging attachments)
   const total = doc.getNumberOfPages();
   for (let p = 1; p <= total; p++) {
     doc.setPage(p);
-    // find candidate name by page index (one candidate per page group is not guaranteed;
-    // but we produce a sequential set — approximate by nearest starting page)
     const name = cards[Math.min(p - 1, cards.length - 1)]?.name ?? "";
     drawFooter(doc, p, total, name);
   }
 
-  const blob = doc.output("blob");
+  // ---- merge documentos originais (PDF + imagens) usando pdf-lib ----
+  const dossierBlob = doc.output("blob");
+  let finalBlob: Blob = dossierBlob;
+  try {
+    const merged = await mergeAttachmentsIntoDossier(dossierBlob, cards);
+    if (merged) finalBlob = merged;
+  } catch (err) {
+    console.warn("[dossie] falha ao anexar documentos:", err);
+  }
+
   const filename = opts.filename ?? `playbet_dossie_${cards.length === 1 ? slug(cards[0].name) : "analise"}_${stamp()}.pdf`;
-  triggerDownload(blob, filename);
-  return blob;
+  triggerDownload(finalBlob, filename);
+  return finalBlob;
+}
+
+/* ------------------- merge attachments ------------------- */
+async function mergeAttachmentsIntoDossier(dossier: Blob, cards: DossierCard[]): Promise<Blob | null> {
+  const anyDocs = cards.some(c => normalizeDocs(c.documents).files.length > 0);
+  if (!anyDocs) return null;
+
+  const base = await PDFDocument.load(await dossier.arrayBuffer());
+
+  for (const card of cards) {
+    const files = normalizeDocs(card.documents).files;
+    if (files.length === 0) continue;
+
+    for (const f of files) {
+      try {
+        const blob = await downloadCandidateDoc(f.path);
+        const bytes = await blob.arrayBuffer();
+        const mime = (f.mime || blob.type || "").toLowerCase();
+
+        if (mime === "application/pdf" || f.name.toLowerCase().endsWith(".pdf")) {
+          const src = await PDFDocument.load(bytes, { ignoreEncryption: true });
+          const pages = await base.copyPages(src, src.getPageIndices());
+          pages.forEach(p => base.addPage(p));
+        } else if (mime.startsWith("image/")) {
+          const dataUrl = await blobToDataUrl(blob);
+          const normalized = await normalizeImageToPng(dataUrl);
+          const png = await base.embedPng(normalized.dataUrl);
+          const page = base.addPage([595.28, 841.89]); // A4 pt
+          const pageW = page.getWidth();
+          const pageH = page.getHeight();
+          const margin = 40;
+          const maxW = pageW - margin * 2;
+          const maxH = pageH - margin * 2 - 40;
+          const scale = Math.min(maxW / png.width, maxH / png.height, 1);
+          const w = png.width * scale;
+          const h = png.height * scale;
+          page.drawImage(png, {
+            x: (pageW - w) / 2,
+            y: (pageH - h) / 2 - 10,
+            width: w, height: h,
+          });
+          // legenda
+          page.drawText(`${card.name}  |  ${KIND_LABEL[f.kind]}  |  ${f.name}`, {
+            x: margin, y: margin - 6, size: 9,
+          });
+        } else {
+          // formato não suportado (heic etc.) — ignora silenciosamente na mesclagem
+          console.info("[dossie] anexo ignorado (formato):", f.name, mime);
+        }
+      } catch (err) {
+        console.warn("[dossie] falha ao anexar:", f.path, err);
+      }
+    }
+  }
+
+  const out = await base.save();
+  return new Blob([out as unknown as ArrayBuffer], { type: "application/pdf" });
+}
+
+async function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onload = () => resolve(String(fr.result));
+    fr.onerror = () => reject(new Error("read blob failed"));
+    fr.readAsDataURL(blob);
+  });
+}
+
+async function normalizeImageToPng(dataUrl: string): Promise<{ dataUrl: string; width: number; height: number }> {
+  const img = new Image();
+  await new Promise<void>((res, rej) => {
+    img.onload = () => res();
+    img.onerror = () => rej(new Error("image decode failed"));
+    img.src = dataUrl;
+  });
+  const canvas = document.createElement("canvas");
+  canvas.width = img.naturalWidth;
+  canvas.height = img.naturalHeight;
+  const ctx = canvas.getContext("2d")!;
+  ctx.drawImage(img, 0, 0);
+  return {
+    dataUrl: canvas.toDataURL("image/png"),
+    width: canvas.width,
+    height: canvas.height,
+  };
+}
+
+/* -------------- ZIP: só os documentos originais -------------- */
+export async function downloadDocumentsZip(candidateName: string, files: CandidateDocFile[]): Promise<void> {
+  if (files.length === 0) throw new Error("Nenhum documento anexado.");
+  const zip = new JSZip();
+  const folder = zip.folder(slug(candidateName) || "documentos")!;
+  const kindFolders: Record<string, JSZip> = {};
+  for (const f of files) {
+    const label = KIND_LABEL[f.kind] || "outros";
+    const key = slug(label);
+    kindFolders[key] ??= folder.folder(key)!;
+    try {
+      const blob = await downloadCandidateDoc(f.path);
+      kindFolders[key].file(f.name, blob);
+    } catch (err) {
+      console.warn("[zip] falha ao baixar:", f.path, err);
+    }
+  }
+  const out = await zip.generateAsync({ type: "blob" });
+  triggerDownload(out, `documentos_${slug(candidateName) || "candidato"}_${stamp()}.zip`);
 }
 
 function slug(s: string): string {

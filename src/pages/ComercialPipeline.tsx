@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CandidateRegistrationForm } from "@/components/comercial/CandidateRegistrationForm";
+import { CandidateDocumentsPanel } from "@/components/comercial/CandidateDocumentsPanel";
 import { useToast } from "@/hooks/use-toast";
 import {
   DndContext, DragEndEvent, DragOverlay, DragStartEvent, MouseSensor, TouchSensor, useSensor, useSensors,
@@ -198,6 +199,7 @@ export default function ComercialPipeline() {
           squad_id: full.squad_id ?? c.squad_id,
           squad_ids: full.squad_ids ?? c.squad_ids ?? [],
           manager_id: full.manager_id ?? c.manager_id,
+          documents: full.documents ?? {},
         };
       });
 
@@ -772,11 +774,16 @@ function CardDetailSheet({ card, squads, managers, onClose, onUpdated, onExportP
             </SheetFooter>
           </TabsContent>
 
-          <TabsContent value="cadastro" className="mt-6">
+          <TabsContent value="cadastro" className="mt-6 space-y-6">
             <CandidateRegistrationForm
               cardId={card.id}
               initial={card as any}
               onSaved={() => { onUpdated(); }}
+            />
+            <CandidateDocumentsPanel
+              cardId={card.id}
+              candidateName={card.name}
+              onChanged={onUpdated}
             />
           </TabsContent>
         </Tabs>
