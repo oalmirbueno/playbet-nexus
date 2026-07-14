@@ -732,7 +732,7 @@ async function mergeAttachmentsIntoDossier(dossier: Blob, cards: DossierCard[]):
   }
 
   const out = await base.save();
-  return new Blob([out], { type: "application/pdf" });
+  return new Blob([out as unknown as ArrayBuffer], { type: "application/pdf" });
 }
 
 async function blobToDataUrl(blob: Blob): Promise<string> {
