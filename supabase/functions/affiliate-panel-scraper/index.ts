@@ -20,6 +20,8 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const ESTRELABET_OFFICIAL_PANEL_URL = "https://admin.aff.estrelabetpartners.com/460395#/";
+const SMARTICO_API_BASE = "https://boapi.smartico.ai";
 
 type Brand = {
   slug: "estrelabet" | "vupi";
@@ -34,17 +36,17 @@ type Brand = {
 const BRANDS: Brand[] = [
   {
     slug: "estrelabet",
-    loginUrl: Deno.env.get("ESTRELABET_AFFILIATE_LOGIN_URL"),
+    loginUrl: ESTRELABET_OFFICIAL_PANEL_URL,
     user: Deno.env.get("ESTRELABET_AFFILIATE_USER"),
     pass: Deno.env.get("ESTRELABET_AFFILIATE_PASS"),
-    accountId: Deno.env.get("ESTRELABET_AFFILIATE_ACCOUNT_ID") ?? undefined,
+    accountId: Deno.env.get("ESTRELABET_AFFILIATE_ACCOUNT_ID") ?? "460395",
   },
   {
     slug: "vupi",
     loginUrl: Deno.env.get("VUPI_AFFILIATE_LOGIN_URL"),
     user: Deno.env.get("VUPI_AFFILIATE_USER"),
     pass: Deno.env.get("VUPI_AFFILIATE_PASS"),
-    accountId: Deno.env.get("VUPI_AFFILIATE_ACCOUNT_ID") ?? Deno.env.get("SMARTICO_LABEL_ID") ?? Deno.env.get("STELLAR_TAP_LABEL_ID") ?? undefined,
+    accountId: Deno.env.get("VUPI_AFFILIATE_ACCOUNT_ID") === "397057" ? undefined : (Deno.env.get("VUPI_AFFILIATE_ACCOUNT_ID") ?? undefined),
   },
 ];
 
@@ -305,6 +307,135 @@ function compactExtraction(perf: any, saldo: { saldo_disponivel: number | null; 
   };
 }
 
+function addDays(date: Date, days: number) {
+  const copy = new Date(date);
+  copy.setUTCDate(copy.getUTCDate() + days);
+  return copy;
+}
+
+function currentPanelPeriod() {
+  const end = new Date();
+  const start = addDays(end, -29);
+  return {
+    date_from: start.toISOString().slice(0, 10),
+    // O painel oficial usa date_to exclusivo: a UI envia fim + 1 dia.
+    date_to: addDays(end, 1).toISOString().slice(0, 10),
+  };
+}
+
+function getBrandSmarticoId(brand: Brand, platforms: any[] = []) {
+  const fromDb = platforms
+    .map((platform: any) => String(platform?.smartico_brand_id ?? "").trim())
+    .find(Boolean);
+  if (fromDb) return fromDb;
+  return brand.slug === "estrelabet" ? "397057" : null;
+}
+
+function parseOfficialMediaReport(rows: any[]) {
+  const row = rows?.[0] ?? {};
+  const cpa = firstNumber(row.commissions_cpa, row.commission_cpa, row.cpa_commission) ?? 0;
+  const total = firstNumber(row.commissions_total, row.commission_total) ?? 0;
+  const rev = firstNumber(row.commissions_rev_share, row.commission_rev_share, row.revshare_commission, total - cpa) ?? 0;
+  return {
+    periodo_label: "Últimos 30 dias",
+    cliques: Math.round(firstNumber(row.visit_count, row.click_count, row.clicks) ?? 0),
+    cadastros: Math.round(firstNumber(row.registration_count, row.reg_count, row.registrations) ?? 0),
+    ftds: Math.round(firstNumber(row.ftd_count, row.ftds) ?? 0),
+    ftds_valor: firstNumber(row.ftd_total, row.ftd_amount) ?? 0,
+    qftds: Math.round(firstNumber(row.qftd_count, row.qftds) ?? 0),
+    depositos_qtd: Math.round(firstNumber(row.deposit_count, row.deposits_count) ?? 0),
+    depositos_valor: firstNumber(row.deposit_total, row.deposits_total, row.net_deposit_total) ?? 0,
+    ggr: firstNumber(row.pl, row.netwin, row.ggr) ?? 0,
+    ngr: firstNumber(row.netwin, row.pl, row.ngr) ?? 0,
+    comissao_cpa: cpa,
+    comissao_revshare: rev,
+  };
+}
+
+async function smarticoLogin(brand: Brand) {
+  if (!brand.user || !brand.pass) throw new Error(`Missing credentials for ${brand.slug}`);
+  const res = await fetch(`${SMARTICO_API_BASE}/api-auth`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username: brand.user, password: brand.pass }),
+  });
+  const text = await res.text();
+  let json: any;
+  try { json = JSON.parse(text); } catch { json = { raw: text }; }
+  if (!res.ok || json?.errCode || !json?.boAccount?.token) {
+    throw new Error(`Smartico login failed for ${brand.slug}: ${json?.message ?? json?.errCode ?? text.slice(0, 200)}`);
+  }
+  return json.boAccount;
+}
+
+async function fetchOfficialPerformanceReport(brand: Brand, platforms: any[] = []) {
+  if (brand.slug !== "estrelabet") return null;
+  const labelId = String(brand.accountId ?? "460395").trim();
+  const brandId = getBrandSmarticoId(brand, platforms);
+  const account = await smarticoLogin(brand);
+  const { date_from, date_to } = currentPanelPeriod();
+  const url = new URL(`${SMARTICO_API_BASE}/api/af2_media_report_af`);
+  url.searchParams.set("sort", JSON.stringify(["id", "DESC"]));
+  url.searchParams.set("range", JSON.stringify([0, 0]));
+  url.searchParams.set("filter", JSON.stringify({}));
+  url.searchParams.set("skip_group_by", "true");
+  url.searchParams.set("date_from", date_from);
+  url.searchParams.set("date_to", date_to);
+  if (brandId) url.searchParams.set("brand_id", String(brandId));
+  url.searchParams.set("lbl", labelId);
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      Authorization: String(account.token),
+      active_label_id: labelId,
+    },
+  });
+  const text = await res.text();
+  let json: any;
+  try { json = JSON.parse(text); } catch { json = { raw: text }; }
+  if (!res.ok) {
+    throw new Error(`Smartico report failed for ${brand.slug}: [${res.status}] ${text.slice(0, 300)}`);
+  }
+  const rows = Array.isArray(json?.data) ? json.data : Array.isArray(json) ? json : [];
+  if (!rows.length) throw new Error(`Smartico report returned no rows for ${brand.slug}`);
+  return {
+    rows,
+    parsed: parseOfficialMediaReport(rows),
+    meta: { date_from, date_to, label_id: labelId, brand_id: brandId, source: "smartico_af2_media_report_af" },
+  };
+}
+
+async function fetchOfficialBalance(brand: Brand) {
+  if (brand.slug !== "estrelabet") return null;
+  const labelId = String(brand.accountId ?? "460395").trim();
+  const account = await smarticoLogin(brand);
+  const url = new URL(`${SMARTICO_API_BASE}/api/af2_balance_af/1`);
+  url.searchParams.set("lbl", labelId);
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      Authorization: String(account.token),
+      active_label_id: labelId,
+    },
+  });
+  const text = await res.text();
+  let json: any;
+  try { json = JSON.parse(text); } catch { json = { raw: text }; }
+  if (!res.ok) {
+    throw new Error(`Smartico balance failed for ${brand.slug}: [${res.status}] ${text.slice(0, 300)}`);
+  }
+  const row = json?.data ?? json;
+  return {
+    saldo_disponivel: firstNumber(row?.balance) ?? null,
+    saldo_pendente: firstNumber(row?.not_processed_payment_amount) ?? null,
+    row,
+    meta: { label_id: labelId, source: "smartico_af2_balance_af" },
+  };
+}
+
 function numberOrZero(value: unknown): number {
   const n = Number(value ?? 0);
   return Number.isFinite(n) ? n : 0;
@@ -373,6 +504,77 @@ function buildLoginJs(brand: Brand) {
       }, 400);
     })();
   `;
+}
+
+function buildOfficialSmarticoCaptureJs(brand: Brand) {
+  if (brand.slug !== "estrelabet") return "";
+  const labelId = String(brand.accountId ?? "460395").trim();
+  const brandId = "397057";
+  const { date_from, date_to } = currentPanelPeriod();
+  return `
+    (async function(){
+      const result = { label_id: ${JSON.stringify(labelId)}, brand_id: ${JSON.stringify(brandId)}, date_from: ${JSON.stringify(date_from)}, date_to: ${JSON.stringify(date_to)} };
+      try {
+        const cookieToken = (document.cookie || '').split(';').map(s => s.trim()).find(s => s.startsWith('__smtaff_bo_token='));
+        const storageToken = localStorage.getItem('__smtaff_bo_token') || sessionStorage.getItem('__smtaff_bo_token');
+        const token = storageToken || (cookieToken ? decodeURIComponent(cookieToken.split('=').slice(1).join('=')) : '');
+        if (!token) throw new Error('token_not_found_after_login');
+        const headers = { Accept: 'application/json', Authorization: token, active_label_id: ${JSON.stringify(labelId)} };
+
+        const perfUrl = new URL('https://boapi.smartico.ai/api/af2_media_report_af');
+        perfUrl.searchParams.set('sort', JSON.stringify(['id', 'DESC']));
+        perfUrl.searchParams.set('range', JSON.stringify([0, 0]));
+        perfUrl.searchParams.set('filter', JSON.stringify({}));
+        perfUrl.searchParams.set('skip_group_by', 'true');
+        perfUrl.searchParams.set('date_from', ${JSON.stringify(date_from)});
+        perfUrl.searchParams.set('date_to', ${JSON.stringify(date_to)});
+        perfUrl.searchParams.set('brand_id', ${JSON.stringify(brandId)});
+        perfUrl.searchParams.set('lbl', ${JSON.stringify(labelId)});
+        const perfRes = await fetch(perfUrl.toString(), { headers, credentials: 'include' });
+        result.performance_status = perfRes.status;
+        result.performance = await perfRes.json().catch(async () => ({ raw: await perfRes.text() }));
+
+        const balUrl = new URL('https://boapi.smartico.ai/api/af2_balance_af/1');
+        balUrl.searchParams.set('lbl', ${JSON.stringify(labelId)});
+        const balRes = await fetch(balUrl.toString(), { headers, credentials: 'include' });
+        result.balance_status = balRes.status;
+        result.balance = await balRes.json().catch(async () => ({ raw: await balRes.text() }));
+      } catch (err) {
+        result.error = err && err.message ? err.message : String(err);
+      }
+      const json = JSON.stringify(result);
+      window.__PLAYBET_OFFICIAL_SMARTICO__ = result;
+      document.documentElement.setAttribute('data-playbet-official-smartico', encodeURIComponent(json));
+      const pre = document.createElement('pre');
+      pre.id = 'playbet-official-smartico';
+      pre.textContent = json;
+      pre.style.cssText = 'white-space:pre-wrap;font-size:12px;position:relative;z-index:999999;background:#fff;color:#000;padding:16px;';
+      document.body.prepend(pre);
+    })();
+  `;
+}
+
+function extractOfficialSmarticoFromDoc(...docs: any[]) {
+  const text = docs.map((doc) => [doc?.markdown, doc?.html].filter(Boolean).join("\n")).join("\n");
+  const marker = '{"label_id":"460395"';
+  const start = text.indexOf(marker);
+  if (start < 0) return null;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (escaped) { escaped = false; continue; }
+    if (ch === "\\") { escaped = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === "{") depth++;
+    if (ch === "}") depth--;
+    if (depth === 0) {
+      try { return JSON.parse(text.slice(start, i + 1)); } catch { return null; }
+    }
+  }
+  return null;
 }
 
 function buildBrandSwitchJs(brand: Brand) {
@@ -568,6 +770,25 @@ function buildRevealBalanceJs(targetPath: string) {
   `;
 }
 
+function buildPanelTargetUrl(brand: Brand, targetPath: string) {
+  const base = new URL(brand.loginUrl ?? "");
+  const cleanPath = targetPath.startsWith("/") ? targetPath : `/${targetPath}`;
+
+  if (brand.slug === "estrelabet" && /admin\.aff\.estrelabetpartners\.com/i.test(base.hostname)) {
+    base.pathname = `/${brand.accountId ?? "460395"}`;
+    base.search = "";
+    base.hash = `#${cleanPath}`;
+    return base.toString();
+  }
+
+  if ((brand.loginUrl ?? "").includes("#")) {
+    base.hash = `#${cleanPath}`;
+    return base.toString();
+  }
+
+  return new URL(cleanPath, base.origin).toString();
+}
+
 // One Firecrawl call: login → optional brand switch → navigate to `targetPath` → capture.
 async function firecrawlLoginAndCapture(
   brand: Brand,
@@ -588,15 +809,25 @@ async function firecrawlLoginAndCapture(
   const accountJs = buildAccountSwitchJs(brand);
   const perfFilterJs = buildPerformanceDateFilterJs(targetPath);
   const revealBalanceJs = buildRevealBalanceJs(targetPath);
+  const officialSmarticoJs = buildOfficialSmarticoCaptureJs(brand);
+  const targetUrl = buildPanelTargetUrl(brand, targetPath);
   const navJs = `
     (function(){
-      const url = new URL(${JSON.stringify(targetPath)}, window.location.origin);
-      if (/reports\\/performance/i.test(url.pathname)) {
+      const url = new URL(${JSON.stringify(targetUrl)});
+      if (/reports\\/performance/i.test(url.pathname + url.hash)) {
         const end = new Date();
         const start = new Date(end);
         start.setUTCDate(start.getUTCDate() - 29);
-        url.searchParams.set('date_start', start.toISOString().slice(0,10));
-        url.searchParams.set('date_end', end.toISOString().slice(0,10));
+        if (url.hash && url.hash.includes('/reports/performance')) {
+          const [hashPath, hashQuery = ''] = url.hash.slice(1).split('?');
+          const params = new URLSearchParams(hashQuery);
+          params.set('date_start', start.toISOString().slice(0,10));
+          params.set('date_end', end.toISOString().slice(0,10));
+          url.hash = '#' + hashPath + '?' + params.toString();
+        } else {
+          url.searchParams.set('date_start', start.toISOString().slice(0,10));
+          url.searchParams.set('date_end', end.toISOString().slice(0,10));
+        }
       }
       window.location.assign(url.href);
     })();
@@ -611,22 +842,23 @@ async function firecrawlLoginAndCapture(
 
   const actions: any[] = [
     ...(resetSessionJs ? [{ type: "executeJavascript", script: resetSessionJs }, { type: "wait", milliseconds: 5000 }] : []),
-    { type: "wait", milliseconds: 5000 },
+    { type: "wait", milliseconds: 3000 },
     { type: "executeJavascript", script: loginJs },
-    { type: "wait", milliseconds: 8000 },
-    ...(switchJs ? [{ type: "executeJavascript", script: switchJs }, { type: "wait", milliseconds: 7000 }] : []),
-    ...(accountJs ? [{ type: "executeJavascript", script: accountJs }, { type: "wait", milliseconds: 3000 }] : []),
+    { type: "wait", milliseconds: 10000 },
+    ...(switchJs ? [{ type: "executeJavascript", script: switchJs }, { type: "wait", milliseconds: 5000 }] : []),
+    ...(accountJs ? [{ type: "executeJavascript", script: accountJs }, { type: "wait", milliseconds: 2000 }] : []),
     { type: "executeJavascript", script: navJs },
-    { type: "wait", milliseconds: 8000 },
-    ...(revealBalanceJs ? [{ type: "executeJavascript", script: revealBalanceJs }, { type: "wait", milliseconds: 4000 }] : []),
-    ...(perfFilterJs ? [{ type: "executeJavascript", script: perfFilterJs }, { type: "wait", milliseconds: 12000 }] : []),
+    { type: "wait", milliseconds: 12000 },
+    ...(officialSmarticoJs ? [{ type: "executeJavascript", script: officialSmarticoJs }, { type: "wait", milliseconds: 7000 }] : []),
+    ...(revealBalanceJs ? [{ type: "executeJavascript", script: revealBalanceJs }, { type: "wait", milliseconds: 3000 }] : []),
+    ...(perfFilterJs ? [{ type: "executeJavascript", script: perfFilterJs }, { type: "wait", milliseconds: 8000 }] : []),
   ];
 
   const body = {
     url: brand.loginUrl,
     formats,
     onlyMainContent: false,
-    waitFor: 4500,
+    waitFor: 6000,
     actions,
     timeout: 180000,
   };
@@ -673,9 +905,38 @@ async function prepareBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
   const perfDoc = perfFc?.data ?? perfFc;
   const homeMd = homeDoc?.markdown ?? null;
   const perfMd = perfDoc?.markdown ?? null;
+  const loadingOnly = isLoadingOnlyCapture(homeMd, perfMd, homeDoc?.html, perfDoc?.html);
 
+  const key = brandLookupKey(brand.slug);
+  const { data: platforms } = await supabase
+    .from("platforms")
+    .select("id, slug, name, smartico_brand_id")
+    .or(`slug.ilike.%${key}%,name.ilike.%${key}%`);
+
+  const officialCapture = extractOfficialSmarticoFromDoc(homeDoc, perfDoc);
+  const capturedRows = Array.isArray(officialCapture?.performance?.data)
+    ? officialCapture.performance.data
+    : Array.isArray(officialCapture?.performance)
+      ? officialCapture.performance
+      : [];
+  const capturedBalance = officialCapture?.balance?.data ?? officialCapture?.balance ?? null;
+  const officialPerf = capturedRows.length
+    ? {
+      rows: capturedRows,
+      parsed: parseOfficialMediaReport(capturedRows),
+      meta: { date_from: officialCapture?.date_from, date_to: officialCapture?.date_to, label_id: officialCapture?.label_id, brand_id: officialCapture?.brand_id, source: "smartico_panel_session_af2_media_report_af" },
+    }
+    : await fetchOfficialPerformanceReport(brand, platforms ?? []);
+  const officialBalance = capturedBalance
+    ? {
+      saldo_disponivel: firstNumber(capturedBalance?.balance),
+      saldo_pendente: firstNumber(capturedBalance?.not_processed_payment_amount),
+      row: capturedBalance,
+      meta: { label_id: officialCapture?.label_id, source: "smartico_panel_session_af2_balance_af" },
+    }
+    : await fetchOfficialBalance(brand).catch(() => null);
   const perfJson = perfDoc?.json ?? perfDoc?.extract ?? {};
-  const perf = { ...perfJson, ...parsePerformanceTotalFromMarkdown(perfMd) };
+  const perf = officialPerf?.parsed ?? { ...perfJson, ...parsePerformanceTotalFromMarkdown(perfMd) };
 
   const homeUrl = String(homeDoc?.metadata?.url ?? homeDoc?.metadata?.sourceURL ?? "");
   const perfUrl = String(perfDoc?.metadata?.url ?? perfDoc?.metadata?.sourceURL ?? "");
@@ -697,17 +958,12 @@ async function prepareBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
   const homeJsonSaldo = firstNumber(homeJson?.saldo_disponivel);
   const maskedZero = saldoRegex.masked && homeJsonSaldo === 0 && saldoRegex.saldo_disponivel == null;
   const saldo = {
-    saldo_disponivel: firstNumber(saldoRegex.saldo_disponivel, maskedZero ? null : homeJsonSaldo),
-    saldo_pendente: firstNumber(saldoRegex.saldo_pendente, homeJson?.saldo_pendente),
+    saldo_disponivel: firstNumber(officialBalance?.saldo_disponivel, saldoRegex.saldo_disponivel, maskedZero ? null : homeJsonSaldo),
+    saldo_pendente: firstNumber(officialBalance?.saldo_pendente, saldoRegex.saldo_pendente, homeJson?.saldo_pendente),
     masked: saldoRegex.masked,
   };
   const extracted = compactExtraction(perf, saldo);
 
-  const key = brandLookupKey(brand.slug);
-  const { data: platforms } = await supabase
-    .from("platforms")
-    .select("id, slug, name")
-    .or(`slug.ilike.%${key}%,name.ilike.%${key}%`);
   const platformIds = (platforms ?? []).map((p: any) => p.id);
   const accounts: any[] = [];
   if (platformIds.length) {
@@ -724,7 +980,7 @@ async function prepareBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
     accounts.push(...(preferred.length ? preferred : fetched));
   }
 
-  return { brand, extracted, saldo, accounts, homeMd, perfMd, vupiHint, visibleVupiHint, visibleEstrelaHint, accountHint };
+  return { brand, extracted, saldo, accounts, homeMd, perfMd, vupiHint, visibleVupiHint, visibleEstrelaHint, accountHint, loadingOnly, officialPerf, officialBalance, officialCapture };
 }
 
 function metricsFingerprint(e: any) {
@@ -751,9 +1007,32 @@ function looksLikeDuplicateOf(a: any, b: any) {
   return metricsFingerprint(a) === metricsFingerprint(b);
 }
 
+function isLoadingOnlyCapture(...parts: Array<string | null | undefined>) {
+  const text = parts.filter(Boolean).join("\n");
+  if (!text) return false;
+  const normalized = text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+  if (!/loading\.\.\./i.test(normalized)) return false;
+  return !/(cliques|cadastros|registros|ftd|dep[óo]sitos|saldo|saque|total\s*30|comiss[aã]o|r\$)/i.test(normalized);
+}
+
 async function writeBrand(supabase: any, prep: Awaited<ReturnType<typeof prepareBrand>>, opts: { skipMetrics?: string; skipBalance?: string } = {}) {
   const { brand, extracted, saldo, accounts, homeMd, perfMd } = prep;
   let updatedAccounts = 0;
+
+  if (prep.loadingOnly && !prep.officialPerf) {
+    return {
+      extracted,
+      saldo_source: "panel_loading",
+      updatedAccounts: 0,
+      updatedMetrics: 0,
+      skippedMetrics: accounts.length,
+      skipped: "panel_loading",
+      skippedBalance: "panel_loading",
+      has_home_md: !!homeMd,
+      has_perf_md: !!perfMd,
+    };
+  }
+
   if (!opts.skipBalance && saldo.saldo_disponivel != null) {
     for (const acc of accounts) {
       const { error } = await supabase
@@ -920,23 +1199,24 @@ Deno.serve(async (req) => {
     // marca da outra e gravar 397052 dentro de 397057 (ou o inverso).
     for (const brand of captureTargets) {
       try {
-        const [perfFc, homeFc] = await Promise.all([
-          firecrawlLoginAndCapture(brand, "/reports/performance", null, ""),
-          firecrawlLoginAndCapture(
+        const officialFc = brand.slug === "estrelabet"
+          ? await firecrawlLoginAndCapture(brand, "/", null, "")
+          : null;
+        const perfFc = officialFc ?? await firecrawlLoginAndCapture(brand, "/reports/performance", null, "");
+        const homeFc = officialFc ?? await firecrawlLoginAndCapture(
             brand,
             "/withdraw",
             HOME_SCHEMA,
             "Extraia somente o saldo disponível real para saque e o saldo pendente visíveis no painel. Ignore valores de performance, depósitos, GGR, NGR e totais de relatório.",
-          ),
-        ]);
+          );
         const prep = await prepareBrand(supabase, brand, homeFc, perfFc);
         preps[brand.slug] = prep;
         if (debug) {
           const hd = homeFc?.data ?? homeFc;
           const pd = perfFc?.data ?? perfFc;
           rawDump[brand.slug] = {
-            home: { metadata: hd?.metadata ?? null, markdown_head: (hd?.markdown ?? "").slice(0, 8000), html_head: (hd?.html ?? "").slice(0, 60000), json: hd?.json ?? hd?.extract ?? null },
-            perf: { metadata: pd?.metadata ?? null, markdown_head: (pd?.markdown ?? "").slice(0, 5000) },
+            home: { metadata: hd?.metadata ?? null, markdown_head: (hd?.markdown ?? "").slice(0, 8000), html_head: (hd?.html ?? "").slice(0, 60000), json: hd?.json ?? hd?.extract ?? null, official: prep.officialBalance ?? null },
+            perf: { metadata: pd?.metadata ?? null, markdown_head: (pd?.markdown ?? "").slice(0, 5000), official: prep.officialPerf ?? null },
           };
         }
       } catch (err: any) {
