@@ -556,10 +556,25 @@ function buildOfficialSmarticoCaptureJs(brand: Brand) {
 
 function extractOfficialSmarticoFromDoc(...docs: any[]) {
   const text = docs.map((doc) => [doc?.markdown, doc?.html].filter(Boolean).join("\n")).join("\n");
-  const match = text.match(/\{\"label_id\":\"460395\"[\s\S]*?\}\s*(?:<|$)/);
-  if (!match) return null;
-  const raw = match[0].replace(/<$/, "").trim();
-  try { return JSON.parse(raw); } catch { return null; }
+  const marker = '{"label_id":"460395"';
+  const start = text.indexOf(marker);
+  if (start < 0) return null;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (escaped) { escaped = false; continue; }
+    if (ch === "\\") { escaped = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === "{") depth++;
+    if (ch === "}") depth--;
+    if (depth === 0) {
+      try { return JSON.parse(text.slice(start, i + 1)); } catch { return null; }
+    }
+  }
+  return null;
 }
 
 function buildBrandSwitchJs(brand: Brand) {
