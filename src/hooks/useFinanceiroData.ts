@@ -70,7 +70,7 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
       let q = supabase
         .from("tracking_metrics")
         .select(
-          "data_ref, platform_id, influencer_id, registros, ftd, deposits_count, depositos_total, revenue, converted_amount, cpa_commission, revshare_commission, commission_total, origem_importacao, platform_accounts(revshare_percent,cpa_value,cpa_baseline_deposit)"
+          "data_ref, platform_id, influencer_id, registros, ftd, deposits_count, depositos_total, revenue, converted_amount, cpa_commission, revshare_commission, commission_total, origem_importacao, platforms(name,slug), platform_accounts(revshare_percent,cpa_value,cpa_baseline_deposit)"
         )
         .or("is_demo.is.false,is_demo.is.null")
         .lte("data_ref", endIso);
@@ -137,25 +137,9 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
     );
   }, [metricsQuery.data]);
 
-  const authoritativeProfitBase = useMemo(() => {
-    const freshMs = 24 * 60 * 60 * 1000;
-    const now = Date.now();
-    let sum = 0;
-    let hasFresh = false;
-    for (const b of balancesQuery.data ?? []) {
-      const val = Number(b?.balance_available ?? 0);
-      const updated = b?.balance_updated_at ? new Date(b.balance_updated_at).getTime() : NaN;
-      if (!Number.isFinite(val) || !Number.isFinite(updated) || now - updated > freshMs) continue;
-      sum += val;
-      hasFresh = true;
-    }
-    // Zero fresco vindo do painel com métricas positivas é leitura mascarada/oculta,
-    // não saldo real. Mantém Rev+CPA até o scraper revelar o saldo disponível.
-    return hasFresh && (sum > 0 || trackingTotals.profitBase === 0) ? sum : trackingTotals.profitBase;
-  }, [balancesQuery.data, trackingTotals.profitBase]);
-
-  // Receita oficial da operação = RevShare + CPA. Depósito/NGR ficam só como telemetria.
-  const revenueTracking = authoritativeProfitBase;
+  // Receita oficial da operação = RevShare + CPA da tabela Performance.
+  // Saldo livre para saque é caixa disponível, não performance do período.
+  const revenueTracking = trackingTotals.profitBase;
 
   const influencerMap = useMemo(() => {
     const m = new Map<string, any>();
@@ -327,20 +311,15 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
       }
     }
 
-    const balanceAdjustment = authoritativeProfitBase - metricProfitBase;
-    if (Math.abs(balanceAdjustment) >= 0.01) {
-      unattributedProfit += balanceAdjustment;
-    }
-
     return {
-      profitBase: authoritativeProfitBase,
+      profitBase: metricProfitBase,
       attributedProfit,
       unattributedProfit,
       influencerCommissionsOwed,
       managerCommissionsOwed,
-      netAfterCommissions: authoritativeProfitBase - influencerCommissionsOwed - managerCommissionsOwed,
+      netAfterCommissions: metricProfitBase - influencerCommissionsOwed - managerCommissionsOwed,
     };
-  }, [metricsQuery.data, influencerMap, managerMap, authoritativeProfitBase]);
+  }, [metricsQuery.data, influencerMap, managerMap]);
 
   return {
     range,

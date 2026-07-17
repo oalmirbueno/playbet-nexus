@@ -32,7 +32,7 @@ export function useTrackingMetricsSummary(period: PeriodKey = "30d", platformId?
       let query = supabase
         .from("tracking_metrics")
         .select(
-          "data_ref, platform_id, ftd, registros, deposits_count, depositos_total, cliques, revenue, cpa_commission, revshare_commission, commission_total, converted_amount, origem_importacao, platform_accounts(revshare_percent,cpa_value,cpa_baseline_deposit)",
+          "data_ref, platform_id, ftd, registros, deposits_count, depositos_total, cliques, revenue, cpa_commission, revshare_commission, commission_total, converted_amount, origem_importacao, platforms(name,slug), platform_accounts(revshare_percent,cpa_value,cpa_baseline_deposit)",
         )
         .or("is_demo.is.false,is_demo.is.null")
         .lte("data_ref", endIso);
@@ -117,27 +117,9 @@ export function useTrackingMetricsSummary(period: PeriodKey = "30d", platformId?
       }
     }
 
-    // Prefere o saldo consolidado do painel (fonte da verdade). Só cai no
-    // Rev+CPA agregado quando não há nenhuma leitura fresca (<24h).
-    const BALANCE_STALE_MS = 24 * 60 * 60 * 1000;
-    const now = Date.now();
-    let balanceSum = 0;
-    let anyFresh = false;
-    for (const b of (balancesQ.data ?? []) as any[]) {
-      const val = b?.balance_available;
-      if (val == null) continue;
-      const num = Number(val);
-      if (!Number.isFinite(num)) continue;
-      const updated = b?.balance_updated_at ? new Date(b.balance_updated_at).getTime() : NaN;
-      if (Number.isFinite(updated) && now - updated <= BALANCE_STALE_MS) {
-        balanceSum += num;
-        anyFresh = true;
-      }
-    }
-    // Zero fresco com comissão positiva normalmente significa saldo mascarado/
-    // oculto no painel, não lucro real zerado. Mantém Rev+CPA como fallback
-    // até a função conseguir revelar o saldo disponível de saque.
-    acc.profitBase = anyFresh && (balanceSum > 0 || acc.commissionTotal === 0) ? balanceSum : acc.commissionTotal;
+    // KPI oficial acompanha o relatório Performance do painel: CPA + RevShare.
+    // Saldo disponível para saque é caixa operacional e não substitui a performance.
+    acc.profitBase = acc.commissionTotal;
 
     return acc;
   }, [q.data, balancesQ.data]);
