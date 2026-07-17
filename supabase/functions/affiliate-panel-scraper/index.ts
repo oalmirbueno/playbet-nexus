@@ -339,6 +339,20 @@ function existingHasData(existing: any) {
   );
 }
 
+function isPartialDowngrade(existing: any, extracted: any) {
+  if (!existingHasData(existing) || isEmptyExtraction(extracted)) return false;
+  const checks: Array<[number, number]> = [
+    [numberOrZero(existing.cliques), numberOrZero(extracted.cliques)],
+    [numberOrZero(existing.registros), numberOrZero(extracted.cadastros)],
+    [numberOrZero(existing.ftd), numberOrZero(extracted.ftds)],
+    [numberOrZero(existing.deposits_count), numberOrZero(extracted.depositos_qtd)],
+    [numberOrZero(existing.depositos_total), numberOrZero(extracted.depositos_valor)],
+  ];
+  const hasHigherExisting = checks.some(([oldValue, newValue]) => oldValue > 0 && newValue < oldValue);
+  const hasFreshPositiveRead = checks.some(([, newValue]) => newValue > 0);
+  return hasFreshPositiveRead && hasHigherExisting;
+}
+
 function buildLoginJs(brand: Brand) {
   return `
     (function(){
@@ -362,12 +376,20 @@ function buildLoginJs(brand: Brand) {
 }
 
 function buildBrandSwitchJs(brand: Brand) {
-  if (brand.slug !== "vupi") return "";
+  const targetPatterns = brand.slug === "vupi"
+    ? ["vupi"]
+    : ["estrela bet", "estrelabet"];
+  const oppositePatterns = brand.slug === "vupi"
+    ? ["estrela bet", "estrelabet"]
+    : ["vupi"];
   return `
     (function(){
+      const targetPatterns = ${JSON.stringify(targetPatterns)};
+      const oppositePatterns = ${JSON.stringify(oppositePatterns)};
       const norm = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
       const clickLikeUser = (el) => {
         if (!el) return false;
+        el = el.closest('button,[role="button"],a,li,[aria-haspopup="true"],[data-radix-collection-item]') || el;
         el.scrollIntoView({block:'center', inline:'center'});
         el.dispatchEvent(new MouseEvent('pointerdown', {bubbles:true}));
         el.dispatchEvent(new MouseEvent('mousedown', {bubbles:true}));
@@ -375,20 +397,28 @@ function buildBrandSwitchJs(brand: Brand) {
         el.click();
         return true;
       };
-      const nodes = Array.from(document.querySelectorAll('button,[role="button"],a,li,div,span'));
-      const direct = nodes
-        .filter((el) => /vupi/i.test(el.textContent || ''))
-        .sort((a,b) => (a.textContent || '').length - (b.textContent || '').length)[0];
-      if (clickLikeUser(direct)) return;
-      const brandToggle = nodes
-        .filter((el) => /estrelabet|estrela bet/i.test(el.textContent || ''))
-        .sort((a,b) => (a.textContent || '').length - (b.textContent || '').length)[0];
+      const allNodes = () => Array.from(document.querySelectorAll('button,[role="button"],a,li,div,span,[aria-haspopup="true"],[data-radix-collection-item]'));
+      const findPattern = (patterns) => allNodes()
+        .filter((el) => {
+          const txt = norm(el.textContent || '');
+          return txt && txt.length <= 60 && patterns.some((p) => txt === norm(p) || txt.includes(norm(p)));
+        })
+        .sort((a,b) => {
+          const at = norm(a.textContent || '');
+          const bt = norm(b.textContent || '');
+          const ae = patterns.some((p) => at === norm(p)) ? 0 : 1;
+          const be = patterns.some((p) => bt === norm(p)) ? 0 : 1;
+          return ae - be || (a.textContent || '').length - (b.textContent || '').length;
+        })[0];
+
+      // Se a sessão ficou presa na outra marca, abre o seletor clicando no
+      // rótulo atual (ex: "Vupi") e só então escolhe a marca correta.
+      const brandToggle = findPattern(oppositePatterns) || findPattern(targetPatterns) || findPattern(['marca', 'brand', 'label', 'conta']);
       clickLikeUser(brandToggle);
       setTimeout(() => {
-        const vupi = Array.from(document.querySelectorAll('button,[role="button"],a,li,div,span'))
-          .filter((el) => norm(el.textContent).includes('vupi'))
-          .sort((a,b) => (a.textContent || '').length - (b.textContent || '').length)[0];
-        clickLikeUser(vupi);
+        if (clickLikeUser(findPattern(targetPatterns))) {
+          setTimeout(() => window.location.reload(), 1800);
+        }
       }, 1200);
     })();
   `;
@@ -571,8 +601,16 @@ async function firecrawlLoginAndCapture(
       window.location.assign(url.href);
     })();
   `;
+  const resetSessionJs = brand.slug === "estrelabet" ? `
+    (function(){
+      try { localStorage.clear(); } catch (_) {}
+      try { sessionStorage.clear(); } catch (_) {}
+      try { window.location.assign(${JSON.stringify(brand.loginUrl)}); } catch (_) {}
+    })();
+  ` : "";
 
   const actions: any[] = [
+    ...(resetSessionJs ? [{ type: "executeJavascript", script: resetSessionJs }, { type: "wait", milliseconds: 5000 }] : []),
     { type: "wait", milliseconds: 5000 },
     { type: "executeJavascript", script: loginJs },
     { type: "wait", milliseconds: 8000 },
@@ -642,7 +680,13 @@ async function prepareBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
   const homeUrl = String(homeDoc?.metadata?.url ?? homeDoc?.metadata?.sourceURL ?? "");
   const perfUrl = String(perfDoc?.metadata?.url ?? perfDoc?.metadata?.sourceURL ?? "");
   const bothMd = `${homeMd ?? ""}\n${perfMd ?? ""}`;
-  const vupiHint = /vupi/i.test(bothMd) || /vupi/i.test(homeUrl) || /vupi/i.test(perfUrl);
+  const visibleTextMd = bothMd
+    .replace(/!\[[^\]]*\]\([^)]+\)/g, " ")
+    .replace(/\[([^\]]*)\]\([^)]+\)/g, "$1")
+    .replace(/https?:\/\/\S+/gi, " ");
+  const vupiHint = /vupi/i.test(visibleTextMd) || /vupi/i.test(homeUrl) || /vupi/i.test(perfUrl);
+  const visibleVupiHint = /vupi/i.test(visibleTextMd);
+  const visibleEstrelaHint = /estrela\s*bet|estrelabet/i.test(visibleTextMd);
   const captureText = `${bothMd}\n${homeUrl}\n${perfUrl}`;
   const accountHint = brand.accountId
     ? captureText.includes(String(brand.accountId).trim())
@@ -680,7 +724,7 @@ async function prepareBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
     accounts.push(...(preferred.length ? preferred : fetched));
   }
 
-  return { brand, extracted, saldo, accounts, homeMd, perfMd, vupiHint, accountHint };
+  return { brand, extracted, saldo, accounts, homeMd, perfMd, vupiHint, visibleVupiHint, visibleEstrelaHint, accountHint };
 }
 
 function metricsFingerprint(e: any) {
@@ -755,6 +799,11 @@ async function writeBrand(supabase: any, prep: Awaited<ReturnType<typeof prepare
       .maybeSingle();
 
     if (isEmptyExtraction(extracted) && existingHasData(existingMetric)) {
+      skippedMetrics++;
+      continue;
+    }
+
+    if (isPartialDowngrade(existingMetric, extracted)) {
       skippedMetrics++;
       continue;
     }
@@ -911,10 +960,15 @@ Deno.serve(async (req) => {
       if (!prep) continue;
       try {
         let skipMetrics: string | undefined;
-        if (brand.slug === "vupi" && captureTargets.length > 1) {
-          if (vupiBrandNotVisible) skipMetrics = "brand_not_visible";
-          else if (vupiIsDupOfEstrela) skipMetrics = "duplicate_of_estrelabet";
+        if (brand.slug === "vupi") {
+          if (prep.visibleEstrelaHint && !prep.visibleVupiHint) skipMetrics = "wrong_visible_brand_estrelabet";
+          else if (captureTargets.length > 1 && vupiBrandNotVisible) skipMetrics = "brand_not_visible";
+          else if (captureTargets.length > 1 && vupiIsDupOfEstrela) skipMetrics = "duplicate_of_estrelabet";
         }
+        // Estrelabet às vezes mantém o rótulo visual "Vupi" mesmo após login
+        // limpo, mas os totais da Estrela vêm corretos. A gravação dela fica
+        // protegida pelo anti-downgrade acima; bloquear só pelo texto visível
+        // travava a reconvergência para o valor real.
         const skipBalance = skipMetrics ? skipMetrics : undefined;
         const persisted = await writeBrand(supabase, prep, { skipMetrics, skipBalance });
         results[brand.slug] = { ok: true, account_id_visible: prep.accountHint, ...persisted };
