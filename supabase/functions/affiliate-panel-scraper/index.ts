@@ -506,6 +506,54 @@ function buildLoginJs(brand: Brand) {
   `;
 }
 
+function buildOfficialSmarticoCaptureJs(brand: Brand) {
+  if (brand.slug !== "estrelabet") return "";
+  const labelId = String(brand.accountId ?? "460395").trim();
+  const brandId = "397057";
+  const { date_from, date_to } = currentPanelPeriod();
+  return `
+    (async function(){
+      const result = { label_id: ${JSON.stringify(labelId)}, brand_id: ${JSON.stringify(brandId)}, date_from: ${JSON.stringify(date_from)}, date_to: ${JSON.stringify(date_to)} };
+      try {
+        const cookieToken = (document.cookie || '').split(';').map(s => s.trim()).find(s => s.startsWith('__smtaff_bo_token='));
+        const storageToken = localStorage.getItem('__smtaff_bo_token') || sessionStorage.getItem('__smtaff_bo_token');
+        const token = storageToken || (cookieToken ? decodeURIComponent(cookieToken.split('=').slice(1).join('=')) : '');
+        if (!token) throw new Error('token_not_found_after_login');
+        const headers = { Accept: 'application/json', Authorization: token, active_label_id: ${JSON.stringify(labelId)} };
+
+        const perfUrl = new URL('https://boapi.smartico.ai/api/af2_media_report_af');
+        perfUrl.searchParams.set('sort', JSON.stringify(['id', 'DESC']));
+        perfUrl.searchParams.set('range', JSON.stringify([0, 0]));
+        perfUrl.searchParams.set('filter', JSON.stringify({}));
+        perfUrl.searchParams.set('skip_group_by', 'true');
+        perfUrl.searchParams.set('date_from', ${JSON.stringify(date_from)});
+        perfUrl.searchParams.set('date_to', ${JSON.stringify(date_to)});
+        perfUrl.searchParams.set('brand_id', ${JSON.stringify(brandId)});
+        perfUrl.searchParams.set('lbl', ${JSON.stringify(labelId)});
+        const perfRes = await fetch(perfUrl.toString(), { headers, credentials: 'include' });
+        result.performance_status = perfRes.status;
+        result.performance = await perfRes.json().catch(async () => ({ raw: await perfRes.text() }));
+
+        const balUrl = new URL('https://boapi.smartico.ai/api/af2_balance_af/1');
+        balUrl.searchParams.set('lbl', ${JSON.stringify(labelId)});
+        const balRes = await fetch(balUrl.toString(), { headers, credentials: 'include' });
+        result.balance_status = balRes.status;
+        result.balance = await balRes.json().catch(async () => ({ raw: await balRes.text() }));
+      } catch (err) {
+        result.error = err && err.message ? err.message : String(err);
+      }
+      const json = JSON.stringify(result);
+      window.__PLAYBET_OFFICIAL_SMARTICO__ = result;
+      document.documentElement.setAttribute('data-playbet-official-smartico', encodeURIComponent(json));
+      const pre = document.createElement('pre');
+      pre.id = 'playbet-official-smartico';
+      pre.textContent = json;
+      pre.style.cssText = 'white-space:pre-wrap;font-size:12px;position:relative;z-index:999999;background:#fff;color:#000;padding:16px;';
+      document.body.prepend(pre);
+    })();
+  `;
+}
+
 function buildBrandSwitchJs(brand: Brand) {
   const targetPatterns = brand.slug === "vupi"
     ? ["vupi"]
