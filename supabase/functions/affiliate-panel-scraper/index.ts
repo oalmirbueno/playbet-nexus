@@ -898,8 +898,28 @@ async function prepareBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
     .select("id, slug, name, smartico_brand_id")
     .or(`slug.ilike.%${key}%,name.ilike.%${key}%`);
 
-  const officialPerf = await fetchOfficialPerformanceReport(brand, platforms ?? []);
-  const officialBalance = await fetchOfficialBalance(brand);
+  const officialCapture = extractOfficialSmarticoFromDoc(homeDoc, perfDoc);
+  const capturedRows = Array.isArray(officialCapture?.performance?.data)
+    ? officialCapture.performance.data
+    : Array.isArray(officialCapture?.performance)
+      ? officialCapture.performance
+      : [];
+  const capturedBalance = officialCapture?.balance?.data ?? officialCapture?.balance ?? null;
+  const officialPerf = capturedRows.length
+    ? {
+      rows: capturedRows,
+      parsed: parseOfficialMediaReport(capturedRows),
+      meta: { date_from: officialCapture?.date_from, date_to: officialCapture?.date_to, label_id: officialCapture?.label_id, brand_id: officialCapture?.brand_id, source: "smartico_panel_session_af2_media_report_af" },
+    }
+    : await fetchOfficialPerformanceReport(brand, platforms ?? []);
+  const officialBalance = capturedBalance
+    ? {
+      saldo_disponivel: firstNumber(capturedBalance?.balance),
+      saldo_pendente: firstNumber(capturedBalance?.not_processed_payment_amount),
+      row: capturedBalance,
+      meta: { label_id: officialCapture?.label_id, source: "smartico_panel_session_af2_balance_af" },
+    }
+    : await fetchOfficialBalance(brand).catch(() => null);
   const perfJson = perfDoc?.json ?? perfDoc?.extract ?? {};
   const perf = officialPerf?.parsed ?? { ...perfJson, ...parsePerformanceTotalFromMarkdown(perfMd) };
 
@@ -945,7 +965,7 @@ async function prepareBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
     accounts.push(...(preferred.length ? preferred : fetched));
   }
 
-  return { brand, extracted, saldo, accounts, homeMd, perfMd, vupiHint, visibleVupiHint, visibleEstrelaHint, accountHint, loadingOnly, officialPerf, officialBalance };
+  return { brand, extracted, saldo, accounts, homeMd, perfMd, vupiHint, visibleVupiHint, visibleEstrelaHint, accountHint, loadingOnly, officialPerf, officialBalance, officialCapture };
 }
 
 function metricsFingerprint(e: any) {
@@ -1164,12 +1184,11 @@ Deno.serve(async (req) => {
     // marca da outra e gravar 397052 dentro de 397057 (ou o inverso).
     for (const brand of captureTargets) {
       try {
-        const perfFc = brand.slug === "estrelabet"
-          ? { data: { markdown: "", html: "", metadata: { source: "smartico_af2_media_report_af" } } }
-          : await firecrawlLoginAndCapture(brand, "/reports/performance", null, "");
-        const homeFc = brand.slug === "estrelabet"
-          ? { data: { markdown: "", html: "", metadata: { source: "smartico_af2_balance_af" } } }
-          : await firecrawlLoginAndCapture(
+        const officialFc = brand.slug === "estrelabet"
+          ? await firecrawlLoginAndCapture(brand, "/", null, "")
+          : null;
+        const perfFc = officialFc ?? await firecrawlLoginAndCapture(brand, "/reports/performance", null, "");
+        const homeFc = officialFc ?? await firecrawlLoginAndCapture(
             brand,
             "/withdraw",
             HOME_SCHEMA,
