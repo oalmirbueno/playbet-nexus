@@ -56,7 +56,12 @@ export function selectAuthoritativeMetricRows<T extends { origem_importacao?: st
 
   const selected: T[] = [];
   for (const groupRows of groups.values()) {
-    const livePanelRows = groupRows.filter((row) => {
+    const usableRows = groupRows.filter((row) => {
+      const source = String(row.origem_importacao ?? "").toLowerCase();
+      return !(isVupiPlatform(row) && source === "panel_scrape_html");
+    });
+
+    const livePanelRows = usableRows.filter((row) => {
       if (isVupiPlatform(row)) return false;
       return String(row.origem_importacao ?? "").toLowerCase() === "panel_scrape_html" && hasMetricContent(row);
     });
@@ -65,14 +70,14 @@ export function selectAuthoritativeMetricRows<T extends { origem_importacao?: st
       continue;
     }
 
-    const nonDeprecated = groupRows.filter((row) => shouldUseMetricSource(row as any));
+    const nonDeprecated = usableRows.filter((row) => shouldUseMetricSource(row as any));
     const nonDeprecatedWithContent = nonDeprecated.filter(hasMetricContent);
     if (nonDeprecatedWithContent.length > 0) {
       selected.push(...nonDeprecatedWithContent);
       continue;
     }
 
-    const legacyWithContent = groupRows.filter((row) => isDeprecatedMetricSource(row.origem_importacao) && hasMetricContent(row));
+    const legacyWithContent = usableRows.filter((row) => isDeprecatedMetricSource(row.origem_importacao) && hasMetricContent(row));
     selected.push(...(legacyWithContent.length > 0 ? legacyWithContent : nonDeprecated));
   }
 
