@@ -711,6 +711,38 @@ async function writeBrand(supabase: any, prep: Awaited<ReturnType<typeof prepare
       continue;
     }
 
+    // Anti-downgrade: cliques/registros/ftd/deposits são cumulativos dentro
+    // da janela de 30 dias. Se o painel devolveu números menores (cache,
+    // renderização parcial, "hoje" no lugar de "Total"), NÃO sobrescreve.
+    if (existingMetric) {
+      const curCliques = Number(existingMetric.cliques ?? 0);
+      const curReg = Number(existingMetric.registros ?? 0);
+      const curFtd = Number(existingMetric.ftd ?? 0);
+      const curDepCount = Number(existingMetric.deposits_count ?? 0);
+      const curDepTotal = Number(existingMetric.depositos_total ?? 0);
+      const nxCliques = Number(extracted.cliques ?? 0);
+      const nxReg = Number(extracted.cadastros ?? 0);
+      const nxFtd = Number(extracted.ftds ?? 0);
+      const nxDepCount = Number(extracted.depositos_qtd ?? 0);
+      const nxDepTotal = Number(extracted.depositos_valor ?? 0);
+      const decreased =
+        nxCliques < curCliques ||
+        nxReg < curReg ||
+        nxFtd < curFtd ||
+        nxDepCount < curDepCount ||
+        nxDepTotal + 0.01 < curDepTotal;
+      const increased =
+        nxCliques > curCliques ||
+        nxReg > curReg ||
+        nxFtd > curFtd ||
+        nxDepCount > curDepCount ||
+        nxDepTotal > curDepTotal + 0.01;
+      if (decreased && !increased) {
+        skippedMetrics++;
+        continue;
+      }
+    }
+
     const { error } = await supabase.from("tracking_metrics").upsert({
       data_ref: today,
       platform_id: acc.platform_id,
