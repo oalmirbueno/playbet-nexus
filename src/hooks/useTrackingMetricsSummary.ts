@@ -117,9 +117,10 @@ export function useTrackingMetricsSummary(period: PeriodKey = "30d", platformId?
       }
     }
 
-    // Prefere o saldo consolidado do painel (fonte da verdade). Só cai no
-    // Rev+CPA agregado quando não há nenhuma leitura fresca (<24h).
-    const BALANCE_STALE_MS = 24 * 60 * 60 * 1000;
+    // Prefere o saldo consolidado do painel somente quando a coleta acabou de
+    // ler a rota de saque/home. Saldo antigo não pode sobrescrever a tabela de
+    // performance atualizada em tempo real.
+    const BALANCE_STALE_MS = 5 * 60 * 1000;
     const now = Date.now();
     let balanceSum = 0;
     let anyFresh = false;

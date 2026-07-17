@@ -138,7 +138,11 @@ export function useFinanceiroData({ period, platformId }: UseFinanceiroDataOpts)
   }, [metricsQuery.data]);
 
   const authoritativeProfitBase = useMemo(() => {
-    const freshMs = 24 * 60 * 60 * 1000;
+    // O saldo do painel só é autoritativo quando veio da coleta atual.
+    // Leituras antigas congelavam valores errados enquanto a performance já
+    // tinha reconvergido; com cron em 1min, 5min cobre rotação/latência sem
+    // mascarar divergência real.
+    const freshMs = 5 * 60 * 1000;
     const now = Date.now();
     let sum = 0;
     let hasFresh = false;

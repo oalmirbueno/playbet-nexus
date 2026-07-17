@@ -920,15 +920,15 @@ Deno.serve(async (req) => {
     // marca da outra e gravar 397052 dentro de 397057 (ou o inverso).
     for (const brand of captureTargets) {
       try {
-        const perfFc = await firecrawlLoginAndCapture(brand, "/reports/performance", null, "");
-        const homeFc = {
-          data: {
-            markdown: "",
-            html: "",
-            metadata: null,
-            json: { saldo_disponivel: null, saldo_pendente: null },
-          },
-        };
+        const [perfFc, homeFc] = await Promise.all([
+          firecrawlLoginAndCapture(brand, "/reports/performance", null, ""),
+          firecrawlLoginAndCapture(
+            brand,
+            "/withdraw",
+            HOME_SCHEMA,
+            "Extraia somente o saldo disponível real para saque e o saldo pendente visíveis no painel. Ignore valores de performance, depósitos, GGR, NGR e totais de relatório.",
+          ),
+        ]);
         const prep = await prepareBrand(supabase, brand, homeFc, perfFc);
         preps[brand.slug] = prep;
         if (debug) {
