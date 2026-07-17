@@ -227,11 +227,11 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   const apiKey = Deno.env.get("SMARTICO_API_KEY") ?? Deno.env.get("STELLAR_TAP_API_KEY");
-  const labelId = Deno.env.get("SMARTICO_LABEL_ID") ?? Deno.env.get("STELLAR_TAP_LABEL_ID") ?? null;
+  const rawLabelId = Deno.env.get("SMARTICO_LABEL_ID") ?? Deno.env.get("STELLAR_TAP_LABEL_ID") ?? null;
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
   const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-  if (!apiKey || !labelId) {
+  if (!apiKey || !rawLabelId) {
     // Operação sem API key ou sem label_id: tracking roda 100% via postback em tempo real.
     // Retornamos 200 com mode=postback_only para não poluir logs de erro.
     return new Response(
@@ -263,6 +263,22 @@ Deno.serve(async (req) => {
       .eq("is_demo", false);
     if (accErr) throw accErr;
 
+    const configuredLabel = str(rawLabelId);
+    const labelLooksLikeAccountId = ((accounts ?? []) as AccountRow[]).some((a) => str(a.account_external_id) === configuredLabel);
+    if (labelLooksLikeAccountId) {
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          fallback: true,
+          mode: "postback_only",
+          inserted: 0,
+          error: `SMARTICO_LABEL_ID está configurado como ID de conta/brand (${configuredLabel}). Esse valor deve ficar em account_external_id; para pull via Smartico/TAP é necessário o Active label id autorizado da API.`,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    const labelId = configuredLabel;
     const report = await fetchReport(apiKey, labelId, dateFrom, dateTo);
     const attributionByCode = await buildAttributionMap(admin, report.rows);
     const accountById = new Map(((accounts ?? []) as AccountRow[]).map((a) => [a.id, a]));
