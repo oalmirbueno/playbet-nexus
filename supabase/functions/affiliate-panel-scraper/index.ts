@@ -961,7 +961,8 @@ Deno.serve(async (req) => {
       try {
         let skipMetrics: string | undefined;
         if (brand.slug === "vupi") {
-          if (prep.visibleEstrelaHint && !prep.visibleVupiHint) skipMetrics = "wrong_visible_brand_estrelabet";
+          if (!prep.accountHint) skipMetrics = "vupi_account_397057_not_visible";
+          else if (prep.visibleEstrelaHint && !prep.visibleVupiHint) skipMetrics = "wrong_visible_brand_estrelabet";
           else if (captureTargets.length > 1 && vupiBrandNotVisible) skipMetrics = "brand_not_visible";
           else if (captureTargets.length > 1 && vupiIsDupOfEstrela) skipMetrics = "duplicate_of_estrelabet";
         }

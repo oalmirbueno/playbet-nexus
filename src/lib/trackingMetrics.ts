@@ -28,6 +28,11 @@ export function shouldUseMetricSource(metric: { origem_importacao?: string | nul
   return !isDeprecatedMetricSource(metric.origem_importacao);
 }
 
+function isVupiPlatform(row: any) {
+  const direct = `${row?.platform_slug ?? ""} ${row?.platform_name ?? ""} ${row?.platforms?.slug ?? ""} ${row?.platforms?.name ?? ""}`;
+  return /vupi|vipi/i.test(direct);
+}
+
 function hasMetricContent(row: any) {
   return (
     Number(row?.cliques ?? 0) !== 0 ||
@@ -51,9 +56,10 @@ export function selectAuthoritativeMetricRows<T extends { origem_importacao?: st
 
   const selected: T[] = [];
   for (const groupRows of groups.values()) {
-    const livePanelRows = groupRows.filter((row) =>
-      String(row.origem_importacao ?? "").toLowerCase() === "panel_scrape_html" && hasMetricContent(row),
-    );
+    const livePanelRows = groupRows.filter((row) => {
+      if (isVupiPlatform(row)) return false;
+      return String(row.origem_importacao ?? "").toLowerCase() === "panel_scrape_html" && hasMetricContent(row);
+    });
     if (livePanelRows.length > 0) {
       selected.push(...livePanelRows);
       continue;

@@ -53,4 +53,13 @@ describe("selectAuthoritativeMetricRows", () => {
 
     expect(selectAuthoritativeMetricRows(rows)).toEqual([rows[0], rows[2]]);
   });
+
+  it("does not accept VUPI HTML rows because the shared panel leaks Estrela metrics", () => {
+    const rows = [
+      { platform_id: "vupi", platforms: { slug: "vupi", name: "VUPI" }, origem_importacao: "panel_scrape_html", commission_total: -31.24, cliques: 55 },
+      { platform_id: "vupi", platforms: { slug: "vupi", name: "VUPI" }, origem_importacao: "smartico_api_pull", commission_total: 2.89, cliques: 12 },
+    ];
+
+    expect(selectAuthoritativeMetricRows(rows)).toEqual([rows[1]]);
+  });
 });
