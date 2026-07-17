@@ -79,6 +79,50 @@ async function resolveBrandForCapture(supabase: any, brand: Brand): Promise<Bran
   return accountId ? { ...brand, accountId } : brand;
 }
 
+async function getLastPanelMetricUpdate(supabase: any, brand: Brand): Promise<number> {
+  const key = brandLookupKey(brand.slug);
+  const { data: platforms } = await supabase
+    .from("platforms")
+    .select("id")
+    .or(`slug.ilike.%${key}%,name.ilike.%${key}%`)
+    .limit(5);
+  const platformIds = (platforms ?? []).map((p: any) => p.id);
+  if (!platformIds.length) return 0;
+
+  let accountQuery = supabase
+    .from("platform_accounts")
+    .select("id")
+    .in("platform_id", platformIds)
+    .eq("is_active", true)
+    .eq("is_demo", false);
+  if (brand.accountId) accountQuery = accountQuery.eq("account_external_id", brand.accountId);
+  const { data: accounts } = await accountQuery;
+  const accountIds = (accounts ?? []).map((acc: any) => acc.id);
+  if (!accountIds.length) return 0;
+
+  const { data: metric } = await supabase
+    .from("tracking_metrics")
+    .select("updated_at,created_at")
+    .in("platform_account_id", accountIds)
+    .eq("origem_importacao", "panel_scrape_html")
+    .order("updated_at", { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+
+  const ts = metric?.updated_at ?? metric?.created_at;
+  return ts ? new Date(ts).getTime() : 0;
+}
+
+async function pickNextBrandForAll(supabase: any, brands: Brand[]): Promise<Brand[]> {
+  if (brands.length <= 1) return brands;
+  const scored = await Promise.all(brands.map(async (brand) => ({
+    brand,
+    lastUpdated: await getLastPanelMetricUpdate(supabase, brand),
+  })));
+  scored.sort((a, b) => a.lastUpdated - b.lastUpdated);
+  return [scored[0].brand];
+}
+
 // Schema used ONLY for the Home widget (saldo disponível / pendente).
 const HOME_SCHEMA = {
   type: "object",
@@ -599,6 +643,10 @@ async function prepareBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
   const perfUrl = String(perfDoc?.metadata?.url ?? perfDoc?.metadata?.sourceURL ?? "");
   const bothMd = `${homeMd ?? ""}\n${perfMd ?? ""}`;
   const vupiHint = /vupi/i.test(bothMd) || /vupi/i.test(homeUrl) || /vupi/i.test(perfUrl);
+  const captureText = `${bothMd}\n${homeUrl}\n${perfUrl}`;
+  const accountHint = brand.accountId
+    ? captureText.includes(String(brand.accountId).trim())
+    : true;
 
   const homeJson = homeDoc?.json ?? homeDoc?.extract ?? {};
   const saldoRegex = parseSaldoFromMarkdown(homeMd);
@@ -632,7 +680,7 @@ async function prepareBrand(supabase: any, brand: Brand, homeFc: any, perfFc: an
     accounts.push(...(preferred.length ? preferred : fetched));
   }
 
-  return { brand, extracted, saldo, accounts, homeMd, perfMd, vupiHint };
+  return { brand, extracted, saldo, accounts, homeMd, perfMd, vupiHint, accountHint };
 }
 
 function metricsFingerprint(e: any) {
@@ -711,38 +759,6 @@ async function writeBrand(supabase: any, prep: Awaited<ReturnType<typeof prepare
       continue;
     }
 
-    // Anti-downgrade: cliques/registros/ftd/deposits são cumulativos dentro
-    // da janela de 30 dias. Se o painel devolveu números menores (cache,
-    // renderização parcial, "hoje" no lugar de "Total"), NÃO sobrescreve.
-    if (existingMetric) {
-      const curCliques = Number(existingMetric.cliques ?? 0);
-      const curReg = Number(existingMetric.registros ?? 0);
-      const curFtd = Number(existingMetric.ftd ?? 0);
-      const curDepCount = Number(existingMetric.deposits_count ?? 0);
-      const curDepTotal = Number(existingMetric.depositos_total ?? 0);
-      const nxCliques = Number(extracted.cliques ?? 0);
-      const nxReg = Number(extracted.cadastros ?? 0);
-      const nxFtd = Number(extracted.ftds ?? 0);
-      const nxDepCount = Number(extracted.depositos_qtd ?? 0);
-      const nxDepTotal = Number(extracted.depositos_valor ?? 0);
-      const decreased =
-        nxCliques < curCliques ||
-        nxReg < curReg ||
-        nxFtd < curFtd ||
-        nxDepCount < curDepCount ||
-        nxDepTotal + 0.01 < curDepTotal;
-      const increased =
-        nxCliques > curCliques ||
-        nxReg > curReg ||
-        nxFtd > curFtd ||
-        nxDepCount > curDepCount ||
-        nxDepTotal > curDepTotal + 0.01;
-      if (decreased && !increased) {
-        skippedMetrics++;
-        continue;
-      }
-    }
-
     const { error } = await supabase.from("tracking_metrics").upsert({
       data_ref: today,
       platform_id: acc.platform_id,
@@ -801,7 +817,7 @@ Deno.serve(async (req) => {
     });
   }
 
-  if (source === "cron" && payload?.force !== true) {
+  if (payload?.force !== true) {
     const runningSince = new Date(Date.now() - 4 * 60_000).toISOString();
     const { data: activeRun } = await supabase
       .from("panel_scraper_runs")
@@ -821,35 +837,49 @@ Deno.serve(async (req) => {
     }
   }
 
+  const resolvedTargets = await Promise.all(targets.map((brand) => resolveBrandForCapture(supabase, brand)));
+  const captureTargetsForRun = wantBrand === "all"
+    ? await pickNextBrandForAll(supabase, resolvedTargets)
+    : resolvedTargets;
+
   const { data: run } = await supabase.from("panel_scraper_runs").insert({
     scraper_key: "affiliate_panel_html",
     status: "running",
-    discovery: { brands: targets.map((t) => t.slug), account_ids: Object.fromEntries(targets.map((t) => [t.slug, t.accountId ?? null])), started_from: source, extract: wantExtract },
+    discovery: {
+      requested_brands: targets.map((t) => t.slug),
+      brands: captureTargetsForRun.map((t) => t.slug),
+      account_ids: Object.fromEntries(captureTargetsForRun.map((t) => [t.slug, t.accountId ?? null])),
+      started_from: source,
+      extract: wantExtract,
+      mode: wantBrand === "all" ? "single_brand_rotation" : "single_brand",
+    },
   }).select("id").maybeSingle();
   const runId = run?.id;
 
-  // Each Firecrawl pass takes ~40s; two brands × two pages easily blow the
-  // 150s request timeout. Run everything in the background and let the client
-  // poll `panel_scraper_runs` (by run_id) for completion.
+  // Each invocation captures ONE brand only (rotation when brand="all").
+  // Run in background so the HTTP request is not killed by the gateway while
+  // Firecrawl finishes browser actions.
   const task = (async () => {
     const results: Record<string, any> = {};
     const rawDump: Record<string, any> = {};
     const preps: Record<string, any> = {};
 
-    const captureTargets = await Promise.all(targets.map((brand) => resolveBrandForCapture(supabase, brand)));
+    const captureTargets = captureTargetsForRun;
 
-    // Fase 1 — extração paralela (Firecrawl + parse). Nenhuma escrita ainda.
-    await Promise.all(captureTargets.map(async (brand) => {
+    // Fase 1 — extração serial por marca. O painel mantém a marca/label ativa
+    // na sessão; rodar Estrela e VUPI em paralelo fazia uma captura trocar a
+    // marca da outra e gravar 397052 dentro de 397057 (ou o inverso).
+    for (const brand of captureTargets) {
       try {
-        const [homeFc, perfFc] = await Promise.all([
-          firecrawlLoginAndCapture(
-            brand,
-            "/withdraw",
-            HOME_SCHEMA,
-            "Extraia o valor real disponível para saque/retirada no painel afiliado. Use o saldo do bloco de saque ou balanço de saldo, não use comissão do relatório e não use valores mascarados como ••••••. Formato R$ 1.234,56 → 1234.56. Se o saldo estiver oculto ou mascarado, omita — não invente zero.",
-          ),
-          firecrawlLoginAndCapture(brand, "/reports/performance", null, ""),
-        ]);
+        const perfFc = await firecrawlLoginAndCapture(brand, "/reports/performance", null, "");
+        const homeFc = {
+          data: {
+            markdown: "",
+            html: "",
+            metadata: null,
+            json: { saldo_disponivel: null, saldo_pendente: null },
+          },
+        };
         const prep = await prepareBrand(supabase, brand, homeFc, perfFc);
         preps[brand.slug] = prep;
         if (debug) {
@@ -864,7 +894,7 @@ Deno.serve(async (req) => {
         results[brand.slug] = { ok: false, error: err?.message ?? String(err) };
         rawDump[brand.slug] = { error: err?.message ?? String(err) };
       }
-    }));
+    }
 
     // Fase 2 — cruza VUPI x Estrelabet. Se a extração da VUPI vier idêntica
     // à Estrelabet (brand switch falhou silenciosamente e ambos vistos como
@@ -881,13 +911,13 @@ Deno.serve(async (req) => {
       if (!prep) continue;
       try {
         let skipMetrics: string | undefined;
-        if (brand.slug === "vupi") {
+        if (brand.slug === "vupi" && captureTargets.length > 1) {
           if (vupiBrandNotVisible) skipMetrics = "brand_not_visible";
           else if (vupiIsDupOfEstrela) skipMetrics = "duplicate_of_estrelabet";
         }
-        const skipBalance = brand.slug === "vupi" && skipMetrics ? skipMetrics : undefined;
+        const skipBalance = skipMetrics ? skipMetrics : undefined;
         const persisted = await writeBrand(supabase, prep, { skipMetrics, skipBalance });
-        results[brand.slug] = { ok: true, ...persisted };
+        results[brand.slug] = { ok: true, account_id_visible: prep.accountHint, ...persisted };
       } catch (err: any) {
         results[brand.slug] = { ok: false, error: err?.message ?? String(err) };
       }
@@ -898,7 +928,14 @@ Deno.serve(async (req) => {
         finished_at: new Date().toISOString(),
         rows_imported: Object.values(results).reduce((n: number, r: any) => n + (r?.updatedAccounts ?? 0), 0),
         message: JSON.stringify(Object.fromEntries(Object.entries(results).map(([k, v]: any) => [k, v.ok ? `ok (saldo=${v.extracted?.saldo_disponivel ?? "n/a"} src=${v.saldo_source ?? "?"})` : v.error]))),
-        discovery: { brands: captureTargets.map((t) => t.slug), account_ids: Object.fromEntries(captureTargets.map((t) => [t.slug, t.accountId ?? null])), results, raw: debug ? rawDump : undefined },
+        discovery: {
+          requested_brands: targets.map((t) => t.slug),
+          brands: captureTargets.map((t) => t.slug),
+          account_ids: Object.fromEntries(captureTargets.map((t) => [t.slug, t.accountId ?? null])),
+          mode: wantBrand === "all" ? "single_brand_rotation" : "single_brand",
+          results,
+          raw: debug ? rawDump : undefined,
+        },
       }).eq("id", runId);
     }
   })().catch(async (err) => {
@@ -918,7 +955,7 @@ Deno.serve(async (req) => {
   }
 
   return new Response(
-    JSON.stringify({ ok: true, run_id: runId, status: "processing", brands: targets.map((t) => t.slug) }, null, 2),
+    JSON.stringify({ ok: true, run_id: runId, status: "processing", brands: captureTargetsForRun.map((t) => t.slug) }, null, 2),
     { status: 202, headers: { ...corsHeaders, "Content-Type": "application/json" } },
   );
 });
