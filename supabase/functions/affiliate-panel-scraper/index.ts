@@ -554,6 +554,14 @@ function buildOfficialSmarticoCaptureJs(brand: Brand) {
   `;
 }
 
+function extractOfficialSmarticoFromDoc(...docs: any[]) {
+  const text = docs.map((doc) => [doc?.markdown, doc?.html].filter(Boolean).join("\n")).join("\n");
+  const match = text.match(/\{\"label_id\":\"460395\"[\s\S]*?\}\s*(?:<|$)/);
+  if (!match) return null;
+  const raw = match[0].replace(/<$/, "").trim();
+  try { return JSON.parse(raw); } catch { return null; }
+}
+
 function buildBrandSwitchJs(brand: Brand) {
   const targetPatterns = brand.slug === "vupi"
     ? ["vupi"]
@@ -786,6 +794,7 @@ async function firecrawlLoginAndCapture(
   const accountJs = buildAccountSwitchJs(brand);
   const perfFilterJs = buildPerformanceDateFilterJs(targetPath);
   const revealBalanceJs = buildRevealBalanceJs(targetPath);
+  const officialSmarticoJs = buildOfficialSmarticoCaptureJs(brand);
   const targetUrl = buildPanelTargetUrl(brand, targetPath);
   const navJs = `
     (function(){
@@ -825,6 +834,7 @@ async function firecrawlLoginAndCapture(
     ...(accountJs ? [{ type: "executeJavascript", script: accountJs }, { type: "wait", milliseconds: 2000 }] : []),
     { type: "executeJavascript", script: navJs },
     { type: "wait", milliseconds: 12000 },
+    ...(officialSmarticoJs ? [{ type: "executeJavascript", script: officialSmarticoJs }, { type: "wait", milliseconds: 7000 }] : []),
     ...(revealBalanceJs ? [{ type: "executeJavascript", script: revealBalanceJs }, { type: "wait", milliseconds: 3000 }] : []),
     ...(perfFilterJs ? [{ type: "executeJavascript", script: perfFilterJs }, { type: "wait", milliseconds: 8000 }] : []),
   ];
