@@ -8,7 +8,7 @@ import {
   Users, UserCheck, ShieldCheck, Gamepad2, Monitor, Link2, FileText, GitBranch,
   Calendar, PenTool, Lightbulb, Megaphone, BarChart3, ArrowRightLeft, Tag, ClipboardList,
   Settings, Scale, Lock, Plug, Menu, X, Bell, Search, ChevronDown, PanelLeftClose, PanelLeft,
-  Command, LogOut, Code2, Sparkles, Briefcase, KanbanSquare, CheckSquare, Wand2, Radio,
+  Command, LogOut, Code2, Sparkles, Briefcase, KanbanSquare, CheckSquare, Wand2, Radio, MoreHorizontal,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import PreviewBanner from "@/components/PreviewBanner";
@@ -202,8 +202,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <PreviewBanner />
         <header className="h-[56px] border-b border-border/60 flex items-center px-3 sm:px-4 xl:px-6 gap-2 sm:gap-3 xl:gap-4 bg-background/70 backdrop-blur-xl sticky top-0 z-30 shrink-0 safe-pt">
 
-          <button className="xl:hidden text-muted-foreground hover:text-foreground transition-colors" onClick={() => setSidebarOpen(true)}>
-            <Menu size={17} />
+          <button className="xl:hidden text-muted-foreground hover:text-foreground transition-colors p-1.5 -ml-1 rounded-lg hover:bg-secondary/60" onClick={() => setSidebarOpen(true)} aria-label="Abrir menu">
+            <Menu size={18} />
           </button>
           <div className="hidden xl:flex items-center gap-2.5 bg-secondary/40 hover:bg-secondary/60 border border-border/60 hover:border-primary/30 rounded-lg px-3.5 py-[7px] flex-1 max-w-sm cursor-pointer transition-all duration-200" onClick={() => setSearchOpen(true)}>
             <Search size={13} className="text-muted-foreground shrink-0" />
@@ -222,12 +222,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </button>
           <div className="ml-auto xl:ml-0 flex items-center gap-2">
             <NotificationPanel />
-            <div className="h-5 w-px bg-border/60 mx-1" />
-            <div className="flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-secondary/40 transition-colors cursor-pointer">
+            <div className="h-5 w-px bg-border/60 mx-1 hidden sm:block" />
+            <div className="hidden sm:flex items-center gap-2.5 px-2 py-1 rounded-lg hover:bg-secondary/40 transition-colors cursor-pointer">
               <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary to-primary-glow flex items-center justify-center text-primary-foreground text-[11px] font-semibold shadow-[0_2px_8px_-2px_hsl(var(--primary)/0.5)]">
                 {user?.email?.charAt(0).toUpperCase() || "U"}
               </div>
-              <span className="text-[12.5px] font-medium hidden sm:block text-foreground/80 capitalize">{role || "user"}</span>
+              <span className="text-[12.5px] font-medium hidden md:block text-foreground/80 capitalize">{role || "user"}</span>
             </div>
             <button onClick={signOut} className="p-2 rounded-lg hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive" title="Sair">
               <LogOut size={14} />
@@ -235,7 +235,35 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        <main className="flex-1 p-4 md:p-5 xl:p-8 overflow-y-auto invisible-scroll main-scroll animate-fade-in">{children}</main>
+        <main className="flex-1 p-4 md:p-5 xl:p-8 pb-tabbar xl:pb-8 overflow-y-auto invisible-scroll main-scroll animate-fade-in safe-x">{children}</main>
+
+        {/* Mobile / tablet quick bottom bar — app-like shortcuts + menu */}
+        <nav className="xl:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border/60 bg-background/95 backdrop-blur-xl safe-pb safe-x">
+          <div className="grid grid-cols-5">
+            {[
+              { label: "Menu", icon: Menu, action: () => setSidebarOpen(true) },
+              { label: "Pipeline", icon: KanbanSquare, path: "/comercial" },
+              { label: "Links", icon: Link2, path: "/tracking/links" },
+              { label: "Materiais", icon: Wand2, path: "/materiais" },
+              { label: "Squad", icon: Briefcase, path: "/comercial/squads" },
+            ].map((it) => {
+              const active = it.path && location.pathname === it.path;
+              const inner = (
+                <>
+                  {active && <span className="absolute top-0 left-4 right-4 h-[2px] rounded-full bg-gradient-to-r from-primary-glow to-primary" />}
+                  <it.icon size={19} strokeWidth={active ? 2.25 : 1.6} />
+                  <span className="leading-tight">{it.label}</span>
+                </>
+              );
+              const cls = `relative flex flex-col items-center justify-center min-h-[56px] py-2 gap-0.5 text-[10px] transition-colors ${active ? "text-primary" : "text-muted-foreground active:text-foreground"}`;
+              return it.path ? (
+                <Link key={it.label} to={it.path} className={cls}>{inner}</Link>
+              ) : (
+                <button key={it.label} type="button" onClick={it.action} className={cls} aria-label={it.label}>{inner}</button>
+              );
+            })}
+          </div>
+        </nav>
       </div>
 
       <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
