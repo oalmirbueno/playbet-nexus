@@ -326,7 +326,7 @@ function Column({ stage, cards, squads, managers, loading, onOpen }: {
           <Badge variant="secondary" className="text-[10px] h-5 px-1.5 shrink-0 ml-2">{cards.length}</Badge>
         </div>
       </div>
-      <div className="flex-1 p-2 space-y-2 min-h-[140px] overflow-y-auto [scrollbar-width:thin] overscroll-contain">
+      <div className="flex-1 p-2 space-y-2 min-h-[140px] overflow-y-auto [scrollbar-width:thin] overscroll-contain [-webkit-overflow-scrolling:touch] touch-pan-y">
         {loading && <div className="text-xs text-muted-foreground p-3">Carregando...</div>}
         {!loading && cards.length === 0 && (
           <div className="text-xs text-muted-foreground/70 p-4 text-center border border-dashed border-border/40 rounded-lg">
