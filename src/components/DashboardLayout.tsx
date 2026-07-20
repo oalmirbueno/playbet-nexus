@@ -8,7 +8,7 @@ import {
   Users, UserCheck, ShieldCheck, Gamepad2, Monitor, Link2, FileText, GitBranch,
   Calendar, PenTool, Lightbulb, Megaphone, BarChart3, ArrowRightLeft, Tag, ClipboardList,
   Settings, Scale, Lock, Plug, Menu, X, Bell, Search, ChevronDown, PanelLeftClose, PanelLeft,
-  Command, LogOut, Code2, Sparkles, Briefcase, KanbanSquare, CheckSquare, Wand2, Radio,
+  Command, LogOut, Code2, Sparkles, Briefcase, KanbanSquare, CheckSquare, Wand2, Radio, MoreHorizontal,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import PreviewBanner from "@/components/PreviewBanner";
