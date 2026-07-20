@@ -40,11 +40,13 @@ export default function InfluencerPortalLayout({ children }: { children: React.R
 
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-[100dvh] bg-background flex flex-col">
+      <div className="safe-pt bg-background/95 backdrop-blur-xl" />
       <PreviewBanner />
 
       {/* Top bar (desktop + mobile) */}
-      <header className="sticky top-0 z-30 flex items-center justify-between h-14 px-4 md:px-6 border-b border-border/60 bg-background/80 backdrop-blur-xl safe-pt">
+      <header className="sticky top-0 z-30 flex items-center justify-between h-14 px-4 md:px-6 border-b border-border/60 bg-background/80 backdrop-blur-xl safe-x">
+
         <div className="flex items-center gap-3">
           <img src={logo} alt="PlayBet" className="h-8 w-auto opacity-95" />
           <span className="hidden sm:inline text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Portal Influenciador</span>
@@ -82,10 +84,11 @@ export default function InfluencerPortalLayout({ children }: { children: React.R
         })}
       </nav>
 
-      <main className="flex-1 p-4 md:p-8 pb-28 md:pb-8 max-w-6xl w-full mx-auto animate-fade-in">{children}</main>
+      <main className="flex-1 p-4 md:p-8 pb-tabbar md:pb-8 max-w-6xl w-full mx-auto animate-fade-in safe-x">{children}</main>
 
       {/* Mobile bottom tabs — elevated above home indicator, generous touch targets */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl grid grid-cols-6 safe-pb">
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl grid grid-cols-6 safe-pb safe-x">
+
         {items.map((it) => {
           const active = location.pathname === it.path;
           return (
