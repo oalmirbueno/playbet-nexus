@@ -87,8 +87,10 @@ export default function ComercialPipeline() {
   const [exportingAnalise, setExportingAnalise] = useState(false);
 
   const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 6 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    // Longer delay + wider tolerance = touch scroll always wins until the user
+    // actually holds still on a card. Eliminates the "trava" ao rolar no tablet.
+    useSensor(TouchSensor, { activationConstraint: { delay: 220, tolerance: 10 } }),
   );
 
   async function load() {
@@ -255,7 +257,13 @@ export default function ComercialPipeline() {
         </div>
       </div>
 
-      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <DndContext
+        sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        autoScroll={{ acceleration: 24, threshold: { x: 0.15, y: 0.2 }, interval: 5 }}
+      >
+
         <div
           className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden px-3 sm:px-4 md:px-5 xl:px-6 py-4 xl:py-5 [scrollbar-width:thin] [-webkit-overflow-scrolling:touch] snap-x snap-mandatory xl:snap-none"
           style={{ scrollbarColor: "hsl(var(--border)) transparent" }}

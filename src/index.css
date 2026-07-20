@@ -82,7 +82,9 @@
   .safe-mb { margin-bottom: env(safe-area-inset-bottom); }
   .safe-x { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
   /* Bottom-nav clearance for fixed tab bar (56px + home indicator) */
-  .pb-tabbar { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  .pb-tabbar { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+  /* Prevent iOS Safari from freezing scroll while a dnd-kit drag delay is pending */
+  .dnd-scroll { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; touch-action: pan-y; }
 
 
   h1, h2, h3, h4, h5, h6 {
