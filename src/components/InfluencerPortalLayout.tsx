@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Link2, Wallet, DollarSign, User, LogOut, Wand2 } from "lucide-react";
+import { LayoutDashboard, Link2, Wallet, DollarSign, User, LogOut, Wand2, MoreHorizontal } from "lucide-react";
 import { useAuth, usePreviewScope } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -9,16 +9,20 @@ import { usePanelSync } from "@/hooks/usePanelSync";
 import PreviewBanner from "@/components/PreviewBanner";
 import LiveSyncBadge from "@/components/LiveSyncBadge";
 import { PortalNotificationBell } from "@/components/PortalNotificationBell";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import logo from "@/assets/logo.png";
 
-const items = [
+const primary = [
   { label: "Painel", icon: LayoutDashboard, path: "/portal" },
-  { label: "Meus links", icon: Link2, path: "/portal/links" },
+  { label: "Links", icon: Link2, path: "/portal/links" },
   { label: "Materiais", icon: Wand2, path: "/portal/materiais" },
   { label: "Financeiro", icon: DollarSign, path: "/portal/financeiro" },
+];
+const secondary = [
   { label: "Saques", icon: Wallet, path: "/portal/saques" },
   { label: "Perfil", icon: User, path: "/portal/perfil" },
 ];
+const allDesktop = [...primary, ...secondary];
 
 export default function InfluencerPortalLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
@@ -27,6 +31,7 @@ export default function InfluencerPortalLayout({ children }: { children: React.R
   const qc = useQueryClient();
   const { lastSyncedAt } = usePanelSync();
   const [influencerId, setInfluencerId] = useState<string | null>(scope.influencerId ?? null);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   useEffect(() => {
     if (scope.active) { setInfluencerId(scope.influencerId ?? null); return; }
@@ -37,16 +42,12 @@ export default function InfluencerPortalLayout({ children }: { children: React.R
 
   usePortalRealtime({ influencerId }, () => qc.invalidateQueries());
 
-
-
   return (
     <div className="min-h-[100dvh] bg-background flex flex-col">
       <div className="safe-pt bg-background/95 backdrop-blur-xl" />
       <PreviewBanner />
 
-      {/* Top bar (desktop + mobile) */}
       <header className="sticky top-0 z-30 flex items-center justify-between h-14 px-4 md:px-6 border-b border-border/60 bg-background/80 backdrop-blur-xl safe-x">
-
         <div className="flex items-center gap-3">
           <img src={logo} alt="PlayBet" className="h-8 w-auto opacity-95" />
           <span className="hidden sm:inline text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Portal Influenciador</span>
@@ -66,16 +67,12 @@ export default function InfluencerPortalLayout({ children }: { children: React.R
         </div>
       </header>
 
-      {/* Desktop nav */}
-      <nav className="hidden md:flex sticky top-14 z-20 border-b border-border/50 bg-background/70 backdrop-blur-xl px-6 gap-1">
-        {items.map((it) => {
+      <nav className="hidden md:flex sticky top-14 z-20 border-b border-border/50 bg-background/70 backdrop-blur-xl px-6 gap-1 overflow-x-auto">
+        {allDesktop.map((it) => {
           const active = location.pathname === it.path;
           return (
-            <Link
-              key={it.path}
-              to={it.path}
-              className={`relative flex items-center gap-2 px-3 py-3 text-[13px] transition-colors ${active ? "text-foreground" : "text-muted-foreground hover:text-foreground/90"}`}
-            >
+            <Link key={it.path} to={it.path}
+              className={`relative flex items-center gap-2 px-3 py-3 text-[13px] whitespace-nowrap transition-colors ${active ? "text-foreground" : "text-muted-foreground hover:text-foreground/90"}`}>
               <it.icon size={14} strokeWidth={active ? 2.25 : 1.6} className={active ? "text-primary" : ""} />
               {it.label}
               {active && <span className="absolute left-2 right-2 -bottom-px h-[2px] rounded-full bg-gradient-to-r from-primary-glow to-primary" />}
@@ -86,10 +83,8 @@ export default function InfluencerPortalLayout({ children }: { children: React.R
 
       <main className="flex-1 p-4 md:p-8 pb-tabbar md:pb-8 max-w-6xl w-full mx-auto animate-fade-in safe-x">{children}</main>
 
-      {/* Mobile bottom tabs — elevated above home indicator, generous touch targets */}
-      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl grid grid-cols-6 safe-pb safe-x">
-
-        {items.map((it) => {
+      <nav className="md:hidden fixed bottom-0 inset-x-0 z-30 border-t border-border/60 bg-background/95 backdrop-blur-xl grid grid-cols-5 safe-pb safe-x">
+        {primary.map((it) => {
           const active = location.pathname === it.path;
           return (
             <Link key={it.path} to={it.path} className={`relative flex flex-col items-center justify-center min-h-[56px] py-2 gap-0.5 text-[10px] transition-colors ${active ? "text-primary" : "text-muted-foreground active:text-foreground"}`}>
@@ -99,6 +94,35 @@ export default function InfluencerPortalLayout({ children }: { children: React.R
             </Link>
           );
         })}
+        <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+          <SheetTrigger asChild>
+            <button className="relative flex flex-col items-center justify-center min-h-[56px] py-2 gap-0.5 text-[10px] text-muted-foreground active:text-foreground" aria-label="Mais">
+              <MoreHorizontal size={20} strokeWidth={1.6} />
+              <span className="leading-tight">Mais</span>
+            </button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="rounded-t-2xl safe-pb">
+            <SheetHeader>
+              <SheetTitle className="text-left">Atalhos</SheetTitle>
+            </SheetHeader>
+            <div className="grid grid-cols-3 gap-2 pt-3 pb-2">
+              {secondary.map((it) => {
+                const active = location.pathname === it.path;
+                return (
+                  <Link key={it.path} to={it.path} onClick={() => setMoreOpen(false)}
+                    className={`flex flex-col items-center justify-center gap-2 rounded-xl border p-3 text-[11px] transition-colors ${active ? "border-primary/60 bg-primary/10 text-primary" : "border-border/60 text-foreground/80 hover:border-primary/40 hover:bg-secondary/40"}`}>
+                    <it.icon size={20} strokeWidth={1.8} />
+                    <span className="leading-tight">{it.label}</span>
+                  </Link>
+                );
+              })}
+              <button onClick={() => { setMoreOpen(false); signOut(); }} className="flex flex-col items-center justify-center gap-2 rounded-xl border border-border/60 p-3 text-[11px] text-destructive hover:bg-destructive/10">
+                <LogOut size={20} strokeWidth={1.8} />
+                <span className="leading-tight">Sair</span>
+              </button>
+            </div>
+          </SheetContent>
+        </Sheet>
       </nav>
     </div>
   );
