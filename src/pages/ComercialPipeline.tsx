@@ -353,7 +353,7 @@ function CardItem({ card, squads, managers, onOpen, dragging }: {
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      className={`group relative rounded-lg border border-border/60 bg-card p-3 shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-grab active:cursor-grabbing touch-none select-none ${
+      className={`group relative rounded-lg border border-border/60 bg-card p-3 shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-grab active:cursor-grabbing touch-pan-y select-none ${
         isDragging || dragging ? "opacity-50" : ""
       }`}
       onClick={onOpen}
